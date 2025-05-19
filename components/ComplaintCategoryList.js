@@ -26,15 +26,15 @@ const ComplaintCategoryList = () => {
           <div key={item._id} className="flex flex-col items-center space-y-2">
             <button
               onClick={() => setSelectedLabel(item.Prob_name)}
-              className="w-full aspect-square rounded-full flex items-center justify-center bg-gray-200"
+              className="w-full aspect-square rounded-full overflow-hidden transition-transform duration-200 ease-in-out hover:scale-105"
             >
               <img
                 src={item.Prob_pic}
                 alt={item.Prob_name}
-                className="w-2/3 h-2/3 object-contain"
+                className="w-full h-full object-cover"
               />
             </button>
-            <div className="text-xs sm:text-sm font-medium text-gray-800 text-center">
+            <div className="text-sm sm:text-base font-medium text-gray-800 text-center">
               {item.Prob_name}
             </div>
           </div>
