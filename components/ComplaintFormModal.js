@@ -33,7 +33,7 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
             selected={selectedCommunity}
             onSelect={handleCommunitySelect}
           />
-          <ListButtonComplaint/>
+          <ListButtonComplaint category={selectedLabel} />
           <ReporterInput
             prefix={prefix}
             setPrefix={setPrefix}
