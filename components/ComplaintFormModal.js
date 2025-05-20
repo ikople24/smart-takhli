@@ -1,6 +1,17 @@
-
+import React, { useState } from 'react';
+import CommunitySelector from './CommunitySelector';
+import ReporterInput from './ReporterInput';
+import ListButtonComplaint from './ListButtonComplaint';
 
 const ComplaintFormModal = ({ selectedLabel, onClose }) => {
+  const [selectedCommunity, setSelectedCommunity] = useState('');
+  const [prefix, setPrefix] = useState('นาย');
+  const [fullName, setFullName] = useState('');
+
+  const handleCommunitySelect = (community) => {
+    setSelectedCommunity(community);
+  };
+
   if (!selectedLabel) return null;
 
   return (
@@ -18,11 +29,25 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
           </button>
         </div>
         <form className="space-y-3">
-          <input className="w-full border rounded px-3 py-2 transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:outline-none" placeholder="ชื่อผู้ร้อง" />
-          <textarea className="w-full border rounded px-3 py-2 transition-all duration-200 focus:ring-2 focus:ring-blue-400 focus:outline-none" placeholder="รายละเอียด" rows={3} />
+          <CommunitySelector
+            selected={selectedCommunity}
+            onSelect={handleCommunitySelect}
+          />
+          <ListButtonComplaint/>
+          <ReporterInput
+            prefix={prefix}
+            setPrefix={setPrefix}
+            fullName={fullName}
+            setFullName={setFullName}
+          />
+        <div className="flex mb-4 gap-2">
+          <button type="clear" className="bg-gray-100 text-black px-4 py-2 rounded">
+            ยกเลิก
+          </button>
           <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
             ส่งเรื่อง
           </button>
+        </div>
         </form>
       </div>
     </div>
