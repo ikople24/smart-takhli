@@ -5,13 +5,14 @@ import ComplaintFormModal from "./ComplaintFormModal";
 const ComplaintCategoryList = () => {
   const [selectedLabel, setSelectedLabel] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
   console.log("🚀 useEffect called, fetching menu...");
   fetch("/api/menu")
     .then((res) => res.json())
     .then((data) => {
-      console.log("📦 เมนูที่ได้จาก API:", data);
+      // console.log("📦 เมนูที่ได้จาก API:", data);
       setCategories(data);
     })
     .catch((error) => {
@@ -40,7 +41,15 @@ const ComplaintCategoryList = () => {
           </div>
         ))}
       </div>
-      <ComplaintFormModal selectedLabel={selectedLabel} onClose={() => setSelectedLabel(null)} />
+      <ComplaintFormModal
+        key={formKey}
+        selectedLabel={selectedLabel}
+        onClose={() => setSelectedLabel(null)}
+        onSuccess={() => {
+          setSelectedLabel(null);
+          setFormKey((prev) => prev + 1);
+        }}
+      />
     </>
   );
 };

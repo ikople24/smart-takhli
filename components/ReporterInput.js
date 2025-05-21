@@ -21,24 +21,29 @@ const ReporterInput = ({
   setPhone,
   detail,
   setDetail,
+  validateTrigger = false,
+  setValid = () => {},
 }) => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    if (!validateTrigger) return;
     const result = reporterSchema.safeParse({ prefix, fullName, address, phone, detail });
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
+      setValid(false);
     } else {
       setErrors({});
+      setValid(true);
     }
-  }, [prefix, fullName, address, phone, detail]);
+  }, [validateTrigger]);
 
   return (
     <div className="flex flex-col space-y-2">
       <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-gray-800">
-            รายละเอียดของปัญหา
+            4.รายละเอียดของปัญหา
           </label>
           {errors.detail && <p className="text-sm text-red-500 text-right ml-2">{errors.detail[0]}</p>}
         </div>
@@ -51,7 +56,7 @@ const ReporterInput = ({
       </div>
       <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-800">ผู้แจ้ง</label>
+          <label className="text-sm font-medium text-gray-800">5.ข้อมูลผู้แจ้ง (จะไม่แสดงผลในระบบ)</label>
             {errors.fullName && <p className="text-sm text-red-500 text-right ml-2">{errors.fullName[0]}</p>}
         </div>
         <div className="flex gap-2">
@@ -91,7 +96,7 @@ const ReporterInput = ({
       </div>
       <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-800">ที่อยู่</label>
+          <label className="text-sm font-medium text-gray-800">6.ที่อยู่</label>
           {errors.address && <p className="text-sm text-red-500 text-right ml-2">{errors.address[0]}</p>}
         </div>
         <textarea
@@ -104,7 +109,7 @@ const ReporterInput = ({
       <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-gray-800">
-            เบอร์โทรศัพท์
+            7.เบอร์โทรศัพท์
           </label>
           {errors.phone && <p className="text-sm text-red-500 text-right ml-2">{errors.phone[0]}</p>}
         </div>
@@ -136,7 +141,6 @@ const ReporterInput = ({
             />
           </svg>
         </div>
-        <p className="validator-hint">Must be 10 digits</p>
       </div>
     </div>
   );

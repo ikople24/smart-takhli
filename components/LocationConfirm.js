@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
 });
 
 
-const LocationConfirm = ({ useCurrent, onToggle, location, setLocation }) => {
+const LocationConfirm = ({ useCurrent, onToggle, location, setLocation, formSubmitted }) => {
     const [loading, setLoading] = useState(false);
     const { BaseLayer } = LayersControl;
 
@@ -43,21 +43,17 @@ const LocationConfirm = ({ useCurrent, onToggle, location, setLocation }) => {
 
     return (
         <div className="space-y-2">
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-gray-700">ใช้ตำแหน่งปัจจุบันของฉัน</span>
-
-                {/* ✅ Toggle switch */}
-                <button
-                    type="button"
-                    onClick={() => onToggle(!useCurrent)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${useCurrent ? 'bg-blue-500' : 'bg-gray-300'
-                        }`}
-                >
-                    <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${useCurrent ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                    />
-                </button>
+            <div className="form-control bg-blue-50 p-3 rounded-md border border-blue-200">
+              <label className="flex items-center gap-2 cursor-pointer w-full justify-between">
+                <span className="label-text text-base font-medium text-gray-700">กดปุ่มเพื่อใช้ตำแหน่งปัจจุบันของคุณ</span>
+                <input
+                  id="toggle-location"
+                  type="checkbox"
+                  className={`toggle ${useCurrent ? 'toggle-success' : formSubmitted ? 'toggle-error' : ''}`}
+                  checked={useCurrent}
+                  onChange={() => onToggle(!useCurrent)}
+                />
+              </label>
             </div>
 
             {loading && <p className="text-sm text-gray-500">กำลังดึงตำแหน่ง...</p>}

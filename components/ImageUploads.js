@@ -53,16 +53,24 @@ const ImageUploads = ({ onChange }) => {
     <div className="form-control">
       <label className="label">
         <span className="label-text text-sm font-medium text-gray-800">
-          แนบรูปภาพ (หลายภาพได้)
+         3.แนบรูปภาพ 📁 เลือกรูปภาพ (ไม่เกิน 3 ภาพ)
         </span>
       </label>
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={handleFiles}
-        className="file-input file-input-info bg-blue-50 text-blue-900 w-full"
-      />
+      <div className="w-full flex items-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2">
+        <label className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-none cursor-pointer">
+          เลือกรูป
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFiles}
+            className="hidden"
+          />
+        </label>
+        <span className="ml-4 text-sm text-gray-600">
+          {files.length > 0 ? `${files.length} ไฟล์ที่เลือก` : "ยังไม่ได้แนบรูป"}
+        </span>
+      </div>
       <p className="text-xs text-gray-500 mt-1">
         รองรับไฟล์ภาพ .jpg, .png ขนาดไม่เกิน 5MB
       </p>
@@ -74,7 +82,7 @@ const ImageUploads = ({ onChange }) => {
               <img
                 src={p.url}
                 alt={`preview-${index}`}
-                className="w-full h-24 object-cover rounded border"
+                className="w-full h-24 object-cover rounded border border-gray-300 p-1 bg-white shadow-sm"
               />
               <button
                 type="button"

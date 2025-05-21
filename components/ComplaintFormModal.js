@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
-import { useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import CommunitySelector from './CommunitySelector';
 import ReporterInput from './ReporterInput';
 import ListButtonComplaint from './ListButtonComplaint';
 import ImageUploads from './ImageUploads';
 import Swal from 'sweetalert2';
+import { z } from 'zod';
 const LocationConfirm = dynamic(() => import('./LocationConfirm'), { ssr: false });
+
+const schema = z.object({
+  community: z.string().min(1, 'กรุณาระบุ 1 ชุมชน'),
+});
 
 const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [selectedCommunity, setSelectedCommunity] = useState('');
@@ -19,9 +23,34 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [location, setLocation] = useState(null);
   const [selectedProblems, setSelectedProblems] = useState([]);
+  const [validateTrigger, setValidateTrigger] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+  const reporterValidRef = useRef(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    setValidateTrigger(true);
+    await new Promise((resolve) => setTimeout(resolve, 0)); // allow validation effect to run
+
+    const result = schema.safeParse({ community: selectedCommunity });
+    if (!result.success) {
+      setFormErrors(result.error.flatten().fieldErrors);
+      return;
+    } else {
+      setFormErrors({});
+    }
+
+    if (!reporterValidRef.current) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาตรวจสอบข้อมูล',
+        text: 'กรุณากรอกข้อมูลให้ถูกต้องก่อนส่งเรื่อง',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
 
     if (!location) {
       await Swal.fire({
@@ -53,16 +82,6 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
       return;
     }
 
-    if (!selectedCommunity) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาเลือกชุมชน',
-        text: 'ต้องเลือกชุมชนก่อนส่งเรื่อง',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
-
     if (selectedProblems.length === 0) {
       await Swal.fire({
         icon: 'warning',
@@ -74,35 +93,44 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
     }
 
     const payload = {
-      category: selectedLabel,
-      community: selectedCommunity,
-      prefix,
       fullName,
-      address,
       phone,
-      detail,
-      imageUrls,
-      location,
+      community: selectedCommunity,
       problems: selectedProblems,
+      images: imageUrls,
+      detail,
+      location,
+      status: 'อยู่ระหว่างดำเนินการ',
+      officer: '',
+      updatedAt: new Date(),
     };
 
-    console.log('🧾 ค่าที่จะส่งไปยัง API:', payload);
-
     try {
-      const res = await fetch('/api/report', {
+      const res = await fetch('/api/submit-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('ส่งข้อมูลไม่สำเร็จ');
+
+      setIsSubmitting(true);
+      await new Promise((resolve) => setTimeout(resolve, 4000));
       await Swal.fire({
         icon: 'success',
         title: 'ส่งเรื่องสำเร็จ',
-        confirmButtonText: 'ตกลง'
+        confirmButtonText: 'ตกลง',
       });
+      setIsSubmitting(false);
       handleClearForm();
+      onClose?.(); // Close the modal
     } catch (err) {
       console.error('❌ เกิดข้อผิดพลาด:', err);
+      await Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: err.message || 'ไม่สามารถส่งข้อมูลได้',
+        confirmButtonText: 'ตกลง',
+      });
     }
   };
 
@@ -111,8 +139,15 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
     setPrefix('นาย');
     setFullName('');
     setAddress('');
-    setImageUrls([]);
-    onClose();
+    setPhone('');
+    setDetail('');
+    setImageUrls([]); // Explicitly clear imageUrls
+    setUseCurrentLocation(false);
+    setLocation(null);
+    setSelectedProblems([]);
+    setValidateTrigger(false);
+    setFormErrors({});
+    reporterValidRef.current = true;
   };
 
   const handleCommunitySelect = (community) => {
@@ -150,6 +185,7 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
           <CommunitySelector
             selected={selectedCommunity}
             onSelect={handleCommunitySelect}
+            error={formErrors.community?.[0]}
           />
           <ListButtonComplaint
             category={selectedLabel}
@@ -168,6 +204,8 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
             setPhone={setPhone}
             detail={detail}
             setDetail={setDetail}
+            validateTrigger={validateTrigger}
+            setValid={(v) => reporterValidRef.current = v}
           />
           <LocationConfirm
             useCurrent={useCurrentLocation}
@@ -176,10 +214,15 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
             setLocation={setLocation}
           />
         <div className="flex mb-4 gap-2 justify-end">
-          <button type="button" onClick={handleClearForm} className="bg-gray-100 text-black px-4 py-2 rounded">
+          <button
+            type="button"
+            onClick={handleClearForm}
+            className="btn btn-outline btn-warning"
+          >
             ล้างฟอร์ม
           </button>
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+          <button type="submit" className="btn btn-info" disabled={isSubmitting}>
+            {isSubmitting && <span className="loading loading-infinity loading-xs mr-2" />}
             ส่งเรื่อง
           </button>
         </div>
