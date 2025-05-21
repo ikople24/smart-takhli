@@ -58,7 +58,6 @@ const ReporterInput = ({
           <div className="flex flex-col flex-shrink-0">
             <div className="flex justify-between items-center">
               <label className="sr-only">คำนำหน้า</label>
-              {/* {errors.prefix && <p className="text-sm text-red-500 text-right ml-2">{errors.prefix[0]}</p>} */}
             </div>
             <select
               className="select select-bordered bg-blue-100 text-blue-900 border-blue-300 w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"

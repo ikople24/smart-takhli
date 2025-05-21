@@ -1,7 +1,4 @@
-import Swal from 'sweetalert2';
-
 import { useEffect, useState } from 'react';
-import { FaMapMarkerAlt } from 'react-icons/fa';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -23,7 +20,6 @@ L.Icon.Default.mergeOptions({
 
 const LocationConfirm = ({ useCurrent, onToggle, location, setLocation }) => {
     const [loading, setLoading] = useState(false);
-    const [mapType, setMapType] = useState('satellite');
     const { BaseLayer } = LayersControl;
 
     useEffect(() => {

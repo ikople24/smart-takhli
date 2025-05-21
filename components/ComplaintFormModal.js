@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import CommunitySelector from './CommunitySelector';
