@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const ListButtonComplaint = ({ category }) => {
-  const [selectedProblems, setSelectedProblems] = useState([]);
+const ListButtonComplaint = ({ category, selectedProblems, setSelectedProblems }) => {
   const [problemOptions, setProblemOptions] = useState([]);
 
   useEffect(() => {

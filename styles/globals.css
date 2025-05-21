@@ -7,6 +7,16 @@
 html {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+.leaflet-control-layers-base span {
+  @apply text-neutral-700 text-sm;
+}
+
+.leaflet-control-layers-base input[type="radio"]:checked + span {
+  @apply font-semibold text-blue-600;
+}
+
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);

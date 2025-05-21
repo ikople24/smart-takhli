@@ -16,7 +16,7 @@ const CommunitySelector = ({ selected, onSelect = () => {} }) => (
               selected === c
                 ? 'bg-blue-500 text-white border-none'
                 : 'bg-blue-100 text-blue-900 hover:bg-blue-200 border-none'
-            } transition duration-200 w-full sm:w-auto`}
+            } transition duration-200 min-w-[120px] max-w-full sm:w-auto`}
           >
             {c}
           </button>
