@@ -32,6 +32,7 @@ const LocationConfirm = ({ useCurrent, onToggle, location, setLocation }) => {
                     setLoading(false);
                 },
                 (err) => {
+                    console.error('Geolocation error:', err);
                     alert('ไม่สามารถเข้าถึงตำแหน่งของคุณได้');
                     setLoading(false);
                     onToggle(false); // ปิด toggle กลับ
