@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const newReport = await SubmittedReport.create(req.body);
 
     // 🔔 POST ไปยัง n8n webhook
-    await fetch('https://primary-production-a1769.up.railway.app/webhook/b4c9b6fe-8865-412d-916d-11ed91dd6f96', {
+    await fetch('https://primary-production-a1769.up.railway.app/webhook/submit-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newReport),
