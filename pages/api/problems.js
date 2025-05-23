@@ -12,6 +12,16 @@ export default async function handler(req, res) {
       console.error("❌ Mongo fetch error:", err);
       res.status(500).json({ error: "Failed to fetch problems" });
     }
+  } else if (req.method === "POST") {
+    try {
+      const { label, iconUrl, category, active } = req.body;
+      const newProblem = new ProblemOption({ label, iconUrl, category, active });
+      await newProblem.save();
+      res.status(201).json(newProblem);
+    } catch (err) {
+      console.error("❌ Failed to save problem:", err);
+      res.status(500).json({ error: "Failed to save problem" });
+    }
   } else {
     res.status(405).json({ error: "Method not allowed" });
   }

@@ -12,25 +12,22 @@ export default function BottomNav() {
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white border-t shadow z-50 flex justify-around items-center h-14 px-safe">
-      {navs.map((nav) => (
-        <div key={nav.path}>
-          {nav.disabled ? (
-            <button
-              onClick={() => alert("อยู่ระหว่างดำเนินการปรับปรุงระบบ")}
-              className="text-xs text-center text-gray-400 cursor-not-allowed"
-              disabled
-            >
+      {navs.map((nav) =>
+        nav.disabled ? (
+          <div
+            key={nav.path}
+            className="text-xs text-center text-gray-400 cursor-not-allowed"
+          >
+            {nav.label}
+          </div>
+        ) : (
+          <Link key={nav.path} href={nav.path}>
+            <div className={`text-xs text-center ${router.pathname === nav.path ? "text-blue-600 font-bold" : "text-gray-500"}`}>
               {nav.label}
-            </button>
-          ) : (
-            <Link href={nav.path}>
-              <div className={`text-xs text-center ${router.pathname === nav.path ? "text-blue-600 font-bold" : "text-gray-500"}`}>
-                {nav.label}
-              </div>
-            </Link>
-          )}
-        </div>
-      ))}
+            </div>
+          </Link>
+        )
+      )}
     </div>
   );
 }

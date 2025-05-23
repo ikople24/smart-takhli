@@ -14,11 +14,11 @@ export default function AdminPage() {
       try {
         const [resProblems, resMenus] = await Promise.all([
           fetch("/api/problems"),
-          fetch("/api/menu")
+          fetch("/api/menu"),
         ]);
         const [dataProblems, dataMenus] = await Promise.all([
           resProblems.json(),
-          resMenus.json()
+          resMenus.json(),
         ]);
         setItems(dataProblems);
         setMenuOptions(dataMenus);
@@ -38,8 +38,13 @@ export default function AdminPage() {
       active: true,
     };
 
+    const BASE_URL =
+      process.env.NODE_ENV === "development"
+        ? "http://localhost:3004"
+        : "https://express-docker-server-production.up.railway.app";
+
     try {
-      const res = await fetch("https://express-docker-server-production.up.railway.app/api/problems", {
+      const res = await fetch(`${BASE_URL}/api/problems`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -140,7 +145,9 @@ export default function AdminPage() {
             ทั้งหมด ({items.length})
           </button>
           {menuOptions.map((opt, i) => {
-            const count = items.filter((item) => item.category === opt.Prob_name).length;
+            const count = items.filter(
+              (item) => item.category === opt.Prob_name
+            ).length;
             return (
               <button
                 key={i}
@@ -168,7 +175,11 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {items
-              .filter((item) => filterCategory === "ทั้งหมด" || item.category === filterCategory)
+              .filter(
+                (item) =>
+                  filterCategory === "ทั้งหมด" ||
+                  item.category === filterCategory
+              )
               .sort((a, b) => (b._id > a._id ? 1 : -1))
               .map((item, index) => (
                 <tr key={index}>
@@ -185,7 +196,6 @@ export default function AdminPage() {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
