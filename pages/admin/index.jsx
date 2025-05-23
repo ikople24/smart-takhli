@@ -1,4 +1,4 @@
-// pages/admin.js
+//admin/index.js
 import { useEffect, useState } from "react";
 
 export default function AdminPage() {
@@ -44,6 +44,7 @@ export default function AdminPage() {
         : "https://express-docker-server-production.up.railway.app";
 
     try {
+      console.log("🔎 Submit Data:", data);
       const res = await fetch(`${BASE_URL}/api/problems`, {
         method: "POST",
         headers: {
@@ -104,21 +105,23 @@ export default function AdminPage() {
         <div>
           <label className="block text-sm font-medium mb-2">Category</label>
           <div className="flex flex-wrap gap-2">
-            {menuOptions.map((opt, i) => (
-              <button
-                type="button"
-                key={i}
-                onClick={() => setCategory(opt.Prob_name)}
-                className={`flex items-center gap-2 px-3 py-2 rounded border ${
-                  category === opt.Prob_name
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-300"
-                }`}
-              >
-                <img src={opt.Prob_pic} alt="" className="w-5 h-5" />
-                {opt.Prob_name}
-              </button>
-            ))}
+            {menuOptions
+              .sort((a, b) => a.order - b.order)
+              .map((opt, i) => (
+                <button
+                  type="button"
+                  key={i}
+                  onClick={() => setCategory(opt.Prob_name)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded border ${
+                    category === opt.Prob_name
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                >
+                  <img src={opt.Prob_pic} alt="" className="w-5 h-5" />
+                  {opt.Prob_name}
+                </button>
+              ))}
           </div>
         </div>
 

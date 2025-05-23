@@ -4,15 +4,23 @@ const ListButtonComplaint = ({ category, selectedProblems, setSelectedProblems }
   const [problemOptions, setProblemOptions] = useState([]);
 
   useEffect(() => {
+    
     fetch(`/api/problems?category=${encodeURIComponent(category)}`)
       .then(res => res.json())
       .then(data => {
+        
         const filtered = Array.isArray(data)
           ? data.filter(item => item.category === category)
           : [];
-        setProblemOptions(filtered);
+        const sorted = filtered.sort((a, b) => {
+          const orderA = typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER;
+          const orderB = typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER;
+          return orderA - orderB;
+        });
+        setProblemOptions(sorted);
       });
   }, [category]);
+  
 
   return (
     <div className="flex flex-col space-y-2 mt-4">

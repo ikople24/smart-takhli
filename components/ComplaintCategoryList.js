@@ -20,10 +20,16 @@ const ComplaintCategoryList = () => {
     });
 }, []);
 
+  const sortedCategories = [...categories].sort((a, b) => {
+    if (a.order === 6) return 1;
+    if (b.order === 6) return -1;
+    return (a.order || 0) - (b.order || 0);
+  });
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-        {categories.map((item) => (
+        {sortedCategories.map((item) => (
           <div key={item._id} className="flex flex-col items-center space-y-2">
             <button
               onClick={() => setSelectedLabel(item.Prob_name)}
