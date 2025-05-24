@@ -8,6 +8,7 @@ export default function AdminPage() {
   const [items, setItems] = useState([]);
   const [menuOptions, setMenuOptions] = useState([]);
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -28,6 +29,36 @@ export default function AdminPage() {
     };
     fetchItems();
   }, []);
+
+  const handleEdit = (item) => {
+    setLabel(item.label);
+    setIconUrl(item.iconUrl);
+    setCategory(item.category);
+    setIsEditing(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("คุณแน่ใจหรือว่าต้องการลบรายการนี้?")) return;
+
+    const BASE_URL =
+      process.env.NODE_ENV === "development"
+        ? "http://localhost:3004"
+        : "https://express-docker-server-production.up.railway.app";
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/problems/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      const updated = await fetch("/api/problems").then((r) => r.json());
+      setItems(updated);
+    } catch (err) {
+      console.error("Error deleting:", err);
+      alert("❌ ไม่สามารถลบข้อมูลได้");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,6 +90,7 @@ export default function AdminPage() {
 
       const result = await res.json();
       alert("✅ บันทึกข้อมูลสำเร็จ");
+      setIsEditing(false);
 
       // Reset form
       setLabel("");
@@ -77,28 +109,29 @@ export default function AdminPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Admin Upload Page</h1>
-
-      <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+      <div className={`card bg-base-100 shadow mb-6 ${isEditing ? 'border-2 border-orange-400' : ''}`}>
+        <div className="card-body">
+          <h1 className="text-xl font-bold mb-4">Admin Upload Page</h1>
+          <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium">Label</label>
           <input
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="input input-bordered input-primary w-full"
             placeholder="เช่น ไฟไม่ติด"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium">Icon URL</label>
-          <input
-            type="text"
+          <textarea
             value={iconUrl}
             onChange={(e) => setIconUrl(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="textarea textarea-bordered textarea-primary w-full"
             placeholder="https://..."
+            rows={3}
           />
         </div>
 
@@ -125,13 +158,29 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          บันทึกข้อมูล
-        </button>
-      </form>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="btn btn-outline btn-warning"
+            onClick={() => {
+              setLabel("");
+              setIconUrl("");
+              setCategory("");
+              setIsEditing(false);
+            }}
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            className="btn btn-accent ml-2"
+          >
+            บันทึกข้อมูล
+          </button>
+        </div>
+          </form>
+        </div>
+      </div>
 
       <div>
         <h2 className="text-lg font-semibold mb-2">รายการที่มีอยู่ในระบบ</h2>
@@ -167,13 +216,14 @@ export default function AdminPage() {
           })}
         </div>
 
-        <table className="min-w-full border text-sm">
-          <thead className="bg-gray-100">
+        <table className="table table-zebra w-full">
+          <thead>
             <tr>
-              <th className="border px-3 py-2">Label</th>
-              <th className="border px-3 py-2">Icon</th>
-              <th className="border px-3 py-2">Category</th>
-              <th className="border px-3 py-2">Active</th>
+              <th className="text-center">Label</th>
+              <th className="text-center">Icon</th>
+              <th className="text-center w-40">Category</th>
+              <th className="text-center">Active</th>
+              <th className="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -186,13 +236,27 @@ export default function AdminPage() {
               .sort((a, b) => (b._id > a._id ? 1 : -1))
               .map((item, index) => (
                 <tr key={index}>
-                  <td className="border px-3 py-1">{item.label}</td>
-                  <td className="border px-3 py-1">
-                    <img src={item.iconUrl} alt="icon" className="h-6 w-6" />
+                  <td>{item.label}</td>
+                  <td>
+                    <img src={item.iconUrl} alt="icon" className="h-8 w-8" />
                   </td>
-                  <td className="border px-3 py-1">{item.category}</td>
-                  <td className="border px-3 py-1">
-                    {item.active ? "✅" : "❌"}
+                  <td className="w-40">{item.category}</td>
+                  <td className="text-center align-middle">{item.active ? "✅" : "❌"}</td>
+                  <td className="space-x-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="btn btn-outline btn-info btn-sm"
+                      >
+                        แก้ไข
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item._id)}
+                        className="btn btn-outline btn-error btn-sm"
+                      >
+                        ลบ
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
