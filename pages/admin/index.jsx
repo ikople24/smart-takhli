@@ -1,28 +1,27 @@
 //admin/index.js
 import { useEffect, useState } from "react";
+import { useMenuStore } from "@/stores/useMenuStore";
 
 export default function AdminPage() {
   const [label, setLabel] = useState("");
   const [iconUrl, setIconUrl] = useState("");
   const [category, setCategory] = useState("");
   const [items, setItems] = useState([]);
-  const [menuOptions, setMenuOptions] = useState([]);
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
   const [isEditing, setIsEditing] = useState(false);
+
+  const { menu, fetchMenu, menuLoading } = useMenuStore();
+
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const [resProblems, resMenus] = await Promise.all([
-          fetch("/api/problems"),
-          fetch("/api/menu"),
-        ]);
-        const [dataProblems, dataMenus] = await Promise.all([
-          resProblems.json(),
-          resMenus.json(),
-        ]);
+        const resProblems = await fetch("/api/problems");
+        const dataProblems = await resProblems.json();
         setItems(dataProblems);
-        setMenuOptions(dataMenus);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       }
@@ -107,6 +106,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
+
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json();
+      setIconUrl(data.secure_url);
+    } catch (error) {
+      console.error("Image upload failed", error);
+      alert("❌ Upload failed");
+    }
+  };
+
   return (
     <div className="p-4">
       <div className={`card bg-base-100 shadow mb-6 ${isEditing ? 'border-2 border-orange-400' : ''}`}>
@@ -133,28 +156,42 @@ export default function AdminPage() {
             placeholder="https://..."
             rows={3}
           />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="mt-2 file-input file-input-bordered w-full"
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-2">Category</label>
           <div className="flex flex-wrap gap-2">
-            {menuOptions
-              .sort((a, b) => a.order - b.order)
-              .map((opt, i) => (
-                <button
-                  type="button"
-                  key={i}
-                  onClick={() => setCategory(opt.Prob_name)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded border ${
-                    category === opt.Prob_name
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-gray-700 border-gray-300"
-                  }`}
-                >
-                  <img src={opt.Prob_pic} alt="" className="w-5 h-5" />
-                  {opt.Prob_name}
-                </button>
-              ))}
+            {menuLoading ? (
+              <div className="flex flex-wrap gap-2">
+                {Array(4).fill(0).map((_, i) => (
+                  <div key={i} className="skeleton w-24 h-10 rounded"></div>
+                ))}
+              </div>
+            ) : (
+              menu
+                .sort((a, b) => a.order - b.order)
+                .map((opt, i) => (
+                  <button
+                    type="button"
+                    key={i}
+                    onClick={() => setCategory(opt.Prob_name)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded border ${
+                      category === opt.Prob_name
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    <img src={opt.Prob_pic} alt="" className="w-5 h-5" />
+                    {opt.Prob_name}
+                  </button>
+                ))
+            )}
           </div>
         </div>
 
@@ -196,7 +233,7 @@ export default function AdminPage() {
           >
             ทั้งหมด ({items.length})
           </button>
-          {menuOptions.map((opt, i) => {
+          {menu.map((opt, i) => {
             const count = items.filter(
               (item) => item.category === opt.Prob_name
             ).length;
