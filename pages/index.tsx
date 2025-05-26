@@ -50,7 +50,7 @@ export default function Home() {
     console.log("📦 menu from store:", menu);
   }, [menu]);
   return (
-    <div className="min-h-screen bg-white flex flex-col -mt-4 min-w-[490px]">
+    <div className="min-h-screen bg-white flex flex-col -mt-8 w-full max-w-screen-sm min-w-[320px] mx-auto overflow-x-hidden">
       {/* <h1 className="fixed top-0 left-0 right-0 z-50 bg-white/30 backdrop-blur-md border border-white/40 text-center text-2xl font-semibold text-blue-950 text-shadow-gray-800 shadow-lg py-4">
         SMART-NAMPHRAE
       </h1> */}
@@ -64,7 +64,7 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
-      <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-4xl">
+      <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">
             <div className="w-12 h-12 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
@@ -78,7 +78,7 @@ export default function Home() {
                   className="flex flex-col items-center rounded-xl"
                   onClick={() => handleOpenModal(item.Prob_name)}
                 >
-                  <div className="w-50 h-50 rounded-full overflow-hidden mb-2 transform transition duration-200 hover:scale-105 relative">
+                  <div className="w-40 h-40 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-2 transform transition duration-200 hover:scale-105 relative">
                     <img
                       src={item.Prob_pic}
                       alt={item.Prob_name}
