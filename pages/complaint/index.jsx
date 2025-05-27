@@ -29,7 +29,7 @@ export default function ComplaintListPage() {
       <Head>
         <title>Smart-Namphare</title>
       </Head>
-      <div className="w-full flex justify-center px-4 py-6 min-h-[750px] mx-auto">
+      <div className="w-full flex justify-center px-4 py-6 mx-auto">
         <div className="grid grid-cols-1 gap-4 max-w-screen-xl mx-auto w-full">
           {loading ? (
             <p>กำลังโหลดข้อมูล...</p>
