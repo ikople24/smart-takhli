@@ -20,6 +20,18 @@ body {
     transform: scale(1);
   }
 }
+@keyframes slide-x {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-slide-x {
+  animation: slide-x 10s linear infinite;
+}
+
+.pause {
+  animation-play-state: paused !important;
+}
 @plugin "daisyui/theme" {
   name: "mytheme";
   default: true; /* set as default */

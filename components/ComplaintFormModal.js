@@ -97,6 +97,7 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
       phone,
       community: selectedCommunity,
       problems: selectedProblems,
+      category: selectedLabel,
       images: imageUrls,
       detail,
       location,
@@ -104,6 +105,8 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
       officer: '',
       updatedAt: new Date(),
     };
+
+    console.log("📤 Payload ส่งไป backend:", payload);
 
     try {
       const res = await fetch('/api/submit-report', {

@@ -5,6 +5,7 @@ const SubmittedReportSchema = new mongoose.Schema({
   phone: String,
   community: String,
   problems: [String],
+  category: String,
   images: [String],
   detail: String,
   location: {

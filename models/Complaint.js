@@ -5,14 +5,15 @@ const SubmittedReportSchema = new mongoose.Schema({
   phone: { type: String },
   community: { type: String },
   problems: { type: [String], default: [] },
+  category: {type:String},
   images: { type: [String], default: [] },
   detail: { type: String },
   location: {
     lat: { type: Number },
-    lng: { type: Number },
-    status: { type: String },
-    officer: { type: String }
+    lng: { type: Number }
   },
+  status: { type: String },
+  officer: { type: String },
   updatedAt: { type: Date },
   timestamp: { type: Date }
 }, {
