@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 const ListButtonComplaint = ({ category, selectedProblems, setSelectedProblems }) => {
@@ -44,9 +45,11 @@ const ListButtonComplaint = ({ category, selectedProblems, setSelectedProblems }
             }
           >
             {item.iconUrl && (
-              <img
+              <Image
                 src={item.iconUrl}
-                alt=""
+                alt={item.label}
+                width={20}
+                height={20}
                 className="w-5 h-5 rounded-full"
               />
             )}

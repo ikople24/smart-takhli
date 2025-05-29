@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
 import Footer from "@/components/Footer";
@@ -7,7 +8,12 @@ export default function Home() {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
 
-  const texts = ["ร้องทุกข์ - ร้องเรียน", "แจ้งเหตุด่วน - รายงานปัญหา", "เทศบาลตำบลน้ำแพร่พัฒนา", "Smart City Award 2024"];
+  const texts = useMemo(() => [
+    "ร้องทุกข์ - ร้องเรียน",
+    "แจ้งเหตุด่วน - รายงานปัญหา",
+    "เทศบาลตำบลน้ำแพร่พัฒนา",
+    "Smart City Award 2024"
+  ], []);
   const [displayText, setDisplayText] = useState("");
   const [textIndex, setTextIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
@@ -29,7 +35,7 @@ export default function Home() {
       }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [charIndex, textIndex]);
+  }, [charIndex, textIndex, texts]);
 
   useEffect(() => {
     if (!hasFetched && menu.length === 0 && !menuLoading) {
@@ -79,9 +85,11 @@ export default function Home() {
                   onClick={() => handleOpenModal(item.Prob_name)}
                 >
                   <div className="w-40 h-40 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-2 transform transition duration-200 hover:scale-105 relative">
-                    <img
+                    <Image
                       src={item.Prob_pic}
                       alt={item.Prob_name}
+                      width={128}
+                      height={128}
                       className="w-full h-full object-cover"
                     />
                   </div>

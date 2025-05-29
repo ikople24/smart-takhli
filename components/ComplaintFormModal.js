@@ -7,6 +7,7 @@ import { useProblemOptionStore } from '@/stores/useProblemOptionStore';
 import ImageUploads from './ImageUploads';
 import Swal from 'sweetalert2';
 import { z } from 'zod';
+import Image from 'next/image';
 const LocationConfirm = dynamic(() => import('./LocationConfirm'), { ssr: false });
 
 const schema = z.object({
@@ -31,9 +32,9 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
 
   const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
 
-  useEffect(() => {
+useEffect(() => {
     fetchProblemOptions();
-  }, []);
+  }, [fetchProblemOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -219,7 +220,13 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <img src={option.iconUrl} alt={option.label} className="w-5 h-5" />
+                      <Image
+                        src={option.iconUrl}
+                        alt={option.label}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5"
+                      />
                       <span>{option.label}</span>
                     </div>
                   </button>

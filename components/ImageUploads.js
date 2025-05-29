@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
@@ -79,9 +80,11 @@ const ImageUploads = ({ onChange }) => {
         <div className="mt-3 grid grid-cols-3 gap-3">
           {previews.map((p, index) => (
             <div key={index} className="relative group">
-              <img
+              <Image
                 src={p.url}
                 alt={`preview-${index}`}
+                width={300}
+                height={96}
                 className="w-full h-24 object-cover rounded border border-gray-300 p-1 bg-white shadow-sm"
               />
               <button

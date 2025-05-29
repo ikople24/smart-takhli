@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     try {
       const options = await ProblemOption.find({});
       res.status(200).json(options);
-    } catch (err) {
+    } catch {
       res.status(500).json({ message: "Error fetching problem options" });
     }
   } else {
