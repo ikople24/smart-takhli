@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import CommunitySelector from './CommunitySelector';
 import ReporterInput from './ReporterInput';
-import ListButtonComplaint from './ListButtonComplaint';
+// import ListButtonComplaint from './ListButtonComplaint';
+import { useProblemOptionStore } from '@/stores/useProblemOptionStore';
 import ImageUploads from './ImageUploads';
 import Swal from 'sweetalert2';
 import { z } from 'zod';
@@ -27,6 +28,12 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [formErrors, setFormErrors] = useState({});
   const reporterValidRef = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
+
+  useEffect(() => {
+    fetchProblemOptions();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,7 +103,10 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
       fullName,
       phone,
       community: selectedCommunity,
-      problems: selectedProblems,
+      problems: selectedProblems.map(id => {
+        const match = problemOptions.find(opt => opt._id === id);
+        return match ? match.label : id;
+      }),
       category: selectedLabel,
       images: imageUrls,
       detail,
@@ -190,11 +200,32 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
             onSelect={handleCommunitySelect}
             error={formErrors.community?.[0]}
           />
-          <ListButtonComplaint
-            category={selectedLabel}
-            selectedProblems={selectedProblems}
-            setSelectedProblems={setSelectedProblems}
-          />
+          <div>
+            <p className="font-semibold text-sm text-gray-700">2.เลือกรายการปัญหา</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {problemOptions
+                .filter(option => option.category === selectedLabel)
+                .map(option => (
+                  <button
+                    key={option._id}
+                    type="button"
+                    className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border whitespace-nowrap ${selectedProblems.includes(option._id) ? 'bg-blue-100 text-black border-blue-300' : 'border-gray-300 text-black hover:bg-gray-100'}`}
+                    onClick={() => {
+                      setSelectedProblems(prev =>
+                        prev.includes(option._id)
+                          ? prev.filter(id => id !== option._id)
+                          : [...prev, option._id]
+                      );
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <img src={option.iconUrl} alt={option.label} className="w-5 h-5" />
+                      <span>{option.label}</span>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
           <ImageUploads onChange={(urls) => setImageUrls(urls)} />
           <ReporterInput
             prefix={prefix}
