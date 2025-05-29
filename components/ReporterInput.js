@@ -36,7 +36,7 @@ const ReporterInput = ({
       setErrors({});
       setValid(true);
     }
-  }, [validateTrigger]);
+  }, [validateTrigger, prefix, fullName, address, phone, detail, setValid]);
 
   return (
     <div className="flex flex-col space-y-2">

@@ -39,7 +39,7 @@ const LocationConfirm = ({ useCurrent, onToggle, location, setLocation, formSubm
                 }
             );
         }
-    }, [useCurrent]);
+    }, [useCurrent, onToggle, setLocation]);
 
     return (
         <div className="space-y-2">
