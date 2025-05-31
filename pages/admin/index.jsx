@@ -1,33 +1,25 @@
 //admin/index.js
 import { useEffect, useState } from "react";
 import { useMenuStore } from "@/stores/useMenuStore";
+import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 
 export default function AdminPage() {
   const [label, setLabel] = useState("");
   const [iconUrl, setIconUrl] = useState("");
   const [category, setCategory] = useState("");
-  const [items, setItems] = useState([]);
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
   const [isEditing, setIsEditing] = useState(false);
 
   const { menu, fetchMenu, menuLoading } = useMenuStore();
+  const { problemOptions, fetchProblemOptions, problemLoading } = useProblemOptionStore();
 
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
 
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const resProblems = await fetch("/api/problems");
-        const dataProblems = await resProblems.json();
-        setItems(dataProblems);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      }
-    };
-    fetchItems();
-  }, []);
+    fetchProblemOptions();
+  }, [fetchProblemOptions]);
 
   const handleEdit = (item) => {
     setLabel(item.label);
@@ -52,7 +44,8 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Failed to delete");
 
       const updated = await fetch("/api/problems").then((r) => r.json());
-      setItems(updated);
+      // Replace setItems with update to problemOptions store
+      fetchProblemOptions();
     } catch (err) {
       console.error("Error deleting:", err);
       alert("❌ ไม่สามารถลบข้อมูลได้");
@@ -97,9 +90,7 @@ export default function AdminPage() {
       setCategory("");
 
       // Refresh data
-      const refetch = await fetch("/api/problems");
-      const updated = await refetch.json();
-      setItems(updated);
+      await fetchProblemOptions();
     } catch (err) {
       console.error("Error submitting:", err);
       alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล");
@@ -223,34 +214,44 @@ export default function AdminPage() {
         <h2 className="text-lg font-semibold mb-2">รายการที่มีอยู่ในระบบ</h2>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setFilterCategory("ทั้งหมด")}
-            className={`px-3 py-1 rounded border ${
-              filterCategory === "ทั้งหมด"
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300"
-            }`}
-          >
-            ทั้งหมด ({items.length})
-          </button>
-          {menu.map((opt, i) => {
-            const count = items.filter(
-              (item) => item.category === opt.Prob_name
-            ).length;
-            return (
+          {problemLoading ? (
+            <div className="flex flex-wrap gap-2">
+              {Array(4).fill(0).map((_, i) => (
+                <div key={i} className="skeleton w-24 h-8 rounded"></div>
+              ))}
+            </div>
+          ) : (
+            <>
               <button
-                key={i}
-                onClick={() => setFilterCategory(opt.Prob_name)}
+                onClick={() => setFilterCategory("ทั้งหมด")}
                 className={`px-3 py-1 rounded border ${
-                  filterCategory === opt.Prob_name
+                  filterCategory === "ทั้งหมด"
                     ? "bg-blue-600 text-white border-blue-600"
                     : "bg-white text-gray-700 border-gray-300"
                 }`}
               >
-                {opt.Prob_name} ({count})
+                ทั้งหมด ({problemOptions.length})
               </button>
-            );
-          })}
+              {menu.map((opt, i) => {
+                const count = problemOptions.filter(
+                  (item) => item.category === opt.Prob_name
+                ).length;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setFilterCategory(opt.Prob_name)}
+                    className={`px-3 py-1 rounded border ${
+                      filterCategory === opt.Prob_name
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    {opt.Prob_name} ({count})
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
 
         <table className="table table-zebra w-full">
@@ -264,7 +265,7 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {items
+            {problemOptions
               .filter(
                 (item) =>
                   filterCategory === "ทั้งหมด" ||
