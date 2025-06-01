@@ -1,3 +1,4 @@
+//api/complaints/index.js
 import dbConnect from '@/lib/dbConnect';
 import Complaint from '@/models/Complaint';
 
@@ -6,7 +7,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const complaints = await Complaint.find();
+      const isAdmin = req.query.role === 'admin';
+      const projection = isAdmin ? {} : { fullName: 0, phone: 0 };
+      const complaints = await Complaint.find({}, projection);
+
       return res.status(200).json(complaints);
     } catch (err) {
       console.error('❌ Failed to fetch complaints:', err);

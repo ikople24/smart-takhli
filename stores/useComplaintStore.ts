@@ -22,8 +22,10 @@ const useComplaintStore = create<ComplaintState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await axios.get<Complaint[]>('/api/complaints');
+      console.log("(store) fetched complaints ✅", res.data);
       set({ complaints: res.data, isLoading: false });
     } catch (err: any) {
+      console.error("(store) fetch error ❌", err.message);
       set({ error: err.message || 'Failed to fetch', isLoading: false });
     }
   }

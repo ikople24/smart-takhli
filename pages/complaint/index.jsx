@@ -8,16 +8,21 @@ import "swiper/css/autoplay";
 import { Autoplay } from "swiper/modules";
 
 export default function ComplaintListPage() {
-  const { fetchComplaints } = useComplaintStore();
+  const { complaints, fetchComplaints } = useComplaintStore();
   const { menu, fetchMenu } = useMenuStore();
   const [loading, setLoading] = useState(true);
-  const [complaints, setComplaints] = useState([]);
+  const [expandedIds, setExpandedIds] = useState([]);
+  const toggleExpand = (id) => {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   useEffect(() => {
     const loadData = async () => {
+      console.log("📤 เรียก API /api/complaints...");
       await fetchComplaints();
-      const fetched = await fetch("/api/complaints").then(res => res.json());
-      setComplaints(fetched.map(c => ({ ...c, showFull: false })));
+      console.log("✅ ดึง complaints เสร็จ");
       setLoading(false);
     };
     loadData();
@@ -35,7 +40,6 @@ export default function ComplaintListPage() {
             <p>กำลังโหลดข้อมูล...</p>
           ) : (
             complaints.map((item) => {
-              console.log(item);
               return (
                 <div key={item._id} className="card w-full bg-white shadow-md overflow-hidden flex flex-col md:flex-row">
                 <figure className="md:w-1/2 w-full h-48 md:h-auto relative overflow-hidden">
@@ -65,8 +69,8 @@ export default function ComplaintListPage() {
                     </h2>
                     <span className="badge badge-secondary text-xs whitespace-nowrap">{item.community}</span>
                   </div>
-                  <p className={`mt-2 text-sm text-gray-600 ${item.showFull ? '' : 'line-clamp-3'}`}>
-                    {item.detail}
+                  <p className="mt-2 text-sm text-gray-600">
+                    {expandedIds.includes(item._id) ? item.detail : `${item.detail.slice(0, 100)}...`}
                     <span className="ml-1 text-gray-400 text-xs">
                       ({new Date(item.updatedAt).toLocaleDateString("th-TH")})
                     </span>
@@ -74,16 +78,10 @@ export default function ComplaintListPage() {
                   {item.detail.length > 100 && (
                     <div className="text-right">
                       <button
-                        onClick={() =>
-                          setComplaints((prev) =>
-                            prev.map((c) =>
-                              c._id === item._id ? { ...c, showFull: !c.showFull } : c
-                            )
-                          )
-                        }
                         className="text-xs text-blue-500 mt-1 underline"
+                        onClick={() => toggleExpand(item._id)}
                       >
-                        {item.showFull ? "แสดงน้อยลง" : "..เพิ่มเติม"}
+                        {expandedIds.includes(item._id) ? "ย่อ" : "..เพิ่มเติม"}
                       </button>
                     </div>
                   )}

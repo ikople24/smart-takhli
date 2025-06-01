@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
+
 
 export default function RegisterUserPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const { menu, fetchMenu } = useMenuStore();
 
   const [form, setForm] = useState({
@@ -27,8 +29,15 @@ export default function RegisterUserPage() {
   useEffect(() => {
     const checkUser = async () => {
       if (!user?.id) return;
+
       try {
-        const res = await fetch(`/api/users/get-by-clerkId?clerkId=${user.id}`);
+        const token = await getToken();
+        const res = await fetch("/api/users/get-by-clerkId", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         const data = await res.json();
         if (res.ok && data.user) {
           setExistingUser(data.user);
