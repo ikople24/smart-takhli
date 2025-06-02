@@ -1,20 +1,35 @@
 import React from "react";
-import { AlignJustify } from "lucide-react";
 import { UserButton, useUser, SignInButton } from "@clerk/nextjs";
+import AdminDropdownMenu from "./AdminDropdownMenu";
 
 const TopNavbar = () => {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+
   return (
-    <header className="w-full min-w-[320px] max-w-screen-sm mx-auto bg-white/30 backdrop-blur-md border-b border-white/40 shadow-md px-4 py-4 flex items-center justify-between sticky top-0 z-50">
-      <div className="text-xl font-bold text-indigo-600 flex items-center gap-2">
-        <AlignJustify className="w-6 h-6 text-gray-400" />
+    <header className="w-full min-w-[320px] max-w-screen-sm mx-auto bg-white/30 backdrop-blur-md border-b border-white/40 shadow-md px-4 py-4 flex items-center justify-center relative sticky top-0 z-50">
+      <div className="absolute left-4">
+        <AdminDropdownMenu
+          show={user?.publicMetadata?.role === "admin"}
+          links={[
+            { path: "/admin", label: "🛠 ตั้งค่าหน้าจอ" },
+            { path: "/register-user", label: "👥 จัดการผู้ใช้งาน" },
+          ]}
+        />
       </div>
-      <div className="flex-1 text-2xl font-semibold text-blue-950 flex justify-center items-center">
+      <div className="text-2xl font-semibold text-blue-950 flex justify-center items-center">
         <span className="text-base sm:text-lg md:text-xl lg:text-2xl">SMART-NAMPHRAE</span>
       </div>
-      <div className="col-start-3 flex justify-end">
+      <div className="absolute right-4 flex items-center space-x-2">
         {isSignedIn ? (
-          <UserButton afterSignOutUrl="/sign-in" />
+          <>
+            {isSignedIn && user && (
+              <div className="hidden sm:flex flex-col items-end text-xs text-gray-500">
+                <span className="text-sm font-medium text-gray-700">{user?.fullName || "name"}</span>
+                <span className="text-green-600">{user?.publicMetadata?.role || "User"}</span>
+              </div>
+            )}
+            <UserButton afterSignOutUrl="/" />
+          </>
         ) : (
           <SignInButton mode="modal">
             <button

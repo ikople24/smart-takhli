@@ -1,3 +1,4 @@
+//pages/api/users/create.js
 import axios from "axios";
 import { getAuth } from "@clerk/nextjs/server";
 
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
   const token = await getToken();
 
   try {
-    const response = await axios.post(`http://localhost:3004/api/users/create`, req.body, {
+    const response = await axios.post(`${process.env.BACKEND_API_URL}/api/users/create`, req.body, {
       headers: {
         Authorization: `Bearer ${token}`
       }

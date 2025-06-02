@@ -1,3 +1,4 @@
+//pages/register-user.jsx
 import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
