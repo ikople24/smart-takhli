@@ -1,19 +1,166 @@
 import { Dialog } from "@headlessui/react";
+import { useMenuStore } from "@/stores/useMenuStore";
+import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
+import { useEffect, useState } from "react";
 
 export default function CardModalDetail({ modalData, onClose }) {
+  const { menu } = useMenuStore();
+  const { problemOptions } = useProblemOptionStore();
+  const [categoryIcon, setCategoryIcon] = useState(null);
+  const [previewImg, setPreviewImg] = useState(null);
+
+  useEffect(() => {
+    if (modalData?.category && menu?.length) {
+      const matched = menu.find((m) => m.Prob_name === modalData.category);
+      if (matched) {
+        setCategoryIcon(matched.Prob_pic);
+      }
+    }
+  }, [modalData, menu]);
+
   if (!modalData) return null;
 
   return (
-    <Dialog open={!!modalData} onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10">
-      <Dialog.Panel className="bg-white max-w-lg w-full p-6 rounded shadow">
-        <Dialog.Title className="text-xl font-bold mb-4">รายละเอียดคำร้อง</Dialog.Title>
-        <p><strong>หัวข้อ:</strong> {modalData.title || modalData.problems?.[0]}</p>
-        <p className="mt-2"><strong>รายละเอียด:</strong> {modalData.detail}</p>
-        <p className="mt-2 text-sm text-gray-500">อัปเดตเมื่อ: {new Date(modalData.updatedAt).toLocaleDateString("th-TH")}</p>
-        <div className="mt-4 text-right">
-          <button onClick={onClose} className="btn btn-sm btn-outline">ปิด</button>
+    <>
+      <Dialog
+        as="div"
+        open={!!modalData}
+        onClose={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
+      >
+        <Dialog.Panel className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden">
+          {modalData.images?.[0] && (
+            <div className="relative w-full h-48 rounded-b-xl overflow-hidden">
+              <div className="carousel w-full h-full">
+                {modalData.images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    id={`slide-${idx}`}
+                    className="carousel-item relative w-full h-48"
+                  >
+                    <div className="relative w-full h-full">
+                      <img
+                        src={img}
+                        alt={`slide-${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        className="absolute bottom-2 right-2 z-20 bg-white/20 hover:bg-white/40 border-white/30 text-white text-xl p-1 rounded-full backdrop-blur"
+                        title="ดูรูปเต็มจอ"
+                        onClick={() => setPreviewImg(img)}
+                      >
+                        🔍
+                      </button>
+                    </div>
+                    <div className="absolute flex justify-between transform -translate-y-1/2 left-2 right-2 top-1/2 z-10">
+                      <a
+                        href={`#slide-${(idx - 1 + modalData.images.length) % modalData.images.length}`}
+                        className="btn btn-circle btn-sm bg-white/20 hover:bg-white/40 border-white/30 text-white backdrop-blur"
+                      >
+                        ❮
+                      </a>
+                      <a
+                        href={`#slide-${(idx + 1) % modalData.images.length}`}
+                        className="btn btn-circle btn-sm bg-white/20 hover:bg-white/40 border-white/30 text-white backdrop-blur"
+                      >
+                        ❯
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="absolute bottom-0 left-0 z-10 flex flex-col items-start bg-black/50 backdrop-blur-none p-2 rounded-lg gap-1 w-full">
+                <div className="flex flex-col items-start w-full gap-1">
+                  <div className="flex items-center w-full gap-3">
+                    {categoryIcon && (
+                      <img
+                        src={categoryIcon}
+                        alt="category icon"
+                        className="w-13 h-13 object-contain"
+                      />
+                    )}
+                    <div>
+                      <span className="text-white text-lg font-semibold flex items-center gap-1">
+                        <span className="text-yellow-300">📍</span> {modalData.community}
+                      </span>
+                      <div className="flex items-center gap-2 text-white text-xs mt-1">
+                        <span>
+                          {new Date(
+                            modalData.createdAt || modalData.updatedAt
+                          ).toLocaleDateString("th-TH", {
+                            year: "2-digit",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                        {modalData.status && (
+                          <span className="border border-yellow-400 text-yellow-400 font-semibold px-3 py-1 rounded-full text-xs bg-yellow-400/10">
+                            ● {modalData.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="p-4">
+            <div className="mb-3">
+              <div className="font-semibold mb-1">ปัญหาที่พบ</div>
+              <div className="flex flex-wrap gap-2">
+                {modalData.problems?.map((p, idx) => {
+                  const matched = problemOptions.find((opt) => opt.label === p);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1 border border-gray-300 px-3 py-1 rounded-full shadow-sm bg-white text-sm text-gray-800"
+                    >
+                      {matched?.iconUrl && (
+                        <img
+                          src={matched.iconUrl}
+                          alt={p}
+                          className="w-4 h-4 object-contain"
+                        />
+                      )}
+                      <span>{p}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-1">รายละเอียด</div>
+              <div className="bg-yellow-50 p-3 text-sm text-gray-700 rounded border">
+                {modalData.detail}
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <button onClick={onClose} className="btn btn-sm btn-outline">
+                ปิด
+              </button>
+            </div>
+          </div>
+        </Dialog.Panel>
+      </Dialog>
+
+      {previewImg && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative">
+            <img
+              src={previewImg}
+              alt="Preview"
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
+            />
+            <button
+              onClick={() => setPreviewImg(null)}
+              className="absolute top-2 right-2 bg-white/80 hover:bg-white text-black rounded-full px-2 py-1 text-sm shadow"
+            >
+              ✖
+            </button>
+          </div>
         </div>
-      </Dialog.Panel>
-    </Dialog>
+      )}
+    </>
   );
 }
