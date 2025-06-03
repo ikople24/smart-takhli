@@ -5,10 +5,14 @@ import { useEffect, useState } from "react";
 
 export default function CardModalDetail({ modalData, onClose }) {
   const { menu } = useMenuStore();
-  const { problemOptions } = useProblemOptionStore();
+  const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
   const [categoryIcon, setCategoryIcon] = useState(null);
   const [previewImg, setPreviewImg] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    fetchProblemOptions();
+  }, []);
 
   useEffect(() => {
     if (modalData?.category && menu?.length) {

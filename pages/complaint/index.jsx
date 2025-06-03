@@ -2,6 +2,7 @@ import Head from "next/head";
 import { useEffect, useState } from "react";
 import useComplaintStore from "@/stores/useComplaintStore";
 import { useMenuStore } from "@/stores/useMenuStore";
+import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/autoplay";
@@ -11,6 +12,7 @@ import CardModalDetail from "@/components/CardModalDetail";
 export default function ComplaintListPage() {
   const { complaints, fetchComplaints } = useComplaintStore();
   const { menu, fetchMenu } = useMenuStore();
+  const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState([]);
   const [modalData, setModalData] = useState(null);
@@ -24,12 +26,13 @@ export default function ComplaintListPage() {
     const loadData = async () => {
       console.log("📤 เรียก API /api/complaints...");
       await fetchComplaints();
+      await fetchProblemOptions(); // added
       console.log("✅ ดึง complaints เสร็จ");
       setLoading(false);
     };
     loadData();
     fetchMenu(); // Ensure menu is fetched and available
-  }, [fetchComplaints, fetchMenu]);
+  }, [fetchComplaints, fetchMenu, fetchProblemOptions]);
 
   return (
     <>
@@ -96,11 +99,20 @@ export default function ComplaintListPage() {
                         </div>
                       )}
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {item.problems?.map((prob, i) => (
-                          <span key={i} className="badge badge-outline text-xs">
-                            {prob}
-                          </span>
-                        ))}
+                        {item.problems?.map((prob, i) => {
+                          const found = problemOptions.find((opt) => opt.label === prob);
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-1 px-2 py-1 border rounded-full text-xs border-gray-300 bg-white/50 backdrop-blur-sm"
+                            >
+                              {found?.iconUrl && (
+                                <img src={found.iconUrl} alt={prob} className="w-4 h-4" />
+                              )}
+                              <span>{prob}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                       <div className="mt-auto flex items-center gap-3">
                         {item.category && (
