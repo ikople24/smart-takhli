@@ -5,6 +5,6 @@ export default clerkMiddleware();
 export const config = {
   matcher: [
     // ตรวจสอบเฉพาะเส้นทางที่ไม่ใช่ public
-    '/((?!_next|favicon.ico|register-user|api/users/create).*)',
+    "/((?!_next|static|favicon.ico).*)",
   ],
 };

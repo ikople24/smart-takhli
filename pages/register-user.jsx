@@ -1,4 +1,3 @@
-//pages/register-user.jsx
 import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
@@ -24,15 +23,18 @@ export default function RegisterUserPage() {
   const phoneRefs = useRef([]);
 
   useEffect(() => {
-    fetchMenu();
-  }, []);
+    if (user?.id) {
+      fetchMenu();
+    }
+  }, [user?.id]);
 
-  useEffect(() => {
+    useEffect(() => {
     const checkUser = async () => {
       if (!user?.id) return;
 
       try {
         const token = await getToken();
+        const clerkId = user.id;
         const res = await fetch("/api/users/get-by-clerkId", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -48,7 +50,7 @@ export default function RegisterUserPage() {
       }
     };
     checkUser();
-  }, [user]);
+  }, [user?.id, getToken]);
 
   const handleChange = (e) => {
     setForm({

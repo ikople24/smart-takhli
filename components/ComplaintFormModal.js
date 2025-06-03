@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import CommunitySelector from './CommunitySelector';
 import ReporterInput from './ReporterInput';
-// import ListButtonComplaint from './ListButtonComplaint';
+
 import { useProblemOptionStore } from '@/stores/useProblemOptionStore';
 import ImageUploads from './ImageUploads';
 import Swal from 'sweetalert2';

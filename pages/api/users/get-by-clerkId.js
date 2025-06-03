@@ -1,4 +1,3 @@
-//pages/api/users/get-by-clerkId.js
 import axios from 'axios';
 import { getAuth } from "@clerk/nextjs/server";
 
