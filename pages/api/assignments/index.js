@@ -8,7 +8,7 @@ export default async function handler(req, res) {
     try {
       const assignments = await Assignment.find({});
       res.status(200).json(assignments);
-    } catch (err) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch assignments" });
     }
   } else {

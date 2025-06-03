@@ -2,14 +2,7 @@ import { useState } from "react";
 import CardModalDetail from "@/components/CardModalDetail";
 
 export default function ComplaintList({ complaints }) {
-  const [expandedIds, setExpandedIds] = useState([]);
   const [modalData, setModalData] = useState(null);
-
-  const toggleExpand = (id) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
 
   return (
     <div>
