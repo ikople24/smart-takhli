@@ -99,8 +99,8 @@ export default function RegisterUserPage() {
           phone: "",
         });
       } else {
-        if (data.message?.includes("E11000")) {
-          alert("Clerk ID นี้มีอยู่แล้วในระบบ");
+        if (data.message?.includes("duplicate")) {
+          alert("มีผู้ใช้นี้อยู่แล้วในระบบ");
         } else {
           alert("เกิดข้อผิดพลาด: " + data.message);
         }
