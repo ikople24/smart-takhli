@@ -8,6 +8,7 @@ export default function CardModalDetail({ modalData, onClose }) {
   const { problemOptions } = useProblemOptionStore();
   const [categoryIcon, setCategoryIcon] = useState(null);
   const [previewImg, setPreviewImg] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     if (modalData?.category && menu?.length) {
@@ -17,6 +18,11 @@ export default function CardModalDetail({ modalData, onClose }) {
       }
     }
   }, [modalData, menu]);
+
+  useEffect(() => {
+    setPreviewImg(null); // Clear preview image on modalData change
+    setCurrentSlide(0);  // Reset slide index
+  }, [modalData]);
 
   if (!modalData) return null;
 
@@ -35,8 +41,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                 {modalData.images.map((img, idx) => (
                   <div
                     key={idx}
-                    id={`slide-${idx}`}
-                    className="carousel-item relative w-full h-48"
+                    className={`carousel-item relative w-full h-48 ${currentSlide === idx ? 'block' : 'hidden'}`}
                   >
                     <div className="relative w-full h-full">
                       <img
@@ -53,18 +58,22 @@ export default function CardModalDetail({ modalData, onClose }) {
                       </button>
                     </div>
                     <div className="absolute flex justify-between transform -translate-y-1/2 left-2 right-2 top-1/2 z-10">
-                      <a
-                        href={`#slide-${(idx - 1 + modalData.images.length) % modalData.images.length}`}
+                      <button
+                        onClick={() =>
+                          setCurrentSlide((currentSlide - 1 + modalData.images.length) % modalData.images.length)
+                        }
                         className="btn btn-circle btn-sm bg-white/20 hover:bg-white/40 border-white/30 text-white backdrop-blur"
                       >
                         ❮
-                      </a>
-                      <a
-                        href={`#slide-${(idx + 1) % modalData.images.length}`}
+                      </button>
+                      <button
+                        onClick={() =>
+                          setCurrentSlide((currentSlide + 1) % modalData.images.length)
+                        }
                         className="btn btn-circle btn-sm bg-white/20 hover:bg-white/40 border-white/30 text-white backdrop-blur"
                       >
                         ❯
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -136,7 +145,14 @@ export default function CardModalDetail({ modalData, onClose }) {
               </div>
             </div>
             <div className="mt-4 text-center">
-              <button onClick={onClose} className="btn btn-sm btn-outline">
+              <button
+                onClick={() => {
+                  setPreviewImg(null);
+                  setCurrentSlide(0);
+                  onClose();
+                }}
+                className="btn btn-sm btn-outline"
+              >
                 ปิด
               </button>
             </div>
@@ -145,15 +161,21 @@ export default function CardModalDetail({ modalData, onClose }) {
       </Dialog>
 
       {previewImg && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setPreviewImg(null)}
+        >
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
             <img
               src={previewImg}
               alt="Preview"
               className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
             />
             <button
-              onClick={() => setPreviewImg(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImg(null);
+              }}
               className="absolute top-2 right-2 bg-white/80 hover:bg-white text-black rounded-full px-2 py-1 text-sm shadow"
             >
               ✖
