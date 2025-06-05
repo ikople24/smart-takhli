@@ -2,6 +2,7 @@ import { Dialog } from "@headlessui/react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import CardAssignment from "./CardAssignment";
 import CardOfficail from "./CardOfficail";
 
@@ -14,7 +15,7 @@ export default function CardModalDetail({ modalData, onClose }) {
 
   useEffect(() => {
     fetchProblemOptions();
-  }, []);
+  }, [fetchProblemOptions]);
 
   useEffect(() => {
     if (modalData?.category && menu?.length) {
@@ -50,9 +51,10 @@ export default function CardModalDetail({ modalData, onClose }) {
                     className={`carousel-item relative w-full h-48 ${currentSlide === idx ? 'block' : 'hidden'}`}
                   >
                     <div className="relative w-full h-full">
-                      <img
+                      <Image
                         src={img}
                         alt={`slide-${idx}`}
+                        fill
                         className="w-full h-full object-cover"
                       />
                       <button
@@ -88,9 +90,11 @@ export default function CardModalDetail({ modalData, onClose }) {
                 <div className="flex flex-col items-start w-full gap-1">
                   <div className="flex items-center w-full gap-3">
                     {categoryIcon && (
-                      <img
+                      <Image
                         src={categoryIcon}
                         alt="category icon"
+                        width={52}
+                        height={52}
                         className="w-13 h-13 object-contain"
                       />
                     )}
@@ -132,9 +136,11 @@ export default function CardModalDetail({ modalData, onClose }) {
                       className="flex items-center gap-1 border border-gray-300 px-3 py-1 rounded-full shadow-sm bg-white text-sm text-gray-800"
                     >
                       {matched?.iconUrl && (
-                        <img
+                        <Image
                           src={matched.iconUrl}
                           alt={p}
+                          width={16}
+                          height={16}
                           className="w-4 h-4 object-contain"
                         />
                       )}
@@ -175,9 +181,11 @@ export default function CardModalDetail({ modalData, onClose }) {
           onClick={() => setPreviewImg(null)}
         >
           <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <img
+            <Image
               src={previewImg}
               alt="Preview"
+              width={800}
+              height={800}
               className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
             />
             <button

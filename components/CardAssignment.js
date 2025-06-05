@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
 
 export default function CardAssignment({
@@ -24,9 +25,11 @@ export default function CardAssignment({
         <div>
           <h2 className="text-md font-semibold mb-4">การดำเนินการ</h2>
           <div className="relative">
-            <img
+            <Image
               src={mainImage[currentIndex]}
               alt={`Main Image ${currentIndex + 1}`}
+              width={640}
+              height={256}
               className="w-full h-64 object-cover rounded-t-md transition-all duration-500"
             />
             <button
@@ -51,7 +54,13 @@ export default function CardAssignment({
             <div className="space-y-3">
               {smallImages.map((image, index) => (
                 <div key={index} className="flex items-center gap-3">
-                  <img src={image} alt={`Icon ${index + 1}`} className="w-8 h-8" />
+                  <Image
+                    src={image}
+                    alt={`Icon ${index + 1}`}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8"
+                  />
                   <span className="text-sm text-gray-800">{problemTypes[index]}</span>
                   <BadgeCheck className="w-5 h-5 text-green-500 ml-auto" />
                 </div>
