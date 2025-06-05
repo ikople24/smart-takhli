@@ -2,6 +2,8 @@ import { Dialog } from "@headlessui/react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
+import CardAssignment from "./CardAssignment";
+import CardOfficail from "./CardOfficail";
 
 export default function CardModalDetail({ modalData, onClose }) {
   const { menu } = useMenuStore();
@@ -38,7 +40,7 @@ export default function CardModalDetail({ modalData, onClose }) {
         onClose={onClose}
         className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/10"
       >
-        <Dialog.Panel className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden">
+        <Dialog.Panel className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
           {modalData.images?.[0] && (
             <div className="relative w-full h-48 rounded-b-xl overflow-hidden">
               <div className="carousel w-full h-full">
@@ -118,7 +120,7 @@ export default function CardModalDetail({ modalData, onClose }) {
               </div>
             </div>
           )}
-          <div className="p-4">
+          <div className="p-4 space-y-2">
             <div className="mb-3">
               <div className="font-semibold mb-1">ปัญหาที่พบ</div>
               <div className="flex flex-wrap gap-2">
@@ -148,6 +150,8 @@ export default function CardModalDetail({ modalData, onClose }) {
                 {modalData.detail}
               </div>
             </div>
+              <CardOfficail probId={modalData?._id} />
+              <CardAssignment probId={modalData?.probId} />
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
@@ -160,6 +164,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                 ปิด
               </button>
             </div>
+
           </div>
         </Dialog.Panel>
       </Dialog>
