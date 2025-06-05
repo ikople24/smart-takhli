@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     domains: [
       "res.cloudinary.com",
       "storage.googleapis.com",
-      "cdn-icons-png.flaticon.com"
+      "cdn-icons-png.flaticon.com",
     ],
   },
 };
