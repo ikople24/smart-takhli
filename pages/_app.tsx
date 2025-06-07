@@ -9,7 +9,7 @@ function AppContent({ Component, pageProps }: AppProps) {
   const { userId, isLoaded } = useAuth();
   const router = useRouter();
 
-  const isProtected = ["/admin", "/register-user"].some((path) =>
+  const isProtected = ["/admin"].some((path) =>
     router.pathname.startsWith(path)
   );
 
