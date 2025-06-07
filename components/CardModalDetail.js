@@ -55,11 +55,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         src={img}
                         alt={`slide-${idx}`}
                         fill
-<<<<<<< HEAD
-                        className="w-full h-full object-cover"
-=======
                         className="object-cover"
->>>>>>> feature/officer-display
                       />
                       <button
                         className="absolute bottom-2 right-2 z-20 bg-white/20 hover:bg-white/40 border-white/30 text-white text-xl p-1 rounded-full backdrop-blur"
@@ -99,11 +95,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         alt="category icon"
                         width={52}
                         height={52}
-<<<<<<< HEAD
-                        className="w-13 h-13 object-contain"
-=======
                         className="object-contain"
->>>>>>> feature/officer-display
                       />
                     )}
                     <div>
@@ -149,11 +141,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                           alt={p}
                           width={16}
                           height={16}
-<<<<<<< HEAD
-                          className="w-4 h-4 object-contain"
-=======
                           className="object-contain"
->>>>>>> feature/officer-display
                         />
                       )}
                       <span>{p}</span>
@@ -197,13 +185,8 @@ export default function CardModalDetail({ modalData, onClose }) {
               src={previewImg}
               alt="Preview"
               width={800}
-<<<<<<< HEAD
-              height={800}
-              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
-=======
               height={600}
               className="object-contain rounded-lg shadow-lg"
->>>>>>> feature/officer-display
             />
             <button
               onClick={(e) => {
