@@ -1,10 +1,24 @@
 //admin/index.js
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/router";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 
 export default function AdminPage() {
+  const { userId, isLoaded } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      router.replace("/");
+    }
+  }, [isLoaded, userId]);
+
+  if (!isLoaded || !userId) {
+    return <div className="text-center p-8">กำลังโหลด...</div>;
+  }
   const [activeTab, setActiveTab] = useState("problem");
   const [label, setLabel] = useState("");
   const [iconUrl, setIconUrl] = useState("");
