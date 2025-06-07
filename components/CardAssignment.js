@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useState } from "react";
-=======
 import React, { useEffect, useState } from "react";
->>>>>>> feature/officer-display
 import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
@@ -80,17 +76,10 @@ export default function CardAssignment({ probId }) {
           <h2 className="text-md font-semibold mb-4">การดำเนินการ</h2>
           <div className="relative">
             <Image
-<<<<<<< HEAD
-              src={mainImage[currentIndex]}
-              alt={`Main Image ${currentIndex + 1}`}
-              width={640}
-              height={256}
-=======
               src={assignment?.solutionImages?.[currentIndex] ?? ""}
               alt={`Main Image ${currentIndex + 1}`}
               width={800}
               height={400}
->>>>>>> feature/officer-display
               className="w-full h-64 object-cover rounded-t-md transition-all duration-500"
             />
             {assignment?.solutionImages?.length > 1 && (
@@ -119,19 +108,6 @@ export default function CardAssignment({ probId }) {
               วิธีดำเนินการ (ทั้งหมด)
             </div>
             <div className="space-y-3">
-<<<<<<< HEAD
-              {smallImages.map((image, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <Image
-                    src={image}
-                    alt={`Icon ${index + 1}`}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8"
-                  />
-                  <span className="text-sm text-gray-800">{problemTypes[index]}</span>
-                  <BadgeCheck className="w-5 h-5 text-green-500 ml-auto" />
-=======
               {matchedOptions.map((opt) => (
                 <div key={opt.label} className="flex flex-col-2 justify-between items-center gap-3">
                   <div className="flex items-center gap-2">
@@ -145,7 +121,6 @@ export default function CardAssignment({ probId }) {
                     <span className="text-sm text-gray-800">{opt.label}</span>
                   </div>
                   <BadgeCheck className="w-4 h-4 text-green-500" />
->>>>>>> feature/officer-display
                 </div>
               ))}
             </div>
