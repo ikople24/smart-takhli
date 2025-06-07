@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { AlertCircle, MessageCircleHeart } from "lucide-react";
+import Image from 'next/image';
 
 
 export default function CardOfficail(props) {
@@ -21,7 +22,7 @@ export default function CardOfficail(props) {
           const responsibleAssignments = data.filter(
             assignment => assignment.complaintId === props.probId
           );
-          console.log("Filtered assignments by complaintId:", responsibleAssignments);
+          // console.log("Filtered assignments by complaintId:", responsibleAssignments); //debug:
           if (responsibleAssignments.length > 0) {
             setAssignedDate(responsibleAssignments[0].assignedAt);
             setCompletedDate(responsibleAssignments[0].completedAt);
@@ -45,7 +46,7 @@ export default function CardOfficail(props) {
         const matchedUserId = assignments[0].userId;
 
         const officerData = users.find(user => user._id === matchedUserId);
-        console.log("Matched officer:", officerData);
+        // console.log("Matched officer:", officerData); //debug:
 
         if (officerData) {
           setOfficer(officerData);

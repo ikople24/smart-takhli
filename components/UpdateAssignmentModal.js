@@ -1,17 +1,21 @@
+import Image from "next/image";
 import ImageUploads from "./ImageUploads";
 import { useState, useEffect } from "react";
+import { useAdminOptionsStore } from "../stores/useAdminOptionsStore";
 
 export default function UpdateAssignmentModal({ assignment, onClose }) {
   const [note, setNote] = useState(assignment.note || "");
-  const [solution, setSolution] = useState(assignment.solution || "");
+  const [solution, setSolution] = useState(assignment.solution || []);
   const [solutionImages, setSolutionImages] = useState([]);
   const [completedAt, setCompletedAt] = useState(
     assignment.completedAt ? new Date(assignment.completedAt).toISOString().split("T")[0] : ""
   );
+  const { adminOptions } = useAdminOptionsStore();
+  // console.log("adminOptions from store:", adminOptions);
 
   useEffect(() => {
     setNote(assignment.note || "");
-    setSolution(assignment.solution || "");
+    setSolution(Array.isArray(assignment.solution) ? assignment.solution : []);
     setSolutionImages(assignment.solutionImages || []);
     setCompletedAt(
       assignment.completedAt
@@ -19,6 +23,24 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         : ""
     );
   }, [assignment]);
+
+  useEffect(() => {
+    const fetchAdminOptions = async () => {
+      try {
+        const res = await fetch("/api/admin-options");
+        const data = await res.json();
+        // console.log("Fetched raw admin-options:", data); // debug: log
+        if (res.ok && Array.isArray(data)) {
+          useAdminOptionsStore.getState().setAdminOptions(data);
+        } else {
+          console.error("Admin options response is invalid:", data);
+        }
+      } catch (error) {
+        console.error("Error fetching admin options:", error);
+      }
+    };
+    fetchAdminOptions();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,12 +82,41 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
             <label className="label">
               <span className="label-text text-sm font-medium text-gray-800">1. วิธีการแก้ไข</span>
             </label>
-            <input
-              type="text"
-              value={solution}
-              onChange={(e) => setSolution(e.target.value)}
-              className="input input-info input-bordered w-full"
-            />
+            {/* {console.log("Assignment category:", assignment.category)} */}
+            <div className="flex flex-wrap gap-2">
+              {adminOptions
+                .filter(
+                  (opt) =>
+                    opt.menu_category === assignment.category ||
+                    solution.includes(opt.label)
+                )
+                .map((opt) => {
+                  const isSelected = solution.includes(opt.label);
+                  return (
+                    <button
+                      key={opt._id}
+                      type="button"
+                      className={`btn btn-md px-4 py-2 ${isSelected ? "btn-info" : "btn-outline"}`}
+                      onClick={() =>
+                        setSolution((prev) =>
+                          prev.includes(opt.label)
+                            ? prev.filter((item) => item !== opt.label)
+                            : [...prev, opt.label]
+                        )
+                      }
+                    >
+                      <Image
+                        src={opt.icon_url}
+                        alt={opt.label}
+                        width={28}
+                        height={28}
+                        className="w-7 h-7 mr-1"
+                      />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+            </div>
           </div>
           <div className="mb-4">
             <label className="label">
