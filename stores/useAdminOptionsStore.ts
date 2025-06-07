@@ -14,6 +14,7 @@ interface AdminOptionsState {
   addAdminOption: (option: AdminOption) => void;
   updateAdminOption: (id: string, updatedOption: Partial<AdminOption>) => void;
   removeAdminOption: (id: string) => void;
+  fetchAdminOptions: () => void;
 }
 
 export const useAdminOptionsStore = create<AdminOptionsState>((set) => ({
@@ -33,4 +34,14 @@ export const useAdminOptionsStore = create<AdminOptionsState>((set) => ({
     set((state) => ({
       adminOptions: state.adminOptions.filter((opt) => opt._id !== id),
     })),
+  fetchAdminOptions: async () => {
+    try {
+      const res = await fetch("/api/admin-options");
+      const data = await res.json();
+      set({ adminOptions: data });
+      // console.log("✅ fetched admin options:", data); //debug:
+    } catch (error) {
+      console.error("❌ failed to fetch admin options:", error);
+    }
+  },
 }));

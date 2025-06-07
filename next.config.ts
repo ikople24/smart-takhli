@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       "res.cloudinary.com",
       "storage.googleapis.com",
       "cdn-icons-png.flaticon.com",
+      "images.clerk.dev",
     ],
   },
 };

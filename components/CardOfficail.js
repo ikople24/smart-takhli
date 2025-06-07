@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AlertCircle, MessageCircleHeart } from "lucide-react";
+import Image from 'next/image';
 
 
 export default function CardOfficail(props) {
@@ -20,7 +21,7 @@ export default function CardOfficail(props) {
           const responsibleAssignments = data.filter(
             assignment => assignment.complaintId === props.probId
           );
-          console.log("Filtered assignments by complaintId:", responsibleAssignments);
+          // console.log("Filtered assignments by complaintId:", responsibleAssignments); //debug:
           if (responsibleAssignments.length > 0) {
             setAssignedDate(responsibleAssignments[0].assignedAt);
             setCompletedDate(responsibleAssignments[0].completedAt);
@@ -32,7 +33,7 @@ export default function CardOfficail(props) {
     };
 
     fetchAssignments();
-  }, []);
+  }, [props.probId]);
   useEffect(() => {
     const fetchOfficer = async () => {
       try {
@@ -44,7 +45,7 @@ export default function CardOfficail(props) {
         const matchedUserId = assignments[0].userId;
 
         const officerData = users.find(user => user._id === matchedUserId);
-        console.log("Matched officer:", officerData);
+        // console.log("Matched officer:", officerData); //debug:
 
         if (officerData) {
           setOfficer(officerData);
@@ -63,10 +64,12 @@ export default function CardOfficail(props) {
       <div className="text-md font-semibold mb-2">เจ้าหน้าที่ดูแลเรื่อง</div>
       <div className="grid grid-cols-[30%_70%] gap-4 items-start">
         <div className="flex flex-col items-center gap-2 border-r border-gray-200 pr-4 h-full">
-          <img
+          <Image
             src={officer?.profileUrl || "https://cdn-icons-png.flaticon.com/128/18775/18775921.png"}
             alt="Officer"
-            className="w-14 h-14 rounded-full object-cover"
+            width={56}
+            height={56}
+            className="rounded-full object-cover"
           />
           <div className="textarea-xs font-semibold text-gray-500 leading-tight text-center">
             {officer

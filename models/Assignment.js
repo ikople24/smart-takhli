@@ -16,8 +16,8 @@ const AssignmentSchema = new mongoose.Schema({
     default: Date.now,
   },
   solution: {
-    type: String,
-    default: '',
+    type: [String],
+    default: [],
   },
   solutionImages: {
     type: [String],

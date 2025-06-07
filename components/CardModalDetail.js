@@ -2,6 +2,7 @@ import { Dialog } from "@headlessui/react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import CardAssignment from "./CardAssignment";
 import CardOfficail from "./CardOfficail";
 
@@ -14,7 +15,7 @@ export default function CardModalDetail({ modalData, onClose }) {
 
   useEffect(() => {
     fetchProblemOptions();
-  }, []);
+  }, [fetchProblemOptions]);
 
   useEffect(() => {
     if (modalData?.category && menu?.length) {
@@ -50,10 +51,11 @@ export default function CardModalDetail({ modalData, onClose }) {
                     className={`carousel-item relative w-full h-48 ${currentSlide === idx ? 'block' : 'hidden'}`}
                   >
                     <div className="relative w-full h-full">
-                      <img
+                      <Image
                         src={img}
                         alt={`slide-${idx}`}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       <button
                         className="absolute bottom-2 right-2 z-20 bg-white/20 hover:bg-white/40 border-white/30 text-white text-xl p-1 rounded-full backdrop-blur"
@@ -88,10 +90,12 @@ export default function CardModalDetail({ modalData, onClose }) {
                 <div className="flex flex-col items-start w-full gap-1">
                   <div className="flex items-center w-full gap-3">
                     {categoryIcon && (
-                      <img
+                      <Image
                         src={categoryIcon}
                         alt="category icon"
-                        className="w-13 h-13 object-contain"
+                        width={52}
+                        height={52}
+                        className="object-contain"
                       />
                     )}
                     <div>
@@ -132,10 +136,12 @@ export default function CardModalDetail({ modalData, onClose }) {
                       className="flex items-center gap-1 border border-gray-300 px-3 py-1 rounded-full shadow-sm bg-white text-sm text-gray-800"
                     >
                       {matched?.iconUrl && (
-                        <img
+                        <Image
                           src={matched.iconUrl}
                           alt={p}
-                          className="w-4 h-4 object-contain"
+                          width={16}
+                          height={16}
+                          className="object-contain"
                         />
                       )}
                       <span>{p}</span>
@@ -151,7 +157,7 @@ export default function CardModalDetail({ modalData, onClose }) {
               </div>
             </div>
               <CardOfficail probId={modalData?._id} />
-              <CardAssignment probId={modalData?.probId} />
+              <CardAssignment probId={modalData?._id} />
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
@@ -175,10 +181,12 @@ export default function CardModalDetail({ modalData, onClose }) {
           onClick={() => setPreviewImg(null)}
         >
           <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <img
+            <Image
               src={previewImg}
               alt="Preview"
-              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-lg"
+              width={800}
+              height={600}
+              className="object-contain rounded-lg shadow-lg"
             />
             <button
               onClick={(e) => {

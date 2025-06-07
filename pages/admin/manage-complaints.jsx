@@ -97,7 +97,9 @@ export default function ManageComplaintsPage() {
   };
 
   const handleOpenUpdateForm = (assignment) => {
-    setSelectedAssignment(assignment);
+    const complaint = complaints.find((c) => c._id === assignment.complaintId);
+    const assignmentWithCategory = { ...assignment, category: complaint?.category };
+    setSelectedAssignment(assignmentWithCategory);
     setShowUpdateModal(true);
   };
 
