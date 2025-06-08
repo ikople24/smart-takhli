@@ -1,4 +1,5 @@
 import { Dialog } from "@headlessui/react";
+import { ReceiptText } from "lucide-react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
@@ -122,6 +123,14 @@ export default function CardModalDetail({ modalData, onClose }) {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          {modalData.images?.[0] && (
+            <div className="px-4 py-2 text-sm text-gray-600 font-semibold flex items-center gap-2 mt-2">
+              เลขที่คำร้อง: <span className="text-black">{modalData.complaintId}</span>
+              <button className="ml-auto text-gray-500 hover:text-gray-700">
+                <ReceiptText size={18} />
+              </button>
             </div>
           )}
           <div className="p-4 space-y-2">

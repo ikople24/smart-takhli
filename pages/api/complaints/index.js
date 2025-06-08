@@ -9,7 +9,8 @@ export default async function handler(req, res) {
     try {
       const isAdmin = req.query.role === 'admin';
       const projection = isAdmin ? {} : { fullName: 0, phone: 0 };
-      const complaints = await Complaint.find({}, projection);
+      const query = req.query.status ? { status: req.query.status } : {};
+      const complaints = await Complaint.find(query, projection);
 
       return res.status(200).json(complaints);
     } catch (err) {

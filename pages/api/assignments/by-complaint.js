@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const assignments = await Assignment.find({ complaintId });
+    const assignments = await Assignment.find({ complaintId }).lean();
     if (!assignments) {
       return res.status(404).json({ success: false, message: "No assignments found" });
     }

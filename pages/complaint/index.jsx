@@ -8,6 +8,7 @@ import "swiper/css";
 import "swiper/css/autoplay";
 import { Autoplay } from "swiper/modules";
 import CardModalDetail from "@/components/CardModalDetail";
+import { ChevronDown } from "lucide-react";
 
 export default function ComplaintListPage() {
   const { complaints, fetchComplaints } = useComplaintStore();
@@ -25,13 +26,13 @@ export default function ComplaintListPage() {
   useEffect(() => {
     const loadData = async () => {
       console.log("📤 เรียก API /api/complaints...");
-      await fetchComplaints();
-      await fetchProblemOptions(); // added
+      await fetchComplaints("อยู่ระหว่างดำเนินการ");
+      await fetchProblemOptions();
       console.log("✅ ดึง complaints เสร็จ");
       setLoading(false);
     };
     loadData();
-    fetchMenu(); // Ensure menu is fetched and available
+    fetchMenu();
   }, [fetchComplaints, fetchMenu, fetchProblemOptions]);
 
   return (
@@ -40,26 +41,65 @@ export default function ComplaintListPage() {
         <title>Smart-Namphare</title>
       </Head>
       <div className="w-full flex justify-center px-4 py-6 mx-auto">
-        <div className="grid grid-cols-1 gap-4 max-w-screen-xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-screen-xl mx-auto w-full min-h-[300px]">
           {loading ? (
             <p>กำลังโหลดข้อมูล...</p>
           ) : (
-            complaints.map((item) => {
-              return (
+            complaints
+              .slice()
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map((item) => {
+                return (
                 <div
                   key={item._id}
                   onClick={() => setModalData(item)}
                   className="text-left w-full cursor-pointer"
                 >
-                  <div className="card w-full bg-white shadow-md overflow-hidden flex flex-col md:flex-row">
-                    <figure className="md:w-1/2 w-full h-48 md:h-auto relative overflow-hidden">
+                  <div className="card w-full bg-white shadow-md overflow-hidden flex flex-col md:flex-row h-[360px] md:h-[340px] relative">
+                    <figure className="md:w-1/2 w-full aspect-[4/3] h-auto relative overflow-hidden">
+                      <div className="absolute top-2 right-2 z-10">
+                        <span className="px-2 py-1 text-info text-xs font-medium rounded-full bg-white/80 backdrop-blur-md shadow-sm">
+                          {new Date(item.createdAt).toLocaleDateString("th-TH", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-2 right-2 left-2 z-10 flex flex-wrap gap-2">
+                        {item.problems?.map((prob, i) => {
+                          const found = problemOptions.find(
+                            (opt) => opt.label === prob
+                          );
+                          return (
+                            <div
+                              key={i}
+                              className="flex items-center gap-1 px-2 py-1 border rounded-full text-xs border-gray-300 bg-white/80 backdrop-blur-sm shadow"
+                            >
+                              {found?.iconUrl && (
+                                <img
+                                  src={found.iconUrl}
+                                  alt={prob}
+                                  className="w-4 h-4"
+                                />
+                              )}
+                              <span>{prob}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
                       <Swiper
                         modules={[Autoplay]}
-                        autoplay={{ delay: 3000, disableOnInteraction: false, pauseOnMouseEnter: true }}
+                        autoplay={{
+                          delay: 3000,
+                          disableOnInteraction: false,
+                          pauseOnMouseEnter: true,
+                        }}
                         loop={true}
                         spaceBetween={0}
                         slidesPerView={1}
                         className="w-full h-full"
+                        style={{ height: "100%" }}
                       >
                         {item.images?.map((imgUrl, index) => (
                           <SwiperSlide key={index}>
@@ -72,60 +112,53 @@ export default function ComplaintListPage() {
                         ))}
                       </Swiper>
                     </figure>
-                    <div className="p-4 md:w-1/2 w-full flex flex-col justify-between">
-                      <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-lg font-semibold text-gray-800 truncate">
-                          {item.problems?.[0] || "ไม่ระบุประเภท"}
-                        </h2>
-                        <span className="badge badge-secondary text-xs whitespace-nowrap">{item.community}</span>
-                      </div>
-                      <p className="mt-2 text-sm text-gray-600">
-                        {expandedIds.includes(item._id) ? item.detail : `${item.detail.slice(0, 100)}...`}
-                        <span className="ml-1 text-gray-400 text-xs">
-                          ({new Date(item.updatedAt).toLocaleDateString("th-TH")})
-                        </span>
-                      </p>
-                      {item.detail.length > 100 && (
-                        <div className="text-right">
-                          <button
-                            className="text-xs text-blue-500 mt-1 underline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpand(item._id);
-                            }}
-                          >
-                            {expandedIds.includes(item._id) ? "ย่อ" : "..เพิ่มเติม"}
-                          </button>
-                        </div>
-                      )}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {item.problems?.map((prob, i) => {
-                          const found = problemOptions.find((opt) => opt.label === prob);
-                          return (
-                            <div
-                              key={i}
-                              className="flex items-center gap-1 px-2 py-1 border rounded-full text-xs border-gray-300 bg-white/50 backdrop-blur-sm"
-                            >
-                              {found?.iconUrl && (
-                                <img src={found.iconUrl} alt={prob} className="w-4 h-4" />
+                    <div className="p-4 md:w-1/2 w-full flex flex-col gap-2 justify-start">
+                      <div className="pr-1">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              {item.category && (
+                                <img
+                                  src={
+                                    menu.find((m) => m.Prob_name === item.category)
+                                      ?.Prob_pic || "/default-icon.png"
+                                  }
+                                  alt={item.category}
+                                  className="w-10 h-10 object-contain"
+                                />
                               )}
-                              <span>{prob}</span>
+                              <div className="text-base md:text-lg font-bold text-gray-900 break-words whitespace-normal">
+                                {item.category}
+                              </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-auto flex items-center gap-3">
-                        {item.category && (
-                          <img
-                            src={
-                              menu.find((m) => m.Prob_name === item.category)?.Prob_pic ||
-                              "/default-icon.png"
-                            }
-                            alt={item.category}
-                            className="w-10 h-10 object-contain"
-                          />
+                            <span className="badge badge-secondary text-xs">{item.community}</span>
+                          </div>
+                        </div>
+                        <div className="relative pr-1 mt-2">
+                          <p className="text-sm text-gray-600">
+                            {expandedIds.includes(item._id)
+                              ? item.detail
+                              : `${item.detail.slice(0, 200)}...`}
+                          </p>
+                        </div>
+                        {item.detail.length > 100 && (
+                          <div className="absolute bottom-2 right-2 z-20">
+                            <button
+                              className="p-1 bg-white/65 rounded-full shadow"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleExpand(item._id);
+                              }}
+                            >
+                              <ChevronDown
+                                size={16}
+                                className={`transition-transform ${
+                                  expandedIds.includes(item._id) ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                          </div>
                         )}
-                        <span className="text-lg font-semibold text-gray-800">{item.category}</span>
                       </div>
                     </div>
                   </div>
@@ -134,7 +167,10 @@ export default function ComplaintListPage() {
             })
           )}
         </div>
-        <CardModalDetail modalData={modalData} onClose={() => setModalData(null)} />
+        <CardModalDetail
+          modalData={modalData}
+          onClose={() => setModalData(null)}
+        />
       </div>
     </>
   );
