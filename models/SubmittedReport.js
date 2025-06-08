@@ -16,6 +16,10 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  complaintId: {
+    type: String,
+    required: true,
+  },
   status: {
     type: String,
     default: 'อยู่ระหว่างดำเนินการ',
