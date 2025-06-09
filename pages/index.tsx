@@ -12,7 +12,7 @@ export default function Home() {
     "แจ้งทุกข์ - แจ้งเหตุ",
     "ลงทะเบียน กายอุปกรณ์",
     "เทศบาลเมืองตาคลี",
-    "เขตส่งเสริมเมืองอัจฉริยะ",
+    "Smart Solution Award 2023",
   ], []);
   const [displayText, setDisplayText] = useState("");
   const [textIndex, setTextIndex] = useState(0);
