@@ -138,7 +138,8 @@ export default function CardModalDetail({ modalData, onClose }) {
               <div className="font-semibold mb-1">ปัญหาที่พบ</div>
               <div className="flex flex-wrap gap-2">
                 {modalData.problems?.map((p, idx) => {
-                  const matched = problemOptions.find((opt) => opt.label === p);
+                  const cleanLabel = typeof p === "string" ? p.trim() : "";
+                  const matched = problemOptions.find((opt) => opt.label === cleanLabel);
                   return (
                     <div
                       key={idx}
@@ -147,13 +148,13 @@ export default function CardModalDetail({ modalData, onClose }) {
                       {matched?.iconUrl && (
                         <Image
                           src={matched.iconUrl}
-                          alt={p}
+                          alt={cleanLabel}
                           width={16}
                           height={16}
                           className="object-contain"
                         />
                       )}
-                      <span>{p}</span>
+                      <span>{cleanLabel}</span>
                     </div>
                   );
                 })}

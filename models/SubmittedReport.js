@@ -20,7 +20,6 @@ const SubmittedReportSchema = new mongoose.Schema({
   complaintId: {
     type: String,
     required: true,
-    unique: true,
   },
   status: {
     type: String,
