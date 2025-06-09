@@ -1,0 +1,51 @@
+{
+  "name": "smart-takhli",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/nextjs": "^6.20.0",
+    "@headlessui/react": "^2.2.4",
+    "animejs": "^4.0.2",
+    "axios": "^1.9.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.7.4",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.511.0",
+    "mongoose": "^8.15.0",
+    "next": "15.3.2",
+    "next-cloudinary": "^6.16.0",
+    "react": "^19.1.0",
+    "react-compare-image": "^3.5.4",
+    "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
+    "react-leaflet": "^5.0.0",
+    "sweetalert2": "^11.21.2",
+    "swiper": "^11.2.8",
+    "tailwind-merge": "^3.3.0",
+    "zod": "^3.25.3",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4.1.7",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "daisyui": "^5.0.35",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.2",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.7",
+    "tw-animate-css": "^1.3.0",
+    "typescript": "^5"
+  }
+}
