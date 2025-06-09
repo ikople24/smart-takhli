@@ -1,3 +1,6 @@
+import { CircleCheck } from "lucide-react";
+import ReactCompareImage from 'react-compare-image';
+import { useMemo } from "react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
@@ -35,9 +38,15 @@ const CompletedCard = ({
     problems,
   });
 
-  useEffect(() => {
-    fetchProblemOptions();
-  }, [fetchProblemOptions]);
+useEffect(() => {
+  let isMounted = true;
+  fetchProblemOptions().then(() => {
+    if (!isMounted) return;
+  });
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   useEffect(() => {
     console.log("All problemOptions:", problemOptions);
@@ -55,26 +64,30 @@ const CompletedCard = ({
     }
   }, [problems, problemOptions]);
 
-  useEffect(() => {
-    const fetchAssignment = async () => {
-      try {
-        const res = await fetch(
-          `/api/assignments/by-complaint?complaintId=${complaintMongoId}`
-        );
-        const json = await res.json();
-        if (json.success && json.data.length > 0) {
-          console.log("Fetched assignment data:", json.data[0]);
-          setAssignment(json.data[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching assignment:", error);
+useEffect(() => {
+  let isMounted = true;
+  const fetchAssignment = async () => {
+    try {
+      const res = await fetch(
+        `/api/assignments/by-complaint?complaintId=${complaintMongoId}`
+      );
+      const json = await res.json();
+      if (isMounted && json.success && json.data.length > 0) {
+        console.log("Fetched assignment data:", json.data[0]);
+        setAssignment(json.data[0]);
       }
-    };
-    fetchAssignment();
-  }, [complaintMongoId]);
+    } catch (error) {
+      console.error("Error fetching assignment:", error);
+    }
+  };
+  fetchAssignment();
+  return () => {
+    isMounted = false;
+  };
+}, [complaintMongoId]);
 
   return (
-    <div className="bg-white shadow-md rounded-2xl p-4 border border-green-300 space-y-2">
+    <div className="bg-white shadow-md rounded-2xl p-4 border border-green-300 space-y-2 max-h-[90vh] overflow-auto">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {menu
@@ -87,7 +100,9 @@ const CompletedCard = ({
                 className="w-10 h-10 object-contain"
               />
             ))}
-          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+          <h2 className="text-lg font-semibold text-gray-800">
+            {title}
+          </h2>
         </div>
         <div className="text-xs text-gray-500 whitespace-nowrap">
           วันที่สำเร็จ: {new Date(updatedAt).toLocaleString("th-TH")}
@@ -110,28 +125,29 @@ const CompletedCard = ({
           </div>
         ))}
       </div>
-      <figure className="diff aspect-video w-full">
-        {beforeImage && (
-          <div className="diff-item-1">
-            <img
-              src={beforeImage}
-              alt="ก่อนดำเนินการ"
-              className="object-cover w-full h-full rounded-lg"
-            />
-          </div>
-        )}
-        {assignment?.solutionImages?.[0] && (
-          <div className="diff-item-2">
-            <img
-              src={assignment.solutionImages[0]}
-              alt="หลังดำเนินการ"
-              className="object-cover w-full h-full rounded-lg"
-            />
-          </div>
-        )}
-        <div className="diff-resizer"></div>
-      </figure>
-      
+      {useMemo(() => {
+        if (beforeImage && assignment?.solutionImages?.[0]) {
+          return (
+            <div className="my-4 rounded-lg overflow-hidden border border-green-200 max-w-[300px] sm:max-w-full mx-auto max-h-[300px] sm:max-h-[450px]">
+              <ReactCompareImage
+                leftImage={beforeImage}
+                rightImage={assignment.solutionImages[0]}
+                leftImageLabel="ก่อนดำเนินการ"
+                rightImageLabel="หลังดำเนินการ"
+                sliderLineWidth={2}
+                sliderPositionPercentage={0.5}
+              />
+            </div>
+          );
+        }
+        return null;
+      }, [beforeImage, assignment?.solutionImages])}
+      <div className="flex justify-end mt-2">
+        <div className="inline-flex items-center gap-1 border border-green-500 text-green-600 px-3 py-1 rounded-full text-xs">
+          <CircleCheck size={14} className="text-green-500" />
+          ดำเนินการเสร็จสิ้น
+        </div>
+      </div>
     </div>
   );
 };

@@ -12,7 +12,7 @@ const StatusPage = () => {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 py-4 w-full max-w-screen-xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 py-4 w-full max-w-4xl mx-auto">
       {complaints.map((item, index) => (
         <CompletedCard
           key={index}
