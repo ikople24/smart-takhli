@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     const result = await proxyFetch(req, "/api/problem-options");
     return res.status(result.status).json(result.body);
   } catch (err) {
-    console.error("❌ Proxy error in /api/problemoptions:", err);
-    res.status(500).json({ error: "Proxy server error" });
+    console.error("❌ Proxy error:", err);
+    return res.status(500).json({ error: "Proxy request failed" });
   }
 }
