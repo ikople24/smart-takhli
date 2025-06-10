@@ -56,6 +56,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         src={img}
                         alt={`slide-${idx}`}
                         fill
+                        sizes="(max-width: 768px) 100vw, 500px"
                         className="object-cover"
                       />
                       <button
@@ -96,6 +97,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         alt="category icon"
                         width={52}
                         height={52}
+                        sizes="52px"
                         className="object-contain"
                       />
                     )}
@@ -151,6 +153,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                           alt={cleanLabel}
                           width={16}
                           height={16}
+                          sizes="16px"
                           className="object-contain"
                         />
                       )}
@@ -196,6 +199,7 @@ export default function CardModalDetail({ modalData, onClose }) {
               alt="Preview"
               width={800}
               height={600}
+              sizes="(max-width: 768px) 100vw, 800px"
               className="object-contain rounded-lg shadow-lg"
             />
             <button
