@@ -111,7 +111,7 @@ export default function ManageComplaintsPage() {
       <Head>
         <title>จัดการเรื่องร้องเรียน - Admin</title>
       </Head>
-      <div className="p-6 max-w-screen-lg mx-auto">
+      <div className="p-6 max-w-full mx-auto">
         <h1 className="text-2xl font-bold mb-4">จัดการเรื่องร้องเรียน</h1>
         {complaints.length === 0 ? (
           <p>ไม่มีข้อมูลเรื่องร้องเรียน</p>
@@ -132,9 +132,10 @@ export default function ManageComplaintsPage() {
                   const isAssigned = assignments.some(
                     (a) => a.complaintId === complaint._id
                   );
+                  const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
                   return (
                     <tr key={complaint._id}>
-                      <td className="text-center">
+                      <td className="text-center text-sm">
                         <div className="flex flex-col items-center justify-center">
                           {menu.find((m) => m.Prob_name === complaint.category)?.Prob_pic && (
                             <img
@@ -150,7 +151,7 @@ export default function ManageComplaintsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center text-sm">
                         {Array.isArray(complaint.images) && complaint.images.length > 0 && (
                           <img
                             src={complaint.images[0]}
@@ -159,54 +160,57 @@ export default function ManageComplaintsPage() {
                           />
                         )}
                       </td>
-                      <td>
-                        <div className="font-medium line-clamp-2 max-h-12 overflow-hidden">
+                      <td className="text-sm max-w-xs overflow-hidden whitespace-nowrap text-ellipsis">
+                        <div className="font-medium">
                           {complaint.detail}
                         </div>
                       </td>
-                      <td>
+                      <td className="text-sm">
                         {new Date(complaint.updatedAt).toLocaleDateString(
                           "th-TH"
                         )}
                       </td>
                       <td className="flex gap-2">
-                        {isAssigned ? (
-                          <>
-                            
+                        {!isClosed ? (
+                          isAssigned ? (
+                            <>
+                              <button
+                                className="btn btn-info btn-sm"
+                                onClick={() =>
+                                  handleOpenUpdateForm(
+                                    assignments.find((a) => a.complaintId === complaint._id)
+                                  )
+                                }
+                              >
+                                อัพเดท
+                              </button>
+                              <button
+                                className="btn btn-warning btn-sm"
+                                onClick={() => {
+                                  setSelectedAssignment(complaint);
+                                  setShowEditUserModal(true);
+                                }}
+                              >
+                                แก้ไขผู้แจ้ง
+                              </button>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleCloseComplaint(complaint._id)}
+                              >
+                                ปิดเรื่อง
+                              </button>
+                            </>
+                          ) : (
                             <button
-                              className="btn btn-info btn-sm"
-                              onClick={() =>
-                                handleOpenUpdateForm(
-                                  assignments.find((a) => a.complaintId === complaint._id)
-                                )
-                              }
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleAssign(complaint._id)}
+                              disabled={loading}
                             >
-                              อัพเดท
+                              รับเรื่อง
                             </button>
-                            <button
-                              className="btn btn-warning btn-sm"
-                              onClick={() => {
-                                setSelectedAssignment(complaint);
-                                setShowEditUserModal(true);
-                              }}
-                            >
-                              แก้ไขผู้แจ้ง
-                            </button>
-                            <button
-                              className="btn btn-success btn-sm"
-                              onClick={() => handleCloseComplaint(complaint._id)}
-                            >
-                              ปิดเรื่อง
-                            </button>
-                          </>
+                          )
                         ) : (
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleAssign(complaint._id)}
-                            disabled={loading}
-                          >
-                            รับเรื่อง
-                          </button>
+                          <span className="text-gray-400 text-xs italic">เรื่องร้องเรียนนี้ถูกปิดแล้ว</span>
                         )}
                       </td>
                     </tr>

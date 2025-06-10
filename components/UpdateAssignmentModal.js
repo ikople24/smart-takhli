@@ -14,6 +14,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
   );
   const { adminOptions } = useAdminOptionsStore();
   
+  const handleRemoveImage = (indexToRemove) => {
+    setSolutionImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
 
   useEffect(() => {
     setNote(assignment.note || "");
@@ -69,6 +72,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
       if (!res.ok) throw new Error("Failed to update assignment");
       alert("อัปเดตงานสำเร็จ");
       onClose();
+      window.location.reload();
     } catch (err) {
       console.error("Error updating assignment:", err);
       alert("เกิดข้อผิดพลาดในการอัปเดต");
@@ -138,7 +142,44 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
             />
           </div>
           <div className="mb-4">
-            <ImageUploads onChange={(urls) => setSolutionImages(urls)} />
+            <label className="label">
+              <span className="label-text text-sm font-medium text-gray-800">2. อัปโหลดภาพถ่าย</span>
+            </label>
+            <ImageUploads
+              initialUrls={solutionImages}
+              onChange={(urls) => setSolutionImages(urls)}
+            />
+            {solutionImages.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <label className="label">
+                  <span className="label-text text-sm font-medium text-gray-800">รูปภาพที่อัปโหลด</span>
+                </label>
+                {solutionImages.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Image
+                      src={url}
+                      alt={`Uploaded ${index + 1}`}
+                      width={80}
+                      height={80}
+                      className="rounded border"
+                    />
+                    <input
+                      type="text"
+                      value={url}
+                      readOnly
+                      className="input input-bordered input-sm w-full text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="btn btn-xs btn-error"
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="mb-4">
             <label className="label">
