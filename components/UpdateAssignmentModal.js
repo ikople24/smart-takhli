@@ -14,8 +14,6 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
   );
   const { adminOptions } = useAdminOptionsStore();
   
-  const [location, setLocation] = useState(assignment.location || null);
-  const [useCurrent, setUseCurrent] = useState(false);
 
   useEffect(() => {
     setNote(assignment.note || "");
@@ -55,7 +53,6 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         solution,
         solutionImages,
         completedAt,
-        location,
       });
       const res = await fetch("/api/assignments/update", {
         method: "PUT",
@@ -66,7 +63,6 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
           solution,
           solutionImages,
           completedAt,
-          location,
         }),
       });
 

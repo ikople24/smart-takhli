@@ -46,7 +46,7 @@ useEffect(() => {
   return () => {
     isMounted = false;
   };
-}, []);
+}, [fetchProblemOptions]);
 
   useEffect(() => {
     console.log("All problemOptions:", problemOptions);

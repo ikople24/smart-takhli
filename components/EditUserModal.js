@@ -2,12 +2,11 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function EditUserModal({ isOpen, onClose, complaint }) {
-  if (!isOpen) return null;
   const [reporterInfo, setReporterInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (complaint?._id) {
+    if (complaint?._id && isOpen) {
       setLoading(true);
       axios
         .get(`/api/submittedreports/personal-info/${complaint._id}`)
@@ -18,7 +17,9 @@ export default function EditUserModal({ isOpen, onClose, complaint }) {
         .catch((err) => console.error("Error fetching reporter info", err))
         .finally(() => setLoading(false));
     }
-  }, [complaint]);
+  }, [complaint, isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
