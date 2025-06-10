@@ -5,6 +5,7 @@ import Head from "next/head";
 import useComplaintStore from "@/stores/useComplaintStore";
 import { useMenuStore } from "@/stores/useMenuStore";
 import UpdateAssignmentModal from "@/components/UpdateAssignmentModal"; // สร้าง component นี้แยกต่างหาก
+import EditUserModal from "@/components/EditUserModal";
 
 export default function ManageComplaintsPage() {
   const { complaints, fetchComplaints } = useComplaintStore();
@@ -17,6 +18,7 @@ export default function ManageComplaintsPage() {
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
 
   useEffect(() => {
     fetchComplaints();
@@ -102,6 +104,7 @@ export default function ManageComplaintsPage() {
     setSelectedAssignment(assignmentWithCategory);
     setShowUpdateModal(true);
   };
+ 
 
   return (
     <>
@@ -169,6 +172,7 @@ export default function ManageComplaintsPage() {
                       <td className="flex gap-2">
                         {isAssigned ? (
                           <>
+                            
                             <button
                               className="btn btn-info btn-sm"
                               onClick={() =>
@@ -178,6 +182,15 @@ export default function ManageComplaintsPage() {
                               }
                             >
                               อัพเดท
+                            </button>
+                            <button
+                              className="btn btn-warning btn-sm"
+                              onClick={() => {
+                                setSelectedAssignment(complaint);
+                                setShowEditUserModal(true);
+                              }}
+                            >
+                              แก้ไขผู้แจ้ง
                             </button>
                             <button
                               className="btn btn-success btn-sm"
@@ -208,6 +221,13 @@ export default function ManageComplaintsPage() {
         <UpdateAssignmentModal
           assignment={selectedAssignment}
           onClose={() => setShowUpdateModal(false)}
+        />
+      )}
+      {showEditUserModal && (
+        <EditUserModal
+          isOpen={showEditUserModal}
+          onClose={() => setShowEditUserModal(false)}
+          complaint={selectedAssignment}
         />
       )}
     </>

@@ -8,10 +8,14 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
   const [solution, setSolution] = useState(assignment.solution || []);
   const [solutionImages, setSolutionImages] = useState([]);
   const [completedAt, setCompletedAt] = useState(
-    assignment.completedAt ? new Date(assignment.completedAt).toISOString().split("T")[0] : ""
+    assignment.completedAt
+      ? new Date(assignment.completedAt).toISOString().split("T")[0]
+      : ""
   );
   const { adminOptions } = useAdminOptionsStore();
-  // console.log("adminOptions from store:", adminOptions);
+  
+  const [location, setLocation] = useState(assignment.location || null);
+  const [useCurrent, setUseCurrent] = useState(false);
 
   useEffect(() => {
     setNote(assignment.note || "");
@@ -51,6 +55,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         solution,
         solutionImages,
         completedAt,
+        location,
       });
       const res = await fetch("/api/assignments/update", {
         method: "PUT",
@@ -61,6 +66,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
           solution,
           solutionImages,
           completedAt,
+          location,
         }),
       });
 
@@ -80,7 +86,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">1. วิธีการแก้ไข</span>
+              <span className="label-text text-sm font-medium text-gray-800">
+                1. วิธีการแก้ไข
+              </span>
             </label>
             {/* {console.log("Assignment category:", assignment.category)} */}
             <div className="flex flex-wrap gap-2">
@@ -96,7 +104,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
                     <button
                       key={opt._id}
                       type="button"
-                      className={`btn btn-md px-4 py-2 ${isSelected ? "btn-info" : "btn-outline"}`}
+                      className={`btn btn-md px-4 py-2 ${
+                        isSelected ? "btn-info" : "btn-outline"
+                      }`}
                       onClick={() =>
                         setSolution((prev) =>
                           prev.includes(opt.label)
@@ -120,7 +130,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
           </div>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">2. หมายเหตุ</span>
+              <span className="label-text text-sm font-medium text-gray-800">
+                2. หมายเหตุ
+              </span>
             </label>
             <textarea
               value={note}
@@ -129,12 +141,14 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
               className="textarea textarea-info textarea-bordered w-full"
             />
           </div>
-      <div className="mb-4">
-        <ImageUploads onChange={(urls) => setSolutionImages(urls)} />
-      </div>
+          <div className="mb-4">
+            <ImageUploads onChange={(urls) => setSolutionImages(urls)} />
+          </div>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">4. วันที่ดำเนินการเสร็จสิ้น</span>
+              <span className="label-text text-sm font-medium text-gray-800">
+                4. วันที่ดำเนินการเสร็จสิ้น
+              </span>
             </label>
             <input
               type="date"
@@ -156,13 +170,13 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
       {/* Override file input button label for localization */}
       <style jsx global>{`
         input[type="file"]::file-selector-button {
-          content: 'เลือกรูปภาพ';
+          content: "เลือกรูปภาพ";
         }
         input[type="file"]::-webkit-file-upload-button {
           visibility: hidden;
         }
         input[type="file"]::before {
-          content: 'เลือกรูปภาพ';
+          content: "เลือกรูปภาพ";
           display: inline-block;
           background: #00bfff;
           border: 1px solid #00bfff;
