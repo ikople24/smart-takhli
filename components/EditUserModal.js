@@ -30,16 +30,29 @@ export default function EditUserModal({ isOpen, onClose, complaint }) {
         >
           ✕
         </button>
-        <h2 className="text-xl font-bold mb-4">แก้ไขข้อมูลผู้แจ้ง</h2>
+        <h2 className="text-xl font-bold mb-4">ข้อมูลผู้แจ้ง</h2>
         <div>
           {/* ใส่ฟอร์มแก้ไขตรงนี้ */}
           {loading ? (
             <p>กำลังโหลด...</p>
           ) : reporterInfo ? (
-            <div className="bg-gray-100 p-4 rounded-md shadow-md">
-              <p className="text-sm text-gray-500 mb-1">Complaint ID: <span className="font-mono">{complaint?._id}</span></p>
-              <p className="text-lg font-semibold">ชื่อ: {reporterInfo.fullName}</p>
-              <p className="text-lg">โทร: {reporterInfo.phone}</p>
+            <div className="bg-gray-50 p-4 rounded-md shadow-md">
+              <p className="text-sm text-gray-500 mb-1">
+                Complaint ID:{" "}
+                <span className="font-mono">{complaint?._id}</span>
+              </p>
+              <p className="text-lg font-semibold">
+                ชื่อผู้แจ้ง 👤 : {reporterInfo.fullName}
+              </p>
+              <p className="text-lg">เบอร์โทร 📞 : {reporterInfo.phone}</p>
+              <p className="text-lg">
+                📍พิกัด:
+                <span className="font-mono">
+                  {" "}
+                  {reporterInfo.location?.lat?.toFixed(5)},{" "}
+                  {reporterInfo.location?.lng?.toFixed(5)}
+                </span>
+              </p>
             </div>
           ) : (
             <p>ไม่พบข้อมูล</p>
