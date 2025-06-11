@@ -11,7 +11,8 @@ export default async function handler(req, res) {
   try {
     const response = await axios.get(`${process.env.BACKEND_API_URL}/api/users/get-by-clerkId?clerkId=${userId}`, {
       headers: {
-        Authorization: req.headers.authorization
+        Authorization: req.headers.authorization,
+        'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
       }
     });
     console.log("📦 AUTH HEADER:", req.headers.authorization);
