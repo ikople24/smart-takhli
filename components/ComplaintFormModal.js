@@ -123,7 +123,10 @@ useEffect(() => {
     try {
       const res = await fetch('/api/submittedreports/submit-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-id': process.env.NEXT_PUBLIC_APP_ID || 'app_a',
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('ส่งข้อมูลไม่สำเร็จ');
