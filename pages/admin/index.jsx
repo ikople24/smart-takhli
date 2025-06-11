@@ -22,7 +22,6 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("problem");
   const [label, setLabel] = useState("");
   const [iconUrl, setIconUrl] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const [category, setCategory] = useState("");
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
   const isAdminTab = activeTab === "admin";
@@ -53,10 +52,15 @@ export default function AdminPage() {
   const handleDelete = async (id) => {
     if (!confirm("คุณแน่ใจหรือว่าต้องการลบรายการนี้?")) return;
 
+    const BASE_URL =
+      process.env.NODE_ENV === "development"
+        ? "http://localhost:3004"
+        : "https://express-docker-server-production.up.railway.app";
+
     const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
 
     try {
-      const res = await fetch(`${endpoint}/${id}`, {
+      const res = await fetch(`${BASE_URL}${endpoint}/${id}`, {
         method: "DELETE",
       });
 
@@ -76,26 +80,22 @@ export default function AdminPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isUploading) {
-      alert("⏳ กรุณารอให้อัปโหลดเสร็จก่อน");
-      return;
-    }
-    if (!label || !iconUrl || !category) {
-      alert("❌ กรุณากรอกข้อมูลให้ครบถ้วน");
-      return;
-    }
     const data = {
       label,
-      iconUrl,
-      category,
+      icon_url: iconUrl,
+      menu_category: category,
       active: true,
     };
-    console.log("Submitting data:", data);
 
-    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
+    const BASE_URL =
+      process.env.NODE_ENV === "development"
+        ? "http://localhost:3004"
+        : "https://express-docker-server-production.up.railway.app";
+
+    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -129,8 +129,6 @@ export default function AdminPage() {
     const file = e.target.files[0];
     if (!file) return;
 
-    setIsUploading(true);
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
@@ -145,12 +143,9 @@ export default function AdminPage() {
       );
       const data = await res.json();
       setIconUrl(data.secure_url);
-      console.log("Uploaded image URL:", data.secure_url);
     } catch (error) {
       console.error("Image upload failed", error);
       alert("❌ Upload failed");
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -221,10 +216,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         key={i}
-                        onClick={() => {
-                          console.log("Selected category:", opt.Prob_name);
-                          setCategory(opt.Prob_name);
-                        }}
+                        onClick={() => setCategory(opt.Prob_name)}
                         className={`flex items-center gap-2 px-3 py-2 rounded border ${
                           category === opt.Prob_name
                             ? "bg-blue-600 text-white border-blue-600"
@@ -255,9 +247,8 @@ export default function AdminPage() {
               <button
                 type="submit"
                 className="btn btn-accent ml-2"
-                disabled={isUploading}
               >
-                {isUploading ? "กำลังอัปโหลด..." : "บันทึกข้อมูล"}
+                บันทึกข้อมูล
               </button>
             </div>
               </form>
@@ -414,10 +405,7 @@ export default function AdminPage() {
                           <button
                             type="button"
                             key={i}
-                            onClick={() => {
-                              console.log("Selected category:", opt.Prob_name);
-                              setCategory(opt.Prob_name);
-                            }}
+                            onClick={() => setCategory(opt.Prob_name)}
                             className={`flex items-center gap-2 px-3 py-2 rounded border ${
                               category === opt.Prob_name
                                 ? "bg-blue-600 text-white border-blue-600"
@@ -448,9 +436,8 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     className="btn btn-accent ml-2"
-                    disabled={isUploading}
                   >
-                    {isUploading ? "กำลังอัปโหลด..." : "บันทึกข้อมูล"}
+                    บันทึกข้อมูล
                   </button>
                 </div>
               </form>

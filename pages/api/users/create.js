@@ -6,17 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const appId = req.headers['x-app-id'] || process.env.NEXT_PUBLIC_APP_ID;
-
-    const response = await axios.post(
-      `${process.env.BACKEND_API_URL}/api/users/create`,
-      req.body,
-      {
-        headers: {
-          'x-app-id': appId,
-        },
-      }
-    );
+    const response = await axios.post(`${process.env.BACKEND_API_URL}/api/users/create`, req.body);
     return res.status(200).json(response.data);
   } catch (e) {
     console.error("❌ Failed to create user:", e.response?.data || e.message);

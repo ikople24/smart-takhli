@@ -1,11 +1,17 @@
-import { proxyFetch } from "@/lib/proxyFetch";
+import dbConnect from "@/lib/dbConnect";
+import ProblemOption from "@/models/ProblemOption";
 
 export default async function handler(req, res) {
-  try {
-    const result = await proxyFetch(req, "/api/problem-options");
-    return res.status(result.status).json(result.body);
-  } catch (err) {
-    console.error("❌ Proxy error in /api/problemoptions:", err);
-    res.status(500).json({ error: "Proxy server error" });
+  await dbConnect();
+
+  if (req.method === "GET") {
+    try {
+      const options = await ProblemOption.find({});
+      res.status(200).json(options);
+    } catch {
+      res.status(500).json({ message: "Error fetching problem options" });
+    }
+  } else {
+    res.status(405).json({ message: "Method not allowed" });
   }
 }
