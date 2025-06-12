@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import { Home, Clock, CheckCircle } from "lucide-react";
 
 const navs = [
-  { label: "SMART-NAMPHRAE", icon: Home, path: "/" },
+  { label: "SMART-TAKHLI", icon: Home, path: "/" },
   { label: "อยู่ระหว่างดำเนินการ", icon: Clock, path: "/complaint", disabled: false },
   { label: "ดำเนินการเสร็จสิ้น", icon: CheckCircle, path: "/status", disabled: false },
 ];
