@@ -9,20 +9,27 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
     const complaintId = await getNextSequence("complaintId");
+    console.log("📥 Incoming body:", req.body);
+    console.log("🆔 Generated complaintId:", complaintId);
     const newReport = await SubmittedReport.create({
       ...req.body,
       complaintId,
     });
 
     // 🔔 POST ไปยัง n8n webhook
-    await fetch(
-      "",
+    const webhookRes = await fetch(
+      "https://primary-production-a1769.up.railway.app/webhook/submit-report",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newReport),
       }
     );
+
+    if (!webhookRes.ok) {
+      const errorText = await webhookRes.text();
+      console.error("🚨 Webhook failed:", webhookRes.status, errorText);
+    }
 
     res.status(201).json({ success: true, data: newReport, complaintId });
   } catch (error) {

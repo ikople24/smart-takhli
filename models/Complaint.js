@@ -12,6 +12,7 @@ const SubmittedReportSchema = new mongoose.Schema({
     lat: { type: Number },
     lng: { type: Number }
   },
+  complaintId : { type: String },
   status: { type: String },
   officer: { type: String },
   updatedAt: { type: Date },

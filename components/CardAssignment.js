@@ -17,7 +17,10 @@ export default function CardAssignment({ probId }) {
           assignment.solution.includes(opt.label)
         )
       : adminOptions.filter(
-          (opt) => opt.label.trim() === assignment?.solution?.trim()
+          (opt) =>
+            typeof opt.label === "string" &&
+            typeof assignment?.solution === "string" &&
+            opt.label.trim() === assignment.solution.trim()
         );
   // debug: console.log(
   //   "🔍 matchedOptions:",
@@ -59,11 +62,12 @@ export default function CardAssignment({ probId }) {
     (
       (!assignment.solution ||
         (Array.isArray(assignment.solution) &&
-          assignment.solution.every((s) => !s || s.trim() === "")) ||
+          assignment.solution.every((s) => !s || (typeof s === "string" && s.trim() === ""))) ||
         (typeof assignment.solution === "string" && assignment.solution.trim() === "")) &&
-      (!assignment.note || assignment.note.trim() === "") &&
+      (!assignment.note || (typeof assignment.note === "string" && assignment.note.trim() === "")) &&
       (!Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0)
-    )
+    ) ||
+    !Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0
   ) {
     return null;
   }

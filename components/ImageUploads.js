@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 
@@ -7,48 +7,70 @@ const ImageUploads = ({ onChange }) => {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
+  const deleteFromCloudinary = async (url) => {
+    try {
+      await fetch("/api/delete-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+    }
+  };
+
   const handleFiles = async (e) => {
     const selectedFiles = Array.from(e.target.files);
-    const combinedFiles = [...files, ...selectedFiles].slice(0, 3);
-    setFiles(combinedFiles);
+    if (previews.length >= 3) {
+      const confirmReplace = window.confirm("คุณอัปโหลดครบ 3 ภาพแล้ว ต้องการแทนที่ภาพแรกหรือไม่?");
+      if (confirmReplace) {
+        const file = selectedFiles[0];
+        try {
+          const cloudUrl = await uploadToCloudinary(file);
+          const updatedPreviews = [...previews];
+          const removedUrl = updatedPreviews[0];
+          updatedPreviews[0] = cloudUrl;
+          setPreviews(updatedPreviews);
+          onChange?.(updatedPreviews);
+          deleteFromCloudinary(removedUrl);
+        } catch (err) {
+          console.error("Upload error:", err);
+        }
+      }
+      return;
+    }
 
-    const newPreviews = [];
-    const uploadedUrls = [];
+    const remainingSlots = 3 - files.length;
+    const filesToAdd = selectedFiles.slice(0, remainingSlots);
+    const newPreviews = [...previews];
+    const newFiles = [...files];
 
-    for (const file of combinedFiles) {
-      const previewUrl = URL.createObjectURL(file);
-      newPreviews.push({ file, url: previewUrl });
-
+    for (const file of filesToAdd) {
       try {
         const cloudUrl = await uploadToCloudinary(file);
-        uploadedUrls.push(cloudUrl);
+        newPreviews.push(cloudUrl);
       } catch (err) {
         console.error("Upload error:", err);
       }
     }
 
     setPreviews(newPreviews);
-    onChange?.(uploadedUrls);
+    setFiles([...newFiles, ...filesToAdd]);
+    onChange?.(newPreviews);
   };
 
   const removeImage = (index) => {
     const newPreviews = [...previews];
-    const newFiles = [...files];
+    const removedUrl = newPreviews[index];
 
-    URL.revokeObjectURL(previews[index].url);
     newPreviews.splice(index, 1);
-    newFiles.splice(index, 1);
-
     setPreviews(newPreviews);
-    setFiles(newFiles);
-    onChange?.(newFiles);
-  };
+    onChange?.(newPreviews);
 
-  useEffect(() => {
-    return () => {
-      previews.forEach((p) => URL.revokeObjectURL(p.url));
-    };
-  }, [previews]);
+    deleteFromCloudinary(removedUrl);
+  };
 
   return (
     <div className="form-control">
@@ -69,7 +91,7 @@ const ImageUploads = ({ onChange }) => {
           />
         </label>
         <span className="ml-4 text-sm text-gray-600">
-          {files.length > 0 ? `${files.length} ไฟล์ที่เลือก` : "ยังไม่ได้แนบรูป"}
+          {previews.length > 0 ? `${previews.length} ไฟล์ที่อัปโหลดแล้ว` : "ยังไม่ได้แนบรูป"}
         </span>
       </div>
       <p className="text-xs text-gray-500 mt-1">
@@ -81,7 +103,7 @@ const ImageUploads = ({ onChange }) => {
           {previews.map((p, index) => (
             <div key={index} className="relative group">
               <Image
-                src={p.url}
+                src={p}
                 alt={`preview-${index}`}
                 width={300}
                 height={96}

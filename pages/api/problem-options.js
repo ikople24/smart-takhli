@@ -2,7 +2,7 @@ import { proxyFetch } from "@/lib/proxyFetch";
 
 export default async function handler(req, res) {
   try {
-    const result = await proxyFetch(req, "/api/menu");
+    const result = await proxyFetch(req, "/api/problem-options");
     return res.status(result.status).json(result.body);
   } catch (err) {
     console.error("❌ Proxy error:", err);

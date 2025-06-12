@@ -38,7 +38,7 @@ export default function ComplaintListPage() {
   return (
     <>
       <Head>
-        <title>Smart-Takhli</title>
+        <title>Smart-Namphare</title>
       </Head>
       <div className="w-full flex justify-center px-4 py-6 mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-screen-xl mx-auto w-full min-h-[300px]">

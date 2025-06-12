@@ -58,7 +58,11 @@ export default function CardOfficail(props) {
     fetchOfficer();
   }, [assignments]);
 
-     
+  // Conditionally render nothing if no officer or assignedDate is found
+  if (!assignedDate || !officer) {
+    return null;
+  }
+
   return (
     <div className="w-full max-w-md mx-auto bg-white rounded-md shadow p-4">
       <div className="text-md font-semibold mb-2">เจ้าหน้าที่ดูแลเรื่อง</div>

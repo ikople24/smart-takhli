@@ -9,10 +9,10 @@ export default function Home() {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
 
   const texts = useMemo(() => [
-    "แจ้งทุกข์ - แจ้งเหตุ",
-    "ลงทะเบียน กายอุปกรณ์",
-    "เทศบาลเมืองตาคลี",
-    "Smart Solution Award 2023",
+    "ร้องทุกข์ - ร้องเรียน",
+    "แจ้งเหตุด่วน - รายงานปัญหา",
+    "เทศบาลตำบลน้ำแพร่พัฒนา",
+    "Smart City Award 2024"
   ], []);
   const [displayText, setDisplayText] = useState("");
   const [textIndex, setTextIndex] = useState(0);

@@ -8,10 +8,15 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
   const [solution, setSolution] = useState(assignment.solution || []);
   const [solutionImages, setSolutionImages] = useState([]);
   const [completedAt, setCompletedAt] = useState(
-    assignment.completedAt ? new Date(assignment.completedAt).toISOString().split("T")[0] : ""
+    assignment.completedAt
+      ? new Date(assignment.completedAt).toISOString().split("T")[0]
+      : ""
   );
   const { adminOptions } = useAdminOptionsStore();
-  // console.log("adminOptions from store:", adminOptions);
+  
+  const handleRemoveImage = (indexToRemove) => {
+    setSolutionImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
 
   useEffect(() => {
     setNote(assignment.note || "");
@@ -67,6 +72,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
       if (!res.ok) throw new Error("Failed to update assignment");
       alert("อัปเดตงานสำเร็จ");
       onClose();
+      window.location.reload();
     } catch (err) {
       console.error("Error updating assignment:", err);
       alert("เกิดข้อผิดพลาดในการอัปเดต");
@@ -80,7 +86,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">1. วิธีการแก้ไข</span>
+              <span className="label-text text-sm font-medium text-gray-800">
+                1. วิธีการแก้ไข
+              </span>
             </label>
             {/* {console.log("Assignment category:", assignment.category)} */}
             <div className="flex flex-wrap gap-2">
@@ -96,7 +104,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
                     <button
                       key={opt._id}
                       type="button"
-                      className={`btn btn-md px-4 py-2 ${isSelected ? "btn-info" : "btn-outline"}`}
+                      className={`btn btn-md px-4 py-2 ${
+                        isSelected ? "btn-info" : "btn-outline"
+                      }`}
                       onClick={() =>
                         setSolution((prev) =>
                           prev.includes(opt.label)
@@ -120,7 +130,9 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
           </div>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">2. หมายเหตุ</span>
+              <span className="label-text text-sm font-medium text-gray-800">
+                2. หมายเหตุ
+              </span>
             </label>
             <textarea
               value={note}
@@ -129,12 +141,51 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
               className="textarea textarea-info textarea-bordered w-full"
             />
           </div>
-      <div className="mb-4">
-        <ImageUploads onChange={(urls) => setSolutionImages(urls)} />
-      </div>
           <div className="mb-4">
             <label className="label">
-              <span className="label-text text-sm font-medium text-gray-800">4. วันที่ดำเนินการเสร็จสิ้น</span>
+              <span className="label-text text-sm font-medium text-gray-800">2. อัปโหลดภาพถ่าย</span>
+            </label>
+            <ImageUploads
+              initialUrls={solutionImages}
+              onChange={(urls) => setSolutionImages(urls)}
+            />
+            {solutionImages.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <label className="label">
+                  <span className="label-text text-sm font-medium text-gray-800">รูปภาพที่อัปโหลด</span>
+                </label>
+                {solutionImages.map((url, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Image
+                      src={url}
+                      alt={`Uploaded ${index + 1}`}
+                      width={80}
+                      height={80}
+                      className="rounded border"
+                    />
+                    <input
+                      type="text"
+                      value={url}
+                      readOnly
+                      className="input input-bordered input-sm w-full text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="btn btn-xs btn-error"
+                    >
+                      ลบ
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mb-4">
+            <label className="label">
+              <span className="label-text text-sm font-medium text-gray-800">
+                4. วันที่ดำเนินการเสร็จสิ้น
+              </span>
             </label>
             <input
               type="date"
@@ -156,13 +207,13 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
       {/* Override file input button label for localization */}
       <style jsx global>{`
         input[type="file"]::file-selector-button {
-          content: 'เลือกรูปภาพ';
+          content: "เลือกรูปภาพ";
         }
         input[type="file"]::-webkit-file-upload-button {
           visibility: hidden;
         }
         input[type="file"]::before {
-          content: 'เลือกรูปภาพ';
+          content: "เลือกรูปภาพ";
           display: inline-block;
           background: #00bfff;
           border: 1px solid #00bfff;
