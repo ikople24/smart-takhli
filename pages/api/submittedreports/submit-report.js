@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     // 🔔 POST ไปยัง n8n webhook
     const webhookRes = await fetch(
-      "https://primary-production-a1769.up.railway.app/webhook/submit-report",
+      "https://primary-production-a1769.up.railway.app/webhook-test/submit-tk",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

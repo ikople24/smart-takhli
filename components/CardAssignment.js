@@ -36,7 +36,19 @@ export default function CardAssignment({ probId }) {
     //   adminOptions.map((o) => o.label)
     // );
   }
-  const [currentIndex] = useState(0); // currentIndex is used for image display
+  const [currentIndex, setCurrentIndex] = useState(0); // currentIndex is used for image display
+
+  const handlePrev = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === 0 ? assignment.solutionImages.length - 1 : prevIndex - 1
+    );
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === assignment.solutionImages.length - 1 ? 0 : prevIndex + 1
+    );
+  };
 
   useEffect(() => {
     async function fetchAssignment() {

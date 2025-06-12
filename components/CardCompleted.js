@@ -105,7 +105,7 @@ useEffect(() => {
           </h2>
         </div>
         <div className="text-xs text-gray-500 whitespace-nowrap">
-          วันที่สำเร็จ: {new Date(updatedAt).toLocaleString("th-TH")}
+          วันที่สำเร็จ: {new Date(assignment?.completedAt || updatedAt).toLocaleDateString("th-TH")}
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -128,12 +128,20 @@ useEffect(() => {
       {useMemo(() => {
         if (beforeImage && assignment?.solutionImages?.[0]) {
           return (
-            <div className="my-4 rounded-lg overflow-hidden border border-green-200 max-w-[300px] sm:max-w-full mx-auto max-h-[300px] sm:max-h-[450px]">
+            <div
+              className="relative my-2 max-w-full h-[180px] sm:h-[220px] mx-auto pointer-events-auto z-10 overflow-hidden rounded-lg border border-green-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-2 left-2 z-20 bg-black bg-opacity-50 text-white px-2 py-0.5 rounded text-xs">
+                ก่อนดำเนินการ
+              </div>
+              <div className="absolute top-2 right-2 z-20 bg-black bg-opacity-50 text-white px-2 py-0.5 rounded text-xs">
+                หลังดำเนินการ
+              </div>
               <ReactCompareImage
                 leftImage={beforeImage}
                 rightImage={assignment.solutionImages[0]}
-                leftImageLabel="ก่อนดำเนินการ"
-                rightImageLabel="หลังดำเนินการ"
+                handle={<div />}  // ซ่อนปุ่มเลื่อน
                 sliderLineWidth={2}
                 sliderPositionPercentage={0.5}
               />
