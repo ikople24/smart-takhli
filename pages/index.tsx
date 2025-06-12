@@ -9,10 +9,10 @@ export default function Home() {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
 
   const texts = useMemo(() => [
-    "ร้องทุกข์ - ร้องเรียน",
-    "แจ้งเหตุด่วน - รายงานปัญหา",
-    "เทศบาลตำบลน้ำแพร่พัฒนา",
-    "Smart City Award 2024"
+    "แจ้งทุกข์ - แจ้งเหตุ",
+    "ลงทะเบียน กายอุปกรณ์",
+    "เทศบาลเมืองตาคลี",
+    "Smart Solution Award 2023",
   ], []);
   const [displayText, setDisplayText] = useState("");
   const [textIndex, setTextIndex] = useState(0);
@@ -57,9 +57,6 @@ export default function Home() {
   }, [menu]);
   return (
     <div className="min-h-screen bg-white flex flex-col -mt-8 w-full max-w-screen-sm min-w-[320px] mx-auto overflow-x-hidden">
-      {/* <h1 className="fixed top-0 left-0 right-0 z-50 bg-white/30 backdrop-blur-md border border-white/40 text-center text-2xl font-semibold text-blue-950 text-shadow-gray-800 shadow-lg py-4">
-        SMART-NAMPHRAE
-      </h1> */}
       <div className="mt-8 text-center text-xl font-semibold min-h-[1.5rem]">
         <span className={
           textIndex === 0 ? "text-pink-600" :
