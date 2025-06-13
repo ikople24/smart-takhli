@@ -102,6 +102,9 @@ export default function Home() {
           <ComplaintFormModal selectedLabel={selectedLabel} onClose={handleCloseModal} />
         )}
       </div>
+      <div className="flex justify-center items-center gap-2 text-purple-400 text-sm mb-4">
+        <a href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view">คู่มือการใช้งาน</a>
+      </div>
       <Footer />
     </div>
   );
