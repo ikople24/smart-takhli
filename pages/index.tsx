@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
+import Pm25Dashboard from "@/components/Pmdata";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -67,6 +68,7 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
+      <Pm25Dashboard/>
       <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">
