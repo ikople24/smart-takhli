@@ -13,6 +13,8 @@ const SubmittedReportSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
   },
+  prefix: String,
+  address: String,
   createdAt: {
     type: Date,
     default: Date.now,
@@ -27,7 +29,7 @@ const SubmittedReportSchema = new mongoose.Schema({
   },
   officer: {
     type: String,
-    default: '',
+    default: 'on',
   },
   updatedAt: {
     type: Date,
