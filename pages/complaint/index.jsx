@@ -95,7 +95,7 @@ export default function ComplaintListPage() {
                           disableOnInteraction: false,
                           pauseOnMouseEnter: true,
                         }}
-                        loop={true}
+                        loop={item.images && item.images.length > 1}
                         spaceBetween={0}
                         slidesPerView={1}
                         className="w-full h-full"
@@ -131,7 +131,7 @@ export default function ComplaintListPage() {
                                 {item.category}
                               </div>
                             </div>
-                            <span className="badge badge-secondary text-xs">{item.community}</span>
+                            <span className="badge badge-primary text-xs">{item.community}</span>
                           </div>
                         </div>
                         <div className="relative pr-1 mt-2">
