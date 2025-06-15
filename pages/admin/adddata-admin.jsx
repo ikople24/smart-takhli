@@ -2,18 +2,40 @@ import React, { useEffect, useState } from "react";
 
 export default function AddDataAdminPage() {
   const [oldData, setOldData] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const saved = localStorage.getItem("adminOldDataPage");
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [selectedRow, setSelectedRow] = useState(null);
   const [submittedMappings, setSubmittedMappings] = useState(new Set());
   const [adminData, setAdminData] = useState([]);
   // Pagination state for adminData
-  const [adminPage, setAdminPage] = useState(1);
+  const [adminPage, setAdminPage] = useState(() => {
+    const saved = localStorage.getItem("adminAssignedPage");
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const adminItemsPerPage = 10;
   const adminTotalPages = Math.ceil(adminData.length / adminItemsPerPage);
-  const paginatedAdminData = adminData.slice(
+  // Filter adminData by selectedRow.mappingId if present
+  const filteredAdminData = selectedRow?.mappingId
+    ? adminData.filter((item) => item.ref?.deta_smartapps === selectedRow.mappingId)
+    : adminData;
+  const paginatedAdminData = filteredAdminData.slice(
     (adminPage - 1) * adminItemsPerPage,
     adminPage * adminItemsPerPage
   );
+  // เพิ่ม state สำหรับเลือกแถว admin
+  const [selectedAdminRow, setSelectedAdminRow] = useState({});
+  // Restore complaintId from localStorage if exists
+  useEffect(() => {
+    const savedComplaintId = localStorage.getItem("savedComplaintId");
+    if (savedComplaintId) {
+      setSelectedAdminRow((prev) => ({
+        ...prev,
+        complaintId: savedComplaintId,
+      }));
+    }
+  }, []);
   useEffect(() => {
     fetch("/api/data-admin-takhli67")
       .then((res) => res.json())
@@ -37,18 +59,18 @@ export default function AddDataAdminPage() {
           data.sort((a, b) => {
             const toDate = (item) => {
               const thaiMonths = {
-                "มกราคม": "01",
-                "กุมภาพันธ์": "02",
-                "มีนาคม": "03",
-                "เมษายน": "04",
-                "พฤษภาคม": "05",
-                "มิถุนายน": "06",
-                "กรกฎาคม": "07",
-                "สิงหาคม": "08",
-                "กันยายน": "09",
-                "ตุลาคม": "10",
-                "พฤศจิกายน": "11",
-                "ธันวาคม": "12",
+                มกราคม: "01",
+                กุมภาพันธ์: "02",
+                มีนาคม: "03",
+                เมษายน: "04",
+                พฤษภาคม: "05",
+                มิถุนายน: "06",
+                กรกฎาคม: "07",
+                สิงหาคม: "08",
+                กันยายน: "09",
+                ตุลาคม: "10",
+                พฤศจิกายน: "11",
+                ธันวาคม: "12",
               };
 
               const day = String(item["วัน"] || "1").padStart(2, "0");
@@ -77,7 +99,26 @@ export default function AddDataAdminPage() {
         setSubmittedMappings(new Set(submitted.map((item) => item.mappingId)));
       })
       .catch((err) => console.error("Failed to fetch submitted mappings", err));
+
+    // Restore currentPage and adminPage from localStorage
+    const savedOldDataPage = localStorage.getItem("adminOldDataPage");
+    if (savedOldDataPage) {
+      setCurrentPage(parseInt(savedOldDataPage, 10));
+    }
+    const savedAdminAssignedPage = localStorage.getItem("adminAssignedPage");
+    if (savedAdminAssignedPage) {
+      setAdminPage(parseInt(savedAdminAssignedPage, 10));
+    }
   }, []);
+
+  // Save currentPage and adminPage to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem("adminOldDataPage", currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
+    localStorage.setItem("adminAssignedPage", adminPage);
+  }, [adminPage]);
 
   return (
     <>
@@ -104,6 +145,27 @@ export default function AddDataAdminPage() {
           »
         </button>
       </div>
+      {/* แสดงกราฟวงกลมความคืบหน้าการบันทึกข้อมูล */}
+      {oldData.length > 0 && (
+        <div className="w-full px-4 mb-4 flex justify-end">
+          <div className="text-center">
+            <div
+              className="radial-progress bg-primary text-primary-content border-primary border-4"
+              style={{
+                "--value": Math.round(
+                  (submittedMappings.size / oldData.length) * 100
+                ),
+              }}
+              role="progressbar"
+            >
+              {Math.round((submittedMappings.size / oldData.length) * 100)}%
+            </div>
+            <div className="text-sm mt-1 text-gray-600">
+              {submittedMappings.size}/{oldData.length} บันทึกแล้ว
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row w-full">
         <div className="w-full lg:w-1/2 px-4">
           <div className=" text-2xl mb-4 font-semibold">ดึง data เก่า</div>
@@ -148,7 +210,9 @@ export default function AddDataAdminPage() {
                       <tr key={item._id || index}>
                         <td>
                           <button
-                            disabled={submittedMappings.has(item["mappingId"] ?? item["�� Row ID"])}
+                            disabled={submittedMappings.has(
+                              item["mappingId"] ?? item["�� Row ID"]
+                            )}
                             className="btn btn-xs btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() =>
                               setSelectedRow({
@@ -172,6 +236,7 @@ export default function AddDataAdminPage() {
                                     : date.toISOString().slice(0, 16);
                                 })(),
                                 createdAtRaw: item["วันที่แจ้ง"],
+                                completedAtRaw: item["วันที่ดำเนินการสำเร็จ"],
                                 problems: item["รายการกดเลือก"],
                                 status: item["Status_Manage"],
                                 images: [
@@ -183,8 +248,12 @@ export default function AddDataAdminPage() {
                           >
                             เลือก
                           </button>
-                          {submittedMappings.has(item["mappingId"] ?? item["�� Row ID"]) && (
-                            <span className="text-xs text-gray-400 ml-1">(ส่งแล้ว)</span>
+                          {submittedMappings.has(
+                            item["mappingId"] ?? item["�� Row ID"]
+                          ) && (
+                            <span className="text-xs text-gray-400 ml-1">
+                              (ส่งแล้ว)
+                            </span>
                           )}
                         </td>
                         {[
@@ -340,10 +409,11 @@ export default function AddDataAdminPage() {
                   : ""}
               </label>
               {selectedRow?.createdAtRaw && (
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="text-xs text-red-600 mb-1">
                   Raw: {selectedRow.createdAtRaw}
                 </div>
               )}
+              
               <input
                 type="datetime-local"
                 className="input input-bordered input-sm w-full"
@@ -424,6 +494,13 @@ export default function AddDataAdminPage() {
                   .then((data) => {
                     alert("บันทึกข้อมูลสำเร็จ");
                     console.log("🟢 บันทึกแล้ว:", data);
+                    // Set complaintId to admin form after successful submission
+                    const newComplaintId = data?.data?._id || data?.insertedId || "";
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      complaintId: newComplaintId,
+                    }));
+                    localStorage.setItem("savedComplaintId", newComplaintId);
                     // 🔄 ส่ง mappingId กับ _id ไปเก็บที่ test.submitted_mapping_log โดยตรง (ไม่ผ่าน API)
                     fetch("/api/mongo-direct-insert", {
                       method: "POST",
@@ -456,62 +533,316 @@ export default function AddDataAdminPage() {
           </div>
         </div>
       </div>
-        <div className="w-full lg:w-1/2 px-4 mt-8 lg:mt-0">
-          <div className="text-xl font-semibold mb-4">ข้อมูลการดำเนินการ</div>
-          <div className="mb-4 text-sm text-blue-600">
-            <strong>ตาราง:</strong> data_admin_takhli67
-          </div>
-          <div className="join mt-4 flex justify-center">
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setAdminPage((prev) => Math.max(prev - 1, 1))}
-                disabled={adminPage <= 1}
-              >
-                «
-              </button>
-              <span className="join-item btn btn-sm pointer-events-none">
-                Page {adminPage} of {adminTotalPages}
-              </span>
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setAdminPage((prev) => Math.min(prev + 1, adminTotalPages))}
-                disabled={adminPage >= adminTotalPages}
-              >
-                »
-              </button>
+
+      <div className="divider mt-15">ส่วนล่าง</div>
+      <div className="join mt-4 flex justify-center ">
+        <button
+          className="join-item btn btn-sm"
+          onClick={() => setAdminPage((prev) => Math.max(prev - 1, 1))}
+          disabled={adminPage <= 1}
+        >
+          «
+        </button>
+        <span className="join-item btn btn-sm pointer-events-none">
+          Page {adminPage} of {adminTotalPages}
+        </span>
+        <button
+          className="join-item btn btn-sm"
+          onClick={() =>
+            setAdminPage((prev) => Math.min(prev + 1, adminTotalPages))
+          }
+          disabled={adminPage >= adminTotalPages}
+        >
+          »
+        </button>
+      </div>
+      <div className="w-full px-4 flex flex-col lg:flex-row gap-4">
+        <div className="w-full lg:w-1/2">
+          <div className="bg-base-100 border border-base-300 rounded p-4">
+            <div>
+              <div className="text-xl font-semibold mb-4">
+                ข้อมูลการดำเนินการ
+              </div>
+              <div className="mb-4 text-sm text-blue-600">
+                <strong>ตาราง:</strong> data_admin_takhli67
+              </div>
             </div>
-          <div className="overflow-x-auto mt-2">
-            <table className="table table-zebra text-sm min-w-[768px]">
-              <thead>
-                <tr>
-                  {[
-                    "ref.deta_smartapps",
-                    "ref.จากการแก้ไข",
-                    "ref.Fix_detail",
-                    "ref.Fix_date",
-                    "ref.Fix_pic1",
-                    "ref.Fix_by_Admin"
-                  ].map((key) => (
-                    <th key={key} className="bg-base-200 px-2 py-1 text-left">{key}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedAdminData.map((item, idx) => (
-                  <tr key={item._id || idx}>
-                    <td className="px-2 py-1">{item.ref?.deta_smartapps || "-"}</td>
-                    <td className="px-2 py-1">{item.รายการแก้ไข || "-"}</td>
-                    <td className="px-2 py-1">{item.Fix_detail || "-"}</td>
-                    <td className="px-2 py-1">{item.Fix_date || "-"}</td>
-                    <td className="px-2 py-1">{item.Fix_pic1 || "-"}</td>
-                    <td className="px-2 py-1">{item.Fix_by_Admin || "-"}</td>
+            <div className="overflow-x-auto mt-2">
+              <table className="table table-zebra text-sm min-w-[768px]">
+                <thead>
+                  <tr>
+                    <th className="bg-base-200 px-2 py-1 text-left">เลือก</th>
+                    {[
+                      "ref.deta_smartapps",
+                      "รายการแก้ไข",
+                      "Fix_detail",
+                      "Fix_date",
+                      "Fix_pic1",
+                      "Fix_pic2",
+                      "Fix_by_Admin",
+                    ].map((key) => (
+                      <th key={key} className="bg-base-200 px-2 py-1 text-left">
+                        {key}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            
+                </thead>
+                <tbody>
+                  {paginatedAdminData.map((item, idx) => (
+                    <tr key={item._id || idx}>
+                      <td className="px-2 py-1">
+                        <button
+                          className="btn btn-xs btn-outline"
+                          onClick={() =>
+                            setSelectedAdminRow((prev) => ({
+                              ...prev,
+                              // complaintId: prev.complaintId, // preserve, do not overwrite
+                              assignedAt: (() => {
+                                const date = new Date(item.Fix_date);
+                                return isNaN(date) ? "" : date.toISOString().slice(0, 16);
+                              })(),
+                              solution: item.รายการแก้ไข
+                                ? item.รายการแก้ไข
+                                    .split(/[,،؛]/)
+                                    .map((s) => s.trim())
+                                    .filter((s) => s.length > 0)
+                                : [],
+                              solutionImages: [
+                                ...(item.Fix_pic1 ? [item.Fix_pic1.trim()] : []),
+                                ...(item.Fix_pic2 ? [item.Fix_pic2.trim()] : []),
+                              ],
+                              completedAt: (() => {
+                                const date = new Date(item.Fix_date);
+                                return isNaN(date) ? "" : date.toISOString().slice(0, 16);
+                              })(),
+                              note: item.Fix_detail?.toString() || "",
+                            }))
+                          }
+                        >
+                          เลือก
+                        </button>
+                      </td>
+                      <td className="px-2 py-1">
+                        {item.ref?.deta_smartapps || "-"}
+                      </td>
+                      <td className="px-2 py-1">{item.รายการแก้ไข || "-"}</td>
+                      <td className="px-2 py-1">{item.Fix_detail || "-"}</td>
+                      <td className="px-2 py-1">{item.Fix_date || "-"}</td>
+                      <td className="px-2 py-1">{item.Fix_pic1 || "-"}</td>
+                      <td className="px-2 py-1">{item.Fix_pic2 || "-"}</td>
+                      <td className="px-2 py-1">{item.Fix_by_Admin || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+        <div className="w-full lg:w-1/2">
+            <div className="bg-base-100 border border-base-300 rounded p-4 space-y-2 border-t lg:border-t-0 lg:border-l pt-4 lg:pt-0 lg:pl-4">
+              <div className="text-lg font-medium">ฟอร์มบันทึกผลการดำเนินการ</div>
+              <div>
+                <label className="text-sm">complaintId</label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="complaintId"
+                  value={selectedAdminRow?.complaintId || ""}
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      complaintId: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                {/* Quick select userId buttons */}
+                <div className="flex gap-2 mb-1">
+                  <button
+                    className="btn btn-xs btn-outline"
+                    onClick={() =>
+                      setSelectedAdminRow((prev) => ({
+                        ...prev,
+                        userId: "684a9a0140c6ae493e5b3392",
+                      }))
+                    }
+                  >
+                    กองช่าง
+                  </button>
+                  <button
+                    className="btn btn-xs btn-outline"
+                    onClick={() =>
+                      setSelectedAdminRow((prev) => ({
+                        ...prev,
+                        userId: "684e64b940c6ae493e5b3473",
+                      }))
+                    }
+                  >
+                    ส่วนกลาง
+                  </button>
+                </div>
+                <label className="text-sm">userId</label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="userId (MongoDB ObjectId)"
+                  value={selectedAdminRow?.userId || ""}
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      userId: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm">Assigned At</label>
+                <input
+                  type="datetime-local"
+                  className="input input-bordered input-sm w-full"
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      assignedAt: e.target.value,
+                    }))
+                  }
+                  value={selectedAdminRow?.assignedAt || ""}
+                />
+              </div>
+              <div>
+                <label className="text-sm">Solution</label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="คำอธิบายแนวทางการแก้ไข (คั่นด้วย ,)"
+                  value={selectedAdminRow?.solution?.join(", ") || ""}
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      solution: e.target.value.split(",").map((s) => s.trim()),
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm">Solution Images</label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="URL รูปภาพ (คั่นด้วย ,)"
+                  value={selectedAdminRow?.solutionImages?.join(", ") || ""}
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      solutionImages: [e.target.value.trim()],
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm">Completed At</label>
+                {selectedRow?.completedAtRaw && (
+                <div className="text-xs text-green-600 mb-1">
+                  Rawวันที่ปิดงาน: {selectedRow.completedAtRaw}
+                </div>
+              )}
+                <input
+                  type="datetime-local"
+                  className="input input-bordered input-sm w-full"
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      completedAt: e.target.value,
+                    }))
+                  }
+                  value={selectedAdminRow?.completedAt || ""}
+                />
+              </div>
+              <div>
+                <label className="text-sm">Note</label>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="หมายเหตุ"
+                  value={selectedAdminRow?.note || ""}
+                  onChange={(e) =>
+                    setSelectedAdminRow((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              {/* Save button for admin form */}
+              <div className="pt-4">
+                <button
+                  className="btn btn-success btn-sm"
+                  onClick={() => {
+                    if (!selectedAdminRow || !selectedRow?.mappingId) {
+                      return alert("กรุณาเลือกข้อมูลจากตารางด้านบนก่อน");
+                    }
+
+                    const formData = {
+                      mappingId: selectedRow.mappingId,
+                      complaintId: selectedAdminRow.complaintId,
+                      userId: selectedAdminRow.userId,
+                      assignedAt: (() => {
+                        const raw = selectedAdminRow.assignedAt;
+                        if (!raw) return null;
+                        const dt = new Date(raw);
+                        const year = dt.getFullYear();
+                        if (year > 2400) dt.setFullYear(year - 543);
+                        return isNaN(dt.getTime()) ? null : dt.toISOString();
+                      })(),
+                      completedAt: (() => {
+                        const raw = selectedAdminRow.completedAt;
+                        if (!raw) return null;
+                        const dt = new Date(raw);
+                        const year = dt.getFullYear();
+                        if (year > 2400) dt.setFullYear(year - 543);
+                        return isNaN(dt.getTime()) ? null : dt.toISOString();
+                      })(),
+                      solution: typeof selectedAdminRow.solution === "string"
+                        ? selectedAdminRow.solution
+                            .split(/[,،؛]/)
+                            .map((s) => s.trim())
+                            .filter((s) => s.length > 0)
+                        : Array.isArray(selectedAdminRow.solution)
+                        ? selectedAdminRow.solution
+                        : [],
+                      solutionImages: typeof selectedAdminRow.solutionImages === "string"
+                        ? selectedAdminRow.solutionImages.split(",").map((s) => s.trim()).filter(Boolean)
+                        : Array.isArray(selectedAdminRow.solutionImages)
+                        ? selectedAdminRow.solutionImages
+                        : [],
+                      note: selectedAdminRow.note?.toString() || "",
+                    };
+
+                    console.log("📝 Admin formData:", formData);
+
+                    fetch("/api/assignments/create", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(formData),
+                    })
+                      .then((res) => res.json())
+                      .then((data) => {
+                        alert("บันทึกผลการดำเนินการสำเร็จ");
+                        console.log("✅ บันทึก admin row:", data);
+                      })
+                      .catch((err) => {
+                        console.error("❌ บันทึกล้มเหลว:", err);
+                        alert("เกิดข้อผิดพลาดในการบันทึกผลการดำเนินการ");
+                      });
+                  }}
+                >
+                  บันทึกผลการดำเนินการ
+                </button>
+              </div>
+            </div>
+        </div>
+      </div>
     </>
   );
 }

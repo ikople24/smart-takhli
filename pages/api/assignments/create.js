@@ -9,7 +9,8 @@ export default async function handler(req, res) {
 
   try {
     await dbConnect();
-    const { complaintId, userId, solutionDetails, solutionImages, completedAt, remarks } = req.body;
+    const { complaintId, userId, solution, solutionImages, completedAt,assignedAt
+, note } = req.body;
 
     if (!complaintId || !userId) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -18,10 +19,11 @@ export default async function handler(req, res) {
     const newAssignment = await Assignment.create({
       complaintId: new mongoose.Types.ObjectId(complaintId),
       userId: new mongoose.Types.ObjectId(userId),
-      solutionDetails,
+      solution,
       solutionImages,
       completedAt,
-      remarks,
+      assignedAt,
+      note,
     });
 
     res.status(201).json({ message: 'Assignment created successfully', assignment: newAssignment });

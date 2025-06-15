@@ -13,7 +13,7 @@ const AssignmentSchema = new mongoose.Schema({
   },
   assignedAt: {
     type: Date,
-    default: Date.now,
+    //default: Date.now,
   },
   solution: {
     type: [String],
