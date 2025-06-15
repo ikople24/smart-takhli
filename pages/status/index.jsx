@@ -1,4 +1,3 @@
-//page/status/index.jsx
 import CardModalDetail from "@/components/CardModalDetail";
 import { useEffect, useState } from "react";
 import useComplaintStore from "@/stores/useComplaintStore";
@@ -17,8 +16,17 @@ const StatusPage = () => {
     });
   }, []);
 
+  const normalizeDate = (dateStr) => {
+    const d = new Date(dateStr);
+    if (d.getFullYear() > 2500) {
+      d.setFullYear(d.getFullYear() - 543);
+    }
+    return d;
+  };
+
+  // Sort complaints by completedAt or updatedAt (latest first)
   const paginatedComplaints = [...complaints]
-    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+    .sort((a, b) => normalizeDate(b.completedAt || b.updatedAt) - normalizeDate(a.completedAt || a.updatedAt))
     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (

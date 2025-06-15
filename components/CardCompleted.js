@@ -27,16 +27,16 @@ const CompletedCard = ({
   const [activeIcons, setActiveIcons] = useState([]);
   const [assignment, setAssignment] = useState(null);
 
-  console.log("CompletedCard props:", {
-    complaintMongoId,
-    complaintId,
-    title,
-    description,
-    timestamp,
-    beforeImage,
-    afterImage,
-    problems,
-  });
+  // console.log("CompletedCard props:", {
+  //   complaintMongoId,
+  //   complaintId,
+  //   title,
+  //   description,
+  //   timestamp,
+  //   beforeImage,
+  //   afterImage,
+  //   problems,
+  // });
 
 useEffect(() => {
   let isMounted = true;
@@ -49,7 +49,7 @@ useEffect(() => {
 }, [fetchProblemOptions]);
 
   useEffect(() => {
-    console.log("All problemOptions:", problemOptions);
+    // console.log("All problemOptions:", problemOptions);
     if (Array.isArray(problems)) {
       const mapped = problems.map((problem) => {
         const found = problemOptions?.find(
@@ -73,7 +73,7 @@ useEffect(() => {
       );
       const json = await res.json();
       if (isMounted && json.success && json.data.length > 0) {
-        console.log("Fetched assignment data:", json.data[0]);
+        //console.log("Fetched assignment data:", json.data[0]);
         setAssignment(json.data[0]);
       }
     } catch (error) {
