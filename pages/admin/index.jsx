@@ -83,12 +83,19 @@ export default function AdminPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = {
-      label,
-      icon_url: iconUrl,
-      menu_category: category,
-      active: true,
-    };
+    const data = isAdminTab
+      ? {
+          label,
+          icon_url: iconUrl,
+          menu_category: category,
+          active: true,
+        }
+      : {
+          label,
+          iconUrl,
+          category,
+          active: true,
+        };
 
     const BASE_URL =
       process.env.NODE_ENV === "development"
