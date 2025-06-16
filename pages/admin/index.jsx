@@ -62,6 +62,9 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${BASE_URL}${endpoint}/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-app-id": process.env.NEXT_PUBLIC_APP_ID,
+        },
       });
 
       if (!res.ok) throw new Error("Failed to delete");
@@ -99,6 +102,7 @@ export default function AdminPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-app-id": process.env.NEXT_PUBLIC_APP_ID,
         },
         body: JSON.stringify(data),
       });
