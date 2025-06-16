@@ -9,12 +9,8 @@ import { useEffect, useState } from "react";
 
 const CompletedCard = ({
   complaintMongoId,
-  complaintId,
   title,
-  description,
-  timestamp,
   beforeImage,
-  afterImage,
   problems,
   updatedAt,
 }) => {
