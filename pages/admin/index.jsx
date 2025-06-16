@@ -57,7 +57,7 @@ export default function AdminPage() {
         ? "http://localhost:3004"
         : "https://express-docker-server-production.up.railway.app";
 
-    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
+    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
 
     try {
       const res = await fetch(`${BASE_URL}${endpoint}/${id}`, {
@@ -95,7 +95,7 @@ export default function AdminPage() {
         ? "http://localhost:3004"
         : "https://express-docker-server-production.up.railway.app";
 
-    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
+    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
 
     try {
       const res = await fetch(`${BASE_URL}${endpoint}`, {
