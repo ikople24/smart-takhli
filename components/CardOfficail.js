@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { AlertCircle, MessageCircleHeart } from "lucide-react";
+import SatisfactionForm from "./SatisfactionForm";
 
 
 export default function CardOfficail(props) {
@@ -9,6 +10,7 @@ export default function CardOfficail(props) {
     const [assignedDate, setAssignedDate] = useState(null);
     const [completedDate, setCompletedDate] = useState(null);
     const [officer, setOfficer] = useState(null);
+    const [showRating, setShowRating] = useState(false);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -98,10 +100,24 @@ export default function CardOfficail(props) {
             <button className="btn btn-outline btn-error btn-sm btn-disabled text-red-400">
               <AlertCircle className="w-4 h-4" /> รายงาน
             </button>
-            <button className="btn btn-info btn-sm text-white">
+            <button
+              className="btn btn-info btn-sm text-white"
+              onClick={() => setShowRating(!showRating)}
+            >
               <MessageCircleHeart className="w-6 h-6 text-white" /> ประเมินความพึงพอใจ
             </button>
           </div>
+          {showRating && (
+            <div className="mt-4 w-full">
+              <SatisfactionForm
+                complaintId={props.probId}
+                onSubmit={(data) => {
+                  console.log("ส่งความคิดเห็น:", data);
+                  setShowRating(false);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
