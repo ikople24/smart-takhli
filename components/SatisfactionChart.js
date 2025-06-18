@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 
 const SatisfactionChart = ({ complaintId }) => {
-  const compleintId = complaintId || null;
   // console.log("📊 Rendering SatisfactionChart for complaintId:", compleintId);
   const [data, setData] = useState([]);
   const [average, setAverage] = useState(0);
