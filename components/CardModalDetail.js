@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import CardAssignment from "./CardAssignment";
 import CardOfficail from "./CardOfficail";
+import SatisfactionChart from "./SatisfactionChart";
 
 export default function CardModalDetail({ modalData, onClose }) {
   const { menu } = useMenuStore();
@@ -171,6 +172,7 @@ export default function CardModalDetail({ modalData, onClose }) {
             </div>
               <CardOfficail probId={modalData?._id} />
               <CardAssignment probId={modalData?._id} />
+              <SatisfactionChart complaintId={modalData._id} />
             <div className="mt-4 text-center">
               <button
                 onClick={() => {

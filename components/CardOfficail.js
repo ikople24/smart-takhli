@@ -102,6 +102,17 @@ export default function CardOfficail(props) {
               <MessageCircleHeart className="w-6 h-6 text-white" /> ประเมินความพึงพอใจ
             </button>
           </div>
+          {showRating && (
+            <div className="mt-4 w-full">
+              <SatisfactionForm
+                complaintId={props.probId}
+                onSubmit={(data) => {
+                  console.log("ส่งความคิดเห็น:", data);
+                  setShowRating(false);
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
