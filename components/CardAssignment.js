@@ -85,7 +85,7 @@ export default function CardAssignment({ probId }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto bg-white shadow-md rounded-md">
+    <div className="max-w-4xl mx-auto bg-white shadow-md rounded-md p-[6px]">
       <div className="flex flex-col justify-between space-y-4">
         {/* วิธีดำเนินการ Section */}
         <div>
@@ -118,8 +118,8 @@ export default function CardAssignment({ probId }) {
         </div>
 
         {/* เจ้าหน้าที่ Section */}
-        <div className="grid grid-cols-5 gap-4 items-start">
-          <div className="col-span-3 pr-6 border-r border-gray-300">
+        <div className="grid grid-cols-5 gap-4 items-start h-full">
+          <div className="col-span-3 pr-6 border-r border-gray-300 h-full">
             <div className="text-md font-semibold mb-4">
               วิธีดำเนินการ (ทั้งหมด)
             </div>
