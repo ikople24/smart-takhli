@@ -17,6 +17,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "lib/auth.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "lib/auth.ts", "pages/api/smart-health/menu-ob-health.js"],
   "exclude": ["node_modules"]
 }
