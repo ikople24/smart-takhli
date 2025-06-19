@@ -5,9 +5,14 @@ import ComplaintFormModal from "@/components/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
 import Footer from "@/components/Footer";
 
+import SpecialFormModal from "@/components/SpacialFormModal";
+
 export default function Home() {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [showSpecialForm, setShowSpecialForm] = useState(false);
+  const [formData, setFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
+
 
   const texts = useMemo(() => [
     "แจ้งทุกข์ - แจ้งเหตุ",
@@ -47,7 +52,11 @@ export default function Home() {
 
 
   const handleOpenModal = (label: string) => {
-    setSelectedLabel(label);
+    if (label === "ลงทะเบียนกายอุปกรณ์") {
+      setShowSpecialForm(true);
+    } else {
+      setSelectedLabel(label);
+    }
   };
   const handleCloseModal = () => {
     setSelectedLabel(null);
@@ -68,7 +77,7 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
-      <Pm25Dashboard/>
+      <Pm25Dashboard />
       <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">
@@ -107,6 +116,13 @@ export default function Home() {
       <div className="flex justify-center items-center gap-2 text-purple-400 text-sm mb-4">
         <a href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view">คู่มือการใช้งาน</a>
       </div>
+      {showSpecialForm && (
+        <SpecialFormModal
+          formData={formData}
+          setFormData={setFormData}
+          onClose={() => setShowSpecialForm(false)}
+        />
+      )}
       <Footer />
     </div>
   );
