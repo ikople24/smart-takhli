@@ -14,6 +14,7 @@ const TopNavbar = () => {
             { path: "/admin", label: "🛠 ตั้งค่าหน้าจอ" },
             { path: "/admin/register-user", label: "👥 จัดการผู้ใช้งาน" },
             { path: "/admin/manage-complaints", label: "📋 จัดการเรื่องร้องเรียน" },
+            { path: "/admin/smart-health", label: "🟣 smart-health" },
           ]}
         />
       </div>
