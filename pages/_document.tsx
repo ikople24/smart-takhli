@@ -4,15 +4,11 @@ export default function Document() {
   return (
     <Html lang="en" data-theme="light">
       <Head>
-        {/* Favicon */}
         <link rel="icon" href="/favicon.ico" />
-
-        {/* Social Sharing Meta Tags */}
-        <meta property="og:title" content="Smart-Takhli แจ้งทุกข์-แจ้งเหตุ" />
-        <meta property="og:description" content="ระบบยืมกายอุปกรณ์ สำหรับประชาชน" />
-        <meta property="og:image" content="https://smart-takhli.app/preview.jpg" />
-        <meta property="og:url" content="https://smart-takhli.app" />
-        <meta name="twitter:card" content="summary_large_image" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png" />
+        <link rel="manifest" href="/manifest.json" />
       </Head>
       <body className="antialiased">
         <Main />

@@ -1,13 +1,31 @@
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
 import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
 import Footer from "@/components/Footer";
-
+import { BookOpen, Download } from "lucide-react";
 import SpecialFormModal from "@/components/SpacialFormModal";
 
 export default function Home() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [showSpecialForm, setShowSpecialForm] = useState(false);
@@ -113,8 +131,28 @@ export default function Home() {
           <ComplaintFormModal selectedLabel={selectedLabel} onClose={handleCloseModal} />
         )}
       </div>
-      <div className="flex justify-center items-center gap-2 text-purple-400 text-sm mb-4">
-        <a href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view">คู่มือการใช้งาน</a>
+      <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
+        <a
+          href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <BookOpen size={16} className="text-purple-500" />
+          คู่มือการใช้งาน
+        </a>
+        {deferredPrompt && (
+          <button
+            onClick={() => {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then(() => {
+                setDeferredPrompt(null);
+              });
+            }}
+            className="flex items-center gap-1 mt-1 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
+          >
+            <Download size={16} className="text-white" />
+            ติดตั้งแอป
+          </button>
+        )}
       </div>
       {showSpecialForm && (
         <SpecialFormModal

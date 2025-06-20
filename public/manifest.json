@@ -1,0 +1,21 @@
+{
+  "name": "Smart Takhli",
+  "short_name": "SmartTakhli",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5A67D8",
+  "description": "แจ้งทุกข์-แจ้งเหตุ บริการลงทะเบียนการอุปรกรณ์ เทศบาลเมืองตาคลี",
+  "icons": [
+    {
+      "src": "/logoTK.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logoTK.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
