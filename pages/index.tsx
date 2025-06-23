@@ -13,6 +13,7 @@ import Footer from "@/components/Footer";
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
 import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
+import { BookOpen, Download } from "lucide-react";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -145,7 +146,7 @@ export default function Home() {
                 </div>
                 <span className="font-bold text-blue-400">SMART-HEALTH</span>
               </div>
-                <span className="font-semibold text-blue-400">✨ ศูนย์กายอุปกรณ์ ✨</span>
+              <span className="font-semibold text-blue-400">✨ ศูนย์กายอุปกรณ์ ✨</span>
               <AvailableListOnly menu={healthMenu} loading={healthLoading} />
             </div>
           </>
@@ -162,10 +163,30 @@ export default function Home() {
         />
       )}
 
-
-      <div className="flex justify-center items-center gap-2 text-purple-400 text-sm mb-4">
-        <a href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view">คู่มือการใช้งาน</a>
+      <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
+        <a
+          href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <BookOpen size={16} className="text-purple-500" />
+          คู่มือการใช้งาน
+        </a>
+        {deferredPrompt && (
+          <button
+            onClick={() => {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then(() => {
+                setDeferredPrompt(null);
+              });
+            }}
+            className="flex items-center gap-1 mt-1 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
+          >
+            <Download size={16} className="text-white" />
+            ติดตั้งแอป
+          </button>
+        )}
       </div>
+
       <Footer />
     </div>
   );
