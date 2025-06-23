@@ -9,6 +9,8 @@ fs.createReadStream('input.csv', { encoding: 'utf8' })
     // const [lat, lng] = row["ที่อยู่/location_lat_log"]
     //   ? row["ที่อยู่/location_lat_log"].split(',').map(Number)
     //   : [null, null];
+    // const ob_status_raw = row["ความพร้อมอุปกรณ์"] || "";
+    // const ob_status = ob_status_raw.includes("✅") ? true : ob_status_raw.includes("⛔") ? false : "";
 
     const safe = (value) => value?.trim() ? value : "-";
 
@@ -41,10 +43,12 @@ fs.createReadStream('input.csv', { encoding: 'utf8' })
       // household_income: safe(row["รายได้ต่อครัวเรือน"]),
       // assistive_devices: safe(row["อุปรกรณ์ช่วยเหลือ"]),
       // remark: safe(row["หมายเหตุ"]),
-      ob_type: safe(row["ประเภทกายอุปกรณ์"]),
-      id_code_th: safe(row["id_code"]),
-      image_icon: safe(row["pic"]),
-      shot_name: safe(row["ชื่อย่อ"]),
+      // ob_status: ob_status,
+      id_use_object: safe(row["รหัสการยืม"]),
+      index_id_tk: safe(row["รหัสอุปกรณ์"]),
+      id_personal_use: safe(row["รหัสผู้ยืม"]),
+      date_lend: safe(row["วันที่ยืม"]),
+      date_return: safe(row["วันที่คืน"]),
     };
 
     results.push(removeEmptyFields(entry));
@@ -52,4 +56,4 @@ fs.createReadStream('input.csv', { encoding: 'utf8' })
   .on('end', () => {
     fs.writeFileSync('output.json', JSON.stringify(results, null, 2), 'utf8');
     console.log('✅ แปลงข้อมูลเรียบร้อยแล้ว → บันทึกในไฟล์ output.json');
-  });
+  })

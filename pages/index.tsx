@@ -9,8 +9,10 @@ import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
 import Footer from "@/components/Footer";
-import { BookOpen, Download } from "lucide-react";
-import SpecialFormModal from "@/components/SpacialFormModal";
+
+import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
+import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
+import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -29,7 +31,9 @@ export default function Home() {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [showSpecialForm, setShowSpecialForm] = useState(false);
+  const { menu: healthMenu, loading: healthLoading, fetchMenu: fetchHealthMenu } = useHealthMenuStore();
   const [formData, setFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
+  const [hasFetchedHealth, setHasFetchedHealth] = useState(false);
 
 
   const texts = useMemo(() => [
@@ -67,6 +71,13 @@ export default function Home() {
       setHasFetched(true);
     }
   }, [menu.length, fetchMenu, menuLoading, hasFetched]);
+
+  useEffect(() => {
+    if (!hasFetchedHealth && healthMenu.length === 0 && !healthLoading) {
+      fetchHealthMenu();
+      setHasFetchedHealth(true);
+    }
+  }, [healthMenu.length, fetchHealthMenu, healthLoading, hasFetchedHealth]);
 
 
   const handleOpenModal = (label: string) => {
@@ -125,33 +136,22 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            {/* {section 2 smart-health} */}
+            <div className="flex flex-col items-center mt-4 mb-2 p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="inline-grid *:[grid-area:1/1]">
+                  <div className="status status-success status-lg animate-ping"></div>
+                  <div className="status status-success status-lg"></div>
+                </div>
+                <span className="font-bold text-blue-400">SMART-HEALTH</span>
+              </div>
+                <span className="font-semibold text-blue-400">✨ ศูนย์กายอุปกรณ์ ✨</span>
+              <AvailableListOnly menu={healthMenu} loading={healthLoading} />
+            </div>
           </>
         )}
         {selectedLabel && (
           <ComplaintFormModal selectedLabel={selectedLabel} onClose={handleCloseModal} />
-        )}
-      </div>
-      <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
-        <a
-          href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view"
-          className="flex items-center gap-1 hover:underline"
-        >
-          <BookOpen size={16} className="text-purple-500" />
-          คู่มือการใช้งาน
-        </a>
-        {deferredPrompt && (
-          <button
-            onClick={() => {
-              deferredPrompt.prompt();
-              deferredPrompt.userChoice.then(() => {
-                setDeferredPrompt(null);
-              });
-            }}
-            className="flex items-center gap-1 mt-1 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
-          >
-            <Download size={16} className="text-white" />
-            ติดตั้งแอป
-          </button>
         )}
       </div>
       {showSpecialForm && (
@@ -161,6 +161,11 @@ export default function Home() {
           onClose={() => setShowSpecialForm(false)}
         />
       )}
+
+
+      <div className="flex justify-center items-center gap-2 text-purple-400 text-sm mb-4">
+        <a href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view">คู่มือการใช้งาน</a>
+      </div>
       <Footer />
     </div>
   );
