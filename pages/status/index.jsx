@@ -1,4 +1,5 @@
 import CardModalDetail from "@/components/CardModalDetail";
+import Head from "next/head";
 import { useEffect, useState } from "react";
 import useComplaintStore from "@/stores/useComplaintStore";
 import CompletedCard from "@/components/CardCompleted";
@@ -6,8 +7,6 @@ import CompletedCard from "@/components/CardCompleted";
 
 const StatusPage = () => {
   const { complaints, fetchComplaints } = useComplaintStore();
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const [modalData, setModalData] = useState(null);
 
   useEffect(() => {
@@ -27,10 +26,13 @@ const StatusPage = () => {
   // Sort complaints by completedAt or updatedAt (latest first)
   const paginatedComplaints = [...complaints]
     .sort((a, b) => normalizeDate(b.completedAt || b.updatedAt) - normalizeDate(a.completedAt || a.updatedAt))
-    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    .slice(0, 10);
 
   return (
     <>
+      <Head>
+        <title>ดำเนินการเสร็จสิ้น</title>
+      </Head>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 py-4 w-full max-w-4xl mx-auto min-h-screen items-stretch">
         {paginatedComplaints.map((item, index) => (
           <div key={index} className="h-full">
@@ -54,25 +56,6 @@ const StatusPage = () => {
             </div>
           </div>
         ))}
-      </div>
-      <div className="join flex justify-center mt-4">
-        <button
-          className="join-item btn btn-xs"
-          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-        >
-          «
-        </button>
-        <button className="join-item btn btn-xs">หน้า {currentPage}</button>
-        <button
-          className="join-item btn btn-xs"
-          onClick={() =>
-            setCurrentPage((p) =>
-              p < Math.ceil(complaints.length / itemsPerPage) ? p + 1 : p
-            )
-          }
-        >
-          »
-        </button>
       </div>
       <CardModalDetail
         modalData={modalData}
