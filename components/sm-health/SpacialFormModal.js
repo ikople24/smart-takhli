@@ -156,7 +156,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                 const res = await fetch("/api/smart-health/ob-registration", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(formData),
+                  body: JSON.stringify({ ...formData, status: "รับคำร้อง" }),
                 });
 
                 if (res.ok) {
@@ -164,6 +164,11 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                     icon: "success",
                     title: "ส่งข้อมูลสำเร็จ",
                     text: "ขอบคุณสำหรับการลงทะเบียน",
+                  });
+                  await fetch("https://primary-production-a1769.up.railway.app/webhook/sm-health", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...formData, status: "รับคำร้อง" }),
                   });
                   onClose();
                 } else {
