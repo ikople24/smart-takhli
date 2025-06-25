@@ -1,7 +1,7 @@
 // AvailableItems.js
 import React from "react";
 import Image from "next/image";
-import { SquarePlus, ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 
 const skeletonCount = 6; // จำนวน skeleton ที่แสดงขณะโหลด
 
@@ -9,12 +9,12 @@ const AvailableItems = ({ menu = [], loading = false }) => {
   return (
     <div className="mt-6 p-4 bg-gray-100 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">รายการพร้อมยืม</h2>
-      <div className="flex flex-wrap gap-4 justify-center">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 justify-center">
         {loading
           ? Array.from({ length: skeletonCount }).map((_, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-xl shadow-md p-4 w-[150px] flex flex-col items-center animate-pulse"
+                className="bg-white rounded-xl shadow-md p-3 w-full max-w-[130px] sm:max-w-[150px] flex flex-col items-center mx-auto animate-pulse"
               >
                 <div className="skeleton h-14 w-14 mb-2 rounded-full bg-gray-300"></div>
                 <div className="skeleton h-4 w-16 mb-1 rounded bg-gray-200"></div>
@@ -25,7 +25,7 @@ const AvailableItems = ({ menu = [], loading = false }) => {
           : menu.map((item, index) => (
               <div
                 key={index}
-                className="bg-white rounded-xl shadow-md p-4 w-[150px] flex flex-col items-center"
+                className="bg-white rounded-xl shadow-md p-3 w-full max-w-[130px] sm:max-w-[150px] flex flex-col items-center mx-auto"
               >
                 <div className="w-14 h-14 relative">
                   <Image
@@ -44,10 +44,6 @@ const AvailableItems = ({ menu = [], loading = false }) => {
             ))}
       </div>
       <div className="mt-6 flex justify-center gap-4">
-        <button className="btn btn-primary flex items-center gap-2">
-          <SquarePlus className="w-4 h-4" />
-          ลงทะเบียน
-        </button>
         <button className="btn btn-success flex items-center gap-2">
           <ArrowRight className="w-4 h-4" />
           ยืมอุปกรณ์

@@ -30,9 +30,9 @@ export default async function handler(req, res) {
         phone,
         equipment,
         reason,
-        submitted_at: new Date()
+        submitted_at: new Date(),
+        status: "รับคำร้อง"
       });
-
       return res.status(200).json({ message: "ส่งข้อมูลสำเร็จ", insertedId: result.insertedId });
     } catch (error) {
       console.error("❌ Insert Error:", error);
