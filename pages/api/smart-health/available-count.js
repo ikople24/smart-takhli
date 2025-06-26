@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   await dbConnect();
   try {
     // ดึง available count
+    console.log(dbConnect)
     const availableCounts = await RegisterHealthModel.aggregate([
       { $match: { ob_status: true, id_code_th: { $ne: null } } },
       {
@@ -15,11 +16,13 @@ export default async function handler(req, res) {
         }
       }
     ]);
+    console.log("availableCounts (aggregate result):", availableCounts);
 
     const menus = await MenuHealthModel.find({});
 
     const mergedData = menus.map(menu => {
       const match = availableCounts.find(c => c._id === menu.id_code_th);
+      console.log(`Matching for menu.id_code_th=${menu.id_code_th}:`, match);
       return {
         label: menu.shot_name || menu.ob_type,
         image_icon: menu.image_icon,

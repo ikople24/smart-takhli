@@ -36,7 +36,11 @@ const AvailableItems = ({ menu = [], loading = false }) => {
                   />
                 </div>
                 <div className="mt-2 text-center font-semibold text-sm">{item.label}</div>
-                <div className="text-green-600 text-sm mt-1">✅ พร้อมยืม</div>
+                {item.available > 0 ? (
+                  <div className="text-green-600 text-sm mt-1">✅ พร้อมยืม</div>
+                ) : (
+                  <div className="text-red-500 text-sm mt-1">⛔️ ไม่พร้อมยืม</div>
+                )}
                 <div className="text-xs text-gray-500 mt-1">
                   {typeof item.available === "number" ? item.available : 0} รายการ
                 </div>

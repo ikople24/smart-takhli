@@ -10,12 +10,16 @@ import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import AvailableItems from "@/components/sm-health/AvailableItems";
 import RequestTable from "@/components/sm-health/RequestTable";
 import DemographicSummaryCards from "@/components/sm-health/DemographicSummaryCards";
+import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 
 export default function SmartHealthPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("request");
   const { menu, fetchMenu } = useHealthMenuStore();
+
+  const [devices, setDevices] = useState([]);
+  const [loadingDevices, setLoadingDevices] = useState(false);
 
   const fetchRequests = async () => {
     try {
@@ -29,6 +33,19 @@ export default function SmartHealthPage() {
       setTimeout(() => {
         setLoading(false);
       }, 1200); // 1200 ms หรือ 1.2 วินาที
+    }
+  };
+
+  const fetchDevices = async () => {
+    setLoadingDevices(true);
+    try {
+      const res = await fetch("/api/smart-health/registered-devices");
+      const data = await res.json();
+      setDevices(data);
+    } catch (err) {
+      console.error("Failed to fetch devices", err);
+    } finally {
+      setLoadingDevices(false);
     }
   };
 
@@ -63,10 +80,16 @@ export default function SmartHealthPage() {
     }
   };
 
+useEffect(() => {
+  fetchRequests();
+  fetchMenu();
+}, []);
+
   useEffect(() => {
-    fetchRequests();
-    fetchMenu();
-  }, []);
+    if (selectedTab === "register-device") {
+      fetchDevices();
+    }
+  }, [selectedTab]);
 
   return (
     <div className="p-6">
@@ -167,6 +190,9 @@ export default function SmartHealthPage() {
           onDelete={deleteRequest}
           onUpdateStatus={updateStatus}
         />
+      )}
+      {selectedTab === "register-device" && (
+        <RegisterDeviceTable devices={devices} loading={loadingDevices} />
       )}
     </div>
   );
