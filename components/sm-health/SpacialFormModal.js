@@ -171,6 +171,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                     body: JSON.stringify({ ...formData, status: "รับคำร้อง" }),
                   });
                   onClose();
+                  setFormData({ name: "", phone: "", equipment: "", reason: "" });
                 } else {
                   const data = await res.json();
                   Swal.fire({

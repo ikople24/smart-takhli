@@ -50,7 +50,11 @@ const AvailableListOnly: FC<AvailableListOnlyProps> = ({ menu = [], loading = fa
             </div>
             <div className="text-center font-semibold text-xs sm:text-base">{item.label}</div>
             <div className="flex flex-col items-center mt-auto">
-              <div className="text-green-600 text-xs sm:text-sm">✅พร้อมยืม</div>
+              {item.available > 0 ? (
+                <div className="text-green-600 text-xs sm:text-sm">✅พร้อมยืม</div>
+              ) : (
+                <div className="text-red-500 text-xs sm:text-sm">⛔️ไม่พร้อมยืม</div>
+              )}
               <div className="text-[10px] text-gray-500 sm:text-sm">
                 {typeof item.available === "number" ? item.available : 0} รายการ
               </div>
