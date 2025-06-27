@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import Image from 'next/image';
 
-const BorrowReturnTable = () => {
+const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuIcons, setMenuIcons] = useState([]);
@@ -180,7 +180,8 @@ const BorrowReturnTable = () => {
         <tbody>
           {data
             .filter((item) =>
-              filterType ? item.index_id_tk?.substring(0, 8) === filterType : true
+              (filterType ? item.index_id_tk?.substring(0, 8) === filterType : true) &&
+              (!showOnlyUnevaluated || !submittedFeedbacks.includes(item.id_use_object))
             )
             .map((item, index) => (
               <tr key={item._id}>

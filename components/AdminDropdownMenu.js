@@ -8,7 +8,11 @@ const AdminDropdownMenu = ({ links, show }) => {
 
   return (
     <div className="dropdown dropdown-right">
-      <div tabIndex={0} role="button" className="btn btn-sm btn-ghost">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-sm btn-ghost text-gray-700 hover:text-gray-900"
+      >
         <AlignJustify className="w-5 h-5" />
       </div>
       <ul
@@ -17,7 +21,12 @@ const AdminDropdownMenu = ({ links, show }) => {
       >
         {links.map(({ path, label }, index) => (
           <li key={index}>
-            <button onClick={() => router.push(path)}>{label}</button>
+            <button
+              className="text-black hover:text-primary"
+              onClick={() => router.push(path)}
+            >
+              {label}
+            </button>
           </li>
         ))}
       </ul>

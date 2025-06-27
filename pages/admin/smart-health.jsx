@@ -12,6 +12,7 @@ import RequestTable from "@/components/sm-health/RequestTable";
 import DemographicSummaryCards from "@/components/sm-health/DemographicSummaryCards";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
+import SatisfactionPieChart from "@/components/sm-health/SatisfactionPieChart";
 
 export default function SmartHealthPage() {
   const [requests, setRequests] = useState([]);
@@ -159,6 +160,7 @@ useEffect(() => {
       </div>
           <DemographicSummaryCards />
       <AvailableItems menu={menu} loading={loading} />
+      <SatisfactionPieChart />
       {loading ? (
         <p>กำลังโหลด...</p>
       ) : (
