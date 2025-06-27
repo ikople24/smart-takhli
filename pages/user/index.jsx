@@ -1,11 +1,18 @@
-// pages/user/index.jsx
-import React from 'react';
+import { useUser } from "@clerk/nextjs";
+import BorrowReturnTable from "../../components/sm-health/BorrowReturnTable";
 
-export default function UserPage() {
+const SatisfactionPage = () => {
+  const { user } = useUser();
+
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold">หน้า User</h1>
-      {/* ใส่เนื้อหาสำหรับหน้า user ที่ login แล้วดูได้ */}
+      <h1 className="text-2xl font-bold mb-4">แบบประเมินความพึงพอใจ</h1>
+      <div className="text-sm text-gray-500 mb-2">
+        คุณ: {user?.primaryEmailAddress?.emailAddress || "ไม่พบผู้ใช้"}
+      </div>
+      <BorrowReturnTable showOnlyUnevaluated />
     </div>
   );
-}
+};
+
+export default SatisfactionPage;
