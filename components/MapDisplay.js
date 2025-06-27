@@ -1,32 +1,65 @@
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect, useState } from 'react';
 
-// Fix default marker icon issue in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+  iconUrl: '/leaflet/marker-icon.png',
+  iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+  shadowUrl: '/leaflet/marker-shadow.png',
 });
 
-export default function MapDisplay({ lat, lng }) {
-  const [position, setPosition] = useState([13.736717, 100.523186]);
+function ClickHandler({ onClick }) {
+  useMapEvents({
+    click(e) {
+      onClick(e.latlng);
+    },
+  });
+  return null;
+}
+
+export default function MapDisplay({ lat, lng, showPopup = false }) {
+  const defaultPosition = [13.736717, 100.523186];
+  const [position, setPosition] = useState(
+    lat != null && lng != null ? [lat, lng] : defaultPosition
+  );
 
   useEffect(() => {
-    if (lat && lng) {
+    if (lat != null && lng != null) {
       setPosition([lat, lng]);
     }
   }, [lat, lng]);
 
   return (
     <MapContainer center={position} zoom={17} style={{ height: '100%', width: '100%' }}>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-      />
-      <Marker position={position} />
+      <ClickHandler onClick={(latlng) => setPosition([latlng.lat, latlng.lng])} />
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="แผนที่ถนน">
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="แผนที่ดาวเทียม">
+          <TileLayer
+            url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+            maxZoom={20}
+            subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+            attribution="Google Satellite"
+          />
+        </LayersControl.BaseLayer>
+      </LayersControl>
+      {position && (
+        <Marker position={position}>
+          {showPopup && (
+            <Popup>
+              📍 ตำแหน่งของคุณ<br />
+              ละติจูด: {position[0]}<br />
+              ลองจิจูด: {position[1]}
+            </Popup>
+          )}
+        </Marker>
+      )}
     </MapContainer>
   );
 }

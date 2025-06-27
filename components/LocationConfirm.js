@@ -21,10 +21,9 @@ const LocationConfirm = ({
         const leaflet = await import("leaflet");
         await import("leaflet/dist/leaflet.css");
         L = leaflet.default;
-        delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
-          iconRetinaUrl: "/leaflet/marker-icon-2x.png",
           iconUrl: "/leaflet/marker-icon.png",
+          iconRetinaUrl: "/leaflet/marker-icon-2x.png",
           shadowUrl: "/leaflet/marker-shadow.png",
         });
       })();
@@ -75,11 +74,12 @@ const LocationConfirm = ({
 
       {loading && <p className="text-sm text-gray-500">กำลังดึงตำแหน่ง...</p>}
 
-      {typeof window !== "undefined" && useCurrent && location && (
-        <div className="rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50">
+      {typeof window !== "undefined" && useCurrent && location?.lat && location?.lng && (
+        <div className="rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50 space-y-2">
           <div className="h-64 rounded overflow-hidden border">
-            <MapDisplay location={location} setLocation={setLocation} />
+            <MapDisplay lat={location.lat} lng={location.lng} showPopup={true} />
           </div>
+          
         </div>
       )}
     </div>
