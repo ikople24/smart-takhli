@@ -3,9 +3,16 @@ import Image from "next/image";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { z } from "zod";
 import Swal from "sweetalert2";
+import LocationConfirm from "@/components/LocationConfirm";
+import { useState } from "react";
 
 export default function SpecialFormModal({ formData, setFormData, onClose }) {
   const { menu, fetchMenu } = useHealthMenuStore();
+
+  // 🗺️  location state & toggle
+  const [useCurrent, setUseCurrent] = useState(false);
+  const [location, setLocation]   = useState(null);
+
   useEffect(() => {
     fetchMenu();
   }, [fetchMenu]);
@@ -15,11 +22,15 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
     phone: z.string().length(10, "เบอร์โทรต้องมี 10 หลัก"),
     equipment: z.string().min(1, "กรุณาเลือกอุปกรณ์"),
     reason: z.string().min(1, "กรุณากรอกเหตุผล"),
+    location: z.object({
+      lat: z.number(),
+      lng: z.number(),
+    }),
   });
 
   return (
     <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg p-6 w-80 space-y-4 relative">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4 relative">
         <button
           className="absolute top-2 right-2 text-gray-500"
           onClick={onClose}
@@ -30,7 +41,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
           ลงทะเบียนกายอุปกรณ์
         </h2>
 
-        <ul className="steps steps-horizontal mb-4 text-xs">
+        <ul className="steps w-full justify-center mb-4 text-[10px] flex-wrap text-center leading-tight whitespace-nowrap overflow-x-auto px-1">
           <li className={`step ${formData.name ? "step-primary" : ""}`}>
             กรอกชื่อ
           </li>
@@ -43,6 +54,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
           <li className={`step ${formData.reason ? "step-primary" : ""}`}>
             เหตุผล
           </li>
+          <li className={`step ${location ? "step-primary" : ""}`}>พิกัด</li>
         </ul>
         <label className="font-extrabold text-sm text-gray-600">
           ขั้นตอนที่ 1: ชื่อ-นามสกุล
@@ -126,12 +138,25 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
           }`}
         />
 
+        <label className="font-extrabold text-sm text-gray-600">
+          ขั้นตอนที่ 5: ระบุพิกัด
+        </label>
+        <LocationConfirm
+          useCurrent={useCurrent}
+          onToggle={setUseCurrent}
+          location={location}
+          setLocation={setLocation}
+          formSubmitted={false}
+        />
+
         <div className="flex gap-2">
           <button
             className="btn btn-secondary flex-1"
-            onClick={() =>
-              setFormData({ name: "", phone: "", equipment: "", reason: "" })
-            }
+            onClick={() => {
+              setFormData({ name: "", phone: "", equipment: "", reason: "" });
+              setLocation(null);
+              setUseCurrent(false);
+            }}
             type="button"
           >
             ล้างข้อมูล
@@ -139,7 +164,17 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
           <button
             className="btn btn-primary flex-1"
             onClick={async () => {
-              const result = formSchema.safeParse(formData);
+              const dataToValidate = { ...formData, location };
+              if (!location) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "ข้อมูลไม่ครบ",
+                  text: "ขั้นตอนที่ 5: กรุณาระบุตำแหน่งที่ตั้งของคุณ",
+                });
+                return;
+              }
+
+              const result = formSchema.safeParse(dataToValidate);
               if (!result.success) {
                 const msg = result.error.errors
                   .map((err) => err.message)
@@ -156,7 +191,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                 const res = await fetch("/api/smart-health/ob-registration", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ...formData, status: "รับคำร้อง" }),
+                  body: JSON.stringify({ ...formData, location, status: "รับคำร้อง" }),
                 });
 
                 if (res.ok) {
@@ -168,10 +203,12 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                   await fetch("https://primary-production-a1769.up.railway.app/webhook/sm-health", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ...formData, status: "รับคำร้อง" }),
+                    body: JSON.stringify({ ...formData, location, status: "รับคำร้อง" }),
                   });
                   onClose();
                   setFormData({ name: "", phone: "", equipment: "", reason: "" });
+                  setLocation(null);
+                  setUseCurrent(false);
                 } else {
                   const data = await res.json();
                   Swal.fire({

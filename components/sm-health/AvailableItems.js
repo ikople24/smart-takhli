@@ -1,11 +1,21 @@
 // AvailableItems.js
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 
 const skeletonCount = 6; // จำนวน skeleton ที่แสดงขณะโหลด
 
 const AvailableItems = ({ menu = [], loading = false }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [availableDevices, setAvailableDevices] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/smart-health/available-devices")
+      .then((res) => res.json())
+      .then((data) => setAvailableDevices(data))
+      .catch((err) => console.error("Error loading devices", err));
+  }, []);
+
   return (
     <div className="mt-6 p-4 bg-gray-100 rounded-lg shadow-md">
       <h2 className="text-xl font-semibold mb-4">รายการพร้อมยืม</h2>
@@ -48,7 +58,10 @@ const AvailableItems = ({ menu = [], loading = false }) => {
             ))}
       </div>
       <div className="mt-6 flex justify-center gap-4">
-        <button className="btn btn-success flex items-center gap-2">
+        <button
+          className="btn btn-success flex items-center gap-2"
+          onClick={() => setShowModal(true)}
+        >
           <ArrowRight className="w-4 h-4" />
           ยืมอุปกรณ์
         </button>
@@ -57,6 +70,44 @@ const AvailableItems = ({ menu = [], loading = false }) => {
           คืนอุปกรณ์
         </button>
       </div>
+      {showModal && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">ฟอร์มยืมอุปกรณ์</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="label">
+                  <span className="label-text">เลขบัตรประชาชน</span>
+                </label>
+                <input type="text" placeholder="เลขบัตรประชาชน" className="input input-bordered w-full" />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">รหัสอุปกรณ์</span>
+                </label>
+                <select className="select select-bordered w-full">
+                  <option value="">เลือกอุปกรณ์</option>
+                  {availableDevices.map((device, i) => (
+                    <option key={i} value={device.index_id_tk}>
+                      {device.display_label || device.index_id_tk}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">วันที่และเวลา</span>
+                </label>
+                <input type="datetime-local" className="input input-bordered w-full" />
+              </div>
+            </div>
+            <div className="modal-action">
+              <button className="btn btn-primary">บันทึก</button>
+              <button className="btn" onClick={() => setShowModal(false)}>ยกเลิก</button>
+            </div>
+          </div>
+        </dialog>
+      )}
     </div>
   );
 };

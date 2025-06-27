@@ -1,21 +1,9 @@
 import { useEffect, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import dynamic from "next/dynamic";
 
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  LayersControl,
-} from "react-leaflet";
+let L;
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-  iconUrl: "/leaflet/marker-icon.png",
-  shadowUrl: "/leaflet/marker-shadow.png",
-});
+const MapDisplay = dynamic(() => import("./MapDisplay"), { ssr: false });
 
 const LocationConfirm = ({
   useCurrent,
@@ -25,7 +13,22 @@ const LocationConfirm = ({
   formSubmitted,
 }) => {
   const [loading, setLoading] = useState(false);
-  const { BaseLayer } = LayersControl;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Dynamic import for Leaflet to avoid SSR window error
+      (async () => {
+        const leaflet = await import("leaflet");
+        await import("leaflet/dist/leaflet.css");
+        L = leaflet.default;
+        L.Icon.Default.mergeOptions({
+          iconUrl: "/leaflet/marker-icon.png",
+          iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+          shadowUrl: "/leaflet/marker-shadow.png",
+        });
+      })();
+    }
+  }, []);
 
   useEffect(() => {
     if (useCurrent) {
@@ -71,59 +74,12 @@ const LocationConfirm = ({
 
       {loading && <p className="text-sm text-gray-500">กำลังดึงตำแหน่ง...</p>}
 
-      {useCurrent && location && (
-        <div className="rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50">
+      {typeof window !== "undefined" && useCurrent && location?.lat && location?.lng && (
+        <div className="rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50 space-y-2">
           <div className="h-64 rounded overflow-hidden border">
-            <MapContainer
-              center={[location.lat, location.lng]}
-              zoom={17}
-              scrollWheelZoom={false}
-              style={{ height: "100%", width: "100%" }}
-            >
-              {/* 🧭 Layers Control */}
-              <LayersControl
-                position="topright"
-                className="custom-layers-control"
-              >
-                {/* 🗺️ แผนที่ถนน */}
-                <BaseLayer checked name="แผนที่ถนน">
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution="&copy; OpenStreetMap contributors"
-                  />
-                </BaseLayer>
-
-                {/* 🛰️ แผนที่ดาวเทียม */}
-                <BaseLayer name="แผนที่ดาวเทียม">
-                  <TileLayer
-                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                    attribution="Tiles &copy; Esri"
-                  />
-                </BaseLayer>
-              </LayersControl>
-
-              {/* 📍 Marker ตำแหน่งผู้ใช้ */}
-              <Marker
-                position={[location.lat, location.lng]}
-                draggable={true}
-                eventHandlers={{
-                  dragend: (e) => {
-                    const marker = e.target;
-                    const position = marker.getLatLng();
-                    setLocation({ lat: position.lat, lng: position.lng });
-                  },
-                }}
-              >
-                <Popup>
-                  📍 <strong>ตำแหน่งของคุณ</strong>
-                  <br />
-                  ละติจูด: {location.lat.toFixed(6)}
-                  <br />
-                  ลองจิจูด: {location.lng.toFixed(6)}
-                </Popup>
-              </Marker>
-            </MapContainer>
+            <MapDisplay lat={location.lat} lng={location.lng} showPopup={true} />
           </div>
+          
         </div>
       )}
     </div>

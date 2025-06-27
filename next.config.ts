@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
       "storage.googleapis.com",
       "cdn-icons-png.flaticon.com",
       "images.clerk.dev",
+      "storage.googleapis.com",
     ],
   },
 };
