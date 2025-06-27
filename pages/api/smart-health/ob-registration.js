@@ -18,9 +18,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { name, phone, equipment, reason } = req.body;
+    const { name, phone, equipment, reason, location } = req.body;
 
-    if (!name || !phone || !equipment || !reason) {
+    if (!name || !phone || !equipment || !reason || !location) {
       return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
     }
 
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
         phone,
         equipment,
         reason,
+        location,
         submitted_at: new Date(),
         status: "รับคำร้อง"
       });

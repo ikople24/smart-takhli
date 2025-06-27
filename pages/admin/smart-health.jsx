@@ -11,6 +11,7 @@ import AvailableItems from "@/components/sm-health/AvailableItems";
 import RequestTable from "@/components/sm-health/RequestTable";
 import DemographicSummaryCards from "@/components/sm-health/DemographicSummaryCards";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
+import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
 
 export default function SmartHealthPage() {
   const [requests, setRequests] = useState([]);
@@ -20,6 +21,8 @@ export default function SmartHealthPage() {
 
   const [devices, setDevices] = useState([]);
   const [loadingDevices, setLoadingDevices] = useState(false);
+
+  const [borrows, setBorrows] = useState([]);
 
   const fetchRequests = async () => {
     try {
@@ -46,6 +49,16 @@ export default function SmartHealthPage() {
       console.error("Failed to fetch devices", err);
     } finally {
       setLoadingDevices(false);
+    }
+  };
+
+  const fetchBorrows = async () => {
+    try {
+      const res = await fetch("/api/smart-health/borrow-return");
+      const data = await res.json();
+      setBorrows(data);
+    } catch (err) {
+      console.error("Failed to fetch borrow-return data", err);
     }
   };
 
@@ -88,6 +101,9 @@ useEffect(() => {
   useEffect(() => {
     if (selectedTab === "register-device") {
       fetchDevices();
+    }
+    if (selectedTab === "borrow-return") {
+      fetchBorrows();
     }
   }, [selectedTab]);
 
@@ -193,6 +209,9 @@ useEffect(() => {
       )}
       {selectedTab === "register-device" && (
         <RegisterDeviceTable devices={devices} loading={loadingDevices} />
+      )}
+      {selectedTab === "borrow-return" && (
+        <BorrowReturnTable borrows={borrows} />
       )}
     </div>
   );
