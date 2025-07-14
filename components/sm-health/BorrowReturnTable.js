@@ -12,6 +12,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [submittedFeedbacks, setSubmittedFeedbacks] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
+  
   useEffect(() => {
     const fetchSubmittedFeedbacks = async () => {
       try {
@@ -188,7 +189,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                 <td>{index + 1}</td>
                 <td>
                   {getIconUrl(item.index_id_tk) && (
-                    <Image src={getIconUrl(item.index_id_tk)} alt="icon" width={24} height={24} />
+                    <Image src={getIconUrl(item.index_id_tk)} alt="icon" width={24} height={24} unoptimized />
                   )}
                 </td>
                 <td>{item.index_id_tk}</td>
@@ -242,7 +243,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
               </div>
               <div className="text-center">
                 {getIconUrl(selectedItem.index_id_tk) && (
-                  <Image src={getIconUrl(selectedItem.index_id_tk)} alt="icon" width={64} height={64} className="mx-auto mb-1" />
+                  <Image src={getIconUrl(selectedItem.index_id_tk)} alt="icon" width={64} height={64} className="mx-auto mb-1" unoptimized />
                 )}
                 <div className="text-green-600 text-sm font-medium">{getObjectName(selectedItem.index_id_tk)}</div>
               </div>

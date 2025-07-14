@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const menus = await MenuHealthModel.find({});
 
     const mergedData = menus.map(menu => {
-      const match = availableCounts.find(c => c._id === menu.id_code_th);
+      const match = availableCounts.find(c => String(c._id) === String(menu.id_code_th));
       console.log(`Matching for menu.id_code_th=${menu.id_code_th}:`, match);
       return {
         label: menu.shot_name || menu.ob_type,

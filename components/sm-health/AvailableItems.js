@@ -87,11 +87,12 @@ const AvailableItems = ({ menu = [], loading = false }) => {
                 </label>
                 <select className="select select-bordered w-full">
                   <option value="">เลือกอุปกรณ์</option>
-                  {availableDevices.map((device, i) => (
-                    <option key={i} value={device.index_id_tk}>
-                      {device.display_label || device.index_id_tk}
-                    </option>
-                  ))}
+                  {Array.isArray(availableDevices) &&
+                    availableDevices.map((device, i) => (
+                      <option key={i} value={device.index_id_tk}>
+                        {device.display_label || device.index_id_tk}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>

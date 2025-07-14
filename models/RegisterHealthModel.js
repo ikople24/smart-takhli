@@ -7,6 +7,8 @@ const RegisterHealthSchema = new mongoose.Schema(
     ob_status: { type: Boolean, default: true }, // true = available, false = in use
     registered_by: { type: String },
     note: { type: String },
+    id_code_th: { type: String },
+    index_id_tk: { type: String },
   },
   {
     timestamps: true,

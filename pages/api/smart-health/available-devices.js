@@ -1,9 +1,5 @@
-import { MongoClient } from 'mongodb';
-
-const uri = process.env.MONGODB_URI;
-const dbName = 'db_takhli';
-
-let cachedClient = null;
+import dbConnect from '@/lib/dbConnect';
+import RegisterObjectHealth from '@/models/RegisterHealthModel';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,28 +7,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!cachedClient) {
-      cachedClient = await MongoClient.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-    }
+    await dbConnect();
 
-    const db = cachedClient.db(dbName);
-    const collection = db.collection('register_object_health');
-    const menuCollection = db.collection('menu_ob_health');
-
-    const availableDevices = await collection.find({ ob_status: true }).toArray();
-    const menuItems = await menuCollection.find().toArray();
-    const devicesWithType = availableDevices.map(device => {
-      const matchedType = menuItems.find(menu => menu.id_code_th === device.index_id_tk?.substring(0, 8));
-      return {
-        ...device,
-        type_label: matchedType?.label || '',
-        display_label: `${device.index_id_tk} ${matchedType?.shot_name || ''}`,
-      };
-    });
-
+    const availableDevices = await RegisterObjectHealth.find({ ob_status: true });
+    const devicesWithType = availableDevices.map(device => ({
+      ...device.toObject(),
+      display_label: `${device.id_code_th} - ${device.ob_type || '-'}`,
+    }));
     res.status(200).json(devicesWithType);
   } catch (error) {
     console.error('Failed to fetch available devices:', error);

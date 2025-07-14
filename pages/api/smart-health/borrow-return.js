@@ -1,14 +1,12 @@
-import { MongoClient } from 'mongodb';
-
-const uri = process.env.MONGODB_URI;
+import dbConnect from '@/lib/dbConnect';
 const dbName = 'db_takhli';
 const collectionName = 'resoles_sm_health';
 const menuCollectionName = 'menu_ob_health';
 
 export default async function handler(req, res) {
   try {
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+    const mongoose = await dbConnect();
+    const db = mongoose.connection.useDb(dbName);
 
     if (req.method === 'POST') {
       // ----- Save feedback -----
@@ -16,7 +14,6 @@ export default async function handler(req, res) {
       const { ob_type, relation, satisfaction, suggestion } = req.body;
 
       if (!ob_type || !relation || !satisfaction || !suggestion) {
-        client.close();
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -28,7 +25,6 @@ export default async function handler(req, res) {
         createdAt: new Date(),
       });
 
-      client.close();
       return res.status(201).json({ success: true, id: result.insertedId });
     }
 
@@ -51,12 +47,10 @@ export default async function handler(req, res) {
         };
       });
 
-      client.close();
       return res.status(200).json(mappedData);
     }
 
     // ----- Other HTTP methods -----
-    client.close();
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('Borrow‑return API error:', err);
