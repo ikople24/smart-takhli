@@ -1,3 +1,4 @@
+//pages/complaint/index.jsx
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import useComplaintStore from "@/stores/useComplaintStore";
@@ -38,7 +39,7 @@ export default function ComplaintListPage() {
   return (
     <>
       <Head>
-        <title>อยู่ระหว่างดำเนินการ</title>
+        <title>Smart-Namphare</title>
       </Head>
       <div className="w-full flex justify-center px-4 py-6 mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-screen-xl mx-auto w-full min-h-[300px]">
@@ -88,29 +89,37 @@ export default function ComplaintListPage() {
                           );
                         })}
                       </div>
-                      <Swiper
-                        modules={[Autoplay]}
-                        autoplay={{
-                          delay: 3000,
-                          disableOnInteraction: false,
-                          pauseOnMouseEnter: true,
-                        }}
-                        loop={item.images && item.images.length > 1}
-                        spaceBetween={0}
-                        slidesPerView={1}
-                        className="w-full h-full"
-                        style={{ height: "100%" }}
-                      >
-                        {item.images?.map((imgUrl, index) => (
-                          <SwiperSlide key={index}>
-                            <img
-                              src={imgUrl}
-                              alt={`ภาพที่ ${index + 1}`}
-                              className="object-cover w-full h-full"
-                            />
-                          </SwiperSlide>
-                        ))}
-                      </Swiper>
+                      {item.images?.length === 1 ? (
+                        <img
+                          src={item.images[0]}
+                          alt="ภาพร้องเรียน"
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <Swiper
+                          modules={[Autoplay]}
+                          autoplay={{
+                            delay: 3000,
+                            disableOnInteraction: false,
+                            pauseOnMouseEnter: true,
+                          }}
+                          loop={item.images?.length > 1}
+                          spaceBetween={0}
+                          slidesPerView={1}
+                          className="w-full h-full"
+                          style={{ height: "100%" }}
+                        >
+                          {item.images?.map((imgUrl, index) => (
+                            <SwiperSlide key={index}>
+                              <img
+                                src={imgUrl}
+                                alt={`ภาพที่ ${index + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
+                      )}
                     </figure>
                     <div className="p-4 md:w-1/2 w-full flex flex-col gap-2 justify-start">
                       <div className="pr-1">
@@ -131,7 +140,7 @@ export default function ComplaintListPage() {
                                 {item.category}
                               </div>
                             </div>
-                            <span className="badge badge-primary text-xs">{item.community}</span>
+                            <span className="badge badge-secondary text-xs">{item.community}</span>
                           </div>
                         </div>
                         <div className="relative pr-1 mt-2">
