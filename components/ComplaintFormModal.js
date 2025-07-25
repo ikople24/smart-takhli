@@ -243,6 +243,7 @@ useEffect(() => {
                 ))}
             </div>
           </div>
+          <p className="font-semibold text-sm text-gray-700">3.แนบรูปภาพ 📁 เลือกรูปภาพ (ไม่เกิน 3 ภาพ)</p>
           <ImageUploads onChange={(urls) => setImageUrls(urls)} />
           <ReporterInput
             prefix={prefix}
