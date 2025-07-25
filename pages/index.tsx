@@ -15,6 +15,8 @@ import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { BookOpen, Download } from "lucide-react";
 
+import EducationFormModal from "@/components/education/EducationFormModal";
+
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
@@ -32,6 +34,7 @@ export default function Home() {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [showSpecialForm, setShowSpecialForm] = useState(false);
+  const [showEducationForm, setShowEducationForm] = useState(false);
   const { menu: healthMenu, loading: healthLoading, fetchMenu: fetchHealthMenu } = useHealthMenuStore();
   const [formData, setFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
   const [hasFetchedHealth, setHasFetchedHealth] = useState(false);
@@ -84,6 +87,8 @@ export default function Home() {
   const handleOpenModal = (label: string) => {
     if (label === "ลงทะเบียนกายอุปกรณ์") {
       setShowSpecialForm(true);
+    } else if (label === "สำรวจการศึกษา") {
+      setShowEducationForm(true);
     } else {
       setSelectedLabel(label);
     }
@@ -162,6 +167,11 @@ export default function Home() {
           onClose={() => setShowSpecialForm(false)}
         />
       )}
+
+      <EducationFormModal
+        isOpen={showEducationForm}
+        onClose={() => setShowEducationForm(false)}
+      />
 
       <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
         <a
