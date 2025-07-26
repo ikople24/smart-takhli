@@ -68,7 +68,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
 
         <label className="font-extrabold text-sm text-gray-600">ระดับการศึกษา</label>
         <div className="flex flex-wrap gap-2 justify-center">
-          {["มัธยมต้น", "มัธยมปลาย", "ปวช", "ปวส", "ปริญญาตรี"].map((level) => (
+          {["อนุบาล","ประถม","มัธยมต้น", "มัธยมปลาย", "ปวช", "ปวส", "ปริญญาตรี"].map((level) => (
             <button
               key={level}
               type="button"

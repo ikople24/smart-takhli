@@ -44,6 +44,25 @@ export default async function handler(req, res) {
       },
     });
 
+    // ✅ แจ้งเตือนไปยัง n8n webhook
+    try {
+      await fetch("https://primary-production-a1769.up.railway.app/webhook/sm-school", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${prefix || ''} ${fullName}`.trim(),
+          educationLevel,
+          phone,
+          address,
+          note,
+          image,
+          location,
+        }),
+      });
+    } catch (e) {
+      console.error("n8n notification failed:", e);
+    }
+
     return res.status(200).json({ message: 'Success', id: doc._id });
   } catch (err) {
     console.error('❌ API error:', err);
