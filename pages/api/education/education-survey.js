@@ -30,7 +30,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const count = await EducationRegister.countDocuments();
+    const applicantId = `TKC-${(count + 1).toString().padStart(3, '0')}`;
+
     const doc = await EducationRegister.create({
+      applicantId,
       prefix: prefix || '',
       educationLevel: educationLevel || '',
       name: fullName,
@@ -50,6 +54,7 @@ export default async function handler(req, res) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          applicantId,
           name: `${prefix || ''} ${fullName}`.trim(),
           educationLevel,
           phone,

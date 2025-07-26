@@ -48,6 +48,17 @@ export default function EducationFormModal({ isOpen, onClose }) {
       if (res.ok) {
         Swal.fire({ icon: 'success', title: 'ส่งข้อมูลเรียบร้อยแล้ว' });
         onClose();
+        setFormData({
+          educationLevel: '',
+          prefix: '',
+          fullName: '',
+          address: '',
+          phone: '',
+          note: '',
+          image: [],
+        });
+        setLocation(null);
+        setUseCurrent(false);
       } else {
         const errData = await res.json();
         Swal.fire({ icon: 'error', title: 'ไม่สามารถส่งข้อมูลได้', text: errData.message });

@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 
 const EducationSchema = new mongoose.Schema(
   {
+    applicantId: {
+      type: String,
+      unique: true,
+      required: true,
+    },
     level: String,
     prefix: String,
     name: String,
