@@ -18,6 +18,7 @@ const TopNavbar = () => {
                   { path: "/admin/register-user", label: "👥 จัดการผู้ใช้งาน" },
                   { path: "/admin/manage-complaints", label: "📋 จัดการเรื่องร้องเรียน" },
                   { path: "/admin/smart-health", label: "🟣 smart-health" },
+                  { path: "/admin/education-map", label: "🏫 smart-school" },
                   { path: "/user/satisfaction", label: "📊 ประเมินความพึงพอใจ" },
                 ]
               : []),
