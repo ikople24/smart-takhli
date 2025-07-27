@@ -7,7 +7,7 @@ const EducationSchema = new mongoose.Schema(
       unique: true,
       required: true,
     },
-    level: String,
+    educationLevel: String,
     prefix: String,
     name: String,
     address: String,
