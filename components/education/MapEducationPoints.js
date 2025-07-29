@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function MapEducationPoints({ data }) {
-  const center = data.length > 0 ? [data[0].location.lat, data[0].location.lng] : [15.2, 100.2];
+  const center = data.length > 0 ? [data[0].location.lat, data[0].location.lng] : [15.259, 100.349];
   
   return (
     <MapContainer center={center} zoom={12} style={{ height: '500px', width: '100%', zIndex: 0, position: 'relative' }}>
