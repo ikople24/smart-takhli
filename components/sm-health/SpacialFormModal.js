@@ -12,6 +12,7 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
   // 🗺️  location state & toggle
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation]   = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchMenu();
@@ -164,6 +165,11 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
           <button
             className="btn btn-primary flex-1"
             onClick={async () => {
+              // ป้องกันการกดปุ่มซ้ำ
+              if (isSubmitting) {
+                return;
+              }
+
               const dataToValidate = { ...formData, location };
               if (!location) {
                 Swal.fire({
@@ -186,6 +192,8 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                 });
                 return;
               }
+
+              setIsSubmitting(true);
 
               try {
                 const res = await fetch("/api/smart-health/ob-registration", {
@@ -224,11 +232,21 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
                   title: "เครือข่ายผิดพลาด",
                   text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
                 });
+              } finally {
+                setIsSubmitting(false);
               }
             }}
+            disabled={isSubmitting}
             type="button"
           >
-            ส่งคำร้อง
+            {isSubmitting ? (
+              <>
+                <span className="loading loading-spinner loading-sm"></span>
+                กำลังส่ง...
+              </>
+            ) : (
+              'ส่งคำร้อง'
+            )}
           </button>
         </div>
       </div>

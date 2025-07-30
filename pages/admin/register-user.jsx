@@ -19,6 +19,7 @@ export default function RegisterUserPage() {
   });
 
   const [existingUser, setExistingUser] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const phoneRefs = useRef([]);
 
@@ -61,6 +62,13 @@ export default function RegisterUserPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const payload = {
       ...form,
@@ -107,6 +115,8 @@ export default function RegisterUserPage() {
       }
     } catch (err) {
       alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -382,8 +392,15 @@ export default function RegisterUserPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn btn-success w-full">
-              Save
+            <button type="submit" className="btn btn-success w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  กำลังบันทึก...
+                </>
+              ) : (
+                'Save'
+              )}
             </button>
           </form>
         )}

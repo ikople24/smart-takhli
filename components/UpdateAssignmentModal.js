@@ -13,6 +13,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
       : ""
   );
   const { adminOptions } = useAdminOptionsStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleRemoveImage = (indexToRemove) => {
     setSolutionImages((prev) => prev.filter((_, index) => index !== indexToRemove));
@@ -49,6 +50,14 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       console.log("Submitting assignment update", {
         assignmentId: assignment._id,
@@ -76,6 +85,8 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
     } catch (err) {
       console.error("Error updating assignment:", err);
       alert("เกิดข้อผิดพลาดในการอัปเดต");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -195,11 +206,18 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
             />
           </div>
           <div className="flex justify-end space-x-2">
-            <button type="button" onClick={onClose} className="btn btn-ghost">
+            <button type="button" onClick={onClose} className="btn btn-ghost" disabled={isSubmitting}>
               ยกเลิก
             </button>
-            <button type="submit" className="btn btn-primary">
-              บันทึก
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  กำลังบันทึก...
+                </>
+              ) : (
+                'บันทึก'
+              )}
             </button>
           </div>
         </form>
