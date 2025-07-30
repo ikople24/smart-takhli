@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [iconUrl, setIconUrl] = useState("");
   const [category, setCategory] = useState("");
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdminTab = activeTab === "admin";
   const [isEditing, setIsEditing] = useState(false);
 
@@ -83,6 +84,14 @@ export default function AdminPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     const data = isAdminTab
       ? {
           label,
@@ -133,6 +142,8 @@ export default function AdminPage() {
     } catch (err) {
       console.error("Error submitting:", err);
       alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -447,8 +458,16 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     className="btn btn-accent ml-2"
+                    disabled={isSubmitting}
                   >
-                    บันทึกข้อมูล
+                    {isSubmitting ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        กำลังบันทึก...
+                      </>
+                    ) : (
+                      'บันทึกข้อมูล'
+                    )}
                   </button>
                 </div>
               </form>

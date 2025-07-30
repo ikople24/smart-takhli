@@ -15,10 +15,16 @@ export default function EducationFormModal({ isOpen, onClose }) {
   });
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ImageUploads will handle image upload and update formData.image as array of URLs
 
   const handleSubmit = async () => {
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
     if (
       !formData.educationLevel ||
       !formData.prefix ||
@@ -32,6 +38,8 @@ export default function EducationFormModal({ isOpen, onClose }) {
       Swal.fire({ icon: 'warning', title: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' });
       return;
     }
+
+    setIsSubmitting(true);
 
     const payload = {
       ...formData,
@@ -66,6 +74,8 @@ export default function EducationFormModal({ isOpen, onClose }) {
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดขณะส่งข้อมูล' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -87,6 +97,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
                 formData.educationLevel === level ? "btn-info" : "btn-outline"
               }`}
               onClick={() => setFormData({ ...formData, educationLevel: level })}
+              disabled={isSubmitting}
             >
               {level}
             </button>
@@ -103,6 +114,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
                 formData.prefix === prefix ? "btn-info" : "btn-outline"
               }`}
               onClick={() => setFormData({ ...formData, prefix })}
+              disabled={isSubmitting}
             >
               {prefix}
             </button>
@@ -116,6 +128,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
           value={formData.fullName}
           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           className="input input-bordered w-full"
+          disabled={isSubmitting}
         />
 
         <label className="font-extrabold text-sm text-gray-600">3. ที่อยู่</label>
@@ -124,6 +137,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           className="textarea textarea-bordered w-full"
+          disabled={isSubmitting}
         />
 
         <label className="font-extrabold text-sm text-gray-600">4. เบอร์โทร</label>
@@ -134,6 +148,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
           maxLength={10}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/, '') })}
           className="input input-bordered w-full"
+          disabled={isSubmitting}
         />
 
         <label className="font-extrabold text-sm text-gray-600">5. หมายเหตุ</label>
@@ -142,6 +157,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
           value={formData.note}
           onChange={(e) => setFormData({ ...formData, note: e.target.value })}
           className="textarea textarea-bordered w-full"
+          disabled={isSubmitting}
         />
 
         <label className="font-extrabold text-sm text-gray-600">6. อัพโหลดรูปภาพ</label>
@@ -157,8 +173,27 @@ export default function EducationFormModal({ isOpen, onClose }) {
         />
 
         <div className="flex gap-2 pt-2">
-          <button className="btn btn-secondary flex-1" onClick={onClose}>ยกเลิก</button>
-          <button className="btn btn-primary flex-1" onClick={handleSubmit}>ส่งข้อมูล</button>
+          <button 
+            className="btn btn-secondary flex-1" 
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            ยกเลิก
+          </button>
+          <button 
+            className="btn btn-primary flex-1" 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="loading loading-spinner loading-sm"></span>
+                กำลังส่ง...
+              </>
+            ) : (
+              'ส่งข้อมูล'
+            )}
+          </button>
         </div>
       </div>
     </div>
