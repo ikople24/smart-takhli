@@ -2,6 +2,7 @@ import Image from "next/image";
 import ImageUploads from "./ImageUploads";
 import { useState, useEffect } from "react";
 import { useAdminOptionsStore } from "../stores/useAdminOptionsStore";
+import { z } from "zod";
 
 export default function UpdateAssignmentModal({ assignment, onClose }) {
   const [note, setNote] = useState(assignment.note || "");
@@ -14,6 +15,14 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
   );
   const { adminOptions } = useAdminOptionsStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Zod schema สำหรับ validation
+  const assignmentUpdateSchema = z.object({
+    note: z.string().min(1, "กรุณากรอกหมายเหตุ"),
+    solution: z.array(z.string()).min(1, "กรุณาเลือกวิธีการแก้ไขอย่างน้อย 1 รายการ"),
+    solutionImages: z.array(z.string()).optional(),
+    completedAt: z.string().min(1, "กรุณาเลือกวันที่ดำเนินการเสร็จสิ้น"),
+  });
   
   const handleRemoveImage = (indexToRemove) => {
     setSolutionImages((prev) => prev.filter((_, index) => index !== indexToRemove));
@@ -53,6 +62,35 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
     
     // ป้องกันการกดปุ่มซ้ำ
     if (isSubmitting) {
+      return;
+    }
+
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      note: note.trim(),
+      solution,
+      solutionImages,
+      completedAt,
+    };
+
+    const result = assignmentUpdateSchema.safeParse(dataToValidate);
+    if (!result.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'note',
+        'solution',
+        'completedAt',
+        'solutionImages'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      alert("ข้อมูลไม่ครบถ้วน:\n" + errorMessages);
       return;
     }
 

@@ -2,6 +2,7 @@ import ImageUploads from '@/components/ImageUploads';
 import React, { useState } from 'react';
 import LocationConfirm from '@/components/LocationConfirm';
 import Swal from 'sweetalert2';
+import { z } from 'zod';
 
 export default function EducationFormModal({ isOpen, onClose }) {
   const [formData, setFormData] = useState({
@@ -17,6 +18,21 @@ export default function EducationFormModal({ isOpen, onClose }) {
   const [location, setLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Zod schema สำหรับ validation
+  const educationFormSchema = z.object({
+    educationLevel: z.string().min(1, 'กรุณาเลือกระดับการศึกษา'),
+    prefix: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
+    fullName: z.string().min(2, 'ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร'),
+    address: z.string().min(10, 'ที่อยู่ต้องมีอย่างน้อย 10 ตัวอักษร'),
+    phone: z.string().length(10, 'เบอร์โทรศัพท์ต้องมี 10 หลัก'),
+    note: z.string().min(1, 'กรุณากรอกหมายเหตุ'),
+    image: z.array(z.string()).min(1, 'กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป'),
+    location: z.object({
+      lat: z.number(),
+      lng: z.number(),
+    }).nullable().refine((val) => val !== null, 'กรุณาเลือกตำแหน่งที่ตั้ง'),
+  });
+
   // ImageUploads will handle image upload and update formData.image as array of URLs
 
   const handleSubmit = async () => {
@@ -25,17 +41,39 @@ export default function EducationFormModal({ isOpen, onClose }) {
       return;
     }
 
-    if (
-      !formData.educationLevel ||
-      !formData.prefix ||
-      !formData.fullName ||
-      !formData.address ||
-      !formData.phone ||
-      !formData.note ||
-      formData.image.length === 0 ||
-      !location
-    ) {
-      Swal.fire({ icon: 'warning', title: 'กรุณากรอกข้อมูลให้ครบทุกช่อง' });
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      ...formData,
+      location,
+    };
+
+    const result = educationFormSchema.safeParse(dataToValidate);
+    if (!result.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'educationLevel',
+        'fullName',
+        'address', 
+        'phone',
+        'note',
+        'image',
+        'location',
+        'prefix'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      Swal.fire({ 
+        icon: 'warning', 
+        title: 'ข้อมูลไม่ครบถ้วน', 
+        text: errorMessages,
+        confirmButtonText: 'ตกลง'
+      });
       return;
     }
 

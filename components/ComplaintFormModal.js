@@ -10,8 +10,19 @@ import { z } from 'zod';
 import Image from 'next/image';
 const LocationConfirm = dynamic(() => import('./LocationConfirm'), { ssr: false });
 
-const schema = z.object({
+const complaintFormSchema = z.object({
   community: z.string().min(1, 'กรุณาระบุ 1 ชุมชน'),
+  prefix: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
+  fullName: z.string().min(2, 'ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร'),
+  address: z.string().min(10, 'ที่อยู่ต้องมีอย่างน้อย 10 ตัวอักษร'),
+  phone: z.string().length(10, 'เบอร์โทรศัพท์ต้องมี 10 หลัก'),
+  detail: z.string().min(1, 'กรุณากรอกรายละเอียด'),
+  imageUrls: z.array(z.string()).min(1, 'กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป'),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number(),
+  }).nullable().refine((val) => val !== null, 'กรุณาเลือกตำแหน่งที่ตั้ง'),
+  selectedProblems: z.array(z.string()).min(1, 'กรุณาเลือกรายการปัญหาอย่างน้อย 1 รายการ'),
 });
 
 const ComplaintFormModal = ({ selectedLabel, onClose }) => {
@@ -47,63 +58,51 @@ useEffect(() => {
     setValidateTrigger(true);
     await new Promise((resolve) => setTimeout(resolve, 0)); // allow validation effect to run
 
-    const result = schema.safeParse({ community: selectedCommunity });
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      community: selectedCommunity,
+      prefix,
+      fullName: fullName.trim(),
+      address: address.trim(),
+      phone,
+      detail: detail.trim(),
+      imageUrls,
+      location,
+      selectedProblems,
+    };
+
+    const result = complaintFormSchema.safeParse(dataToValidate);
     if (!result.success) {
-      setFormErrors(result.error.flatten().fieldErrors);
-      return;
-    } else {
-      setFormErrors({});
-    }
-
-    if (!reporterValidRef.current) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'community',
+        'fullName', 
+        'address',
+        'phone',
+        'detail',
+        'imageUrls',
+        'location',
+        'selectedProblems',
+        'prefix'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
       await Swal.fire({
         icon: 'warning',
-        title: 'กรุณาตรวจสอบข้อมูล',
-        text: 'กรุณากรอกข้อมูลให้ถูกต้องก่อนส่งเรื่อง',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: errorMessages,
         confirmButtonText: 'ตกลง'
       });
       return;
     }
 
-    if (!location) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาเลือกตำแหน่ง',
-        text: 'ต้องระบุตำแหน่งก่อนส่งเรื่อง',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
-
-    if (imageUrls.length === 0) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาอัปโหลดรูปภาพ',
-        text: 'ต้องมีอย่างน้อย 1 รูปภาพก่อนส่งเรื่อง',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
-
-    if (!fullName.trim()) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'กรุณากรอกชื่อผู้แจ้ง',
-        text: 'ต้องระบุชื่อผู้แจ้งก่อนส่งเรื่อง',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
-
-    if (selectedProblems.length === 0) {
-      await Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาเลือกรายการปัญหา',
-        text: 'ต้องเลือกรายการปัญหาอย่างน้อย 1 รายการ',
-        confirmButtonText: 'ตกลง'
-      });
-      return;
-    }
+    setFormErrors({});
 
     setIsSubmitting(true);
 

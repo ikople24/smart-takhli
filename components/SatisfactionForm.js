@@ -1,10 +1,18 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
+import { z } from "zod";
 
 const SatisfactionForm = ({ onSubmit, complaintId }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Zod schema สำหรับ validation
+  const satisfactionFormSchema = z.object({
+    rating: z.number().min(1, "กรุณาให้คะแนน"),
+    comment: z.string().min(1, "กรุณากรอกความคิดเห็น"),
+    complaintId: z.string().min(1, "ไม่พบรหัสเรื่องร้องเรียน"),
+  });
 
   const handleSubmit = async () => {
     // ป้องกันการกดปุ่มซ้ำ
@@ -14,8 +22,30 @@ const SatisfactionForm = ({ onSubmit, complaintId }) => {
 
     console.log("📦 Submitting Satisfaction:", { complaintId, rating, comment });
 
-    if (rating === 0) {
-      Swal.fire("กรุณาให้คะแนน", "โปรดเลือกคะแนนก่อนส่งแบบประเมิน", "warning");
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      rating,
+      comment: comment.trim(),
+      complaintId,
+    };
+
+    const validationResult = satisfactionFormSchema.safeParse(dataToValidate);
+    if (!validationResult.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'rating',
+        'comment',
+        'complaintId'
+      ];
+      
+      const sortedErrors = validationResult.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      Swal.fire("ข้อมูลไม่ครบถ้วน", errorMessages, "warning");
       return;
     }
 
