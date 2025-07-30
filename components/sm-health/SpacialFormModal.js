@@ -19,14 +19,14 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
   }, [fetchMenu]);
 
   const formSchema = z.object({
-    name: z.string().min(1, "กรุณากรอกชื่อ"),
+    name: z.string().min(2, "ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร"),
     phone: z.string().length(10, "เบอร์โทรต้องมี 10 หลัก"),
     equipment: z.string().min(1, "กรุณาเลือกอุปกรณ์"),
-    reason: z.string().min(1, "กรุณากรอกเหตุผล"),
+    reason: z.string().min(10, "เหตุผลต้องมีอย่างน้อย 10 ตัวอักษร"),
     location: z.object({
       lat: z.number(),
       lng: z.number(),
-    }),
+    }).nullable().refine((val) => val !== null, "กรุณาเลือกตำแหน่งที่ตั้ง"),
   });
 
   return (
@@ -171,19 +171,25 @@ export default function SpecialFormModal({ formData, setFormData, onClose }) {
               }
 
               const dataToValidate = { ...formData, location };
-              if (!location) {
-                Swal.fire({
-                  icon: "warning",
-                  title: "ข้อมูลไม่ครบ",
-                  text: "ขั้นตอนที่ 5: กรุณาระบุตำแหน่งที่ตั้งของคุณ",
-                });
-                return;
-              }
-
               const result = formSchema.safeParse(dataToValidate);
               if (!result.success) {
-                const msg = result.error.errors
-                  .map((err) => err.message)
+                // เรียงลำดับ error ตามความสำคัญ
+                const errorOrder = [
+                  'name',
+                  'phone',
+                  'equipment',
+                  'reason',
+                  'location'
+                ];
+                
+                const sortedErrors = result.error.errors.sort((a, b) => {
+                  const aIndex = errorOrder.indexOf(a.path[0]);
+                  const bIndex = errorOrder.indexOf(b.path[0]);
+                  return aIndex - bIndex;
+                });
+                
+                const msg = sortedErrors
+                  .map((err, index) => `${index + 1}. ${err.message}`)
                   .join("\n");
                 Swal.fire({
                   icon: "warning",

@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
+import { z } from "zod";
 
 export default function AdminPage() {
   const { userId, isLoaded } = useAuth();
@@ -27,6 +28,13 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdminTab = activeTab === "admin";
   const [isEditing, setIsEditing] = useState(false);
+
+  // Zod schema สำหรับ validation
+  const adminOptionSchema = z.object({
+    label: z.string().min(2, "Label ต้องมีอย่างน้อย 2 ตัวอักษร"),
+    iconUrl: z.string().url("กรุณากรอก URL รูปภาพที่ถูกต้อง"),
+    category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
+  });
 
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const { problemOptions, fetchProblemOptions, problemLoading } = useProblemOptionStore();
@@ -87,6 +95,33 @@ export default function AdminPage() {
     
     // ป้องกันการกดปุ่มซ้ำ
     if (isSubmitting) {
+      return;
+    }
+
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      label: label.trim(),
+      iconUrl: iconUrl.trim(),
+      category,
+    };
+
+    const result = adminOptionSchema.safeParse(dataToValidate);
+    if (!result.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'label',
+        'category',
+        'iconUrl'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      alert("ข้อมูลไม่ครบถ้วน:\n" + errorMessages);
       return;
     }
 
