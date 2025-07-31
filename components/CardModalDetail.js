@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import CardAssignment from "./CardAssignment";
 import CardOfficail from "./CardOfficail";
+import SatisfactionChart from "./SatisfactionChart";
 
 export default function CardModalDetail({ modalData, onClose }) {
   const { menu } = useMenuStore();
@@ -56,6 +57,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         src={img}
                         alt={`slide-${idx}`}
                         fill
+                        sizes="(max-width: 768px) 100vw, 500px"
                         className="object-cover"
                       />
                       <button
@@ -96,6 +98,7 @@ export default function CardModalDetail({ modalData, onClose }) {
                         alt="category icon"
                         width={52}
                         height={52}
+                        sizes="52px"
                         className="object-contain"
                       />
                     )}
@@ -138,7 +141,8 @@ export default function CardModalDetail({ modalData, onClose }) {
               <div className="font-semibold mb-1">ปัญหาที่พบ</div>
               <div className="flex flex-wrap gap-2">
                 {modalData.problems?.map((p, idx) => {
-                  const matched = problemOptions.find((opt) => opt.label === p);
+                  const cleanLabel = typeof p === "string" ? p.trim() : "";
+                  const matched = problemOptions.find((opt) => opt.label === cleanLabel);
                   return (
                     <div
                       key={idx}
@@ -147,13 +151,14 @@ export default function CardModalDetail({ modalData, onClose }) {
                       {matched?.iconUrl && (
                         <Image
                           src={matched.iconUrl}
-                          alt={p}
+                          alt={cleanLabel}
                           width={16}
                           height={16}
+                          sizes="16px"
                           className="object-contain"
                         />
                       )}
-                      <span>{p}</span>
+                      <span>{cleanLabel}</span>
                     </div>
                   );
                 })}
@@ -167,6 +172,7 @@ export default function CardModalDetail({ modalData, onClose }) {
             </div>
               <CardOfficail probId={modalData?._id} />
               <CardAssignment probId={modalData?._id} />
+              <SatisfactionChart complaintId={modalData._id} />
             <div className="mt-4 text-center">
               <button
                 onClick={() => {
@@ -195,6 +201,7 @@ export default function CardModalDetail({ modalData, onClose }) {
               alt="Preview"
               width={800}
               height={600}
+              sizes="(max-width: 768px) 100vw, 800px"
               className="object-contain rounded-lg shadow-lg"
             />
             <button

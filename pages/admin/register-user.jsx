@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
+import { z } from "zod";
 
 
 export default function RegisterUserPage() {
@@ -19,6 +20,18 @@ export default function RegisterUserPage() {
   });
 
   const [existingUser, setExistingUser] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Zod schema สำหรับ validation
+  const userRegistrationSchema = z.object({
+    name: z.string().min(2, "ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร"),
+    position: z.string().min(1, "กรุณากรอกตำแหน่ง"),
+    department: z.string().min(1, "กรุณากรอกแผนก"),
+    role: z.string().min(1, "กรุณาเลือกบทบาท"),
+    profileUrl: z.string().optional(),
+    assignedTask: z.array(z.string()).min(1, "กรุณาเลือกงานที่ได้รับมอบหมายอย่างน้อย 1 รายการ"),
+    phone: z.string().length(10, "เบอร์โทรศัพท์ต้องมี 10 หลัก"),
+  });
 
   const phoneRefs = useRef([]);
 
@@ -61,6 +74,45 @@ export default function RegisterUserPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      ...form,
+      name: form.name.trim(),
+      position: form.position.trim(),
+      department: form.department.trim(),
+    };
+
+    const result = userRegistrationSchema.safeParse(dataToValidate);
+    if (!result.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'name',
+        'position',
+        'department',
+        'phone',
+        'assignedTask',
+        'role',
+        'profileUrl'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      alert("ข้อมูลไม่ครบถ้วน:\n" + errorMessages);
+      return;
+    }
+
+    setIsSubmitting(true);
 
     const payload = {
       ...form,
@@ -107,6 +159,8 @@ export default function RegisterUserPage() {
       }
     } catch (err) {
       alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -382,8 +436,15 @@ export default function RegisterUserPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn btn-success w-full">
-              Save
+            <button type="submit" className="btn btn-success w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  กำลังบันทึก...
+                </>
+              ) : (
+                'Save'
+              )}
             </button>
           </form>
         )}

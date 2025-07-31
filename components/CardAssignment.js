@@ -17,7 +17,10 @@ export default function CardAssignment({ probId }) {
           assignment.solution.includes(opt.label)
         )
       : adminOptions.filter(
-          (opt) => opt.label.trim() === assignment?.solution?.trim()
+          (opt) =>
+            typeof opt.label === "string" &&
+            typeof assignment?.solution === "string" &&
+            opt.label.trim() === assignment.solution.trim()
         );
   // debug: console.log(
   //   "🔍 matchedOptions:",
@@ -33,7 +36,19 @@ export default function CardAssignment({ probId }) {
     //   adminOptions.map((o) => o.label)
     // );
   }
-  const [currentIndex] = useState(0); // currentIndex is used for image display
+  const [currentIndex, setCurrentIndex] = useState(0); // currentIndex is used for image display
+
+  const handlePrev = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === 0 ? assignment.solutionImages.length - 1 : prevIndex - 1
+    );
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prevIndex) =>
+      prevIndex === assignment.solutionImages.length - 1 ? 0 : prevIndex + 1
+    );
+  };
 
   useEffect(() => {
     async function fetchAssignment() {
@@ -59,17 +74,18 @@ export default function CardAssignment({ probId }) {
     (
       (!assignment.solution ||
         (Array.isArray(assignment.solution) &&
-          assignment.solution.every((s) => !s || s.trim() === "")) ||
+          assignment.solution.every((s) => !s || (typeof s === "string" && s.trim() === ""))) ||
         (typeof assignment.solution === "string" && assignment.solution.trim() === "")) &&
-      (!assignment.note || assignment.note.trim() === "") &&
+      (!assignment.note || (typeof assignment.note === "string" && assignment.note.trim() === "")) &&
       (!Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0)
-    )
+    ) ||
+    !Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0
   ) {
     return null;
   }
 
   return (
-    <div className="max-w-4xl mx-auto bg-white shadow-md rounded-md">
+    <div className="max-w-4xl mx-auto bg-white shadow-md rounded-md p-[6px]">
       <div className="flex flex-col justify-between space-y-4">
         {/* วิธีดำเนินการ Section */}
         <div>
@@ -102,8 +118,8 @@ export default function CardAssignment({ probId }) {
         </div>
 
         {/* เจ้าหน้าที่ Section */}
-        <div className="grid grid-cols-5 gap-4 items-start">
-          <div className="col-span-3 pr-6 border-r border-gray-300">
+        <div className="grid grid-cols-5 gap-4 items-start h-full">
+          <div className="col-span-3 pr-6 border-r border-gray-300 h-full">
             <div className="text-md font-semibold mb-4">
               วิธีดำเนินการ (ทั้งหมด)
             </div>

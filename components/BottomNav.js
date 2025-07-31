@@ -24,7 +24,7 @@ export default function BottomNav() {
           </div>
         ) : (
           <Link key={nav.path} href={nav.path}>
-            <div className={`text-xs text-center ${router.pathname === nav.path ? "text-blue-600 font-bold" : "text-gray-500"} flex flex-col items-center`}>
+            <div className={`text-xs text-center ${router.pathname === nav.path ? "text-purple-600 font-bold" : "text-gray-500"} flex flex-col items-center`}>
               <nav.icon className="mb-1" stroke="currentColor" />
               <div>{nav.label}</div>
             </div>

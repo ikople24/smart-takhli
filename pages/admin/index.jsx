@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
+import { z } from "zod";
 
 export default function AdminPage() {
   const { userId, isLoaded } = useAuth();
@@ -24,8 +25,16 @@ export default function AdminPage() {
   const [iconUrl, setIconUrl] = useState("");
   const [category, setCategory] = useState("");
   const [filterCategory, setFilterCategory] = useState("ทั้งหมด");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdminTab = activeTab === "admin";
   const [isEditing, setIsEditing] = useState(false);
+
+  // Zod schema สำหรับ validation
+  const adminOptionSchema = z.object({
+    label: z.string().min(2, "Label ต้องมีอย่างน้อย 2 ตัวอักษร"),
+    iconUrl: z.string().url("กรุณากรอก URL รูปภาพที่ถูกต้อง"),
+    category: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
+  });
 
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const { problemOptions, fetchProblemOptions, problemLoading } = useProblemOptionStore();
@@ -57,11 +66,14 @@ export default function AdminPage() {
         ? "http://localhost:3004"
         : "https://express-docker-server-production.up.railway.app";
 
-    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
+    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
 
     try {
       const res = await fetch(`${BASE_URL}${endpoint}/${id}`, {
         method: "DELETE",
+        headers: {
+          "x-app-id": process.env.NEXT_PUBLIC_APP_ID,
+        },
       });
 
       if (!res.ok) throw new Error("Failed to delete");
@@ -80,25 +92,68 @@ export default function AdminPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = {
-      label,
-      icon_url: iconUrl,
-      menu_category: category,
-      active: true,
+    
+    // ป้องกันการกดปุ่มซ้ำ
+    if (isSubmitting) {
+      return;
+    }
+
+    // Validation ด้วย Zod
+    const dataToValidate = {
+      label: label.trim(),
+      iconUrl: iconUrl.trim(),
+      category,
     };
+
+    const result = adminOptionSchema.safeParse(dataToValidate);
+    if (!result.success) {
+      // เรียงลำดับ error ตามความสำคัญ
+      const errorOrder = [
+        'label',
+        'category',
+        'iconUrl'
+      ];
+      
+      const sortedErrors = result.error.errors.sort((a, b) => {
+        const aIndex = errorOrder.indexOf(a.path[0]);
+        const bIndex = errorOrder.indexOf(b.path[0]);
+        return aIndex - bIndex;
+      });
+      
+      const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
+      alert("ข้อมูลไม่ครบถ้วน:\n" + errorMessages);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const data = isAdminTab
+      ? {
+          label,
+          icon_url: iconUrl,
+          menu_category: category,
+          active: true,
+        }
+      : {
+          label,
+          iconUrl,
+          category,
+          active: true,
+        };
 
     const BASE_URL =
       process.env.NODE_ENV === "development"
         ? "http://localhost:3004"
         : "https://express-docker-server-production.up.railway.app";
 
-    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problems";
+    const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
 
     try {
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-app-id": process.env.NEXT_PUBLIC_APP_ID,
         },
         body: JSON.stringify(data),
       });
@@ -122,6 +177,8 @@ export default function AdminPage() {
     } catch (err) {
       console.error("Error submitting:", err);
       alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -436,8 +493,16 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     className="btn btn-accent ml-2"
+                    disabled={isSubmitting}
                   >
-                    บันทึกข้อมูล
+                    {isSubmitting ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        กำลังบันทึก...
+                      </>
+                    ) : (
+                      'บันทึกข้อมูล'
+                    )}
                   </button>
                 </div>
               </form>

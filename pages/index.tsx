@@ -1,12 +1,45 @@
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
 import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
+import Pm25Dashboard from "@/components/Pmdata";
 import Footer from "@/components/Footer";
 
+import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
+import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
+import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
+import { BookOpen, Download } from "lucide-react";
+
+import EducationFormModal from "@/components/education/EducationFormModal";
+import StudentFeedbackForm from "@/components/StudentFeedbackForm";
+
 export default function Home() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [showSpecialForm, setShowSpecialForm] = useState(false);
+  const [showEducationForm, setShowEducationForm] = useState(false);
+  const { menu: healthMenu, loading: healthLoading, fetchMenu: fetchHealthMenu } = useHealthMenuStore();
+  const [formData, setFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
+  const [hasFetchedHealth, setHasFetchedHealth] = useState(false);
+
 
   const texts = useMemo(() => [
     "แจ้งทุกข์ - แจ้งเหตุ",
@@ -44,9 +77,22 @@ export default function Home() {
     }
   }, [menu.length, fetchMenu, menuLoading, hasFetched]);
 
+  useEffect(() => {
+    if (!hasFetchedHealth && healthMenu.length === 0 && !healthLoading) {
+      fetchHealthMenu();
+      setHasFetchedHealth(true);
+    }
+  }, [healthMenu.length, fetchHealthMenu, healthLoading, hasFetchedHealth]);
+
 
   const handleOpenModal = (label: string) => {
-    setSelectedLabel(label);
+    if (label === "ลงทะเบียนกายอุปกรณ์") {
+      setShowSpecialForm(true);
+    } else if (label === "สำรวจการศึกษา") {
+      setShowEducationForm(true);
+    } else {
+      setSelectedLabel(label);
+    }
   };
   const handleCloseModal = () => {
     setSelectedLabel(null);
@@ -57,9 +103,6 @@ export default function Home() {
   }, [menu]);
   return (
     <div className="min-h-screen bg-white flex flex-col -mt-8 w-full max-w-screen-sm min-w-[320px] mx-auto overflow-x-hidden">
-      {/* <h1 className="fixed top-0 left-0 right-0 z-50 bg-white/30 backdrop-blur-md border border-white/40 text-center text-2xl font-semibold text-blue-950 text-shadow-gray-800 shadow-lg py-4">
-        SMART-NAMPHRAE
-      </h1> */}
       <div className="mt-8 text-center text-xl font-semibold min-h-[1.5rem]">
         <span className={
           textIndex === 0 ? "text-pink-600" :
@@ -70,6 +113,7 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
+      <Pm25Dashboard />
       <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">
@@ -99,12 +143,74 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            {/* {section 2 smart-health} */}
+            <div className="flex flex-col items-center mt-4 mb-2 p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="inline-grid *:[grid-area:1/1]">
+                  <div className="status status-success status-lg animate-ping"></div>
+                  <div className="status status-success status-lg"></div>
+                </div>
+                <span className="font-bold text-blue-400">SMART-HEALTH</span>
+              </div>
+              <span className="font-semibold text-blue-400">✨ ศูนย์กายอุปกรณ์ ✨</span>
+              <AvailableListOnly menu={healthMenu} loading={healthLoading} />
+            </div>
+
+            {/* ส่วนแสดงความคิดเห็นของนักเรียนนักศึกษา */}
+            <div className="flex flex-col items-center mt-4 mb-2 p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="inline-grid *:[grid-area:1/1]">
+                  <div className="status status-info status-lg animate-ping"></div>
+                  <div className="status status-info status-lg"></div>
+                </div>
+                <span className="font-bold text-indigo-400">STUDENT FEEDBACK</span>
+              </div>
+              <span className="font-semibold text-indigo-400">โครงการส่งเสริมสภาเด็กและเยาวชน ประจำปี 2568</span>
+              <StudentFeedbackForm />
+            </div>
           </>
         )}
         {selectedLabel && (
           <ComplaintFormModal selectedLabel={selectedLabel} onClose={handleCloseModal} />
         )}
       </div>
+      {showSpecialForm && (
+        <SpecialFormModal
+          formData={formData}
+          setFormData={setFormData}
+          onClose={() => setShowSpecialForm(false)}
+        />
+      )}
+
+      <EducationFormModal
+        isOpen={showEducationForm}
+        onClose={() => setShowEducationForm(false)}
+      />
+
+      <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
+        <a
+          href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view"
+          className="flex items-center gap-1 hover:underline"
+        >
+          <BookOpen size={16} className="text-purple-500" />
+          คู่มือการใช้งาน
+        </a>
+        {deferredPrompt && (
+          <button
+            onClick={() => {
+              deferredPrompt.prompt();
+              deferredPrompt.userChoice.then(() => {
+                setDeferredPrompt(null);
+              });
+            }}
+            className="flex items-center gap-1 mt-1 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
+          >
+            <Download size={16} className="text-white" />
+            ติดตั้งแอป
+          </button>
+        )}
+      </div>
+
       <Footer />
     </div>
   );

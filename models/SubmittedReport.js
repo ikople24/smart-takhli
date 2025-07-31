@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const SubmittedReportSchema = new mongoose.Schema({
+
   fullName: String,
   phone: String,
   community: String,
@@ -12,7 +13,9 @@ const SubmittedReportSchema = new mongoose.Schema({
     lat: Number,
     lng: Number,
   },
-  timestamp: {
+  prefix: String,
+  address: String,
+  createdAt: {
     type: Date,
     default: Date.now,
   },
@@ -26,7 +29,7 @@ const SubmittedReportSchema = new mongoose.Schema({
   },
   officer: {
     type: String,
-    default: '',
+    default: 'on',
   },
   updatedAt: {
     type: Date,

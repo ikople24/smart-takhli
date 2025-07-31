@@ -5,7 +5,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(`${process.env.BACKEND_API_URL}/api/users/all-basic`);
+    const response = await fetch(`${process.env.BACKEND_API_URL}/api/users/all-basic`, {
+      headers: {
+        'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
+      },
+    });
     const data = await response.json();
     return res.status(response.status).json(data.users || data);
   } catch (error) {

@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { UserButton, useUser, SignInButton } from "@clerk/nextjs";
 import AdminDropdownMenu from "./AdminDropdownMenu";
 
@@ -6,14 +7,23 @@ const TopNavbar = () => {
   const { isSignedIn, user } = useUser();
 
   return (
-    <header className="w-full min-w-[320px] bg-white/30 backdrop-blur-md border-b border-white/40 shadow-md px-4 py-4 flex items-center justify-center relative sticky top-0 z-50">
+    <header className="w-full min-w-[320px] bg-white/30 backdrop-blur-md border-b border-white/40 shadow-md px-4 py-4 flex items-center justify-center sticky top-0 z-50">
       <div className="absolute left-4">
         <AdminDropdownMenu
-          show={user?.publicMetadata?.role === "admin"}
+          show={user?.publicMetadata?.role === "admin" || user?.publicMetadata?.role === "user"}
           links={[
-            { path: "/admin", label: "🛠 ตั้งค่าหน้าจอ" },
-            { path: "/admin/register-user", label: "👥 จัดการผู้ใช้งาน" },
-            { path: "/admin/manage-complaints", label: "📋 จัดการเรื่องร้องเรียน" },
+            ...(user?.publicMetadata?.role === "admin"
+              ? [
+                  { path: "/admin", label: "🛠 ตั้งค่าหน้าจอ" },
+                  { path: "/admin/register-user", label: "👥 จัดการผู้ใช้งาน" },
+                  { path: "/admin/manage-complaints", label: "📋 จัดการเรื่องร้องเรียน" },
+                  { path: "/admin/smart-health", label: "🟣 smart-health" },
+                  { path: "/admin/education-map", label: "🏫 smart-school" },
+                  { path: "/admin/feedback-analysis", label: "📊 วิเคราะห์ความคิดเห็น" },
+                  { path: "/user/satisfaction", label: "📊 ประเมินความพึงพอใจ" },
+                ]
+              : []),
+            ...(user?.publicMetadata?.role === "user" ? [] : []),
           ]}
         />
       </div>
@@ -33,10 +43,14 @@ const TopNavbar = () => {
           </>
         ) : (
           <SignInButton mode="modal">
-            <button
-              className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center hover:ring-2 hover:ring-indigo-400 transition"
-            >
-              <span className="sr-only">Sign in</span>
+           <button className="hover:ring-2 hover:ring-purple-600 transition rounded-full overflow-hidden">
+              <Image
+                src="/icons/icon-192x192.png"
+                alt="Sign in"
+                width={40}
+                height={40}
+                className="rounded-full object-cover"
+              />
             </button>
           </SignInButton>
         )}

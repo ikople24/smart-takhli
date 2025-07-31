@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
@@ -5,6 +6,11 @@ import Head from "next/head";
 import useComplaintStore from "@/stores/useComplaintStore";
 import { useMenuStore } from "@/stores/useMenuStore";
 import UpdateAssignmentModal from "@/components/UpdateAssignmentModal"; // สร้าง component นี้แยกต่างหาก
+import EditUserModal from "@/components/EditUserModal";
+
+const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
+  ssr: false,
+});
 
 export default function ManageComplaintsPage() {
   const { complaints, fetchComplaints } = useComplaintStore();
@@ -17,20 +23,22 @@ export default function ManageComplaintsPage() {
   const [assignments, setAssignments] = useState([]);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+
+  const fetchAssignments = async () => {
+    try {
+      const response = await fetch("/api/assignments");
+      const data = await response.json();
+      setAssignments(data);
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    }
+  };
 
   useEffect(() => {
     fetchComplaints();
     fetchMenu(); // fetch menu with icons
     // Fetch assignments
-    const fetchAssignments = async () => {
-      try {
-        const response = await fetch("/api/assignments");
-        const data = await response.json();
-        setAssignments(data);
-      } catch (error) {
-        console.error("Error fetching assignments:", error);
-      }
-    };
     fetchAssignments();
   }, [fetchComplaints, fetchMenu]);
 
@@ -74,6 +82,7 @@ export default function ManageComplaintsPage() {
       console.log("Assignment created:", result);
       setAssignmentCreated(true);
       alert("รับงานสำเร็จ");
+      fetchAssignments(); // Refresh the assignments list immediately
     } catch (error) {
       console.error("❌ Error assigning complaint:", error);
       alert("เกิดข้อผิดพลาดในการรับงาน");
@@ -102,13 +111,14 @@ export default function ManageComplaintsPage() {
     setSelectedAssignment(assignmentWithCategory);
     setShowUpdateModal(true);
   };
+ 
 
   return (
     <>
       <Head>
         <title>จัดการเรื่องร้องเรียน - Admin</title>
       </Head>
-      <div className="p-6 max-w-screen-lg mx-auto">
+      <div className="p-6 max-w-full mx-auto">
         <h1 className="text-2xl font-bold mb-4">จัดการเรื่องร้องเรียน</h1>
         {complaints.length === 0 ? (
           <p>ไม่มีข้อมูลเรื่องร้องเรียน</p>
@@ -117,6 +127,7 @@ export default function ManageComplaintsPage() {
             <table className="table w-full">
               <thead>
                 <tr>
+                  <th>ลำดับ</th>
                   <th>หมวดหมู่</th>
                   <th>ภาพปัญหา</th>
                   <th>หัวข้อ</th>
@@ -125,13 +136,18 @@ export default function ManageComplaintsPage() {
                 </tr>
               </thead>
               <tbody>
-                {complaints.map((complaint) => {
+                {complaints
+                  .slice()
+                  .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+                  .map((complaint, index) => {
                   const isAssigned = assignments.some(
                     (a) => a.complaintId === complaint._id
                   );
+                  const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
                   return (
                     <tr key={complaint._id}>
-                      <td className="text-center">
+                      <td className="text-center text-sm">{index + 1}</td>
+                      <td className="text-center text-sm">
                         <div className="flex flex-col items-center justify-center">
                           {menu.find((m) => m.Prob_name === complaint.category)?.Prob_pic && (
                             <img
@@ -147,7 +163,7 @@ export default function ManageComplaintsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center text-sm">
                         {Array.isArray(complaint.images) && complaint.images.length > 0 && (
                           <img
                             src={complaint.images[0]}
@@ -156,44 +172,84 @@ export default function ManageComplaintsPage() {
                           />
                         )}
                       </td>
-                      <td>
-                        <div className="font-medium line-clamp-2 max-h-12 overflow-hidden">
+                      <td className="text-sm max-w-xs overflow-hidden whitespace-nowrap text-ellipsis">
+                        <div className="font-medium">
                           {complaint.detail}
                         </div>
                       </td>
-                      <td>
+                      <td className="text-sm">
                         {new Date(complaint.updatedAt).toLocaleDateString(
                           "th-TH"
                         )}
                       </td>
                       <td className="flex gap-2">
-                        {isAssigned ? (
-                          <>
+                        {!isClosed ? (
+                          isAssigned ? (
+                            <>
+                              <button
+                                className="btn btn-info btn-sm"
+                                onClick={() =>
+                                  handleOpenUpdateForm(
+                                    assignments.find((a) => a.complaintId === complaint._id)
+                                  )
+                                }
+                              >
+                                อัพเดท
+                              </button>
+                              <button
+                                className="btn btn-warning btn-sm"
+                                onClick={() => {
+                                  setSelectedAssignment(complaint);
+                                  setShowEditUserModal(true);
+                                }}
+                              >
+                                แก้ไขผู้แจ้ง
+                              </button>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleCloseComplaint(complaint._id)}
+                              >
+                                ปิดเรื่อง
+                              </button>
+                            </>
+                          ) : (
                             <button
-                              className="btn btn-info btn-sm"
-                              onClick={() =>
-                                handleOpenUpdateForm(
-                                  assignments.find((a) => a.complaintId === complaint._id)
-                                )
-                              }
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleAssign(complaint._id)}
+                              disabled={loading}
                             >
-                              อัพเดท
+                              รับเรื่อง
                             </button>
+                          )
+                        ) : (
+                          <>
+                            <span className="text-gray-400 text-xs italic mr-2">เรื่องร้องเรียนนี้ถูกปิดแล้ว</span>
                             <button
-                              className="btn btn-success btn-sm"
-                              onClick={() => handleCloseComplaint(complaint._id)}
+                              className="btn btn-error btn-sm"
+                              onClick={() => {
+                                const confirmed = confirm("คุณแน่ใจหรือไม่ว่าต้องการลบเรื่องนี้?");
+                                if (confirmed) {
+                                  fetch(`/api/submittedreports/${complaint._id}`, {
+                                    method: "DELETE",
+                                  })
+                                    .then(async (res) => {
+                                      if (!res.ok) {
+                                        const errorText = await res.text();
+                                        throw new Error(`ลบไม่สำเร็จ: ${errorText}`);
+                                      }
+                                      alert("ลบเรื่องสำเร็จ");
+                                      fetchComplaints();
+                                    })
+                                    .catch((err) => {
+                                      console.error("❌ ลบไม่สำเร็จ:", err);
+                                      alert("เกิดข้อผิดพลาดในการลบ");
+                                    });
+                                }
+                              }}
                             >
-                              ปิดเรื่อง
+                              ลบเรื่อง
                             </button>
                           </>
-                        ) : (
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleAssign(complaint._id)}
-                            disabled={loading}
-                          >
-                            รับเรื่อง
-                          </button>
                         )}
                       </td>
                     </tr>
@@ -208,6 +264,13 @@ export default function ManageComplaintsPage() {
         <UpdateAssignmentModal
           assignment={selectedAssignment}
           onClose={() => setShowUpdateModal(false)}
+        />
+      )}
+      {showEditUserModal && (
+        <EditUserModal
+          isOpen={showEditUserModal}
+          onClose={() => setShowEditUserModal(false)}
+          complaint={selectedAssignment}
         />
       )}
     </>

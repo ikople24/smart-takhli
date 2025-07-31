@@ -1,3 +1,4 @@
+//pages/complaint/index.jsx
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import useComplaintStore from "@/stores/useComplaintStore";
@@ -88,29 +89,37 @@ export default function ComplaintListPage() {
                           );
                         })}
                       </div>
-                      <Swiper
-                        modules={[Autoplay]}
-                        autoplay={{
-                          delay: 3000,
-                          disableOnInteraction: false,
-                          pauseOnMouseEnter: true,
-                        }}
-                        loop={true}
-                        spaceBetween={0}
-                        slidesPerView={1}
-                        className="w-full h-full"
-                        style={{ height: "100%" }}
-                      >
-                        {item.images?.map((imgUrl, index) => (
-                          <SwiperSlide key={index}>
-                            <img
-                              src={imgUrl}
-                              alt={`ภาพที่ ${index + 1}`}
-                              className="object-cover w-full h-full"
-                            />
-                          </SwiperSlide>
-                        ))}
-                      </Swiper>
+                      {item.images?.length === 1 ? (
+                        <img
+                          src={item.images[0]}
+                          alt="ภาพร้องเรียน"
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <Swiper
+                          modules={[Autoplay]}
+                          autoplay={{
+                            delay: 3000,
+                            disableOnInteraction: false,
+                            pauseOnMouseEnter: true,
+                          }}
+                          loop={item.images?.length > 1}
+                          spaceBetween={0}
+                          slidesPerView={1}
+                          className="w-full h-full"
+                          style={{ height: "100%" }}
+                        >
+                          {item.images?.map((imgUrl, index) => (
+                            <SwiperSlide key={index}>
+                              <img
+                                src={imgUrl}
+                                alt={`ภาพที่ ${index + 1}`}
+                                className="object-cover w-full h-full"
+                              />
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
+                      )}
                     </figure>
                     <div className="p-4 md:w-1/2 w-full flex flex-col gap-2 justify-start">
                       <div className="pr-1">
