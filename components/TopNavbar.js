@@ -19,6 +19,7 @@ const TopNavbar = () => {
                   { path: "/admin/manage-complaints", label: "📋 จัดการเรื่องร้องเรียน" },
                   { path: "/admin/smart-health", label: "🟣 smart-health" },
                   { path: "/admin/education-map", label: "🏫 smart-school" },
+                  { path: "/admin/feedback-analysis", label: "📊 วิเคราะห์ความคิดเห็น" },
                   { path: "/user/satisfaction", label: "📊 ประเมินความพึงพอใจ" },
                 ]
               : []),
