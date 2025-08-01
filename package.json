@@ -17,6 +17,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "csv-parser": "^3.2.0",
+    "formidable": "^3.5.4",
     "framer-motion": "^12.7.4",
     "fs": "^0.0.1-security",
     "leaflet": "^1.9.4",
