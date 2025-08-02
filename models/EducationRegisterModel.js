@@ -28,8 +28,8 @@ const EducationSchema = new mongoose.Schema(
     },
     housingStatus: {
       type: String,
-      enum: ['ผู้อาศัย', 'เจ้าของ', 'บ้านเช่า', 'อื่นๆ'],
-      default: ''
+      enum: ['ผู้อาศัย', 'เจ้าของ', 'บ้านเช่า', 'อื่นๆ', 'ไม่ระบุ', ''],
+      default: 'ไม่ระบุ'
     },
     receivedScholarship: {
       type: [String],
