@@ -13,6 +13,9 @@ export default function EducationFormModal({ isOpen, onClose }) {
     phone: '',
     note: '',
     image: [],
+    housingStatus: 'ไม่ระบุ',
+    householdMembers: 1,
+    annualIncome: 0
   });
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation] = useState(null);
@@ -31,6 +34,9 @@ export default function EducationFormModal({ isOpen, onClose }) {
       lat: z.number(),
       lng: z.number(),
     }).nullable().refine((val) => val !== null, 'กรุณาเลือกตำแหน่งที่ตั้ง'),
+    housingStatus: z.string().min(1, 'กรุณาเลือกสถานภาพที่อยู่'),
+    householdMembers: z.number().min(1, 'จำนวนสมาชิกต้องมีอย่างน้อย 1 คน'),
+    annualIncome: z.number().min(0, 'รายได้ต้องไม่ติดลบ')
   });
 
   // ImageUploads will handle image upload and update formData.image as array of URLs
@@ -102,6 +108,9 @@ export default function EducationFormModal({ isOpen, onClose }) {
           phone: '',
           note: '',
           image: [],
+          housingStatus: 'ไม่ระบุ',
+          householdMembers: 1,
+          annualIncome: 0
         });
         setLocation(null);
         setUseCurrent(false);
@@ -144,7 +153,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
 
         <label className="font-extrabold text-sm text-gray-600">1. คำนำหน้า</label>
         <div className="flex flex-wrap gap-2 justify-center">
-          {["ดช.", "ดญ.", "นาย", "นางสาว"].map((prefix) => (
+          {["ด.ช.", "ด.ญ.", "นาย", "นางสาว"].map((prefix) => (
             <button
               key={prefix}
               type="button"
@@ -198,10 +207,46 @@ export default function EducationFormModal({ isOpen, onClose }) {
           disabled={isSubmitting}
         />
 
-        <label className="font-extrabold text-sm text-gray-600">6. อัพโหลดรูปภาพ</label>
+        <label className="font-extrabold text-sm text-gray-600">6. สถานภาพที่อยู่</label>
+        <select
+          value={formData.housingStatus}
+          onChange={(e) => setFormData({ ...formData, housingStatus: e.target.value })}
+          className="select select-bordered w-full"
+          disabled={isSubmitting}
+        >
+          <option value="ไม่ระบุ">ไม่ระบุ</option>
+          <option value="ผู้อาศัย">ผู้อาศัย</option>
+          <option value="เจ้าของ">เจ้าของ</option>
+          <option value="บ้านเช่า">บ้านเช่า</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+
+        <label className="font-extrabold text-sm text-gray-600">7. จำนวนสมาชิกในบ้าน</label>
+        <input
+          type="number"
+          placeholder="จำนวนสมาชิก"
+          value={formData.householdMembers}
+          min="1"
+          onChange={(e) => setFormData({ ...formData, householdMembers: parseInt(e.target.value) || 1 })}
+          className="input input-bordered w-full"
+          disabled={isSubmitting}
+        />
+
+        <label className="font-extrabold text-sm text-gray-600">8. รายได้ทั้งปี (บาท)</label>
+        <input
+          type="number"
+          placeholder="รายได้ทั้งปี"
+          value={formData.annualIncome}
+          min="0"
+          onChange={(e) => setFormData({ ...formData, annualIncome: parseInt(e.target.value) || 0 })}
+          className="input input-bordered w-full"
+          disabled={isSubmitting}
+        />
+
+        <label className="font-extrabold text-sm text-gray-600">9. อัพโหลดรูปภาพ</label>
         <ImageUploads onChange={(urls) => setFormData({ ...formData, image: urls })} />
 
-        <label className="font-extrabold text-sm text-gray-600">7. ตำแหน่งที่ตั้ง</label>
+        <label className="font-extrabold text-sm text-gray-600">10. ตำแหน่งที่ตั้ง</label>
         <LocationConfirm
           useCurrent={useCurrent}
           onToggle={setUseCurrent}
