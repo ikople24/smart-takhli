@@ -6,7 +6,10 @@ export default async function handler(req, res) {
   await dbConnect();
   const data = await EducationRegister.find(
     {},
-    { prefix: 1, name: 1, location: 1, educationLevel: 1, phone: 1, address: 1, note: 1, imageUrl: 1 }
+    { prefix: 1, name: 1, location: 1, educationLevel: 1, phone: 1, address: 1, note: 1, annualIncome: 1, incomeSource: 1, householdMembers: 1, housingStatus: 1, receivedScholarship: 1, imageUrl: 1 }
   );
+  
+  console.log('API /all - Sample data with household info:', data.find(item => item.householdMembers || item.housingStatus));
+  
   res.status(200).json(data);
 }

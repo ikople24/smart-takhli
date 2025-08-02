@@ -1,6 +1,7 @@
 // pages/admin/education-map.js
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Swal from 'sweetalert2';
 
 // EditForm Component
 function EditForm({ data, onClose, onSave, isSaving }) {
@@ -11,11 +12,38 @@ function EditForm({ data, onClose, onSave, isSaving }) {
     educationLevel: data.educationLevel || '',
     phone: data.phone || '',
     address: data.address || '',
-    note: data.note || ''
+    note: data.note || '',
+    annualIncome: data.annualIncome || '',
+    incomeSource: data.incomeSource || [],
+    householdMembers: data.householdMembers || 1,
+    housingStatus: data.housingStatus || '',
+    receivedScholarship: data.receivedScholarship || []
   });
+
+  // อัปเดต formData เมื่อ data prop เปลี่ยน
+  useEffect(() => {
+    console.log('EditForm received data:', data);
+    const newFormData = {
+      _id: data._id,
+      prefix: data.prefix || '',
+      name: data.name || '',
+      educationLevel: data.educationLevel || '',
+      phone: data.phone || '',
+      address: data.address || '',
+      note: data.note || '',
+      annualIncome: data.annualIncome || '',
+      incomeSource: data.incomeSource || [],
+      householdMembers: data.householdMembers || 1,
+      housingStatus: data.housingStatus || '',
+      receivedScholarship: data.receivedScholarship || []
+    };
+    console.log('Setting form data to:', newFormData);
+    setFormData(newFormData);
+  }, [data]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log('Form data being submitted:', formData);
     onSave(formData);
   };
 
@@ -26,8 +54,79 @@ function EditForm({ data, onClose, onSave, isSaving }) {
     }));
   };
 
+  // คำนวณรายได้ต่อเดือนและต่อวัน
+  const calculateIncome = (annualIncome, householdMembers) => {
+    if (!annualIncome || isNaN(annualIncome)) return { monthly: 0, daily: 0, perPerson: 0, perPersonMonthly: 0, perPersonDaily: 0 };
+    const annual = parseFloat(annualIncome);
+    const monthly = annual / 12;
+    const daily = monthly / 30;
+    const perPerson = annual / (householdMembers || 1);
+    const perPersonMonthly = perPerson / 12;
+    const perPersonDaily = perPersonMonthly / 30;
+    return {
+      monthly: Math.round(monthly),
+      daily: Math.round(daily),
+      perPerson: Math.round(perPerson),
+      perPersonMonthly: Math.round(perPersonMonthly),
+      perPersonDaily: Math.round(perPersonDaily)
+    };
+  };
+
+  const { monthly: monthlyIncome, daily: dailyIncome, perPerson: perPersonIncome, perPersonMonthly: perPersonMonthlyIncome, perPersonDaily: perPersonDailyIncome } = calculateIncome(formData.annualIncome, formData.householdMembers);
+
+  // จัดการแหล่งที่มาของรายได้
+  const handleIncomeSourceChange = (source) => {
+    setFormData(prev => ({
+      ...prev,
+      incomeSource: prev.incomeSource.includes(source)
+        ? prev.incomeSource.filter(s => s !== source)
+        : [...prev.incomeSource, source]
+    }));
+  };
+
+  const handleCancel = () => {
+    // Check if form has been modified
+    const hasChanges = 
+      formData.prefix !== (data.prefix || '') ||
+      formData.name !== (data.name || '') ||
+      formData.educationLevel !== (data.educationLevel || '') ||
+      formData.phone !== (data.phone || '') ||
+      formData.address !== (data.address || '') ||
+      formData.note !== (data.note || '') ||
+      formData.annualIncome !== (data.annualIncome || '') ||
+      formData.householdMembers !== (data.householdMembers || 1) ||
+      formData.housingStatus !== (data.housingStatus || '') ||
+      JSON.stringify(formData.incomeSource) !== JSON.stringify(data.incomeSource || []) ||
+      JSON.stringify(formData.receivedScholarship) !== JSON.stringify(data.receivedScholarship || []);
+
+    if (hasChanges) {
+      Swal.fire({
+        title: 'ยืนยันการยกเลิก',
+        text: 'ข้อมูลที่แก้ไขจะไม่ถูกบันทึก ต้องการยกเลิกหรือไม่?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'ยกเลิก',
+        cancelButtonText: 'กลับไปแก้ไข'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          onClose();
+        }
+      });
+    } else {
+      onClose();
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* ข้อมูลส่วนตัว */}
+      <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 bg-slate-600 rounded-full"></span>
+          ข้อมูลส่วนตัว
+        </h3>
       {/* Prefix and Name */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -37,13 +136,12 @@ function EditForm({ data, onClose, onSave, isSaving }) {
           <select
             value={formData.prefix}
             onChange={(e) => handleChange('prefix', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
           >
             <option value="">เลือกคำนำหน้า</option>
-            <option value="ดช.">ดช.</option>
-            <option value="ดญ.">ดญ.</option>
+            <option value="ด.ช.">ด.ช.</option>
+            <option value="ด.ญ.">ด.ญ.</option>
             <option value="นาย">นาย</option>
-            <option value="นาง">นาง</option>
             <option value="นางสาว">นางสาว</option>
           </select>
         </div>
@@ -56,7 +154,7 @@ function EditForm({ data, onClose, onSave, isSaving }) {
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
             placeholder="ชื่อ-นามสกุล"
           />
         </div>
@@ -112,35 +210,213 @@ function EditForm({ data, onClose, onSave, isSaving }) {
         />
       </div>
 
+      {/* Household Members */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            จำนวนสมาชิกในบ้าน *
+          </label>
+          <input
+            type="number"
+            value={formData.householdMembers}
+            onChange={(e) => {
+              const value = e.target.value;
+              const parsedValue = value === '' ? 1 : parseInt(value);
+              handleChange('householdMembers', parsedValue);
+            }}
+            min="1"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="จำนวนสมาชิก"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            สถานภาพที่อยู่ผู้ปกครอง
+          </label>
+                      <select
+              value={formData.housingStatus}
+              onChange={(e) => handleChange('housingStatus', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">เลือกสถานภาพที่อยู่ผู้ปกครอง</option>
+              <option value="ผู้อาศัย">ผู้อาศัย</option>
+              <option value="เจ้าของ">เจ้าของ</option>
+              <option value="บ้านเช่า">บ้านเช่า</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+        </div>
+      </div>
+
       {/* Note */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">
           หมายเหตุ
         </label>
         <textarea
           value={formData.note}
           onChange={(e) => handleChange('note', e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
           placeholder="หมายเหตุ (ถ้ามี)"
         />
       </div>
+      </div>
+
+      {/* ข้อมูลรายได้ */}
+      <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 bg-emerald-600 rounded-full"></span>
+          ข้อมูลรายได้
+        </h3>
+
+        {/* Annual Income */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            รายได้ต่อปี (บาท)
+          </label>
+          <input
+            type="number"
+            value={formData.annualIncome}
+            onChange={(e) => handleChange('annualIncome', e.target.value)}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white"
+            placeholder="กรอกรายได้ต่อปี"
+          />
+          
+          {/* Income Summary */}
+          {formData.annualIncome && (
+            <div className="mt-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {parseInt(formData.annualIncome).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/ปี (รวม)</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {monthlyIncome.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/เดือน (รวม)</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {dailyIncome.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/วัน (รวม)</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {perPersonIncome.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/คน/ปี</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {perPersonMonthlyIncome.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/คน/เดือน</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-emerald-700">
+                    {perPersonDailyIncome.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-emerald-600">บาท/คน/วัน</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Income Sources */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">
+            แหล่งที่มาของรายได้
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              'ค้าขาย',
+              'ค่าจ้างรายวัน', 
+              'เงินอุดหนุนบุตร',
+              'เบี้ยผู้สูงอายุ',
+              'เงินเดือน'
+            ].map((source) => (
+              <label key={source} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.incomeSource.includes(source)}
+                  onChange={() => handleIncomeSourceChange(source)}
+                  className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
+                />
+                <span className="text-sm text-slate-700">{source}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ข้อมูลทุนการศึกษา */}
+      <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 bg-purple-600 rounded-full"></span>
+          ข้อมูลทุนการศึกษา
+        </h3>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">
+            ทุนการศึกษาที่ได้รับ
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              'ทุนเรียนดี',
+              'ทุนยากจน',
+              'ทุนกองทุนการศึกษา',
+              'ทุนจากองค์กรภายนอก',
+              'ไม่ได้รับทุน'
+            ].map((scholarship) => (
+              <label key={scholarship} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.receivedScholarship.includes(scholarship)}
+                  onChange={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      receivedScholarship: prev.receivedScholarship.includes(scholarship)
+                        ? prev.receivedScholarship.filter(s => s !== scholarship)
+                        : [...prev.receivedScholarship, scholarship]
+                    }));
+                  }}
+                  className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                />
+                <span className="text-sm text-slate-700">{scholarship}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Buttons */}
-      <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
         <button
           type="button"
-          onClick={onClose}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+          onClick={handleCancel}
+          disabled={isSaving}
+          className="px-6 py-2.5 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ยกเลิก
         </button>
         <button
           type="submit"
           disabled={isSaving}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2.5 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-lg hover:from-slate-700 hover:to-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
         >
-          {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+          {isSaving ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              กำลังบันทึก...
+            </div>
+          ) : (
+            'บันทึก'
+          )}
         </button>
       </div>
     </form>
@@ -169,6 +445,7 @@ export default function EducationMapPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editModal, setEditModal] = useState({ isOpen: false, data: null });
   const [tableFilter, setTableFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
   const [isSaving, setIsSaving] = useState(false);
@@ -182,6 +459,8 @@ export default function EducationMapPage() {
         throw new Error('Failed to fetch data');
       }
       const data = await response.json();
+      console.log('Fetched data:', data);
+      console.log('Sample item with household data:', data.find(item => item.householdMembers || item.housingStatus));
       setPoints(data);
     } catch (err) {
       setError(err.message);
@@ -196,6 +475,7 @@ export default function EducationMapPage() {
   }, []);
 
   const handleEdit = (item) => {
+    console.log('Opening edit modal with data:', item);
     setEditModal({ isOpen: true, data: item });
   };
 
@@ -203,9 +483,13 @@ export default function EducationMapPage() {
     setEditModal({ isOpen: false, data: null });
   };
 
+
+
   const handleSaveEdit = async (updatedData) => {
     try {
       setIsSaving(true);
+      
+      console.log('Sending update data:', updatedData);
       
       const response = await fetch(`/api/education/update`, {
         method: 'PUT',
@@ -219,17 +503,48 @@ export default function EducationMapPage() {
         throw new Error('Failed to update data');
       }
 
-      // Refresh data
+      const result = await response.json();
+      console.log('Updated data:', result);
+
+      // Update the specific item in the points array
+      setPoints(prevPoints => {
+        const updatedPoints = prevPoints.map(item => 
+          item._id === updatedData._id 
+            ? { ...item, ...updatedData }
+            : item
+        );
+        console.log('Updated points array:', updatedPoints.find(item => item._id === updatedData._id));
+        return updatedPoints;
+      });
+
+      // Refresh data to ensure consistency
       await fetchData();
       
       // Close modal
       handleCloseEditModal();
       
-      // Show success message
-      alert('บันทึกข้อมูลเรียบร้อยแล้ว');
+      // Show success message with SweetAlert
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ!',
+        text: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#3B82F6',
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false
+      });
     } catch (error) {
       console.error('Error updating data:', error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      
+      // Show error message with SweetAlert
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด!',
+        text: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#EF4444'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -249,9 +564,17 @@ export default function EducationMapPage() {
   const getFilteredAndSortedData = () => {
     let filteredData = points;
     
+    // กรองตามคำค้นหา (ชื่อ)
+    if (searchTerm.trim()) {
+      filteredData = filteredData.filter(item => {
+        const fullName = (item.prefix || '') + (item.name || '');
+        return fullName.toLowerCase().includes(searchTerm.toLowerCase());
+      });
+    }
+    
     // กรองตามระดับการศึกษา
     if (tableFilter !== 'all') {
-      filteredData = points.filter(item => item.educationLevel === tableFilter);
+      filteredData = filteredData.filter(item => item.educationLevel === tableFilter);
     }
     
     // เรียงลำดับ
@@ -435,29 +758,114 @@ export default function EducationMapPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Summary - Always visible at top */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">ข้อมูลสรุป</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-100 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-800">รายการทั้งหมด</h3>
-              <p className="text-2xl font-bold text-blue-600">{points.length}</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">ข้อมูลสรุป</h2>
+          
+          {/* ข้อมูลพื้นฐาน */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">ข้อมูลพื้นฐาน</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-blue-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-800 text-sm">รายการทั้งหมด</h4>
+                <p className="text-2xl font-bold text-blue-600">{points.length}</p>
+              </div>
+              <div className="bg-green-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-green-800 text-sm">มีพิกัด</h4>
+                <p className="text-2xl font-bold text-green-600">
+                  {points.filter(item => item.location && item.location.lat && item.location.lng).length}
+                </p>
+              </div>
+              <div className="bg-purple-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-purple-800 text-sm">มีรูปภาพ</h4>
+                <p className="text-2xl font-bold text-purple-600">
+                  {points.filter(item => item.imageUrl && item.imageUrl.length > 0).length}
+                </p>
+              </div>
+              <div className="bg-orange-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-orange-800 text-sm">มีเบอร์โทร</h4>
+                <p className="text-2xl font-bold text-orange-600">
+                  {points.filter(item => item.phone).length}
+                </p>
+              </div>
             </div>
-            <div className="bg-green-100 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-800">มีพิกัด</h3>
-              <p className="text-2xl font-bold text-green-600">
-                {points.filter(item => item.location && item.location.lat && item.location.lng).length}
-              </p>
+          </div>
+
+          {/* ข้อมูลครอบครัว */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">ข้อมูลครอบครัว</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-red-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-red-800 text-sm">สมาชิกเฉลี่ย</h4>
+                <p className="text-2xl font-bold text-red-600">
+                  {points.length > 0 ? 
+                    Math.round(points.reduce((sum, item) => sum + (item.householdMembers || 1), 0) / points.length) : 
+                    0
+                  } คน
+                </p>
+              </div>
+              <div className="bg-teal-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-teal-800 text-sm">เจ้าของบ้าน</h4>
+                <p className="text-2xl font-bold text-teal-600">
+                  {points.filter(item => item.housingStatus === 'เจ้าของ').length} คน
+                </p>
+              </div>
+              <div className="bg-cyan-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-cyan-800 text-sm">ผู้อาศัย</h4>
+                <p className="text-2xl font-bold text-cyan-600">
+                  {points.filter(item => item.housingStatus === 'ผู้อาศัย').length} คน
+                </p>
+              </div>
+              <div className="bg-lime-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-lime-800 text-sm">บ้านเช่า</h4>
+                <p className="text-2xl font-bold text-lime-600">
+                  {points.filter(item => item.housingStatus === 'บ้านเช่า').length} คน
+                </p>
+              </div>
             </div>
-            <div className="bg-purple-100 p-4 rounded-lg">
-              <h3 className="font-semibold text-purple-800">มีรูปภาพ</h3>
-              <p className="text-2xl font-bold text-purple-600">
-                {points.filter(item => item.imageUrl && item.imageUrl.length > 0).length}
-              </p>
-            </div>
-            <div className="bg-orange-100 p-4 rounded-lg">
-              <h3 className="font-semibold text-orange-800">มีเบอร์โทร</h3>
-              <p className="text-2xl font-bold text-orange-600">
-                {points.filter(item => item.phone).length}
-              </p>
+          </div>
+
+          {/* ข้อมูลรายได้ */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">ข้อมูลรายได้เฉลี่ยต่อคน</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-indigo-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-indigo-800 text-sm">รายได้เฉลี่ย/คน/ปี</h4>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {(() => {
+                    const validData = points.filter(item => item.annualIncome && item.householdMembers);
+                    if (validData.length === 0) return '0';
+                    const totalPerPerson = validData.reduce((sum, item) => 
+                      sum + (item.annualIncome / (item.householdMembers || 1)), 0
+                    );
+                    return Math.round(totalPerPerson / validData.length).toLocaleString();
+                  })()} บาท
+                </p>
+              </div>
+              <div className="bg-pink-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-pink-800 text-sm">รายได้เฉลี่ย/คน/เดือน</h4>
+                <p className="text-2xl font-bold text-pink-600">
+                  {(() => {
+                    const validData = points.filter(item => item.annualIncome && item.householdMembers);
+                    if (validData.length === 0) return '0';
+                    const totalPerPerson = validData.reduce((sum, item) => 
+                      sum + (item.annualIncome / (item.householdMembers || 1)), 0
+                    );
+                    return Math.round((totalPerPerson / validData.length) / 12).toLocaleString();
+                  })()} บาท
+                </p>
+              </div>
+              <div className="bg-yellow-100 p-4 rounded-lg">
+                <h4 className="font-semibold text-yellow-800 text-sm">รายได้เฉลี่ย/คน/วัน</h4>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {(() => {
+                    const validData = points.filter(item => item.annualIncome && item.householdMembers);
+                    if (validData.length === 0) return '0';
+                    const totalPerPerson = validData.reduce((sum, item) => 
+                      sum + (item.annualIncome / (item.householdMembers || 1)), 0
+                    );
+                    return Math.round((totalPerPerson / validData.length) / 12 / 30).toLocaleString();
+                  })()} บาท
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -476,21 +884,46 @@ export default function EducationMapPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <h2 className="text-xl font-semibold text-gray-800">ข้อมูลผู้ขอรับสิทธิการศึกษา</h2>
                   
-                  {/* Filter */}
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">กรองตามระดับการศึกษา:</label>
-                    <select
-                      value={tableFilter}
-                      onChange={(e) => setTableFilter(e.target.value)}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="all">ทั้งหมด ({points.length})</option>
-                      {Array.from(new Set(points.map(item => item.educationLevel).filter(Boolean))).map(level => (
-                        <option key={level} value={level}>
-                          {level} ({points.filter(item => item.educationLevel === level).length})
-                        </option>
-                      ))}
-                    </select>
+                  {/* Search and Filter */}
+                  <div className="flex flex-col md:flex-row items-center gap-4">
+                    {/* Search */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">ค้นหาจากชื่อ:</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="พิมพ์ชื่อเพื่อค้นหา..."
+                          className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                        />
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Filter */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">กรองตามระดับการศึกษา:</label>
+                      <select
+                        value={tableFilter}
+                        onChange={(e) => setTableFilter(e.target.value)}
+                        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">ทั้งหมด ({points.length})</option>
+                        {Array.from(new Set(points.map(item => item.educationLevel).filter(Boolean))).map(level => (
+                          <option key={level} value={level}>
+                            {level} ({points.filter(item => item.educationLevel === level).length})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -538,6 +971,11 @@ export default function EducationMapPage() {
                           )}
                         </div>
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สมาชิกในบ้าน</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายได้ต่อคน/ปี</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายได้ต่อคน/เดือน</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายได้ต่อคน/วัน</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะที่อยู่อาศัย</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ที่อยู่</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">การดำเนินการ</th>
                     </tr>
@@ -558,7 +996,26 @@ export default function EducationMapPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
-                          {item.prefix || ''}{item.name}
+                          {(() => {
+                            const fullName = (item.prefix || '') + (item.name || '');
+                            if (searchTerm && fullName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                              const parts = fullName.split(new RegExp(`(${searchTerm})`, 'gi'));
+                              return (
+                                <span>
+                                  {parts.map((part, index) => 
+                                    part.toLowerCase() === searchTerm.toLowerCase() ? (
+                                      <mark key={index} className="bg-yellow-200 px-1 rounded">
+                                        {part}
+                                      </mark>
+                                    ) : (
+                                      part
+                                    )
+                                  )}
+                                </span>
+                              );
+                            }
+                            return fullName;
+                          })()}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           <span className="px-2 py-1 text-xs font-medium rounded-full"
@@ -568,6 +1025,36 @@ export default function EducationMapPage() {
                                 }}>
                             {item.educationLevel || 'ไม่ระบุ'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                          {item.householdMembers || 1} คน
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                          {item.annualIncome && item.householdMembers ? 
+                            (item.annualIncome / (item.householdMembers || 1)).toLocaleString() + ' บาท' : 
+                            'ไม่มีข้อมูล'
+                          }
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                          {item.annualIncome && item.householdMembers ? 
+                            Math.round((item.annualIncome / (item.householdMembers || 1)) / 12).toLocaleString() + ' บาท' : 
+                            'ไม่มีข้อมูล'
+                          }
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                          {item.annualIncome && item.householdMembers ? 
+                            Math.round((item.annualIncome / (item.householdMembers || 1)) / 12 / 30).toLocaleString() + ' บาท' : 
+                            'ไม่มีข้อมูล'
+                          }
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 text-center">
+                          {item.housingStatus ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                              {item.housingStatus}
+                            </span>
+                          ) : (
+                            'ไม่ระบุ'
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {item.address || 'ไม่มีข้อมูล'}
@@ -588,8 +1075,23 @@ export default function EducationMapPage() {
               
               {/* Summary */}
               <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                  แสดง {getFilteredAndSortedData().length} รายการจากทั้งหมด {points.length} รายการ
+                <div className="flex justify-between items-center text-sm text-gray-600">
+                  <div>
+                    แสดง {getFilteredAndSortedData().length} รายการจากทั้งหมด {points.length} รายการ
+                    {searchTerm && (
+                      <span className="ml-2 text-blue-600">
+                        (ค้นหา: &quot;{searchTerm}&quot;)
+                      </span>
+                    )}
+                  </div>
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      ล้างการค้นหา
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -599,13 +1101,13 @@ export default function EducationMapPage() {
 
       {/* Glass Edit Modal */}
       {editModal.isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
-              <h2 className="text-xl font-semibold text-gray-800">แก้ไขข้อมูล</h2>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-200">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-xl font-semibold text-slate-800">แก้ไขข้อมูล</h2>
               <button
                 onClick={handleCloseEditModal}
-                className="text-gray-400 hover:text-gray-600 transition text-2xl"
+                className="text-slate-400 hover:text-slate-600 transition text-2xl"
               >
                 ×
               </button>

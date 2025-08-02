@@ -13,6 +13,28 @@ const EducationSchema = new mongoose.Schema(
     address: String,
     phone: String,
     note: String,
+    annualIncome: {
+      type: Number,
+      default: 0
+    },
+    incomeSource: {
+      type: [String],
+      default: []
+    },
+    householdMembers: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    housingStatus: {
+      type: String,
+      enum: ['ผู้อาศัย', 'เจ้าของ', 'บ้านเช่า', 'อื่นๆ'],
+      default: ''
+    },
+    receivedScholarship: {
+      type: [String],
+      default: []
+    },
     imageUrl: {
       type: [String],
       required: true,

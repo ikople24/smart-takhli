@@ -62,6 +62,7 @@ const createCustomIcon = (level) => {
 
 export default function MapEducationPoints({ data }) {
   const [selectedLevel, setSelectedLevel] = useState('all');
+  const [hoveredPoint, setHoveredPoint] = useState(null);
 
 
 
@@ -293,6 +294,36 @@ export default function MapEducationPoints({ data }) {
           </div>
         </div>
       </div>
+
+      {/* แสดงข้อมูลจุดที่ hover */}
+      {hoveredPoint && (
+        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+          <h3 className="text-lg font-semibold mb-2 text-gray-800">
+            ข้อมูลที่เลือก: {hoveredPoint.prefix || ''}{hoveredPoint.name}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="font-medium">ระดับการศึกษา:</span>
+              <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: levelColors[hoveredPoint.educationLevel || 'ไม่ระบุ'] + '20', color: levelColors[hoveredPoint.educationLevel || 'ไม่ระบุ'] }}>
+                {hoveredPoint.educationLevel || 'ไม่ระบุ'}
+              </span>
+            </div>
+            {hoveredPoint.phone && (
+              <div>
+                <span className="font-medium">เบอร์โทร:</span>
+                <span className="ml-2">{hoveredPoint.phone}</span>
+              </div>
+            )}
+            {hoveredPoint.householdMembers && (
+              <div>
+                <span className="font-medium">สมาชิกในบ้าน:</span>
+                <span className="ml-2">{hoveredPoint.householdMembers} คน</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
 
     </div>
