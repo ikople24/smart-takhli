@@ -46,6 +46,8 @@ export default function RegisterUserPage() {
   const [existingUser, setExistingUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUserChecked, setIsUserChecked] = useState(false);
 
   // Zod schema สำหรับ validation
   const userRegistrationSchema = z.object({
@@ -92,9 +94,14 @@ export default function RegisterUserPage() {
 
     useEffect(() => {
     const checkUser = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoading(false);
+        setIsUserChecked(true);
+        return;
+      }
 
       try {
+        setIsLoading(true);
         const token = await getToken();
         const clerkId = user.id;
         const res = await fetch("/api/users/get-by-clerkId", {
@@ -109,6 +116,9 @@ export default function RegisterUserPage() {
         }
       } catch (error) {
         console.error("Error checking user:", error);
+      } finally {
+        setIsLoading(false);
+        setIsUserChecked(true);
       }
     };
     checkUser();
@@ -437,7 +447,23 @@ export default function RegisterUserPage() {
             Role: <span className="mx-1.5 badge badge-primary pointer-events-none">Admin</span>
           </label>
         </div>
-        {existingUser && !isEditing ? (
+        
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">กำลังตรวจสอบข้อมูลผู้ใช้...</h3>
+              <p className="text-sm text-gray-500">กรุณารอสักครู่</p>
+            </div>
+          </div>
+        )}
+
+        {/* Content after loading */}
+        {!isLoading && isUserChecked && (
+          <>
+            {existingUser && !isEditing ? (
+              // แสดงข้อมูลผู้ใช้ที่มีอยู่แล้ว
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="text-green-700 font-semibold">
@@ -553,6 +579,17 @@ export default function RegisterUserPage() {
                 >
                   ยกเลิก
                 </button>
+              </div>
+            )}
+            {!existingUser && !isEditing && (
+              <div className="text-center py-4 mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">ยังไม่มีข้อมูลผู้ใช้ในระบบ</h3>
+                <p className="text-sm text-gray-500 mb-4">กรุณากรอกข้อมูลเพื่อลงทะเบียนผู้ใช้ใหม่</p>
               </div>
             )}
             <div className="form-control">
@@ -773,8 +810,10 @@ export default function RegisterUserPage() {
               ) : (
                 isEditing ? 'อัปเดตข้อมูล' : 'บันทึกข้อมูล'
               )}
-            </button>
+                        </button>
           </form>
+        )}
+          </>
         )}
       </div>
     </div>
