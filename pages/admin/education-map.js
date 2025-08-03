@@ -485,6 +485,68 @@ export default function EducationMapPage() {
 
 
 
+  const fixDuplicates = async () => {
+    try {
+      const response = await fetch('/api/education/fix-duplicates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        Swal.fire({
+          title: 'สำเร็จ!',
+          text: `จัดการข้อมูลซ้ำสำเร็จ\nพบกลุ่มข้อมูลซ้ำ: ${result.results.duplicateGroups} กลุ่ม\nลบข้อมูลซ้ำ: ${result.results.deletedRecords} รายการ\nข้อมูลทั้งหมด: ${result.summary.totalRecords} รายการ`,
+          icon: 'success',
+        });
+        // รีเฟรชข้อมูล
+        fetchData();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: error.message,
+        icon: 'error',
+      });
+    }
+  };
+
+  const fixPrefixes = async () => {
+    try {
+      const response = await fetch('/api/education/bulk-update-prefix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        Swal.fire({
+          title: 'สำเร็จ!',
+          text: `แก้ไขคำนำหน้าสำเร็จ\nดช. → ด.ช.: ${result.results['ดช. → ด.ช.'].modifiedCount} รายการ\nดญ. → ด.ญ.: ${result.results['ดญ. → ด.ญ.'].modifiedCount} รายการ`,
+          icon: 'success',
+        });
+        // รีเฟรชข้อมูล
+        fetchData();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: error.message,
+        icon: 'error',
+      });
+    }
+  };
+
   const handleSaveEdit = async (updatedData) => {
     try {
       setIsSaving(true);
@@ -688,6 +750,20 @@ export default function EducationMapPage() {
               </p>
             </div>
             <div className="flex items-center gap-3 mt-4 md:mt-0">
+              <button
+                onClick={fixDuplicates}
+                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+              >
+                <span>🗑️</span>
+                <span>ลบข้อมูลซ้ำ</span>
+              </button>
+              <button
+                onClick={fixPrefixes}
+                className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition"
+              >
+                <span>🔧</span>
+                <span>แก้ไขคำนำหน้า</span>
+              </button>
               <button
                 onClick={fetchData}
                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
