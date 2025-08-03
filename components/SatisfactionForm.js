@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { z } from "zod";
 
-const SatisfactionForm = ({ onSubmit, complaintId }) => {
+const SatisfactionForm = ({ onSubmit, complaintId, status }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +82,16 @@ const SatisfactionForm = ({ onSubmit, complaintId }) => {
       setIsSubmitting(false);
     }
   };
+
+  // ตรวจสอบสถานะก่อนแสดงฟอร์ม
+  if (status !== "ดำเนินการเสร็จสิ้น") {
+    return (
+      <div className="text-center p-4 text-gray-500">
+        <p>ไม่สามารถประเมินความพึงพอใจได้</p>
+        <p className="text-sm">กรุณารอให้การดำเนินการเสร็จสิ้นก่อน</p>
+      </div>
+    );
+  }
 
   return (
     <form>

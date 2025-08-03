@@ -9,7 +9,15 @@ export default async function handler(req, res) {
     try {
       const isAdmin = req.query.role === 'admin';
       const projection = isAdmin ? {} : { fullName: 0, phone: 0 };
-      const query = req.query.status ? { status: req.query.status } : {};
+      
+      let query = {};
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+      if (req.query.complaintId) {
+        query._id = req.query.complaintId;
+      }
+      
       const complaints = await Complaint.find(query, projection);
 
       return res.status(200).json(complaints);
