@@ -11,8 +11,10 @@ export default async function handler(req, res) {
 
     const { _id, prefix, name, educationLevel, phone, address, note, annualIncome, incomeSource, householdMembers, housingStatus, receivedScholarship } = req.body;
 
+    console.log('📝 Received update data:', { _id, prefix, name, educationLevel, phone, address, note, annualIncome, householdMembers, housingStatus });
+
     if (!_id || !name) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: 'Missing required fields: _id and name' });
     }
 
     const updatedData = {
@@ -22,14 +24,14 @@ export default async function handler(req, res) {
       phone: phone !== undefined ? phone : '',
       address: address !== undefined ? address : '',
       note: note !== undefined ? note : '',
-      annualIncome: annualIncome !== undefined ? annualIncome : '',
+      annualIncome: annualIncome !== undefined ? parseInt(annualIncome) || 0 : 0,
       incomeSource: incomeSource || [],
-      householdMembers: householdMembers !== undefined ? householdMembers : 1,
-      housingStatus: housingStatus !== undefined ? housingStatus : '',
+      householdMembers: householdMembers !== undefined ? parseInt(householdMembers) || 1 : 1,
+      housingStatus: housingStatus !== undefined ? housingStatus : 'ไม่ระบุ',
       receivedScholarship: receivedScholarship || []
     };
 
-    console.log('Updating record with data:', updatedData);
+    console.log('🔄 Updating record with data:', updatedData);
     
     const result = await EducationRegister.findByIdAndUpdate(
       _id,
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Record not found' });
     }
 
-    console.log('Updated result:', result);
+    console.log('✅ Updated result:', result);
     
     return res.status(200).json({ 
       message: 'Updated successfully', 
@@ -49,6 +51,10 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('❌ API error:', err);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ 
+      message: 'Server error', 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 } 
