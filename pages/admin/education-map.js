@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
+import EducationDetailModal from '@/components/education/EducationDetailModal';
 
 // EditForm Component
 function EditForm({ data, onClose, onSave, isSaving }) {
@@ -444,7 +445,9 @@ export default function EducationMapPage() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editModal, setEditModal] = useState({ isOpen: false, data: null });
+  const [detailModal, setDetailModal] = useState({ isOpen: false, data: null });
   const [tableFilter, setTableFilter] = useState('all');
+  const [incomeFilter, setIncomeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -679,6 +682,12 @@ export default function EducationMapPage() {
     }
   };
 
+  // คำนวณรายได้เฉลี่ยรายวันต่อคน
+  const calculateDailyIncomePerPerson = (annualIncome, householdMembers) => {
+    if (!annualIncome || !householdMembers || annualIncome <= 0 || householdMembers <= 0) return 0;
+    return Math.round((annualIncome / householdMembers) / 12 / 30);
+  };
+
   // ฟังก์ชันสำหรับการกรองและเรียงลำดับข้อมูล
   const getFilteredAndSortedData = () => {
     let filteredData = points;
@@ -694,6 +703,22 @@ export default function EducationMapPage() {
     // กรองตามระดับการศึกษา
     if (tableFilter !== 'all') {
       filteredData = filteredData.filter(item => item.educationLevel === tableFilter);
+    }
+    
+    // กรองตามรายได้เฉลี่ยรายวัน
+    if (incomeFilter !== 'all') {
+      filteredData = filteredData.filter(item => {
+        const dailyIncome = calculateDailyIncomePerPerson(item.annualIncome, item.householdMembers);
+        
+        if (incomeFilter === 'low') {
+          return dailyIncome < 100;
+        } else if (incomeFilter === 'medium') {
+          return dailyIncome >= 100 && dailyIncome <= 150;
+        } else if (incomeFilter === 'high') {
+          return dailyIncome > 200;
+        }
+        return true;
+      });
     }
     
     // เรียงลำดับ
@@ -1048,9 +1073,9 @@ export default function EducationMapPage() {
                       </div>
                     </div>
                     
-                    {/* Filter */}
+                    {/* Education Level Filter */}
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">กรองตามระดับการศึกษา:</label>
+                      <label className="text-sm font-medium text-gray-700">ระดับการศึกษา:</label>
                       <select
                         value={tableFilter}
                         onChange={(e) => setTableFilter(e.target.value)}
@@ -1062,6 +1087,21 @@ export default function EducationMapPage() {
                             {level} ({points.filter(item => item.educationLevel === level).length})
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    {/* Income Filter */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">รายได้เฉลี่ยรายวัน:</label>
+                      <select
+                        value={incomeFilter}
+                        onChange={(e) => setIncomeFilter(e.target.value)}
+                        className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="all">ทุกระดับรายได้</option>
+                        <option value="low">ต่ำกว่า 100 บาท/วัน</option>
+                        <option value="medium">100-150 บาท/วัน</option>
+                        <option value="high">เกิน 200 บาท/วัน</option>
                       </select>
                     </div>
                   </div>
@@ -1122,7 +1162,14 @@ export default function EducationMapPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {getFilteredAndSortedData().map((item, index) => (
-                      <tr key={item._id || index} className="hover:bg-gray-50">
+                      <tr 
+                        key={item._id || index} 
+                        className="hover:bg-gray-50 cursor-pointer transition"
+                        onClick={() => {
+                          console.log('Row clicked:', item);
+                          setDetailModal({ isOpen: true, data: item });
+                        }}
+                      >
                         <td className="px-6 py-4 text-sm text-gray-500 text-center">
                           {sortField === 'createdAt' ? (
                             <div className="text-xs">
@@ -1201,7 +1248,10 @@ export default function EducationMapPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           <button
-                            onClick={() => handleEdit(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(item);
+                            }}
                             className="text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition"
                           >
                             แก้ไข
@@ -1218,18 +1268,28 @@ export default function EducationMapPage() {
                 <div className="flex justify-between items-center text-sm text-gray-600">
                   <div>
                     แสดง {getFilteredAndSortedData().length} รายการจากทั้งหมด {points.length} รายการ
-                    {searchTerm && (
+                    {(searchTerm || tableFilter !== 'all' || incomeFilter !== 'all') && (
                       <span className="ml-2 text-blue-600">
-                        (ค้นหา: &quot;{searchTerm}&quot;)
+                        {searchTerm && `(ค้นหา: "${searchTerm}")`}
+                        {tableFilter !== 'all' && ` (ระดับ: ${tableFilter})`}
+                        {incomeFilter !== 'all' && (
+                          incomeFilter === 'low' ? ' (รายได้: ต่ำกว่า 100 บาท/วัน)' :
+                          incomeFilter === 'medium' ? ' (รายได้: 100-150 บาท/วัน)' :
+                          ' (รายได้: เกิน 200 บาท/วัน)'
+                        )}
                       </span>
                     )}
                   </div>
-                  {searchTerm && (
+                  {(searchTerm || tableFilter !== 'all' || incomeFilter !== 'all') && (
                     <button
-                      onClick={() => setSearchTerm('')}
+                      onClick={() => {
+                        setSearchTerm('');
+                        setTableFilter('all');
+                        setIncomeFilter('all');
+                      }}
                       className="text-blue-600 hover:text-blue-800 underline"
                     >
-                      ล้างการค้นหา
+                      ล้างตัวกรองทั้งหมด
                     </button>
                   )}
                 </div>
@@ -1265,6 +1325,16 @@ export default function EducationMapPage() {
           </div>
         </div>
       )}
+
+      {/* Detail Modal */}
+      <EducationDetailModal
+        data={detailModal.data}
+        isOpen={detailModal.isOpen}
+        onClose={() => {
+          console.log('Closing detail modal');
+          setDetailModal({ isOpen: false, data: null });
+        }}
+      />
     </div>
   );
 } 
