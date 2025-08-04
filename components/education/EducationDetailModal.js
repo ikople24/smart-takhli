@@ -385,8 +385,7 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                                 className="object-cover"
                                 style={{ 
                                   display: imageErrors[`image-${index}`] ? 'none' : 'block',
-                                  zIndex: 1,
-                                  position: 'relative'
+                                  zIndex: 1
                                 }}
                                 onLoad={() => {
                                   console.log('Image loaded successfully:', image);

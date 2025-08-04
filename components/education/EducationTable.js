@@ -8,15 +8,11 @@ export default function EducationTable({ data, onEdit }) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLevel, setFilterLevel] = useState('all');
-  const [filterIncome, setFilterIncome] = useState('all');
+
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // คำนวณรายได้เฉลี่ยรายวัน
-  const calculateDailyIncome = (annualIncome) => {
-    if (!annualIncome || annualIncome <= 0) return 0;
-    return Math.round(annualIncome / 365);
-  };
+
 
   // กรองข้อมูล
   const filteredData = data.filter(item => {
@@ -25,19 +21,7 @@ export default function EducationTable({ data, onEdit }) {
                          item.phone?.includes(searchTerm);
     const matchesLevel = filterLevel === 'all' || item.educationLevel === filterLevel;
     
-    // กรองตามรายได้เฉลี่ยรายวัน
-    const dailyIncome = calculateDailyIncome(item.annualIncome);
-    let matchesIncome = true;
-    
-    if (filterIncome === 'low') {
-      matchesIncome = dailyIncome < 100;
-    } else if (filterIncome === 'medium') {
-      matchesIncome = dailyIncome >= 100 && dailyIncome <= 150;
-    } else if (filterIncome === 'high') {
-      matchesIncome = dailyIncome > 200;
-    }
-    
-    return matchesSearch && matchesLevel && matchesIncome;
+    return matchesSearch && matchesLevel;
   });
 
   // เรียงลำดับข้อมูล
@@ -131,32 +115,37 @@ export default function EducationTable({ data, onEdit }) {
             </select>
           </div>
 
-          {/* Income Filter */}
-          <div className="md:w-48">
-            <select
-              value={filterIncome}
-              onChange={(e) => setFilterIncome(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">ทุกระดับรายได้</option>
-              <option value="low">ต่ำกว่า 100 บาท/วัน</option>
-              <option value="medium">100-150 บาท/วัน</option>
-              <option value="high">เกิน 200 บาท/วัน</option>
-            </select>
-          </div>
+
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" style={{ tableLayout: 'fixed', width: '100%' }}>
+          <style jsx>{`
+            .education-level-cell {
+              width: 150px !important;
+              min-width: 150px !important;
+              max-width: 150px !important;
+              white-space: nowrap !important;
+              word-break: keep-all !important;
+              overflow-wrap: normal !important;
+            }
+            .education-level-text {
+              white-space: nowrap !important;
+              word-break: keep-all !important;
+              overflow-wrap: normal !important;
+              display: inline-flex !important;
+              width: fit-content !important;
+            }
+          `}</style>
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ข้อมูล
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 education-level-cell"
                 onClick={() => handleSort('educationLevel')}
               >
                 ระดับการศึกษา
@@ -210,18 +199,14 @@ export default function EducationTable({ data, onEdit }) {
                           📝 {item.note}
                         </p>
                       )}
-                      {item.annualIncome > 0 && (
-                        <p className="text-xs text-blue-600 truncate">
-                          💰 รายได้เฉลี่ย: {calculateDailyIncome(item.annualIncome)} บาท/วัน
-                        </p>
-                      )}
+
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getLevelColor(item.educationLevel)}`}>
+                <td className="px-6 py-4 education-level-cell">
+                  <div className={`inline-flex px-3 py-2 text-sm font-semibold rounded-full education-level-text ${getLevelColor(item.educationLevel)}`}>
                     {item.educationLevel || 'ไม่ระบุ'}
-                  </span>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900">
@@ -303,7 +288,7 @@ export default function EducationTable({ data, onEdit }) {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">ไม่พบข้อมูล</h3>
           <p className="text-gray-500">
-            {searchTerm || filterLevel !== 'all' || filterIncome !== 'all'
+            {searchTerm || filterLevel !== 'all'
               ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' 
               : 'ยังไม่มีข้อมูลการศึกษา'
             }

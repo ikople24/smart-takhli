@@ -15,7 +15,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
     image: [],
     housingStatus: 'ไม่ระบุ',
     householdMembers: 1,
-    annualIncome: 0
+    annualIncome: ''
   });
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation] = useState(null);
@@ -36,7 +36,10 @@ export default function EducationFormModal({ isOpen, onClose }) {
     }).nullable().refine((val) => val !== null, 'กรุณาเลือกตำแหน่งที่ตั้ง'),
     housingStatus: z.string().min(1, 'กรุณาเลือกสถานภาพที่อยู่'),
     householdMembers: z.number().min(1, 'จำนวนสมาชิกต้องมีอย่างน้อย 1 คน'),
-    annualIncome: z.number().min(0, 'รายได้ต้องไม่ติดลบ')
+    annualIncome: z.string().refine((val) => {
+      const num = parseInt(val);
+      return !isNaN(num) && num >= 0;
+    }, 'รายได้ต้องเป็นตัวเลขและไม่ติดลบ')
   });
 
   // ImageUploads will handle image upload and update formData.image as array of URLs
@@ -87,6 +90,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
 
     const payload = {
       ...formData,
+      annualIncome: parseInt(formData.annualIncome) || 0,
       location,
       status: "รับคำร้อง",
     };
@@ -110,7 +114,7 @@ export default function EducationFormModal({ isOpen, onClose }) {
           image: [],
           housingStatus: 'ไม่ระบุ',
           householdMembers: 1,
-          annualIncome: 0
+          annualIncome: ''
         });
         setLocation(null);
         setUseCurrent(false);
@@ -233,15 +237,38 @@ export default function EducationFormModal({ isOpen, onClose }) {
         />
 
         <label className="font-extrabold text-sm text-gray-600">8. รายได้ทั้งปี (บาท)</label>
-        <input
-          type="number"
-          placeholder="รายได้ทั้งปี"
-          value={formData.annualIncome}
-          min="0"
-          onChange={(e) => setFormData({ ...formData, annualIncome: parseInt(e.target.value) || 0 })}
-          className="input input-bordered w-full"
-          disabled={isSubmitting}
-        />
+        <div className="relative">
+          <input
+            type="number"
+            placeholder="รายได้ทั้งปี"
+            value={formData.annualIncome}
+            min="0"
+            onChange={(e) => setFormData({ ...formData, annualIncome: e.target.value })}
+            className="input input-bordered w-full pr-16"
+            disabled={isSubmitting}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const currentValue = parseInt(formData.annualIncome) || 0;
+              if (currentValue > 0) {
+                // คูณ 12 เพื่อแปลงจากรายได้ต่อเดือนเป็นรายได้ต่อปี
+                const annualIncome = currentValue * 12;
+                setFormData({ ...formData, annualIncome: annualIncome.toString() });
+              }
+            }}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 btn btn-xs btn-outline btn-primary"
+            title="คูณ 12 (แปลงจากรายได้ต่อเดือนเป็นรายได้ต่อปี)"
+            disabled={isSubmitting || !formData.annualIncome}
+          >
+            ×12
+          </button>
+        </div>
+        {formData.annualIncome && (
+          <div className="text-xs text-gray-500 mt-1">
+            💡 หมายเหตุ: หากกรอกรายได้ต่อเดือน ให้กดปุ่ม &quot;×12&quot; เพื่อแปลงเป็นรายได้ต่อปี
+          </div>
+        )}
 
         <label className="font-extrabold text-sm text-gray-600">9. อัพโหลดรูปภาพ</label>
         <ImageUploads onChange={(urls) => setFormData({ ...formData, image: urls })} />

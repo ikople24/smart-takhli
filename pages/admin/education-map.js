@@ -452,6 +452,7 @@ export default function EducationMapPage() {
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
   const [isSaving, setIsSaving] = useState(false);
+  const [showAdvancedActions, setShowAdvancedActions] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -831,91 +832,101 @@ export default function EducationMapPage() {
                 จัดการและวิเคราะห์ข้อมูลการศึกษาของผู้ขอรับสิทธิ
               </p>
             </div>
-            <div className="flex items-center gap-3 mt-4 md:mt-0">
-              <button
-                onClick={resetApplicantId}
-                className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
-              >
-                <span>🔄</span>
-                <span>รีเซ็ตเลขที่ผู้สมัคร</span>
-              </button>
-              <button
-                onClick={fixDuplicates}
-                className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-              >
-                <span>🗑️</span>
-                <span>ลบข้อมูลซ้ำ</span>
-              </button>
-              <button
-                onClick={fixPrefixes}
-                className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition"
-              >
-                <span>🔧</span>
-                <span>แก้ไขคำนำหน้า</span>
-              </button>
+            <div className="flex items-center gap-2 mt-4 md:mt-0">
+              {/* ปุ่มรีเฟรช - แสดงเสมอ */}
               <button
                 onClick={fetchData}
-                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+                className="btn btn-sm bg-blue-500 text-white hover:bg-blue-600 border-0"
               >
                 <span>🔄</span>
                 <span>รีเฟรช</span>
               </button>
+              
+              {/* ปุ่มแสดง/ซ่อนปุ่มดำเนินการขั้นสูง */}
               <button
-                onClick={exportToCSV}
-                className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
+                onClick={() => setShowAdvancedActions(!showAdvancedActions)}
+                className="btn btn-sm bg-gray-500 text-white hover:bg-gray-600 border-0"
               >
-                <span>📥</span>
-                <span>ส่งออก CSV</span>
+                <span>{showAdvancedActions ? '🔽' : '🔼'}</span>
+                <span>{showAdvancedActions ? 'ซ่อน' : 'แสดง'} ปุ่มดำเนินการ</span>
               </button>
+              
+              {/* ปุ่มดำเนินการขั้นสูง - แสดงเมื่อกดปุ่มด้านบน */}
+              {showAdvancedActions && (
+                <>
+                  <button
+                    onClick={resetApplicantId}
+                    className="btn btn-sm bg-purple-500 text-white hover:bg-purple-600 border-0"
+                  >
+                    <span>🔄</span>
+                    <span>รีเซ็ตเลขที่ผู้สมัคร</span>
+                  </button>
+                  <button
+                    onClick={fixDuplicates}
+                    className="btn btn-sm bg-red-500 text-white hover:bg-red-600 border-0"
+                  >
+                    <span>🗑️</span>
+                    <span>ลบข้อมูลซ้ำ</span>
+                  </button>
+                  <button
+                    onClick={fixPrefixes}
+                    className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 border-0"
+                  >
+                    <span>🔧</span>
+                    <span>แก้ไขคำนำหน้า</span>
+                  </button>
+                  <button
+                    onClick={exportToCSV}
+                    className="btn btn-sm bg-green-500 text-white hover:bg-green-600 border-0"
+                  >
+                    <span>📥</span>
+                    <span>ส่งออก CSV</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+      <div className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition ${
-                activeTab === 'dashboard'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
+                activeTab === 'dashboard' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span>📊</span>
-                <span>แดชบอร์ด</span>
-              </div>
+              <span>📊</span>
+              <span>แดชบอร์ด</span>
             </button>
             <button
               onClick={() => setActiveTab('map')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition ${
-                activeTab === 'map'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
+                activeTab === 'map' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span>🗺️</span>
-                <span>แผนที่</span>
-              </div>
+              <span>🗺️</span>
+              <span>แผนที่</span>
             </button>
             <button
               onClick={() => setActiveTab('table')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition ${
-                activeTab === 'table'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
+                activeTab === 'table' 
+                  ? 'bg-white text-blue-600 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span>📋</span>
-                <span>ตารางข้อมูล</span>
-              </div>
+              <span>📋</span>
+              <span>ตารางข้อมูล</span>
             </button>
-          </nav>
+          </div>
         </div>
       </div>
 
