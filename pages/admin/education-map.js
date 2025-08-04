@@ -547,6 +547,63 @@ export default function EducationMapPage() {
     }
   };
 
+  const resetApplicantId = async () => {
+    try {
+      // แสดง confirmation dialog
+      const result = await Swal.fire({
+        title: 'ยืนยันการรีเซ็ตเลขที่ผู้สมัคร',
+        text: 'การดำเนินการนี้จะรีเซ็ตเลขที่ผู้สมัคร (applicantId) ทั้งหมดให้เป็นลำดับใหม่ตามวันที่สร้างข้อมูล ต้องการดำเนินการต่อหรือไม่?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'รีเซ็ต',
+        cancelButtonText: 'ยกเลิก'
+      });
+
+      if (result.isConfirmed) {
+        // แสดง loading
+        Swal.fire({
+          title: 'กำลังรีเซ็ตเลขที่ผู้สมัคร...',
+          text: 'กรุณารอสักครู่',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const response = await fetch('/api/education/reset-applicant-id', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+          Swal.fire({
+            title: 'รีเซ็ตสำเร็จ!',
+            text: `รีเซ็ตเลขที่ผู้สมัครสำเร็จ\nอัปเดต: ${result.updatedCount} รายการ`,
+            icon: 'success',
+          });
+          // รีเฟรชข้อมูล
+          fetchData();
+        } else {
+          throw new Error(result.message);
+        }
+      }
+    } catch (error) {
+      Swal.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: error.message,
+        icon: 'error',
+      });
+    }
+  };
+
   const handleSaveEdit = async (updatedData) => {
     try {
       setIsSaving(true);
@@ -750,6 +807,13 @@ export default function EducationMapPage() {
               </p>
             </div>
             <div className="flex items-center gap-3 mt-4 md:mt-0">
+              <button
+                onClick={resetApplicantId}
+                className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
+              >
+                <span>🔄</span>
+                <span>รีเซ็ตเลขที่ผู้สมัคร</span>
+              </button>
               <button
                 onClick={fixDuplicates}
                 className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"

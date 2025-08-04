@@ -38,12 +38,26 @@ export default function EducationSummary({ data }) {
       bgColor: 'bg-blue-50',
       textColor: 'text-blue-700'
     },
+    'ปวช': { 
+      icon: <FaUserGraduate className="text-indigo-500 text-xl" />, 
+      order: 5, 
+      color: 'bg-indigo-500',
+      bgColor: 'bg-indigo-50',
+      textColor: 'text-indigo-700'
+    },
     'ปวช.': { 
       icon: <FaUserGraduate className="text-indigo-500 text-xl" />, 
       order: 5, 
       color: 'bg-indigo-500',
       bgColor: 'bg-indigo-50',
       textColor: 'text-indigo-700'
+    },
+    'ปวส': { 
+      icon: <FaUserGraduate className="text-purple-500 text-xl" />, 
+      order: 6, 
+      color: 'bg-purple-500',
+      bgColor: 'bg-purple-50',
+      textColor: 'text-purple-700'
     },
     'ปวส.': { 
       icon: <FaUserGraduate className="text-purple-500 text-xl" />, 

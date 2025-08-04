@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { FaMapMarkerAlt, FaSchool, FaUniversity, FaBaby } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaSchool, FaUniversity, FaBaby, FaUserGraduate } from 'react-icons/fa';
 
 // ป้องกัน marker icon หายในบางระบบ
 delete L.Icon.Default.prototype._getIconUrl;
@@ -21,7 +21,9 @@ const createCustomIcon = (level) => {
     'ประถม': '#FF6B35',
     'มัธยมต้น': '#6BCF7F',
     'มัธยมปลาย': '#4D96FF',
+    'ปวช': '#9B59B6',
     'ปวช.': '#9B59B6',
+    'ปวส': '#E67E22',
     'ปวส.': '#E67E22',
     'ปริญญาตรี': '#E74C3C',
     'ไม่ระบุ': '#95A5A6'
@@ -49,7 +51,9 @@ const createCustomIcon = (level) => {
           level === 'ประถม' ? 'ป' :
           level === 'มัธยมต้น' ? 'ม' :
           level === 'มัธยมปลาย' ? 'ม' :
+          level === 'ปวช' ? 'ช' :
           level === 'ปวช.' ? 'ช' :
+          level === 'ปวส' ? 'ส' :
           level === 'ปวส.' ? 'ส' :
           level === 'ปริญญาตรี' ? 'ต' : '?'}
       </div>
@@ -76,6 +80,11 @@ export default function MapEducationPoints({ data }) {
       }
       groups[level].push(item);
     });
+    
+    // Debug: แสดงข้อมูลที่จัดกลุ่มแล้ว
+    console.log('Grouped data:', groups);
+    console.log('Available levels:', Object.keys(groups));
+    
     return groups;
   }, [data]);
 
@@ -108,7 +117,9 @@ export default function MapEducationPoints({ data }) {
     'ประถม': '#FF6B35',
     'มัธยมต้น': '#6BCF7F',
     'มัธยมปลาย': '#4D96FF',
+    'ปวช': '#9B59B6',
     'ปวช.': '#9B59B6',
+    'ปวส': '#E67E22',
     'ปวส.': '#E67E22',
     'ปริญญาตรี': '#E74C3C',
     'ไม่ระบุ': '#95A5A6'
@@ -119,8 +130,10 @@ export default function MapEducationPoints({ data }) {
     'ประถม': <FaSchool />,
     'มัธยมต้น': <FaSchool />,
     'มัธยมปลาย': <FaSchool />,
-    'ปวช.': <FaUniversity />,
-    'ปวส.': <FaUniversity />,
+    'ปวช': <FaUserGraduate />,
+    'ปวช.': <FaUserGraduate />,
+    'ปวส': <FaUserGraduate />,
+    'ปวส.': <FaUserGraduate />,
     'ปริญญาตรี': <FaUniversity />,
     'ไม่ระบุ': <FaMapMarkerAlt />
   };
@@ -141,23 +154,28 @@ export default function MapEducationPoints({ data }) {
           >
             ทั้งหมด ({data.length})
           </button>
-          {Object.entries(groupedData).map(([level, items]) => (
-            <button
-              key={level}
-              onClick={() => setSelectedLevel(level)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
-                selectedLevel === level
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              style={{
-                backgroundColor: selectedLevel === level ? levelColors[level] : 'transparent'
-              }}
-            >
-              <span className="text-xs">{levelIcons[level]}</span>
-              {level} ({items.length})
-            </button>
-          ))}
+          {Object.entries(groupedData).map(([level, items]) => {
+            const icon = levelIcons[level] || <FaMapMarkerAlt />;
+            console.log(`Level: ${level}, Icon:`, icon);
+            
+            return (
+              <button
+                key={level}
+                onClick={() => setSelectedLevel(level)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  selectedLevel === level
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                style={{
+                  backgroundColor: selectedLevel === level ? levelColors[level] : 'transparent'
+                }}
+              >
+                <span className="text-xs">{icon}</span>
+                {level} ({items.length})
+              </button>
+            );
+          })}
         </div>
       </div>
 
