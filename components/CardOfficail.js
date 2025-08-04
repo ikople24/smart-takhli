@@ -58,6 +58,20 @@ export default function CardOfficail(props) {
           if (responsibleAssignments.length > 0) {
             setAssignedDate(responsibleAssignments[0].assignedAt);
             setCompletedDate(responsibleAssignments[0].completedAt);
+            // ดึงข้อมูล user จาก assignment ที่ตรงกับ complaintId
+            if (responsibleAssignments[0].userId) {
+              try {
+                console.log("🔍 Fetching user with ID:", responsibleAssignments[0].userId);
+                const userRes = await fetch(`/api/users/get-by-id?userId=${responsibleAssignments[0].userId}`);
+                const userData = await userRes.json();
+                console.log("👤 User data response:", userData);
+                if (userData.success && userData.user) {
+                  setAssignedUser(userData.user);
+                }
+              } catch (error) {
+                console.error("Failed to fetch assigned user:", error);
+              }
+            }
           }
         }
       } catch (error) {
@@ -85,25 +99,6 @@ export default function CardOfficail(props) {
     fetchAssignments();
     fetchComplaintStatus();
   }, [props.probId]);
-  useEffect(() => {
-    const fetchAssignedUser = async () => {
-      if (assignments[0]?.userId) {
-        try {
-          console.log("🔍 Fetching user with ID:", assignments[0].userId);
-          const res = await fetch(`/api/users/get-by-id?userId=${assignments[0].userId}`);
-          const data = await res.json();
-          console.log("👤 User data response:", data);
-          if (data.success && data.user) {
-            setAssignedUser(data.user);
-          }
-        } catch (error) {
-          console.error("Failed to fetch assigned user:", error);
-        }
-      }
-    };
-
-    fetchAssignedUser();
-  }, [assignments]);
 
   // Conditionally render nothing if no assignedDate is found
   if (!assignedDate) {
