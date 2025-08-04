@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { FaEdit, FaEye, FaMapMarkerAlt, FaPhone, FaImage, FaGraduationCap } from 'react-icons/fa';
+import EducationDetailModal from './EducationDetailModal';
 
-export default function EducationTable({ data, onEdit, onView }) {
+export default function EducationTable({ data, onEdit }) {
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLevel, setFilterLevel] = useState('all');
+  const [filterIncome, setFilterIncome] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // คำนวณรายได้เฉลี่ยรายวัน
+  const calculateDailyIncome = (annualIncome) => {
+    if (!annualIncome || annualIncome <= 0) return 0;
+    return Math.round(annualIncome / 365);
+  };
 
   // กรองข้อมูล
   const filteredData = data.filter(item => {
@@ -14,7 +24,20 @@ export default function EducationTable({ data, onEdit, onView }) {
                          item.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.phone?.includes(searchTerm);
     const matchesLevel = filterLevel === 'all' || item.educationLevel === filterLevel;
-    return matchesSearch && matchesLevel;
+    
+    // กรองตามรายได้เฉลี่ยรายวัน
+    const dailyIncome = calculateDailyIncome(item.annualIncome);
+    let matchesIncome = true;
+    
+    if (filterIncome === 'low') {
+      matchesIncome = dailyIncome < 100;
+    } else if (filterIncome === 'medium') {
+      matchesIncome = dailyIncome >= 100 && dailyIncome <= 150;
+    } else if (filterIncome === 'high') {
+      matchesIncome = dailyIncome > 200;
+    }
+    
+    return matchesSearch && matchesLevel && matchesIncome;
   });
 
   // เรียงลำดับข้อมูล
@@ -107,6 +130,20 @@ export default function EducationTable({ data, onEdit, onView }) {
               <option value="ไม่ระบุ">ไม่ระบุ</option>
             </select>
           </div>
+
+          {/* Income Filter */}
+          <div className="md:w-48">
+            <select
+              value={filterIncome}
+              onChange={(e) => setFilterIncome(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">ทุกระดับรายได้</option>
+              <option value="low">ต่ำกว่า 100 บาท/วัน</option>
+              <option value="medium">100-150 บาท/วัน</option>
+              <option value="high">เกิน 200 บาท/วัน</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -140,7 +177,16 @@ export default function EducationTable({ data, onEdit, onView }) {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedData.map((item) => (
-              <tr key={item._id} className="hover:bg-gray-50 transition">
+              <tr 
+                key={item._id} 
+                className="hover:bg-gray-50 transition cursor-pointer"
+                onClick={() => {
+                  console.log('Row clicked:', item);
+                  setSelectedItem(item);
+                  setIsDetailModalOpen(true);
+                  console.log('Modal state set to true');
+                }}
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
@@ -162,6 +208,11 @@ export default function EducationTable({ data, onEdit, onView }) {
                       {item.note && (
                         <p className="text-xs text-gray-400 truncate">
                           📝 {item.note}
+                        </p>
+                      )}
+                      {item.annualIncome > 0 && (
+                        <p className="text-xs text-blue-600 truncate">
+                          💰 รายได้เฉลี่ย: {calculateDailyIncome(item.annualIncome)} บาท/วัน
                         </p>
                       )}
                     </div>
@@ -212,18 +263,24 @@ export default function EducationTable({ data, onEdit, onView }) {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    {onView && (
-                      <button
-                        onClick={() => onView(item)}
-                        className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition"
-                        title="ดูรายละเอียด"
-                      >
-                        <FaEye />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Row clicked:', item);
+                        setSelectedItem(item);
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 p-2 rounded-full hover:bg-blue-50 transition"
+                      title="ดูรายละเอียด"
+                    >
+                      <FaEye />
+                    </button>
                     {onEdit && (
                       <button
-                        onClick={() => onEdit(item)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(item);
+                        }}
                         className="text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50 transition"
                         title="แก้ไขข้อมูล"
                       >
@@ -246,7 +303,7 @@ export default function EducationTable({ data, onEdit, onView }) {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">ไม่พบข้อมูล</h3>
           <p className="text-gray-500">
-            {searchTerm || filterLevel !== 'all' 
+            {searchTerm || filterLevel !== 'all' || filterIncome !== 'all'
               ? 'ลองเปลี่ยนเงื่อนไขการค้นหา' 
               : 'ยังไม่มีข้อมูลการศึกษา'
             }
@@ -261,6 +318,18 @@ export default function EducationTable({ data, onEdit, onView }) {
           <span>อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH')}</span>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {console.log('Modal render state:', { isOpen: isDetailModalOpen, data: selectedItem })}
+      <EducationDetailModal
+        data={selectedItem}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          console.log('Modal closing');
+          setIsDetailModalOpen(false);
+          setSelectedItem(null);
+        }}
+      />
     </div>
   );
 }
