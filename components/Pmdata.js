@@ -85,6 +85,21 @@ const Pm25Dashboard = () => {
   const [error, setError] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [currentInfo, setCurrentInfo] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+    // Update time on client side only
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString("th-TH"));
+      setCurrentDate(new Date().toLocaleDateString("th-TH"));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
@@ -110,11 +125,27 @@ const Pm25Dashboard = () => {
     return reversed.find((row) => row?.pm25 && row?.Time);
   };
 
+  // Don't render anything until mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="flex flex-col-2 justify-between mt-4 p-2 w-full max-w-[350px] h-[100px] mx-auto rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md">
+        <div className="flex flex-col gap-2 justify-between">
+          <h2 className="text-xl font-semibold text-gray-500">เช็คฝุ่นPM 2.5</h2>
+          <p className="text-sm text-gray-400">กำลังโหลด...</p>
+        </div>
+        <div>
+          <span className="countdown font-medium text-6xl text-end text-gray-400">
+            <span>--</span>
+          </span>
+          <p className="text-end text-md font-medium">µg/m³</p>
+        </div>
+      </div>
+    );
+  }
+
   const latest = getLatestEntry(data);
   if (!latest || error) {
     const errorInfo = getPm25LevelInfo(0);
-    const currentTime = new Date().toLocaleTimeString("th-TH");
-    const currentDate = new Date().toLocaleDateString("th-TH");
     
     return (
       <>
@@ -131,7 +162,7 @@ const Pm25Dashboard = () => {
               {errorInfo.icon} {errorInfo.label}
             </p>
             <p className="text-sm text-gray-400">
-              อัพเดท : {currentDate} เวลา {currentTime}
+              อัพเดท : {mounted ? currentDate : "--/--/----"} เวลา {mounted ? currentTime : "--:--:--"}
             </p>
           </div>
           <div>
@@ -187,7 +218,7 @@ const Pm25Dashboard = () => {
                 </div>
                 
                 <div className="text-xs text-gray-500 mt-4">
-                  อัพเดท: {currentDate} เวลา {currentTime}
+                  อัพเดท: {mounted ? currentDate : "--/--/----"} เวลา {mounted ? currentTime : "--:--:--"}
                 </div>
               </div>
             </div>
@@ -198,7 +229,7 @@ const Pm25Dashboard = () => {
   }
 
   const pm25Info = getPm25LevelInfo(latest.pm25);
-  const displayDate = latest.date_select || new Date().toLocaleDateString("th-TH");
+  const displayDate = latest.date_select || (mounted ? currentDate : "--/--/----");
   const isConnected = latest.pm25 && parseFloat(latest.pm25) > 0;
 
   const handleClick = () => {
@@ -218,7 +249,7 @@ const Pm25Dashboard = () => {
             {pm25Info.icon} {pm25Info.label}
           </p>
           <p className="text-sm text-gray-400">
-            อัพเดท : {displayDate} เวลา {latest.Time}
+            อัพเดท : {displayDate} เวลา {mounted ? latest.Time : "--:--:--"}
           </p>
         </div>
         <div>
@@ -274,7 +305,7 @@ const Pm25Dashboard = () => {
               </div>
               
               <div className="text-xs text-gray-500 mt-4">
-                อัพเดท: {displayDate} เวลา {latest.Time}
+                อัพเดท: {displayDate} เวลา {mounted ? latest.Time : "--:--:--"}
               </div>
             </div>
           </div>
