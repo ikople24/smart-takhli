@@ -1,4 +1,4 @@
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Clock } from "lucide-react";
 import ReactCompareImage from 'react-compare-image';
 import { useMemo } from "react";
 import { useMenuStore } from "@/stores/useMenuStore";
@@ -9,12 +9,10 @@ import { useEffect, useState } from "react";
 
 const CompletedCard = ({
   complaintMongoId,
-  // complaintId,
   title,
-  // description,
-  // timestamp,
+  timestamp,
   beforeImage,
-  // afterImage,
+  afterImage,
   problems,
   updatedAt,
 }) => {
@@ -27,29 +25,17 @@ const CompletedCard = ({
   const [activeIcons, setActiveIcons] = useState([]);
   const [assignment, setAssignment] = useState(null);
 
-  // console.log("CompletedCard props:", {
-  //   complaintMongoId,
-  //   complaintId,
-  //   title,
-  //   description,
-  //   timestamp,
-  //   beforeImage,
-  //   afterImage,
-  //   problems,
-  // });
-
-useEffect(() => {
-  let isMounted = true;
-  fetchProblemOptions().then(() => {
-    if (!isMounted) return;
-  });
-  return () => {
-    isMounted = false;
-  };
-}, [fetchProblemOptions]);
+  useEffect(() => {
+    let isMounted = true;
+    fetchProblemOptions().then(() => {
+      if (!isMounted) return;
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchProblemOptions]);
 
   useEffect(() => {
-    // console.log("All problemOptions:", problemOptions);
     if (Array.isArray(problems)) {
       const mapped = problems.map((problem) => {
         const found = problemOptions?.find(
@@ -64,95 +50,180 @@ useEffect(() => {
     }
   }, [problems, problemOptions]);
 
-useEffect(() => {
-  let isMounted = true;
-  const fetchAssignment = async () => {
-    try {
-      const res = await fetch(
-        `/api/assignments/by-complaint?complaintId=${complaintMongoId}`
-      );
-      const json = await res.json();
-      if (isMounted && json.success && json.data.length > 0) {
-        //console.log("Fetched assignment data:", json.data[0]);
-        setAssignment(json.data[0]);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAssignment = async () => {
+      try {
+        const res = await fetch(
+          `/api/assignments/by-complaint?complaintId=${complaintMongoId}`
+        );
+        const json = await res.json();
+        if (isMounted && json.success && json.data.length > 0) {
+          setAssignment(json.data[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching assignment:", error);
       }
-    } catch (error) {
-      console.error("Error fetching assignment:", error);
+    };
+    fetchAssignment();
+    return () => {
+      isMounted = false;
+    };
+  }, [complaintMongoId]);
+
+  // Get menu icon for the category
+  const menuIcon = menu?.find((item) => item.Prob_name === title)?.Prob_pic;
+
+  // Get completion date
+  const completionDate = assignment?.completedAt || updatedAt || timestamp;
+
+  // Calculate processing time
+  const processingTime = useMemo(() => {
+    if (!timestamp || !completionDate) return null;
+    
+    // ใช้การคำนวณเดียวกับหน้า status
+    const startDate = new Date(timestamp);
+    const endDate = new Date(completionDate);
+    const processingTimeHours = Math.floor((endDate - startDate) / (1000 * 60 * 60));
+    const diffDays = Math.floor(processingTimeHours / 24);
+    
+    if (processingTimeHours < 24) {
+      return { value: processingTimeHours, unit: 'ชั่วโมง', hours: processingTimeHours };
+    } else {
+      return { value: diffDays, unit: 'วัน', hours: processingTimeHours };
+    }
+  }, [timestamp, completionDate]);
+
+  // Get time badge color based on processing time - ใช้การคำนวณเดียวกับตัวกรอง
+  const getTimeBadgeColor = (hours) => {
+    if (hours <= 24) {
+      return 'bg-green-50 text-green-700 border-green-300';
+    } else if (hours > 24 && hours <= 48) {
+      return 'bg-blue-50 text-blue-700 border-blue-300';
+    } else if (hours > 48 && hours <= 72) {
+      return 'bg-indigo-50 text-indigo-700 border-indigo-300';
+    } else if (hours > 72 && hours <= 168) {
+      return 'bg-yellow-50 text-yellow-700 border-yellow-300';
+    } else if (hours > 168 && hours <= 360) {
+      return 'bg-orange-50 text-orange-700 border-orange-300';
+    } else {
+      return 'bg-red-50 text-red-700 border-red-300';
     }
   };
-  fetchAssignment();
-  return () => {
-    isMounted = false;
+
+  // Get time range label - ใช้การคำนวณเดียวกับตัวกรอง
+  const getTimeRangeLabel = (hours) => {
+    if (hours <= 24) {
+      return 'ภายใน 24 ชม.';
+    } else if (hours > 24 && hours <= 48) {
+      return '1-2 วัน';
+    } else if (hours > 48 && hours <= 72) {
+      return '2-3 วัน';
+    } else if (hours > 72 && hours <= 168) {
+      return '3-7 วัน';
+    } else if (hours > 168 && hours <= 360) {
+      return '7-15 วัน';
+    } else {
+      return 'เกิน 15 วัน';
+    }
   };
-}, [complaintMongoId]);
 
   return (
-    <div className="bg-white shadow-md rounded-2xl p-4 border border-green-300 space-y-2 max-h-[90vh] overflow-auto">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          {menu
-            ?.filter((item) => item.Prob_name === title)
-            .map((item, index) => (
-              <img
-                key={index}
-                src={item.Prob_pic}
-                alt={item.Prob_name}
-                className="w-10 h-10 object-contain"
-              />
-            ))}
+    <div className="bg-white shadow-lg rounded-xl p-4 border border-green-200 space-y-3 hover:shadow-xl transition-shadow duration-200">
+      {/* Header with title and completion date */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          {menuIcon && (
+            <img
+              src={menuIcon}
+              alt={title}
+              className="w-8 h-8 object-contain"
+            />
+          )}
           <h2 className="text-lg font-semibold text-gray-800">
             {title}
           </h2>
         </div>
         <div className="text-xs text-gray-500 whitespace-nowrap">
-          วันที่สำเร็จ: {new Date(assignment?.completedAt || updatedAt).toLocaleDateString("th-TH")}
+          วันที่สำเร็จ: {completionDate ? new Date(completionDate).toLocaleDateString("th-TH") : "ไม่ระบุ"}
         </div>
       </div>
+
+      {/* Processing Time Badge */}
+      {processingTime && (
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${getTimeBadgeColor(processingTime.hours)}`}>
+          <Clock size={14} />
+          <span>{getTimeRangeLabel(processingTime.hours)}</span>
+          <span className="text-xs opacity-75">
+            ({processingTime.value} {processingTime.unit})
+          </span>
+        </div>
+      )}
+
+      {/* Status badges */}
       <div className="flex flex-wrap gap-2">
         {activeIcons.map((item, index) => (
           <div
             key={index}
-            className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm"
+            className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm border border-blue-200"
           >
             {item.iconUrl && (
               <img
                 src={item.iconUrl}
                 alt={item.label}
-                className="w-5 h-5 object-contain"
+                className="w-4 h-4 object-contain"
               />
             )}
-            <span>{item.label}</span>
+            <span className="font-medium">{item.label}</span>
           </div>
         ))}
       </div>
+
+      {/* Before/After Images */}
       {useMemo(() => {
-        if (beforeImage && assignment?.solutionImages?.[0]) {
+        const beforeImg = beforeImage;
+        const afterImg = assignment?.solutionImages?.[0] || afterImage;
+        
+        if (beforeImg && afterImg) {
           return (
-            <div
-              className="relative my-2 max-w-full h-[180px] sm:h-[220px] mx-auto pointer-events-auto z-10 overflow-hidden rounded-lg border border-green-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="absolute top-2 left-2 z-20 bg-black bg-opacity-50 text-white px-2 py-0.5 rounded text-xs">
+            <div className="relative my-3 max-w-full h-[200px] mx-auto pointer-events-auto z-10 overflow-hidden rounded-lg border border-gray-200">
+              <div className="absolute top-2 left-2 z-20 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-xs font-medium">
                 ก่อนดำเนินการ
               </div>
-              <div className="absolute top-2 right-2 z-20 bg-black bg-opacity-50 text-white px-2 py-0.5 rounded text-xs">
+              <div className="absolute top-2 right-2 z-20 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-xs font-medium">
                 หลังดำเนินการ
               </div>
               <ReactCompareImage
-                leftImage={beforeImage}
-                rightImage={assignment.solutionImages[0]}
-                handle={<div />}  // ซ่อนปุ่มเลื่อน
+                leftImage={beforeImg}
+                rightImage={afterImg}
+                handle={<div className="w-1 h-8 bg-white rounded-full shadow-lg" />}
                 sliderLineWidth={2}
+                sliderLineColor="#ffffff"
                 sliderPositionPercentage={0.5}
+              />
+            </div>
+          );
+        } else if (beforeImg) {
+          return (
+            <div className="relative my-3 max-w-full h-[200px] mx-auto overflow-hidden rounded-lg border border-gray-200">
+              <div className="absolute top-2 left-2 z-20 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-xs font-medium">
+                รูปภาพปัญหา
+              </div>
+              <img
+                src={beforeImg}
+                alt="Before"
+                className="w-full h-full object-cover"
               />
             </div>
           );
         }
         return null;
-      }, [beforeImage, assignment?.solutionImages])}
-      <div className="flex justify-end mt-2">
-        <div className="inline-flex items-center gap-1 border border-green-500 text-green-600 px-3 py-1 rounded-full text-xs">
-          <CircleCheck size={14} className="text-green-500" />
+      }, [beforeImage, assignment?.solutionImages, afterImage])}
+
+      {/* Completion Status */}
+      <div className="flex justify-end mt-3">
+        <div className="inline-flex items-center gap-2 bg-green-50 border border-green-300 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
+          <CircleCheck size={16} className="text-green-600" />
           ดำเนินการเสร็จสิ้น
         </div>
       </div>
@@ -161,3 +232,4 @@ useEffect(() => {
 };
 
 export default CompletedCard;
+
