@@ -4,6 +4,18 @@ import axios from 'axios';
 interface Complaint {
   _id: string;
   detail: string;
+  category: string;
+  problems: string[];
+  images: string[];
+  status: string;
+  createdAt: string;
+  completedAt?: string;
+  complaintId?: string;
+  community?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
   // เพิ่ม field อื่น ๆ ตาม schema ที่ใช้
 }
 
