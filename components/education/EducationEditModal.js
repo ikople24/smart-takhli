@@ -9,7 +9,12 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
     educationLevel: '',
     phone: '',
     address: '',
+    actualAddress: '',
+    familyStatus: [],
     note: '',
+    schoolName: '',
+    gradeLevel: '',
+    gpa: '',
     imageUrl: [],
     location: { lat: 0, lng: 0 }
   });
@@ -17,13 +22,20 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
 
   useEffect(() => {
     if (data) {
+      console.log('EducationEditModal - Received data:', data);
+      console.log('EducationEditModal - actualAddress from data:', data.actualAddress);
       setFormData({
         prefix: data.prefix || '',
         name: data.name || '',
         educationLevel: data.educationLevel || '',
         phone: data.phone || '',
         address: data.address || '',
+        actualAddress: data.actualAddress || '',
+        familyStatus: data.familyStatus ? (Array.isArray(data.familyStatus) ? data.familyStatus : [data.familyStatus]) : [],
         note: data.note || '',
+        schoolName: data.schoolName || '',
+        gradeLevel: data.gradeLevel || '',
+        gpa: data.gpa || '',
         imageUrl: data.imageUrl || [],
         location: data.location || { lat: 0, lng: 0 }
       });
@@ -32,9 +44,22 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    console.log('EducationEditModal - Input change:', { name, value });
+    if (name === 'actualAddress') {
+      console.log('EducationEditModal - actualAddress changed to:', value);
+    }
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleFamilyStatusChange = (status) => {
+    setFormData(prev => ({
+      ...prev,
+      familyStatus: prev.familyStatus.includes(status)
+        ? prev.familyStatus.filter(item => item !== status)
+        : [...prev.familyStatus, status]
     }));
   };
 
@@ -92,6 +117,9 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('EducationEditModal - Submitting formData:', formData);
+    console.log('EducationEditModal - actualAddress in formData:', formData.actualAddress);
+    
     try {
       await onSave(formData);
       onClose();
@@ -117,10 +145,10 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 คำนำหน้า
               </label>
               <input
@@ -133,8 +161,8 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 ชื่อ-นามสกุล *
               </label>
               <input
@@ -148,8 +176,8 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 ระดับการศึกษา
               </label>
               <select
@@ -169,8 +197,8 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 เบอร์โทรศัพท์
               </label>
               <input
@@ -182,10 +210,117 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
                 placeholder="เบอร์โทรศัพท์"
               />
             </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                ชื่อสถานศึกษา
+              </label>
+              <input
+                type="text"
+                name="schoolName"
+                value={formData.schoolName}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="ชื่อสถานศึกษา"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                ระดับชั้น
+              </label>
+              <input
+                type="text"
+                name="gradeLevel"
+                value={formData.gradeLevel}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="เช่น ป.1, ม.1, ม.4"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                เกรดเฉลี่ย (GPA)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="4"
+                name="gpa"
+                value={formData.gpa}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0.00 - 4.00"
+              />
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
+                สถานภาพครอบครัว
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('บิดา-มารดาแยกกันอยู่')}
+                    onChange={() => handleFamilyStatusChange('บิดา-มารดาแยกกันอยู่')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">บิดา-มารดาแยกกันอยู่</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('แยกกันอยู่ชั่วคราว')}
+                    onChange={() => handleFamilyStatusChange('แยกกันอยู่ชั่วคราว')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">แยกกันอยู่ชั่วคราว</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('หย่าร้าง')}
+                    onChange={() => handleFamilyStatusChange('หย่าร้าง')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">หย่าร้าง</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('บิดาส่งเสีย')}
+                    onChange={() => handleFamilyStatusChange('บิดาส่งเสีย')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">บิดาส่งเสีย</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('มารดาส่งเสีย')}
+                    onChange={() => handleFamilyStatusChange('มารดาส่งเสีย')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">มารดาส่งเสีย</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.familyStatus.includes('บิดา/มารดาไม่ได้ส่งเสีย')}
+                    onChange={() => handleFamilyStatusChange('บิดา/มารดาไม่ได้ส่งเสีย')}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">บิดา/มารดาไม่ได้ส่งเสีย</span>
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">
               ที่อยู่
             </label>
             <textarea
@@ -198,8 +333,26 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">
+              ที่อยู่อาศัยจริง
+            </label>
+            <textarea
+              name="actualAddress"
+              value={formData.actualAddress}
+              onChange={handleInputChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ที่อยู่อาศัยจริง (ถ้าแตกต่างจากที่อยู่ข้างต้น)"
+              style={{ borderColor: '#3B82F6', backgroundColor: '#F8FAFC' }}
+            />
+            <div className="text-xs text-gray-500">
+              💡 กรอกที่อยู่อาศัยจริงหากแตกต่างจากที่อยู่ข้างต้น
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">
               หมายเหตุ
             </label>
             <textarea
@@ -212,9 +365,9 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 ละติจูด
               </label>
               <input
@@ -228,8 +381,8 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">
                 ลองจิจูด
               </label>
               <input
@@ -244,8 +397,8 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="space-y-4">
+            <label className="block text-sm font-medium text-gray-700">
               รูปภาพ (สูงสุด 3 รูป)
             </label>
             <div className="space-y-4">
@@ -290,7 +443,7 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex justify-end space-x-4 pt-6 border-t">
             <button
               type="button"
               onClick={onClose}

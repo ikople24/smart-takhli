@@ -9,9 +9,10 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
 
-    const { _id, prefix, name, educationLevel, phone, address, note, annualIncome, incomeSource, householdMembers, housingStatus, receivedScholarship } = req.body;
+    const { _id, prefix, name, educationLevel, phone, address, actualAddress, note, annualIncome, incomeSource, householdMembers, housingStatus, familyStatus, receivedScholarship, takhliScholarshipHistory, schoolName, gradeLevel, gpa } = req.body;
 
-    console.log('📝 Received update data:', { _id, prefix, name, educationLevel, phone, address, note, annualIncome, householdMembers, housingStatus });
+    console.log('📝 Received update data:', { _id, prefix, name, educationLevel, phone, address, actualAddress, note, annualIncome, householdMembers, housingStatus, familyStatus, takhliScholarshipHistory, schoolName, gradeLevel, gpa });
+    console.log('📝 Full request body:', req.body);
 
     if (!_id || !name) {
       return res.status(400).json({ message: 'Missing required fields: _id and name' });
@@ -23,12 +24,18 @@ export default async function handler(req, res) {
       educationLevel: educationLevel !== undefined ? educationLevel : '',
       phone: phone !== undefined ? phone : '',
       address: address !== undefined ? address : '',
+      actualAddress: actualAddress !== undefined ? actualAddress : '',
       note: note !== undefined ? note : '',
       annualIncome: annualIncome !== undefined ? parseInt(annualIncome) || 0 : 0,
       incomeSource: incomeSource || [],
       householdMembers: householdMembers !== undefined ? parseInt(householdMembers) || 1 : 1,
       housingStatus: housingStatus !== undefined ? housingStatus : 'ไม่ระบุ',
-      receivedScholarship: receivedScholarship || []
+      familyStatus: familyStatus !== undefined ? familyStatus : [],
+      receivedScholarship: receivedScholarship || [],
+      takhliScholarshipHistory: takhliScholarshipHistory !== undefined ? takhliScholarshipHistory : [],
+      schoolName: schoolName !== undefined ? schoolName : '',
+      gradeLevel: gradeLevel !== undefined ? gradeLevel : '',
+      gpa: gpa !== undefined ? parseFloat(gpa) || null : null
     };
 
     console.log('🔄 Updating record with data:', updatedData);
@@ -44,6 +51,11 @@ export default async function handler(req, res) {
     }
 
     console.log('✅ Updated result:', result);
+    console.log('✅ Family status in result:', result.familyStatus);
+    console.log('✅ Takhli scholarship history in result:', result.takhliScholarshipHistory);
+    console.log('✅ School name in result:', result.schoolName);
+    console.log('✅ Grade level in result:', result.gradeLevel);
+    console.log('✅ GPA in result:', result.gpa);
     
     return res.status(200).json({ 
       message: 'Updated successfully', 
