@@ -29,13 +29,18 @@ export default async function handler(req, res) {
       educationLevel,
       fullName,
       address,
+      actualAddress,
       phone,
       note,
+      schoolName,
+      gradeLevel,
+      gpa,
       image,
       location,
       housingStatus,
       householdMembers,
-      annualIncome
+      annualIncome,
+      familyStatus
     } = req.body;
 
     console.log('📝 Received data:', { 
@@ -43,13 +48,18 @@ export default async function handler(req, res) {
       educationLevel, 
       fullName, 
       address, 
+      actualAddress,
       phone, 
       note, 
+      schoolName,
+      gradeLevel,
+      gpa,
       image, 
       location,
       housingStatus,
       householdMembers,
-      annualIncome
+      annualIncome,
+      familyStatus
     });
 
     if (!fullName || !image || !location?.lat) {
@@ -69,8 +79,12 @@ export default async function handler(req, res) {
       educationLevel: educationLevel || '',
       name: fullName,
       address: address || '',
+      actualAddress: actualAddress || '',
       phone: phone || '',
       note: note || '',
+      schoolName: schoolName || '',
+      gradeLevel: gradeLevel || '',
+      gpa: gpa ? parseFloat(gpa) : null,
       imageUrl: image,
       location: {
         lat: location.lat,
@@ -79,6 +93,7 @@ export default async function handler(req, res) {
       housingStatus: housingStatus || 'ไม่ระบุ',
       householdMembers: householdMembers || 1,
       annualIncome: annualIncome || 0,
+      familyStatus: familyStatus || [],
       incomeSource: [],
       receivedScholarship: []
     });

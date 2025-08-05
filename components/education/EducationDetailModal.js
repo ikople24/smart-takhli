@@ -149,6 +149,34 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                       </span>
                     </div>
                   </div>
+                  {(data.schoolName || data.gradeLevel || data.gpa) && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">ข้อมูลสถานศึกษา</label>
+                      <div className="mt-2 space-y-2">
+                        {data.schoolName && (
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2 border border-blue-200">
+                            <p className="text-gray-800 text-sm">
+                              <span className="font-medium">สถานศึกษา:</span> {data.schoolName}
+                            </p>
+                          </div>
+                        )}
+                        {data.gradeLevel && (
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2 border border-green-200">
+                            <p className="text-gray-800 text-sm">
+                              <span className="font-medium">ระดับชั้น:</span> {data.gradeLevel}
+                            </p>
+                          </div>
+                        )}
+                        {data.gpa && (
+                          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2 border border-purple-200">
+                            <p className="text-gray-800 text-sm">
+                              <span className="font-medium">เกรดเฉลี่ย:</span> {data.gpa}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-sm font-medium text-gray-600">เบอร์โทรศัพท์</label>
@@ -216,6 +244,30 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                       <p className="text-green-600 text-xs mt-1">✓ คัดลอกแล้ว</p>
                     )}
                   </div>
+                  
+                  {data.actualAddress && data.actualAddress !== data.address && (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-sm font-medium text-gray-600">ที่อยู่อาศัยจริง</label>
+                        <button
+                          onClick={() => copyToClipboard(data.actualAddress, 'actualAddress')}
+                          className="text-gray-400 hover:text-blue-500 transition-colors duration-200"
+                          title="คัดลอกที่อยู่อาศัยจริง"
+                        >
+                          <FaCopy className="text-xs" />
+                        </button>
+                      </div>
+                      <div className="mt-2 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-200">
+                        <p className="text-gray-800 flex items-center gap-2">
+                          <FaHome className="text-orange-500" />
+                          <span className="font-medium">{data.actualAddress}</span>
+                        </p>
+                      </div>
+                      {copiedField === 'actualAddress' && (
+                        <p className="text-green-600 text-xs mt-1">✓ คัดลอกแล้ว</p>
+                      )}
+                    </div>
+                  )}
                   {data.location && (
                     <div>
                       <label className="text-sm font-medium text-gray-600">พิกัด</label>
@@ -257,7 +309,7 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                   <FaUsers className="text-purple-500" />
                   ข้อมูลครอบครัว
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
                     <label className="text-xs font-medium text-indigo-700">จำนวนสมาชิก</label>
                     <p className="text-indigo-800 font-bold text-lg">{data.householdMembers || 1} คน</p>
@@ -265,6 +317,17 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                   <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
                     <label className="text-xs font-medium text-teal-700">สถานะที่อยู่อาศัย</label>
                     <p className="text-teal-800 font-bold">{data.housingStatus || 'ไม่ระบุ'}</p>
+                  </div>
+                  <div className="bg-pink-50 rounded-lg p-3 border border-pink-200">
+                    <label className="text-xs font-medium text-pink-700">สถานภาพครอบครัว</label>
+                    <p className="text-pink-800 font-bold">
+                      {data.familyStatus && data.familyStatus.length > 0 
+                        ? Array.isArray(data.familyStatus) 
+                          ? data.familyStatus.join(', ') 
+                          : data.familyStatus
+                        : 'ไม่ระบุ'
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
@@ -329,18 +392,40 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
               </div>
 
               {/* ข้อมูลทุนการศึกษา */}
-              {data.receivedScholarship && data.receivedScholarship.length > 0 && (
+              {(data.receivedScholarship && data.receivedScholarship.length > 0) || (data.takhliScholarshipHistory && data.takhliScholarshipHistory.length > 0) && (
                 <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-200 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <FaGraduationCap className="text-indigo-500" />
                     ทุนการศึกษา
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {data.receivedScholarship.map((scholarship, index) => (
-                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full border border-green-200 shadow-sm">
-                        {scholarship}
-                      </span>
-                    ))}
+                  <div className="space-y-4">
+                    {/* ทุนการศึกษาที่ได้รับ */}
+                    {data.receivedScholarship && data.receivedScholarship.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">ทุนการศึกษาที่ได้รับ:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {data.receivedScholarship.map((scholarship, index) => (
+                            <span key={index} className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full border border-green-200 shadow-sm">
+                              {scholarship}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* ประวัติการรับทุนจากเทศบาลเมืองตาคลี */}
+                    {data.takhliScholarshipHistory && data.takhliScholarshipHistory.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">ประวัติการรับทุนจากเทศบาลเมืองตาคลี:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {data.takhliScholarshipHistory.map((history, index) => (
+                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-200 shadow-sm">
+                              {history}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

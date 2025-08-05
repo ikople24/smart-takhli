@@ -13,17 +13,29 @@ function EditForm({ data, onClose, onSave, isSaving }) {
     educationLevel: data.educationLevel || '',
     phone: data.phone || '',
     address: data.address || '',
+    actualAddress: data.actualAddress || '',
     note: data.note || '',
     annualIncome: data.annualIncome || '',
     incomeSource: data.incomeSource || [],
     householdMembers: data.householdMembers || 1,
     housingStatus: data.housingStatus || '',
-    receivedScholarship: data.receivedScholarship || []
+    familyStatus: data.familyStatus ? (Array.isArray(data.familyStatus) ? data.familyStatus : [data.familyStatus]) : [],
+    receivedScholarship: data.receivedScholarship || [],
+    takhliScholarshipHistory: data.takhliScholarshipHistory ? (Array.isArray(data.takhliScholarshipHistory) ? data.takhliScholarshipHistory : [data.takhliScholarshipHistory]) : [],
+    schoolName: data.schoolName || '',
+    gradeLevel: data.gradeLevel || '',
+    gpa: data.gpa || ''
   });
 
   // อัปเดต formData เมื่อ data prop เปลี่ยน
   useEffect(() => {
     console.log('EditForm received data:', data);
+    console.log('Family status in data:', data.familyStatus);
+    console.log('Takhli scholarship history in data:', data.takhliScholarshipHistory);
+    console.log('School name in data:', data.schoolName);
+    console.log('Grade level in data:', data.gradeLevel);
+    console.log('GPA in data:', data.gpa);
+    console.log('Actual address in data:', data.actualAddress);
     const newFormData = {
       _id: data._id,
       prefix: data.prefix || '',
@@ -31,20 +43,38 @@ function EditForm({ data, onClose, onSave, isSaving }) {
       educationLevel: data.educationLevel || '',
       phone: data.phone || '',
       address: data.address || '',
+      actualAddress: data.actualAddress || '',
       note: data.note || '',
       annualIncome: data.annualIncome || '',
       incomeSource: data.incomeSource || [],
       householdMembers: data.householdMembers || 1,
       housingStatus: data.housingStatus || '',
-      receivedScholarship: data.receivedScholarship || []
+      familyStatus: data.familyStatus ? (Array.isArray(data.familyStatus) ? data.familyStatus : [data.familyStatus]) : [],
+      receivedScholarship: data.receivedScholarship || [],
+      takhliScholarshipHistory: data.takhliScholarshipHistory ? (Array.isArray(data.takhliScholarshipHistory) ? data.takhliScholarshipHistory : [data.takhliScholarshipHistory]) : [],
+      schoolName: data.schoolName || '',
+      gradeLevel: data.gradeLevel || '',
+      gpa: data.gpa || ''
     };
     console.log('Setting form data to:', newFormData);
+    console.log('Family status in newFormData:', newFormData.familyStatus);
+    console.log('Takhli scholarship history in newFormData:', newFormData.takhliScholarshipHistory);
+    console.log('School name in newFormData:', newFormData.schoolName);
+    console.log('Grade level in newFormData:', newFormData.gradeLevel);
+    console.log('GPA in newFormData:', newFormData.gpa);
+    console.log('Actual address in newFormData:', newFormData.actualAddress);
     setFormData(newFormData);
   }, [data]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form data being submitted:', formData);
+    console.log('Family status in form data:', formData.familyStatus);
+    console.log('Takhli scholarship history in form data:', formData.takhliScholarshipHistory);
+    console.log('School name in form data:', formData.schoolName);
+    console.log('Grade level in form data:', formData.gradeLevel);
+    console.log('GPA in form data:', formData.gpa);
+    console.log('Actual address in form data:', formData.actualAddress);
     onSave(formData);
   };
 
@@ -85,6 +115,26 @@ function EditForm({ data, onClose, onSave, isSaving }) {
     }));
   };
 
+  // จัดการสถานภาพครอบครัว
+  const handleFamilyStatusChange = (status) => {
+    setFormData(prev => ({
+      ...prev,
+      familyStatus: prev.familyStatus.includes(status)
+        ? prev.familyStatus.filter(item => item !== status)
+        : [...prev.familyStatus, status]
+    }));
+  };
+
+  // จัดการประวัติการรับทุนจากเทศบาลเมืองตาคลี
+  const handleTakhliScholarshipHistoryChange = (history) => {
+    setFormData(prev => ({
+      ...prev,
+      takhliScholarshipHistory: prev.takhliScholarshipHistory.includes(history)
+        ? prev.takhliScholarshipHistory.filter(item => item !== history)
+        : [...prev.takhliScholarshipHistory, history]
+    }));
+  };
+
   const handleCancel = () => {
     // Check if form has been modified
     const hasChanges = 
@@ -98,7 +148,12 @@ function EditForm({ data, onClose, onSave, isSaving }) {
       formData.householdMembers !== (data.householdMembers || 1) ||
       formData.housingStatus !== (data.housingStatus || '') ||
       JSON.stringify(formData.incomeSource) !== JSON.stringify(data.incomeSource || []) ||
-      JSON.stringify(formData.receivedScholarship) !== JSON.stringify(data.receivedScholarship || []);
+      JSON.stringify(formData.familyStatus) !== JSON.stringify(data.familyStatus ? (Array.isArray(data.familyStatus) ? data.familyStatus : [data.familyStatus]) : []) ||
+      JSON.stringify(formData.receivedScholarship) !== JSON.stringify(data.receivedScholarship || []) ||
+      JSON.stringify(formData.takhliScholarshipHistory) !== JSON.stringify(data.takhliScholarshipHistory ? (Array.isArray(data.takhliScholarshipHistory) ? data.takhliScholarshipHistory : [data.takhliScholarshipHistory]) : []) ||
+      formData.schoolName !== (data.schoolName || '') ||
+      formData.gradeLevel !== (data.gradeLevel || '') ||
+      formData.gpa !== (data.gpa || '');
 
     if (hasChanges) {
       Swal.fire({
@@ -182,6 +237,49 @@ function EditForm({ data, onClose, onSave, isSaving }) {
         </select>
       </div>
 
+      {/* School Information */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ชื่อสถานศึกษา
+          </label>
+          <input
+            type="text"
+            value={formData.schoolName}
+            onChange={(e) => handleChange('schoolName', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="ชื่อสถานศึกษา"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ระดับชั้น
+          </label>
+          <input
+            type="text"
+            value={formData.gradeLevel}
+            onChange={(e) => handleChange('gradeLevel', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="เช่น ป.6, ม.3, ม.6"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            เกรดเฉลี่ยปีที่ผ่านมา
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="4"
+            value={formData.gpa}
+            onChange={(e) => handleChange('gpa', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="เช่น 3.50"
+          />
+        </div>
+      </div>
+
       {/* Phone */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -211,7 +309,25 @@ function EditForm({ data, onClose, onSave, isSaving }) {
         />
       </div>
 
-      {/* Household Members */}
+      {/* Actual Address */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          ที่อยู่อาศัยจริง
+        </label>
+        <textarea
+          value={formData.actualAddress}
+          onChange={(e) => handleChange('actualAddress', e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="ที่อยู่อาศัยจริง (ถ้าแตกต่างจากที่อยู่ข้างต้น)"
+          style={{ borderColor: '#3B82F6', backgroundColor: '#F8FAFC' }}
+        />
+        <div className="text-xs text-gray-500 mt-1">
+          💡 กรอกที่อยู่อาศัยจริงหากแตกต่างจากที่อยู่ข้างต้น
+        </div>
+      </div>
+
+      {/* Household Members and Housing Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -234,17 +350,80 @@ function EditForm({ data, onClose, onSave, isSaving }) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             สถานภาพที่อยู่ผู้ปกครอง
           </label>
-                      <select
-              value={formData.housingStatus}
-              onChange={(e) => handleChange('housingStatus', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">เลือกสถานภาพที่อยู่ผู้ปกครอง</option>
-              <option value="ผู้อาศัย">ผู้อาศัย</option>
-              <option value="เจ้าของ">เจ้าของ</option>
-              <option value="บ้านเช่า">บ้านเช่า</option>
-              <option value="อื่นๆ">อื่นๆ</option>
-            </select>
+          <select
+            value={formData.housingStatus}
+            onChange={(e) => handleChange('housingStatus', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">เลือกสถานภาพที่อยู่ผู้ปกครอง</option>
+            <option value="ผู้อาศัย">ผู้อาศัย</option>
+            <option value="เจ้าของ">เจ้าของ</option>
+            <option value="บ้านเช่า">บ้านเช่า</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Family Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          สถานภาพครอบครัว
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('บิดา-มารดาแยกกันอยู่')}
+              onChange={() => handleFamilyStatusChange('บิดา-มารดาแยกกันอยู่')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">บิดา-มารดาแยกกันอยู่</span>
+          </label>
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('แยกกันอยู่ชั่วคราว')}
+              onChange={() => handleFamilyStatusChange('แยกกันอยู่ชั่วคราว')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">แยกกันอยู่ชั่วคราว</span>
+          </label>
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('หย่าร้าง')}
+              onChange={() => handleFamilyStatusChange('หย่าร้าง')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">หย่าร้าง</span>
+          </label>
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('บิดาส่งเสีย')}
+              onChange={() => handleFamilyStatusChange('บิดาส่งเสีย')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">บิดาส่งเสีย</span>
+          </label>
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('มารดาส่งเสีย')}
+              onChange={() => handleFamilyStatusChange('มารดาส่งเสีย')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">มารดาส่งเสีย</span>
+          </label>
+          <label className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.familyStatus.includes('บิดา/มารดาไม่ได้ส่งเสีย')}
+              onChange={() => handleFamilyStatusChange('บิดา/มารดาไม่ได้ส่งเสีย')}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-700">บิดา/มารดาไม่ได้ส่งเสีย</span>
+          </label>
         </div>
       </div>
 
@@ -339,7 +518,8 @@ function EditForm({ data, onClose, onSave, isSaving }) {
               'ค่าจ้างรายวัน', 
               'เงินอุดหนุนบุตร',
               'เบี้ยผู้สูงอายุ',
-              'เงินเดือน'
+              'เงินเดือน',
+              'ไม่มีรายได้',
             ].map((source) => (
               <label key={source} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
                 <input
@@ -362,35 +542,63 @@ function EditForm({ data, onClose, onSave, isSaving }) {
           ข้อมูลทุนการศึกษา
         </h3>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-3">
-            ทุนการศึกษาที่ได้รับ
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {[
-              'ทุนเรียนดี',
-              'ทุนยากจน',
-              'ทุนกองทุนการศึกษา',
-              'ทุนจากองค์กรภายนอก',
-              'ไม่ได้รับทุน'
-            ].map((scholarship) => (
-              <label key={scholarship} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.receivedScholarship.includes(scholarship)}
-                  onChange={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      receivedScholarship: prev.receivedScholarship.includes(scholarship)
-                        ? prev.receivedScholarship.filter(s => s !== scholarship)
-                        : [...prev.receivedScholarship, scholarship]
-                    }));
-                  }}
-                  className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
-                />
-                <span className="text-sm text-slate-700">{scholarship}</span>
-              </label>
-            ))}
+        <div className="space-y-6">
+          {/* ทุนการศึกษาที่ได้รับ */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              ทุนการศึกษาที่ได้รับ
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                'ทุนเรียนดี',
+                'ทุนยากจน',
+                'ทุนกองทุนการศึกษา',
+                'ทุนจากองค์กรภายนอก',
+                'ไม่ได้รับทุน'
+              ].map((scholarship) => (
+                <label key={scholarship} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.receivedScholarship.includes(scholarship)}
+                    onChange={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        receivedScholarship: prev.receivedScholarship.includes(scholarship)
+                          ? prev.receivedScholarship.filter(s => s !== scholarship)
+                          : [...prev.receivedScholarship, scholarship]
+                      }));
+                    }}
+                    className="w-4 h-4 text-purple-600 border-slate-300 rounded focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-slate-700">{scholarship}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* ประวัติการรับทุนจากเทศบาลเมืองตาคลี */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              ประวัติการรับทุนจากเทศบาลเมืองตาคลี
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                'เคยได้รับทุนการศึกษา ปีงบประมาณ 2565',
+                'เคยได้รับทุนการศึกษา ปีงบประมาณ 2566',
+                'เคยได้รับทุนการศึกษา ปีงบประมาณ 2567',
+                'ไม่เคยได้รับทุนการศึกษา'
+              ].map((history) => (
+                <label key={history} className="flex items-center space-x-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.takhliScholarshipHistory.includes(history)}
+                    onChange={() => handleTakhliScholarshipHistoryChange(history)}
+                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-slate-700">{history}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -465,6 +673,10 @@ export default function EducationMapPage() {
       const data = await response.json();
       console.log('Fetched data:', data);
       console.log('Sample item with household data:', data.find(item => item.householdMembers || item.housingStatus));
+      console.log('Sample item with family status:', data.find(item => item.familyStatus));
+      console.log('Sample item with takhli scholarship history:', data.find(item => item.takhliScholarshipHistory));
+      console.log('Sample item with school data:', data.find(item => item.schoolName || item.gradeLevel || item.gpa));
+      console.log('Sample item with actual address:', data.find(item => item.actualAddress));
       setPoints(data);
     } catch (err) {
       setError(err.message);
@@ -480,6 +692,12 @@ export default function EducationMapPage() {
 
   const handleEdit = (item) => {
     console.log('Opening edit modal with data:', item);
+    console.log('Family status in item:', item.familyStatus);
+    console.log('Takhli scholarship history in item:', item.takhliScholarshipHistory);
+    console.log('School name in item:', item.schoolName);
+    console.log('Grade level in item:', item.gradeLevel);
+    console.log('GPA in item:', item.gpa);
+    console.log('Actual address in item:', item.actualAddress);
     setEditModal({ isOpen: true, data: item });
   };
 
@@ -613,6 +831,12 @@ export default function EducationMapPage() {
       setIsSaving(true);
       
       console.log('Sending update data:', updatedData);
+      console.log('Family status in updatedData:', updatedData.familyStatus);
+      console.log('Takhli scholarship history in updatedData:', updatedData.takhliScholarshipHistory);
+      console.log('School name in updatedData:', updatedData.schoolName);
+      console.log('Grade level in updatedData:', updatedData.gradeLevel);
+      console.log('GPA in updatedData:', updatedData.gpa);
+      console.log('Actual address in updatedData:', updatedData.actualAddress);
       
       const response = await fetch(`/api/education/update`, {
         method: 'PUT',
@@ -637,6 +861,10 @@ export default function EducationMapPage() {
             : item
         );
         console.log('Updated points array:', updatedPoints.find(item => item._id === updatedData._id));
+        console.log('School data in updated points:', updatedPoints.find(item => item._id === updatedData._id)?.schoolName);
+        console.log('Grade data in updated points:', updatedPoints.find(item => item._id === updatedData._id)?.gradeLevel);
+        console.log('GPA data in updated points:', updatedPoints.find(item => item._id === updatedData._id)?.gpa);
+        console.log('Actual address in updated points:', updatedPoints.find(item => item._id === updatedData._id)?.actualAddress);
         return updatedPoints;
       });
 

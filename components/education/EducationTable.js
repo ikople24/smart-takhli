@@ -194,6 +194,26 @@ export default function EducationTable({ data, onEdit }) {
                       <p className="text-sm text-gray-500 truncate">
                         {item.address}
                       </p>
+                      {item.actualAddress && item.actualAddress !== item.address && (
+                        <p className="text-xs text-orange-600 truncate">
+                          🏠 ที่อยู่อาศัยจริง: {item.actualAddress}
+                        </p>
+                      )}
+                      {item.schoolName && (
+                        <p className="text-xs text-blue-600 truncate">
+                          🏫 {item.schoolName}
+                        </p>
+                      )}
+                      {item.gradeLevel && (
+                        <p className="text-xs text-purple-600 truncate">
+                          📚 {item.gradeLevel}
+                        </p>
+                      )}
+                      {item.gpa && (
+                        <p className="text-xs text-green-600 truncate">
+                          📊 GPA: {item.gpa}
+                        </p>
+                      )}
                       {item.note && (
                         <p className="text-xs text-gray-400 truncate">
                           📝 {item.note}

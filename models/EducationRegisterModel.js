@@ -11,6 +11,10 @@ const EducationSchema = new mongoose.Schema(
     prefix: String,
     name: String,
     address: String,
+    actualAddress: {
+      type: String,
+      default: ''
+    },
     phone: String,
     note: String,
     annualIncome: {
@@ -31,9 +35,33 @@ const EducationSchema = new mongoose.Schema(
       enum: ['ผู้อาศัย', 'เจ้าของ', 'บ้านเช่า', 'อื่นๆ', 'ไม่ระบุ', ''],
       default: 'ไม่ระบุ'
     },
+    familyStatus: {
+      type: [String],
+      enum: ['บิดา-มารดาแยกกันอยู่', 'แยกกันอยู่ชั่วคราว', 'หย่าร้าง', 'บิดาส่งเสีย', 'มารดาส่งเสีย', 'บิดา/มารดาไม่ได้ส่งเสีย'],
+      default: []
+    },
     receivedScholarship: {
       type: [String],
       default: []
+    },
+    takhliScholarshipHistory: {
+      type: [String],
+      enum: ['เคยได้รับทุนการศึกษา ปีงบประมาณ 2565', 'เคยได้รับทุนการศึกษา ปีงบประมาณ 2566', 'เคยได้รับทุนการศึกษา ปีงบประมาณ 2567', 'ไม่เคยได้รับทุนการศึกษา'],
+      default: []
+    },
+    schoolName: {
+      type: String,
+      default: ''
+    },
+    gradeLevel: {
+      type: String,
+      default: ''
+    },
+    gpa: {
+      type: Number,
+      min: 0,
+      max: 4,
+      default: null
     },
     imageUrl: {
       type: [String],
