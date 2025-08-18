@@ -2,6 +2,30 @@ import { useState, useEffect, useRef } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { z } from "zod";
+import Swal from "sweetalert2";
+
+// ปรับแต่ง SweetAlert2
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.addEventListener('mouseenter', Swal.stopTimer)
+    toast.addEventListener('mouseleave', Swal.resumeTimer)
+  }
+});
+
+// ปรับแต่ง SweetAlert2 สำหรับ loading
+const LoadingAlert = Swal.mixin({
+  allowOutsideClick: false,
+  allowEscapeKey: false,
+  showConfirmButton: false,
+  didOpen: () => {
+    Swal.showLoading();
+  }
+});
 
 
 export default function RegisterUserPage() {
@@ -15,12 +39,15 @@ export default function RegisterUserPage() {
     department: "",
     role: "admin",
     profileUrl: "",
-    assignedTask: [],
+    assignedTask: [], // เริ่มต้นด้วย array ว่าง
     phone: "",
   });
 
   const [existingUser, setExistingUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUserChecked, setIsUserChecked] = useState(false);
 
   // Zod schema สำหรับ validation
   const userRegistrationSchema = z.object({
@@ -38,14 +65,43 @@ export default function RegisterUserPage() {
   useEffect(() => {
     if (user?.id) {
       fetchMenu();
+      // ดึงรูปโปรไฟล์จาก Clerk โดยอัตโนมัติ
+      if (user?.imageUrl) {
+        setForm(prev => ({
+          ...prev,
+          profileUrl: user.imageUrl
+        }));
+      }
     }
-  }, [user?.id]);
+  }, [user?.id, user?.imageUrl]);
+
+  // ป้องกันการ submit ซ้ำ
+  useEffect(() => {
+    if (isSubmitting) {
+      // ปิดการใช้งาน form ทั้งหมด
+      const form = document.querySelector('form');
+      if (form) {
+        form.style.pointerEvents = 'none';
+      }
+    } else {
+      // เปิดการใช้งาน form
+      const form = document.querySelector('form');
+      if (form) {
+        form.style.pointerEvents = 'auto';
+      }
+    }
+  }, [isSubmitting]);
 
     useEffect(() => {
     const checkUser = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoading(false);
+        setIsUserChecked(true);
+        return;
+      }
 
       try {
+        setIsLoading(true);
         const token = await getToken();
         const clerkId = user.id;
         const res = await fetch("/api/users/get-by-clerkId", {
@@ -60,15 +116,93 @@ export default function RegisterUserPage() {
         }
       } catch (error) {
         console.error("Error checking user:", error);
+      } finally {
+        setIsLoading(false);
+        setIsUserChecked(true);
       }
     };
     checkUser();
   }, [user?.id, getToken]);
 
   const handleChange = (e) => {
+    if (isSubmitting) return;
     setForm({
       ...form,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleEdit = () => {
+    if (isSubmitting) return;
+    // เติมข้อมูลจาก existingUser ลงในฟอร์ม
+    if (existingUser) {
+      // แปลง assignedTask จาก string เป็น array และลบข้อมูลซ้ำ
+      let assignedTaskArray = [];
+      if (existingUser.assignedTask) {
+        if (Array.isArray(existingUser.assignedTask)) {
+          // ถ้าเป็น array ให้ตรวจสอบว่าแต่ละ element เป็น string หรือไม่
+          // ถ้าเป็น string เดียวที่มี comma ให้แยกออก
+          if (existingUser.assignedTask.length === 1 && typeof existingUser.assignedTask[0] === 'string') {
+            // แยก string ที่มี comma ออกเป็น array
+            assignedTaskArray = existingUser.assignedTask[0].split(/,\s*/).filter(Boolean);
+          } else {
+            // ถ้าเป็น array ของ string แต่ละตัวแล้ว
+            assignedTaskArray = existingUser.assignedTask;
+          }
+        } else if (typeof existingUser.assignedTask === 'string') {
+          // แปลง string เป็น array และลบข้อมูลซ้ำ
+          assignedTaskArray = existingUser.assignedTask.split(/,\s*/).filter(Boolean);
+        } else {
+          // ถ้าเป็น null, undefined, หรือ type อื่น ให้เป็น array ว่าง
+          assignedTaskArray = [];
+        }
+      }
+
+      // ลบข้อมูลซ้ำใน array
+      const uniqueAssignedTaskArray = [...new Set(assignedTaskArray)];
+
+      setForm({
+        name: existingUser.name || "",
+        position: existingUser.position || "",
+        department: existingUser.department || "",
+        role: existingUser.role || "admin",
+        profileUrl: existingUser.profileUrl || user?.imageUrl || "",
+        assignedTask: uniqueAssignedTaskArray, // ใช้ unique array
+        phone: existingUser.phone || "",
+      });
+      
+      console.log("🔧 Edit mode - Original assignedTask:", existingUser.assignedTask);
+      console.log("🔧 Edit mode - Original assignedTask type:", typeof existingUser.assignedTask);
+      console.log("🔧 Edit mode - Converted assignedTask:", assignedTaskArray);
+      console.log("🔧 Edit mode - Unique assignedTask:", uniqueAssignedTaskArray);
+      console.log("🔧 Edit mode - Unique assignedTask count:", uniqueAssignedTaskArray.length);
+      console.log("🔧 Edit mode - Final assignedTask:", uniqueAssignedTaskArray);
+      console.log("🔧 Edit mode - Final assignedTask count:", uniqueAssignedTaskArray.length);
+      console.log("🔧 Edit mode - Form will allow multiple selection");
+      console.log("🔧 Edit mode - When saving, it will replace all previous tasks");
+      console.log("🔧 Edit mode - User can select multiple tasks but they will replace old ones");
+      console.log("🔧 Edit mode - This is multi-select mode with replace on save");
+      console.log("🔧 Edit mode - Selected tasks:", uniqueAssignedTaskArray);
+      console.log("🔧 Edit mode - Database value:", existingUser.assignedTask);
+      console.log("🔧 Edit mode - Database value type:", typeof existingUser.assignedTask);
+      console.log("🔧 Edit mode - Database value split:", typeof existingUser.assignedTask === 'string' ? existingUser.assignedTask?.split(", ") : existingUser.assignedTask);
+      console.log("🔧 Edit mode - Safe conversion completed");
+    }
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (isSubmitting) return;
+    setIsEditing(false);
+    // รีเซ็ตฟอร์ม
+    setForm({
+      name: "",
+      position: "",
+      department: "",
+      role: "admin",
+      profileUrl: "",
+      assignedTask: [], // เริ่มต้นด้วย array ว่าง
+      phone: "",
     });
   };
 
@@ -77,8 +211,14 @@ export default function RegisterUserPage() {
 
     // ป้องกันการกดปุ่มซ้ำ
     if (isSubmitting) {
-      return;
+      console.log("⚠️ Form submission blocked - already submitting");
+      e.stopPropagation();
+      e.preventDefault();
+      return false;
     }
+
+    // ตั้งค่า isSubmitting เป็น true ทันทีเพื่อป้องกันการกดซ้ำ
+    setIsSubmitting(true);
 
     // Validation ด้วย Zod
     const dataToValidate = {
@@ -108,23 +248,69 @@ export default function RegisterUserPage() {
       });
       
       const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
-      alert("ข้อมูลไม่ครบถ้วน:\n" + errorMessages);
+      
+      // ปิด loading ก่อน
+      Swal.close();
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        html: errorMessages.replace(/\n/g, '<br>'),
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#dc3545',
+        timer: 5000,
+        timerProgressBar: true
+      });
+      
+      // รอสักครู่ก่อนรีเซ็ต isSubmitting เพื่อป้องกันการกดซ้ำ
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 1000);
       return;
     }
+    console.log("🚀 Starting form submission...");
+    
+    // แสดง loading
+    LoadingAlert.fire({
+      title: isEditing ? 'กำลังอัปเดตข้อมูล...' : 'กำลังบันทึกข้อมูล...',
+      html: 'กรุณารอสักครู่'
+    });
 
-    setIsSubmitting(true);
-
+    // ลบข้อมูลซ้ำใน assignedTask ก่อนส่ง
+    const uniqueAssignedTask = [...new Set(form.assignedTask)];
+    
     const payload = {
       ...form,
-      assignedTask: form.assignedTask.join(", "),
+      assignedTask: uniqueAssignedTask.join(", "), // ส่งเป็น string ที่ join แล้ว
       clerkId: user?.id,
     };
-    console.log("Submitting form:", payload);
+    
+    console.log("🔍 FRONTEND - Before sending:", {
+      originalAssignedTask: form.assignedTask,
+      uniqueAssignedTask: uniqueAssignedTask,
+      finalAssignedTask: uniqueAssignedTask.join(", "),
+      isEditing: isEditing
+    });
+    
+    console.log("📤 Payload assignedTask:", form.assignedTask);
+    console.log("📤 Payload uniqueAssignedTask:", uniqueAssignedTask);
+    console.log("📤 Payload assignedTask (joined):", uniqueAssignedTask.join(", "));
+    console.log("📤 Payload assignedTask count:", uniqueAssignedTask.length);
+    console.log("📤 Payload isEditing:", isEditing);
+    console.log("📤 Payload will replace all previous tasks when saved");
+
 
     try {
-      const res = await fetch("/api/users/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const endpoint = isEditing ? "/api/users/update" : "/api/users/create";
+      const method = isEditing ? "PUT" : "POST";
+      
+      const token = await getToken();
+      const res = await fetch(endpoint, {
+        method: method,
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -140,27 +326,93 @@ export default function RegisterUserPage() {
           console.warn("ไม่สามารถอัปเดต Clerk role ได้:", err);
         }
 
-        alert("บันทึกข้อมูลเรียบร้อยแล้ว");
-        setForm({
-          name: "",
-          position: "",
-          department: "",
-          role: "admin",
-          profileUrl: "",
-          assignedTask: [],
-          phone: "",
+        // ปิด loading ก่อน
+        Swal.close();
+        
+        const message = isEditing 
+          ? "อัปเดตข้อมูลเรียบร้อยแล้ว<br><br>ระบบจะรีเฟชข้อมูลเพื่อแสดงข้อมูลที่อัปเดตแล้ว"
+          : "บันทึกข้อมูลเรียบร้อยแล้ว<br><br>ระบบจะรีเฟชข้อมูลเพื่อแสดงข้อมูลที่บันทึกแล้ว";
+        
+        Toast.fire({
+          icon: 'success',
+          title: isEditing ? 'อัปเดตสำเร็จ' : 'บันทึกสำเร็จ'
         });
-      } else {
-        if (data.message?.includes("duplicate")) {
-          alert("มีผู้ใช้นี้อยู่แล้วในระบบ");
+        
+        // รีเฟชข้อมูลเพื่อแสดงข้อมูลที่บันทึกแล้ว
+        try {
+          const token = await getToken();
+          const res = await fetch("/api/users/get-by-clerkId", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const data = await res.json();
+          if (res.ok && data.user) {
+            setExistingUser(data.user);
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error);
+        }
+        
+        if (isEditing) {
+          setIsEditing(false);
         } else {
-          alert("เกิดข้อผิดพลาด: " + data.message);
+          setForm({
+            name: "",
+            position: "",
+            department: "",
+            role: "admin",
+            profileUrl: "",
+            assignedTask: [], // เริ่มต้นด้วย array ว่าง
+            phone: "",
+          });
+        }
+      } else {
+        // ปิด loading ก่อน
+        Swal.close();
+        
+        if (data.message?.includes("duplicate")) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'มีผู้ใช้นี้อยู่แล้ว',
+            text: 'มีผู้ใช้นี้อยู่แล้วในระบบ',
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#ffc107',
+            timer: 4000,
+            timerProgressBar: true
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: 'เกิดข้อผิดพลาด: ' + data.message,
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#dc3545',
+            timer: 5000,
+            timerProgressBar: true
+          });
         }
       }
     } catch (err) {
-      alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+      // ปิด loading ก่อน
+      Swal.close();
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้',
+        text: 'กรุณาลองใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง',
+        confirmButtonColor: '#dc3545',
+        timer: 5000,
+        timerProgressBar: true
+      });
     } finally {
-      setIsSubmitting(false);
+      // รอสักครู่ก่อนรีเซ็ต isSubmitting เพื่อป้องกันการกดซ้ำ
+      setTimeout(() => {
+        setIsSubmitting(false);
+        console.log("✅ Form submission completed");
+      }, 1000);
     }
   };
 
@@ -195,10 +447,36 @@ export default function RegisterUserPage() {
             Role: <span className="mx-1.5 badge badge-primary pointer-events-none">Admin</span>
           </label>
         </div>
-        {existingUser ? (
+        
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">กำลังตรวจสอบข้อมูลผู้ใช้...</h3>
+              <p className="text-sm text-gray-500">กรุณารอสักครู่</p>
+            </div>
+          </div>
+        )}
+
+        {/* Content after loading */}
+        {!isLoading && isUserChecked && (
+          <>
+            {existingUser && !isEditing ? (
+              // แสดงข้อมูลผู้ใช้ที่มีอยู่แล้ว
           <div className="space-y-4">
-            <div className="text-green-700 font-semibold text-center">
-              ผู้ใช้นี้มีอยู่ในระบบแล้ว
+            <div className="flex justify-between items-center">
+              <div className="text-green-700 font-semibold">
+                ผู้ใช้นี้มีอยู่ในระบบแล้ว
+              </div>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="btn btn-outline btn-primary btn-sm"
+                disabled={isSubmitting}
+              >
+                แก้ไขข้อมูล
+              </button>
             </div>
 
             <div className="form-control">
@@ -245,7 +523,9 @@ export default function RegisterUserPage() {
                 type="text"
                 value={
                   Array.isArray(existingUser.assignedTask)
-                    ? existingUser.assignedTask.join(", ")
+                    ? (existingUser.assignedTask.length === 1 && typeof existingUser.assignedTask[0] === 'string')
+                      ? existingUser.assignedTask[0]
+                      : existingUser.assignedTask.join(", ")
                     : existingUser.assignedTask || ""
                 }
                 readOnly
@@ -278,7 +558,40 @@ export default function RegisterUserPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form 
+            onSubmit={handleSubmit} 
+            className="space-y-4" 
+            noValidate
+            style={{ pointerEvents: isSubmitting ? 'none' : 'auto' }}
+          >
+            {/* Hidden input เพื่อป้องกันการ submit ซ้ำ */}
+            <input type="hidden" name="submitting" value={isSubmitting ? "true" : "false"} />
+            {isEditing && (
+              <div className="flex justify-between items-center mb-4">
+                <div className="text-blue-700 font-semibold">
+                  แก้ไขข้อมูลผู้ใช้
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="btn btn-outline btn-error btn-sm"
+                  disabled={isSubmitting}
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            )}
+            {!existingUser && !isEditing && (
+              <div className="text-center py-4 mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">ยังไม่มีข้อมูลผู้ใช้ในระบบ</h3>
+                <p className="text-sm text-gray-500 mb-4">กรุณากรอกข้อมูลเพื่อลงทะเบียนผู้ใช้ใหม่</p>
+              </div>
+            )}
             <div className="form-control">
               <label className="label">
                 <span className="label-text">ชื่อ-สกุล</span>
@@ -289,7 +602,8 @@ export default function RegisterUserPage() {
                 value={form.name}
                 onChange={handleChange}
                 required
-                className="input input-bordered w-full"
+                disabled={isSubmitting}
+                className={`input input-bordered w-full ${isSubmitting ? 'bg-gray-100' : ''}`}
               />
             </div>
 
@@ -303,7 +617,8 @@ export default function RegisterUserPage() {
                 value={form.position}
                 onChange={handleChange}
                 required
-                className="input input-bordered w-full"
+                disabled={isSubmitting}
+                className={`input input-bordered w-full ${isSubmitting ? 'bg-gray-100' : ''}`}
               />
             </div>
 
@@ -317,7 +632,8 @@ export default function RegisterUserPage() {
                 value={form.department}
                 onChange={handleChange}
                 required
-                className="input input-bordered w-full"
+                disabled={isSubmitting}
+                className={`input input-bordered w-full ${isSubmitting ? 'bg-gray-100' : ''}`}
               />
             </div>
 
@@ -328,22 +644,26 @@ export default function RegisterUserPage() {
               <input
                 type="text"
                 name="assignedTasksDisplay"
-                value={form.assignedTask.join(", ")}
+                value={[...new Set(form.assignedTask)].join(", ")}
                 readOnly
                 className="input input-bordered w-full bg-gray-100"
+                placeholder="เลือกงานที่ได้รับมอบหมายด้านล่าง"
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text">URL รูปโปรไฟล์</span>
+                <span className="label-text">URL รูปโปรไฟล์ (จาก Clerk)</span>
               </label>
               <input
                 type="url"
                 name="profileUrl"
                 value={form.profileUrl}
                 onChange={handleChange}
-                className="input input-bordered w-full"
+                placeholder="จะถูกดึงจาก Clerk โดยอัตโนมัติ"
+                disabled={isSubmitting}
+                className={`input input-bordered w-full ${isSubmitting ? 'bg-gray-100' : ''}`}
               />
             </div>
 
@@ -359,9 +679,11 @@ export default function RegisterUserPage() {
                       type="tel"
                       inputMode="numeric"
                       maxLength={1}
-                      className="input input-bordered w-9 text-center"
+                      disabled={isSubmitting}
+                      className={`input input-bordered w-9 text-center ${isSubmitting ? 'bg-gray-100' : ''}`}
                       value={form.phone?.[i] || ""}
                       onChange={(e) => {
+                        if (isSubmitting) return;
                         const input = e.target;
                         const newChar = input.value.replace(/\D/, "");
                         const updated = form.phone.split("");
@@ -399,54 +721,99 @@ export default function RegisterUserPage() {
             <div className="form-control">
               <label className="label">
                 <span className="label-text">งานที่ได้รับมอบหมายในระบบ</span>
+                <span className="label-text-alt text-blue-600">
+                  เลือกแล้ว {[...new Set(form.assignedTask)].length} รายการ
+                </span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {menu.length === 0 ? (
                   <div className="text-gray-400 italic">กำลังโหลดรายการ...</div>
                 ) : (
-                  menu.map((item) => (
-                    <button
-                      key={item._id}
-                      type="button"
-                      className={`btn btn-outline flex items-center gap-2 ${
-                        form.assignedTask.includes(item.Prob_name)
-                          ? "btn-active border-blue-500"
-                          : ""
-                      }`}
-                      onClick={() => {
-                        const exists = form.assignedTask.includes(item.Prob_name);
-                        const updatedTasks = exists
-                          ? form.assignedTask.filter((t) => t !== item.Prob_name)
-                          : [...form.assignedTask, item.Prob_name];
-                        setForm({ ...form, assignedTask: updatedTasks });
-                      }}
-                    >
-                      <img
-                        src={item.Prob_pic}
-                        alt={item.Prob_name}
-                        className="w-5 h-5 rounded-full"
-                      />
-                      <div className="flex flex-col text-left">
-                        <span className="font-medium">{item.Prob_name}</span>
-                        <span className="text-xs opacity-60">{item.role}</span>
-                      </div>
-                    </button>
-                  ))
+                  <>
+                    <div className="w-full text-xs text-gray-500 mb-2">
+                      💡 คลิกปุ่มเพื่อเลือก/ยกเลิกงานที่ได้รับมอบหมาย (เลือกได้หลายงาน)
+                    </div>
+                    {menu.map((item) => (
+                      <button
+                        key={item._id}
+                        type="button"
+                        className={`btn btn-outline flex items-center gap-2 ${
+                          [...new Set(form.assignedTask)].includes(item.Prob_name)
+                            ? "btn-active border-blue-500 bg-blue-50"
+                            : ""
+                        } ${isSubmitting ? 'btn-disabled' : ''}`}
+                        title={isSubmitting ? "ไม่สามารถเลือกได้ขณะกำลังบันทึก" : ([...new Set(form.assignedTask)].includes(item.Prob_name) ? "คลิกเพื่อลบ" : "คลิกเพื่อเลือก")}
+                        onClick={() => {
+                          if (isSubmitting) return;
+                          const uniqueAssignedTask = [...new Set(form.assignedTask)];
+                          const exists = uniqueAssignedTask.includes(item.Prob_name);
+                          let updatedTasks;
+                          
+                          if (exists) {
+                            // ถ้ามีอยู่แล้ว ให้ลบออก
+                            updatedTasks = uniqueAssignedTask.filter((t) => t !== item.Prob_name);
+                          } else {
+                            // ถ้าไม่มี ให้เพิ่มเข้าไปใน array เดิม (เลือกได้หลายงาน)
+                            updatedTasks = [...uniqueAssignedTask, item.Prob_name];
+                          }
+                          
+                          console.log("🔄 Updating assignedTask:", {
+                            current: form.assignedTask,
+                            unique: uniqueAssignedTask,
+                            new: updatedTasks,
+                            action: exists ? "remove" : "add",
+                            item: item.Prob_name,
+                            isEditing: isEditing,
+                            count: updatedTasks.length
+                          });
+                          
+                          setForm({ ...form, assignedTask: updatedTasks });
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        <img
+                          src={item.Prob_pic}
+                          alt={item.Prob_name}
+                          className="w-5 h-5 rounded-full"
+                        />
+                        <div className="flex flex-col text-left">
+                          <span className="font-medium">{item.Prob_name}</span>
+                          <span className="text-xs opacity-60">{item.role}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </>
                 )}
               </div>
             </div>
 
-            <button type="submit" className="btn btn-success w-full" disabled={isSubmitting}>
+            <button 
+              type="submit" 
+              className={`btn w-full ${isSubmitting ? 'btn-disabled opacity-50 cursor-not-allowed' : 'btn-success'}`} 
+              disabled={isSubmitting}
+              style={{ 
+                pointerEvents: isSubmitting ? 'none' : 'auto',
+                userSelect: isSubmitting ? 'none' : 'auto'
+              }}
+              onMouseDown={(e) => {
+                if (isSubmitting) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+            >
               {isSubmitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
                   กำลังบันทึก...
                 </>
               ) : (
-                'Save'
+                isEditing ? 'อัปเดตข้อมูล' : 'บันทึกข้อมูล'
               )}
-            </button>
+                        </button>
           </form>
+        )}
+          </>
         )}
       </div>
     </div>

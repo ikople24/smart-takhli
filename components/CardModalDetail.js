@@ -4,8 +4,8 @@ import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import CardAssignment from "./CardAssignment";
 import CardOfficail from "./CardOfficail";
+import CardAssignment from "./CardAssignment";
 import SatisfactionChart from "./SatisfactionChart";
 
 export default function CardModalDetail({ modalData, onClose }) {

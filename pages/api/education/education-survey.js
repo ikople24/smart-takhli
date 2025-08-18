@@ -13,21 +13,61 @@ export default async function handler(req, res) {
   }
 
   try {
-    await dbConnect();
+    // ตรวจสอบ MongoDB connection
+    try {
+      await dbConnect();
+    } catch (dbError) {
+      console.error('❌ Database connection error:', dbError);
+      return res.status(500).json({ 
+        message: 'Database connection failed. Please check your MongoDB connection.',
+        error: dbError.message 
+      });
+    }
 
     const {
       prefix,
       educationLevel,
       fullName,
       address,
+      actualAddress,
       phone,
       note,
+      schoolName,
+      gradeLevel,
+      gpa,
       image,
-      location
+      location,
+      housingStatus,
+      householdMembers,
+      annualIncome,
+      familyStatus
     } = req.body;
 
+    console.log('📝 Received data:', { 
+      prefix, 
+      educationLevel, 
+      fullName, 
+      address, 
+      actualAddress,
+      phone, 
+      note, 
+      schoolName,
+      gradeLevel,
+      gpa,
+      image, 
+      location,
+      housingStatus,
+      householdMembers,
+      annualIncome,
+      familyStatus
+    });
+
     if (!fullName || !image || !location?.lat) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        required: ['fullName', 'image', 'location.lat'],
+        received: { fullName: !!fullName, image: !!image, location: !!location }
+      });
     }
 
     const count = await EducationRegister.countDocuments();
@@ -39,14 +79,26 @@ export default async function handler(req, res) {
       educationLevel: educationLevel || '',
       name: fullName,
       address: address || '',
+      actualAddress: actualAddress || '',
       phone: phone || '',
       note: note || '',
+      schoolName: schoolName || '',
+      gradeLevel: gradeLevel || '',
+      gpa: gpa ? parseFloat(gpa) : null,
       imageUrl: image,
       location: {
         lat: location.lat,
         lng: location.lng,
       },
+      housingStatus: housingStatus || 'ไม่ระบุ',
+      householdMembers: householdMembers || 1,
+      annualIncome: annualIncome || 0,
+      familyStatus: familyStatus || [],
+      incomeSource: [],
+      receivedScholarship: []
     });
+
+    console.log('✅ Data saved successfully:', doc._id);
 
     // ✅ แจ้งเตือนไปยัง n8n webhook
     try {
@@ -71,6 +123,10 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: 'Success', id: doc._id });
   } catch (err) {
     console.error('❌ API error:', err);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ 
+      message: 'Server error', 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 }

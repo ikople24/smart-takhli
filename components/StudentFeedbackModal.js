@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
+import ActivitySelector from './ActivitySelector';
 
 const feedbackSchema = z.object({
+  activityId: z.string().min(1, 'กรุณาเลือกกิจกรรม'),
   grade: z.string().min(1, 'กรุณาเลือกระดับการศึกษา'),
   comment: z.string().min(10, 'ความคิดเห็นต้องมีอย่างน้อย 10 ตัวอักษร').max(500, 'ความคิดเห็นต้องไม่เกิน 500 ตัวอักษร'),
   emotionLevel: z.number().min(1).max(5),
@@ -25,7 +27,9 @@ const ratingOptions = [
 ];
 
 const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [formData, setFormData] = useState({
+    activityId: '',
     grade: '',
     comment: '',
     emotionLevel: 3,
@@ -41,7 +45,7 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
     try {
       const validationResult = feedbackSchema.safeParse(formData);
       if (!validationResult.success) {
-        const errorOrder = ['grade', 'comment', 'emotionLevel', 'category'];
+        const errorOrder = ['activityId', 'grade', 'comment', 'emotionLevel', 'category'];
         const sortedErrors = validationResult.error.errors.sort((a, b) => {
           const aIndex = errorOrder.indexOf(a.path[0]);
           const bIndex = errorOrder.indexOf(b.path[0]);
@@ -62,11 +66,13 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
       
       // Reset form and close modal
       setFormData({
+        activityId: '',
         grade: '',
         comment: '',
         emotionLevel: 3,
         category: ''
       });
+      setSelectedActivity(null);
       
       onClose();
     } catch (error) {
@@ -80,6 +86,14 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleActivityChange = (activity) => {
+    setSelectedActivity(activity);
+    setFormData(prev => ({
+      ...prev,
+      activityId: activity?._id || ''
+    }));
   };
 
   const handleRatingSelect = (rating) => {
@@ -105,6 +119,11 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <ActivitySelector
+            selectedActivity={selectedActivity}
+            onActivityChange={handleActivityChange}
+          />
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               ระดับการศึกษา *

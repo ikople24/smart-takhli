@@ -7,6 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const appId = req.headers['x-app-id'] || process.env.NEXT_PUBLIC_APP_ID;
+    const authToken = req.headers['authorization'] || req.headers['Authorization'];
 
     const response = await axios.post(
       `${process.env.BACKEND_API_URL}/api/users/create`,
@@ -14,6 +15,8 @@ export default async function handler(req, res) {
       {
         headers: {
           'x-app-id': appId,
+          'Authorization': authToken,
+          'Content-Type': 'application/json'
         },
       }
     );

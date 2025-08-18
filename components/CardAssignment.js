@@ -7,9 +7,11 @@ export default function CardAssignment({ probId }) {
   const [assignment, setAssignment] = useState(null);
   const adminOptions = useAdminOptionsStore((state) => state.adminOptions);
   const fetchAdminOptions = useAdminOptionsStore.getState().fetchAdminOptions;
+  
   useEffect(() => {
     fetchAdminOptions(); // ดึงข้อมูลทันทีเมื่อโหลด component
   }, [fetchAdminOptions]);
+
   // debug: console.log("🧠 all adminOptions from store:", adminOptions);
   const matchedOptions =
     Array.isArray(assignment?.solution) && assignment.solution.length > 0
@@ -57,7 +59,7 @@ export default function CardAssignment({ probId }) {
           `/api/assignments/by-complaint?complaintId=${probId}`
         );
         const data = await res.json();
-        // debug: console.log("📦 assignment data:", data);
+        console.log("📦 assignment data:", data);
         setAssignment(data.data?.[0]);
       } catch (error) {
         console.error("Failed to fetch assignment:", error);
@@ -69,6 +71,8 @@ export default function CardAssignment({ probId }) {
     }
   }, [probId]);
 
+
+
   if (
     !assignment ||
     (
@@ -76,10 +80,8 @@ export default function CardAssignment({ probId }) {
         (Array.isArray(assignment.solution) &&
           assignment.solution.every((s) => !s || (typeof s === "string" && s.trim() === ""))) ||
         (typeof assignment.solution === "string" && assignment.solution.trim() === "")) &&
-      (!assignment.note || (typeof assignment.note === "string" && assignment.note.trim() === "")) &&
-      (!Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0)
-    ) ||
-    !Array.isArray(assignment.solutionImages) || assignment.solutionImages.length === 0
+      (!assignment.note || (typeof assignment.note === "string" && assignment.note.trim() === ""))
+    )
   ) {
     return null;
   }
@@ -87,35 +89,38 @@ export default function CardAssignment({ probId }) {
   return (
     <div className="max-w-4xl mx-auto bg-white shadow-md rounded-md p-[6px]">
       <div className="flex flex-col justify-between space-y-4">
+
         {/* วิธีดำเนินการ Section */}
-        <div>
-          <h2 className="text-md font-semibold mb-4">การดำเนินการ</h2>
-          <div className="relative">
-            <Image
-              src={assignment?.solutionImages?.[currentIndex] ?? ""}
-              alt={`Main Image ${currentIndex + 1}`}
-              width={800}
-              height={400}
-              className="w-full h-64 object-cover rounded-t-md transition-all duration-500"
-            />
-            {assignment?.solutionImages?.length > 1 && (
-              <>
-                <button
-                  onClick={handlePrev}
-                  className="absolute top-1/2 left-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75"
-                >
-                  ‹
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="absolute top-1/2 right-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75"
-                >
-                  ›
-                </button>
-              </>
-            )}
+        {Array.isArray(assignment?.solutionImages) && assignment.solutionImages.length > 0 && (
+          <div>
+            <h2 className="text-md font-semibold mb-4">การดำเนินการ</h2>
+            <div className="relative">
+              <Image
+                src={assignment?.solutionImages?.[currentIndex] ?? ""}
+                alt={`Main Image ${currentIndex + 1}`}
+                width={800}
+                height={400}
+                className="w-full h-64 object-cover rounded-t-md transition-all duration-500"
+              />
+              {assignment?.solutionImages?.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrev}
+                    className="absolute top-1/2 left-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="absolute top-1/2 right-3 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-75"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* เจ้าหน้าที่ Section */}
         <div className="grid grid-cols-5 gap-4 items-start h-full">

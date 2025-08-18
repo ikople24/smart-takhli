@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const StudentFeedbackSchema = new mongoose.Schema({
+  activityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Activity',
+    required: true
+  },
   grade: {
     type: String,
     required: true,
@@ -44,6 +49,7 @@ const StudentFeedbackSchema = new mongoose.Schema({
 
 // Index สำหรับการค้นหาและจัดกลุ่ม
 StudentFeedbackSchema.index({ createdAt: -1 });
+StudentFeedbackSchema.index({ activityId: 1 });
 StudentFeedbackSchema.index({ emotionLevel: 1 });
 StudentFeedbackSchema.index({ category: 1 });
 StudentFeedbackSchema.index({ grade: 1 });
