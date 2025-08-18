@@ -16,7 +16,7 @@ import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { BookOpen, Download } from "lucide-react";
 
 import EducationFormModal from "@/components/education/EducationFormModal";
-import StudentFeedbackForm from "@/components/StudentFeedbackForm";
+import ActivityFeedbackForm from "@/components/ActivityFeedbackForm";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -163,10 +163,10 @@ export default function Home() {
                   <div className="status status-info status-lg animate-ping"></div>
                   <div className="status status-info status-lg"></div>
                 </div>
-                <span className="font-bold text-indigo-400">STUDENT FEEDBACK</span>
+                <span className="font-bold text-indigo-400">ACTIVITY FEEDBACK</span>
               </div>
-              <span className="font-semibold text-indigo-400">โครงการส่งเสริมสภาเด็กและเยาวชน ประจำปี 2568</span>
-              <StudentFeedbackForm />
+              <span className="font-semibold text-indigo-400">💭 แสดงความคิดเห็นและดูกิจกรรมย้อนหลัง</span>
+              <ActivityFeedbackForm selectedActivity={null} />
             </div>
           </>
         )}

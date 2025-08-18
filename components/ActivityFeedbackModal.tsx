@@ -26,8 +26,32 @@ const ratingOptions = [
   { value: 2.5, emoji: '😞', text: 'เฉยๆ' }
 ];
 
-const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
-  const [selectedActivity, setSelectedActivity] = useState(null);
+interface ActivityFeedbackModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (formData: FeedbackFormData) => Promise<void>;
+}
+
+interface Activity {
+  _id: string;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+interface FeedbackFormData {
+  activityId: string;
+  grade: string;
+  comment: string;
+  emotionLevel: number;
+  category: string;
+}
+
+const ActivityFeedbackModal = ({ isOpen, onClose, onSubmit }: ActivityFeedbackModalProps) => {
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [formData, setFormData] = useState({
     activityId: '',
     grade: '',
@@ -38,7 +62,7 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
 
@@ -47,8 +71,8 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
       if (!validationResult.success) {
         const errorOrder = ['activityId', 'grade', 'comment', 'emotionLevel', 'category'];
         const sortedErrors = validationResult.error.errors.sort((a, b) => {
-          const aIndex = errorOrder.indexOf(a.path[0]);
-          const bIndex = errorOrder.indexOf(b.path[0]);
+          const aIndex = errorOrder.indexOf(String(a.path[0]));
+          const bIndex = errorOrder.indexOf(String(b.path[0]));
           return aIndex - bIndex;
         });
         const errorMessages = sortedErrors.map((err, index) => `${index + 1}. ${err.message}`).join('\n');
@@ -88,7 +112,7 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  const handleActivityChange = (activity) => {
+  const handleActivityChange = (activity: Activity | null) => {
     setSelectedActivity(activity);
     setFormData(prev => ({
       ...prev,
@@ -96,7 +120,7 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
     }));
   };
 
-  const handleRatingSelect = (rating) => {
+  const handleRatingSelect = (rating: number) => {
     setFormData(prev => ({
       ...prev,
       emotionLevel: rating
@@ -203,29 +227,38 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
             <textarea
               value={formData.comment}
               onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
+              placeholder="กรุณาแสดงความคิดเห็นเกี่ยวกับกิจกรรม..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="เขียนความคิดเห็นของคุณ (10-500 ตัวอักษร)"
+              maxLength={500}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.comment.length}/500 ตัวอักษร
-            </p>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>ความคิดเห็นต้องมีอย่างน้อย 10 ตัวอักษร</span>
+              <span>{formData.comment.length}/500</span>
+            </div>
           </div>
 
-          <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4">
+          <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm sm:text-base"
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'กำลังส่ง...' : 'ส่งความคิดเห็น'}
+              {isSubmitting ? (
+                <>
+                  <span className="loading loading-spinner loading-xs mr-2"></span>
+                  กำลังส่ง...
+                </>
+              ) : (
+                'ส่งความคิดเห็น'
+              )}
             </button>
           </div>
         </form>
@@ -234,4 +267,4 @@ const StudentFeedbackModal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-export default StudentFeedbackModal; 
+export default ActivityFeedbackModal;
