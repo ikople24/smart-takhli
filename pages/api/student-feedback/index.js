@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import StudentFeedback from '@/models/StudentFeedback';
+import Activity from '@/models/Activity';
 
 export default async function handler(req, res) {
   try {
@@ -12,12 +13,13 @@ export default async function handler(req, res) {
   switch (req.method) {
     case 'GET':
       try {
-        const { page = 1, limit = 10, category } = req.query;
+        const { page = 1, limit = 10, category, activityId } = req.query;
         const skip = (page - 1) * limit;
         
         let query = { isApproved: true };
         
         if (category) query.category = category;
+        if (activityId) query.activityId = activityId;
 
         const feedbacks = await StudentFeedback.find(query)
           .sort({ createdAt: -1 })
@@ -75,13 +77,22 @@ export default async function handler(req, res) {
     case 'POST':
       try {
         console.log('Received data:', req.body);
-        const { grade, comment, emotionLevel, category, tags } = req.body;
+        const { grade, comment, emotionLevel, category, tags, activityId } = req.body;
 
       // Validation
-      if (!grade || !comment || !emotionLevel || !category) {
+      if (!grade || !comment || !emotionLevel || !category || !activityId) {
         return res.status(400).json({ 
           success: false, 
           message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+        });
+      }
+
+      // ตรวจสอบว่า activity มีอยู่จริงและยัง active อยู่
+      const activity = await Activity.findById(activityId);
+      if (!activity || !activity.isActive) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'กิจกรรมไม่ถูกต้องหรือไม่ได้เปิดใช้งาน' 
         });
       }
 
@@ -105,6 +116,7 @@ export default async function handler(req, res) {
         const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
         const feedback = new StudentFeedback({
+          activityId,
           grade,
           comment: comment.trim(),
           emotionLevel: level,

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StudentFeedbackModal from './StudentFeedbackModal';
+import ActivitySelector from './ActivitySelector';
 import Swal from 'sweetalert2';
 
 const StudentFeedbackForm = () => {
@@ -9,15 +10,18 @@ const StudentFeedbackForm = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
 
   useEffect(() => {
     fetchFeedbackStats();
     fetchRecentFeedbacks();
-  }, []);
+  }, [fetchFeedbackStats, fetchRecentFeedbacks]);
 
-  const fetchFeedbackStats = async () => {
+  const fetchFeedbackStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/student-feedback');
+      const activityId = selectedActivity?._id;
+      const url = activityId ? `/api/student-feedback?activityId=${activityId}` : '/api/student-feedback';
+      const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
         setFeedbackStats(data.statistics);
@@ -25,12 +29,14 @@ const StudentFeedbackForm = () => {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, [selectedActivity?._id]);
 
-  const fetchRecentFeedbacks = async (page = 1) => {
+  const fetchRecentFeedbacks = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/student-feedback?page=${page}&limit=5`);
+      const activityId = selectedActivity?._id;
+      const url = activityId ? `/api/student-feedback?page=${page}&limit=5&activityId=${activityId}` : `/api/student-feedback?page=${page}&limit=5`;
+      const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
         setRecentFeedbacks(data.data);
@@ -42,7 +48,7 @@ const StudentFeedbackForm = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedActivity?._id]);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -50,7 +56,7 @@ const StudentFeedbackForm = () => {
     }
   };
 
-  const handleSubmit = async (formData) => {
+  const handleSubmit = useCallback(async (formData) => {
     try {
       console.log('Sending data:', formData);
       const response = await fetch('/api/student-feedback', {
@@ -90,7 +96,7 @@ const StudentFeedbackForm = () => {
         confirmButtonText: 'ตกลง'
       });
     }
-  };
+  }, [fetchFeedbackStats, fetchRecentFeedbacks]);
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -102,6 +108,15 @@ const StudentFeedbackForm = () => {
         >
           เขียนความคิดเห็น
         </button>
+      </div>
+
+      {/* เลือกกิจกรรม */}
+      <div className="mb-4">
+        <ActivitySelector
+          selectedActivity={selectedActivity}
+          onActivityChange={setSelectedActivity}
+          showLabel={true}
+        />
       </div>
 
       {/* สถิติภาพรวม */}
