@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import Image from "next/image";
 
-export default function RequestTable({ requests = [], menu = [], loading, onDelete, onUpdateStatus }) {
+export default function RequestTable({ requests = [], menu = [], loading, onDelete }) {
   const [delayPassed, setDelayPassed] = useState(false);
 
   useEffect(() => {
@@ -137,44 +137,214 @@ export default function RequestTable({ requests = [], menu = [], loading, onDele
                 >
                   ดูข้อมูล
                 </button>
-                <button
-                  onClick={async () => {
-                    Swal.fire({
-                      title: "แก้ไขสถานะ",
-                      html: `
-                        <div style="margin-top: 1rem;">
-                          <label for="statusSelect" style="display: block; margin-bottom: 0.5rem;">เลือกสถานะใหม่</label>
-                          <select id="statusSelect" class="swal2-input" style="width: 100%; padding: 0.5rem;">
-                            <option value="รับคำร้อง">รับคำร้อง</option>
-                            <option value="ประเมินโดยพยาบาลวิชาชีพ">ประเมินโดยพยาบาลวิชาชีพ</option>
-                            <option value="ลงทะเบียนอุปกรณ์">ลงทะเบียนอุปกรณ์</option>
-                            <option value="ส่งมอบอุปกรณ์">ส่งมอบอุปกรณ์</option>
-                          </select>
+                
+                {/* ปุ่มการดำเนินการตามสถานะ */}
+                {(() => {
+                  const currentStatus = r.status || "รับคำร้อง";
+                  
+                  switch (currentStatus) {
+                    case "รับคำร้อง":
+                      return (
+                        <button
+                          onClick={async () => {
+                            const result = await Swal.fire({
+                              title: "ประเมินโดยพยาบาลวิชาชีพ",
+                              text: "ยืนยันการประเมินโดยพยาบาลวิชาชีพ?",
+                              icon: "question",
+                              showCancelButton: true,
+                              confirmButtonText: "ยืนยัน",
+                              cancelButtonText: "ยกเลิก",
+                            });
+                            
+                            if (result.isConfirmed) {
+                              try {
+                                const response = await fetch(`/api/smart-health/update-request-status?id=${r._id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ 
+                                    status: "ประเมินโดยพยาบาลวิชาชีพ",
+                                    action: "assess"
+                                  })
+                                });
+                                
+                                if (response.ok) {
+                                  Swal.fire("สำเร็จ", "ประเมินโดยพยาบาลวิชาชีพแล้ว", "success");
+                                  window.location.reload();
+                                } else {
+                                  Swal.fire("ผิดพลาด", "ไม่สามารถอัปเดตสถานะได้", "error");
+                                }
+                              } catch (error) {
+                                console.error("Update status error:", error);
+                                Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดในการอัปเดต", "error");
+                              }
+                            }
+                          }}
+                          className="btn btn-sm btn-primary"
+                        >
+                          🩺 ประเมิน
+                        </button>
+                      );
+                      
+                    case "ประเมินโดยพยาบาลวิชาชีพ":
+                      return (
+                        <button
+                          onClick={async () => {
+                            const result = await Swal.fire({
+                              title: "ลงทะเบียนอุปกรณ์",
+                              text: "ยืนยันการลงทะเบียนอุปกรณ์?",
+                              icon: "question",
+                              showCancelButton: true,
+                              confirmButtonText: "ยืนยัน",
+                              cancelButtonText: "ยกเลิก",
+                            });
+                            
+                            if (result.isConfirmed) {
+                              try {
+                                const response = await fetch(`/api/smart-health/update-request-status?id=${r._id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ 
+                                    status: "ลงทะเบียนอุปกรณ์",
+                                    action: "register"
+                                  })
+                                });
+                                
+                                if (response.ok) {
+                                  Swal.fire("สำเร็จ", "ลงทะเบียนอุปกรณ์แล้ว", "success");
+                                  window.location.reload();
+                                } else {
+                                  Swal.fire("ผิดพลาด", "ไม่สามารถอัปเดตสถานะได้", "error");
+                                }
+                              } catch (error) {
+                                console.error("Update status error:", error);
+                                Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดในการอัปเดต", "error");
+                              }
+                            }
+                          }}
+                          className="btn btn-sm btn-warning"
+                        >
+                          📝 ลงทะเบียน
+                        </button>
+                      );
+                      
+                    case "ลงทะเบียนอุปกรณ์":
+                      return (
+                        <button
+                          onClick={async () => {
+                            const result = await Swal.fire({
+                              title: "ส่งมอบอุปกรณ์",
+                              text: "ยืนยันการส่งมอบอุปกรณ์และสร้างรายการยืม?",
+                              icon: "question",
+                              showCancelButton: true,
+                              confirmButtonText: "ยืนยัน",
+                              cancelButtonText: "ยกเลิก",
+                            });
+                            
+                            if (result.isConfirmed) {
+                              try {
+                                const response = await fetch(`/api/smart-health/update-request-status?id=${r._id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ 
+                                    status: "ส่งมอบอุปกรณ์",
+                                    action: "borrow"
+                                  })
+                                });
+                                
+                                const data = await response.json();
+                                
+                                if (response.ok) {
+                                  Swal.fire({
+                                    title: "ส่งมอบสำเร็จ!",
+                                    html: `
+                                      <p>ส่งมอบอุปกรณ์แล้ว</p>
+                                      <p><strong>รหัสการยืม:</strong> ${data.borrowId}</p>
+                                    `,
+                                    icon: "success"
+                                  });
+                                  window.location.reload();
+                                } else {
+                                  Swal.fire("ผิดพลาด", data.message || "ไม่สามารถอัปเดตสถานะได้", "error");
+                                }
+                              } catch (error) {
+                                console.error("Update status error:", error);
+                                Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดในการอัปเดต", "error");
+                              }
+                            }
+                          }}
+                          className="btn btn-sm btn-success"
+                        >
+                          📦 ส่งมอบ
+                        </button>
+                      );
+                      
+                    case "ส่งมอบอุปกรณ์":
+                      return (
+                        <div className="text-sm text-green-600 font-medium">
+                          ✅ เสร็จสิ้น
                         </div>
-                      `,
-                      preConfirm: () => {
-                        const selected = document.getElementById("statusSelect").value;
-                        if (!selected) {
-                          Swal.showValidationMessage("กรุณาเลือกสถานะ");
-                        }
-                        return selected;
-                      },
-                      showCancelButton: true,
-                      confirmButtonText: "บันทึก",
-                      cancelButtonText: "ยกเลิก",
-                    }).then((result) => {
-                      if (result.isConfirmed && result.value && result.value !== r.status) {
-                        if (onUpdateStatus) {
-                          onUpdateStatus(r._id, result.value);
-                        }
-                        Swal.fire("สำเร็จ", "อัปเดตสถานะเรียบร้อยแล้ว", "success");
-                      }
-                    });
-                  }}
-                  className="btn btn-sm btn-warning"
-                >
-                  แก้ไข
-                </button>
+                      );
+                      
+                    default:
+                      return (
+                        <button
+                          onClick={async () => {
+                            Swal.fire({
+                              title: "แก้ไขสถานะ",
+                              html: `
+                                <div style="margin-top: 1rem;">
+                                  <label for="statusSelect" style="display: block; margin-bottom: 0.5rem;">เลือกสถานะใหม่</label>
+                                  <select id="statusSelect" class="swal2-input" style="width: 100%; padding: 0.5rem;">
+                                    <option value="รับคำร้อง">รับคำร้อง</option>
+                                    <option value="ประเมินโดยพยาบาลวิชาชีพ">ประเมินโดยพยาบาลวิชาชีพ</option>
+                                    <option value="ลงทะเบียนอุปกรณ์">ลงทะเบียนอุปกรณ์</option>
+                                    <option value="ส่งมอบอุปกรณ์">ส่งมอบอุปกรณ์</option>
+                                  </select>
+                                </div>
+                              `,
+                              preConfirm: () => {
+                                const selected = document.getElementById("statusSelect").value;
+                                if (!selected) {
+                                  Swal.showValidationMessage("กรุณาเลือกสถานะ");
+                                }
+                                return selected;
+                              },
+                              showCancelButton: true,
+                              confirmButtonText: "บันทึก",
+                              cancelButtonText: "ยกเลิก",
+                            }).then(async (result) => {
+                              if (result.isConfirmed && result.value && result.value !== r.status) {
+                                try {
+                                  const response = await fetch(`/api/smart-health/update-request-status?id=${r._id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ 
+                                      status: result.value,
+                                      action: "manual"
+                                    })
+                                  });
+                                  
+                                  if (response.ok) {
+                                    Swal.fire("สำเร็จ", "อัปเดตสถานะเรียบร้อยแล้ว", "success");
+                                    window.location.reload();
+                                  } else {
+                                    Swal.fire("ผิดพลาด", "ไม่สามารถอัปเดตสถานะได้", "error");
+                                  }
+                                } catch (error) {
+                                  console.error("Update status error:", error);
+                                  Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาดในการอัปเดต", "error");
+                                }
+                              }
+                            });
+                          }}
+                          className="btn btn-sm btn-warning"
+                        >
+                          แก้ไข
+                        </button>
+                      );
+                  }
+                })()}
+                
                 <button
                   onClick={() =>
                     Swal.fire({
