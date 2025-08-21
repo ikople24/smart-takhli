@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import Image from "next/image";
+import { MapPin } from "lucide-react";
 
 export default function RequestTable({ requests = [], menu = [], loading, onDelete }) {
   const [delayPassed, setDelayPassed] = useState(false);
@@ -127,6 +128,8 @@ export default function RequestTable({ requests = [], menu = [], loading, onDele
                           <p><b>เบอร์โทร:</b> ${r.phone}</p>
                           <p><b>อุปกรณ์:</b> ${r.equipment}</p>
                           <p><b>เหตุผล:</b> ${r.reason}</p>
+                          <p><b>ตำแหน่ง:</b> ${r.location ? (r.location.lat && r.location.lng ? `${r.location.lat}, ${r.location.lng}` : r.location) : "ไม่ระบุ"}</p>
+                          ${r.location && r.location.lat && r.location.lng ? `<p><b>ลิงก์แผนที่:</b> <a href="https://www.google.com/maps?q=${r.location.lat},${r.location.lng}&z=15" target="_blank" style="color: blue; text-decoration: underline;">เปิด Google Maps</a></p>` : ''}
                           <p><b>สถานะ:</b> ${r.status || "รับคำร้อง"}</p>
                           <p><b>ส่งเมื่อ:</b> ${new Date(r.submitted_at).toLocaleString()}</p>
                         </div>
@@ -136,6 +139,49 @@ export default function RequestTable({ requests = [], menu = [], loading, onDele
                   className="btn btn-sm btn-info"
                 >
                   ดูข้อมูล
+                </button>
+                <button
+                  onClick={() => {
+                    // Debug: แสดงข้อมูล location
+                    console.log("Location data:", r.location);
+                    console.log("Location type:", typeof r.location);
+                    if (r.location && r.location.lat && r.location.lng) {
+                      console.log("Coordinates:", `${r.location.lat}, ${r.location.lng}`);
+                      console.log("Google Maps URL:", `https://www.google.com/maps?q=${r.location.lat},${r.location.lng}&z=15`);
+                    }
+                    console.log("Full request data:", r);
+                    
+                    // เปิด Google Maps ในแท็บใหม่
+                    if (r.location && r.location.lat && r.location.lng) {
+                      // ใช้ coordinates ถ้ามี - แสดงหมุดที่ตำแหน่งนั้นเลย
+                      const googleMapsUrl = `https://www.google.com/maps?q=${r.location.lat},${r.location.lng}&z=15`;
+                      console.log("Opening coordinates URL:", googleMapsUrl);
+                      window.open(googleMapsUrl, '_blank');
+                    } else if (r.location && typeof r.location === 'string') {
+                      // ใช้ string location
+                      const encodedLocation = encodeURIComponent(r.location);
+                      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}&z=15`;
+                      console.log("Opening string URL:", googleMapsUrl);
+                      window.open(googleMapsUrl, '_blank');
+                    } else {
+                      // ถ้าไม่มี location ให้แสดง alert
+                      Swal.fire({
+                        title: "ไม่พบข้อมูลตำแหน่ง",
+                        text: "ไม่มีการระบุตำแหน่งในข้อมูลนี้",
+                        icon: "info"
+                      });
+                    }
+                    
+                    // ทดสอบ URL ตัวอย่าง
+                    console.log("Test URLs:");
+                    console.log("Coordinates example:", "https://www.google.com/maps/search/?api=1&query=13.7563,100.5018");
+                    console.log("String example:", "https://www.google.com/maps/search/?api=1&query=โรงพยาบาลตาคลี");
+                  }}
+                  className="btn btn-sm btn-primary"
+                  title={r.location ? (r.location.lat && r.location.lng ? `เปิดแผนที่ที่ตำแหน่ง: ${r.location.lat}, ${r.location.lng}` : `เปิดแผนที่: ${r.location}`) : "ไม่พบข้อมูลตำแหน่ง"}
+                >
+                  <MapPin className="w-3 h-3" />
+                  แผนที่
                 </button>
                 
                 {/* ปุ่มการดำเนินการตามสถานะ */}
