@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { PackageCheck, Search, User, Calendar, ArrowLeft } from "lucide-react";
+import { PackageCheck, Search, User, Calendar, ArrowLeft, MapPin } from "lucide-react";
 
 export default function SmartHealthDeliveryPage() {
   const [borrowedDevices, setBorrowedDevices] = useState([]);
@@ -141,7 +141,7 @@ export default function SmartHealthDeliveryPage() {
                         {device.date_return && device.date_return !== "" && device.date_return !== "_" && device.date_return !== "-" ? 'ส่งมอบแล้ว' : 'รอส่งมอบ'}
                       </span>
                     </td>
-                    <td>
+                    <td className="flex gap-1">
                       {(!device.date_return || device.date_return === "" || device.date_return === "_" || device.date_return === "-") && (
                         <button
                           onClick={() => handleDelivery(device.id_use_object)}
@@ -151,6 +151,20 @@ export default function SmartHealthDeliveryPage() {
                           ส่งมอบ
                         </button>
                       )}
+                      <button
+                        onClick={() => {
+                          // เปิด Google Maps ในแท็บใหม่
+                          const location = "โรงพยาบาลตาคลี"; // ใช้ตำแหน่งโรงพยาบาลเป็นค่าเริ่มต้น
+                          const encodedLocation = encodeURIComponent(location);
+                          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+                          window.open(googleMapsUrl, '_blank');
+                        }}
+                        className="btn btn-primary btn-sm flex items-center gap-2"
+                        title="เปิดแผนที่: โรงพยาบาลตาคลี"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        แผนที่
+                      </button>
                     </td>
                   </tr>
                 ))

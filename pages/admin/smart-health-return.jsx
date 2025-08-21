@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Search, PackageCheck } from "lucide-react";
+import { ArrowLeft, Search, PackageCheck, MapPin } from "lucide-react";
 
 export default function SmartHealthReturnPage() {
   const [activeBorrows, setActiveBorrows] = useState([]);
@@ -167,7 +167,7 @@ export default function SmartHealthReturnPage() {
                         ถูกยืม
                       </span>
                     </td>
-                    <td>
+                    <td className="flex gap-1">
                       {(!borrow.date_return || borrow.date_return === "" || borrow.date_return === "_" || borrow.date_return === "-") && (
                         <button
                           onClick={() => handleReturn(borrow.id_use_object)}
@@ -177,6 +177,20 @@ export default function SmartHealthReturnPage() {
                           คืน
                         </button>
                       )}
+                      <button
+                        onClick={() => {
+                          // เปิด Google Maps ในแท็บใหม่
+                          const location = "โรงพยาบาลตาคลี"; // ใช้ตำแหน่งโรงพยาบาลเป็นค่าเริ่มต้น
+                          const encodedLocation = encodeURIComponent(location);
+                          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
+                          window.open(googleMapsUrl, '_blank');
+                        }}
+                        className="btn btn-primary btn-sm flex items-center gap-2"
+                        title="เปิดแผนที่: โรงพยาบาลตาคลี"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        แผนที่
+                      </button>
                     </td>
                   </tr>
                 ))
