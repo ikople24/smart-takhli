@@ -189,11 +189,11 @@ export default function Home() {
 
       <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
         <a
-          href="https://drive.google.com/file/d/1SXG5Hn5QF4hDJA7uNr2SUYxVMrPgvEzP/view"
+          href="https://heyzine.com/flip-book/7cf559d572.html"
           className="flex items-center gap-1 hover:underline"
         >
           <BookOpen size={16} className="text-purple-500" />
-          คู่มือการใช้งาน
+          คู่มือประชาชน
         </a>
         {deferredPrompt && (
           <button
