@@ -14,7 +14,6 @@ const complaintFormSchema = z.object({
   community: z.string().min(1, 'กรุณาระบุ 1 ชุมชน'),
   prefix: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
   fullName: z.string().min(2, 'ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร'),
-  address: z.string().min(10, 'ที่อยู่ต้องมีอย่างน้อย 10 ตัวอักษร'),
   phone: z.string().length(10, 'เบอร์โทรศัพท์ต้องมี 10 หลัก'),
   detail: z.string().min(1, 'กรุณากรอกรายละเอียด'),
   imageUrls: z.array(z.string()).min(1, 'กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป'),
@@ -29,7 +28,6 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [prefix, setPrefix] = useState('นาย');
   const [fullName, setFullName] = useState('');
-  const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [detail, setDetail] = useState('');
   const [imageUrls, setImageUrls] = useState([]);
@@ -63,7 +61,6 @@ useEffect(() => {
       community: selectedCommunity,
       prefix,
       fullName: fullName.trim(),
-      address: address.trim(),
       phone,
       detail: detail.trim(),
       imageUrls,
@@ -77,7 +74,6 @@ useEffect(() => {
       const errorOrder = [
         'community',
         'fullName', 
-        'address',
         'phone',
         'detail',
         'imageUrls',
@@ -110,7 +106,6 @@ useEffect(() => {
     const payload = {
       prefix,
       fullName,
-      address,
       phone,
       community: selectedCommunity,
       problems: selectedProblems.map(id => {
@@ -167,7 +162,6 @@ useEffect(() => {
     setSelectedCommunity('');
     setPrefix('นาย');
     setFullName('');
-    setAddress('');
     setPhone('');
     setDetail('');
     setImageUrls([]); // Explicitly clear imageUrls
@@ -255,8 +249,6 @@ useEffect(() => {
             setPrefix={setPrefix}
             fullName={fullName}
             setFullName={setFullName}
-            address={address}
-            setAddress={setAddress}
             phone={phone}
             setPhone={setPhone}
             detail={detail}

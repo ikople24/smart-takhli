@@ -4,7 +4,6 @@ import { z } from "zod";
 const reporterSchema = z.object({
   prefix: z.string(),
   fullName: z.string().min(1, "กรุณากรอกชื่อ-นามสกุล"),
-  address: z.string().min(1, "กรุณากรอกที่อยู่"),
   phone: z.string()
     .regex(/^[0-9]{10}$/, "เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก"),
   detail: z.string().min(1, "กรอกรายละเอียดของปัญหา"),
@@ -15,8 +14,6 @@ const ReporterInput = ({
   setPrefix,
   fullName,
   setFullName,
-  address,
-  setAddress,
   phone,
   setPhone,
   detail,
@@ -28,7 +25,7 @@ const ReporterInput = ({
 
   useEffect(() => {
     if (!validateTrigger) return;
-    const result = reporterSchema.safeParse({ prefix, fullName, address, phone, detail });
+    const result = reporterSchema.safeParse({ prefix, fullName, phone, detail });
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
       setValid(false);
@@ -36,7 +33,7 @@ const ReporterInput = ({
       setErrors({});
       setValid(true);
     }
-  }, [validateTrigger, prefix, fullName, address, phone, detail, setValid]);
+  }, [validateTrigger, prefix, fullName, phone, detail, setValid]);
 
   return (
     <div className="flex flex-col space-y-2">
@@ -96,20 +93,8 @@ const ReporterInput = ({
       </div>
       <div className="flex flex-col space-y-2 mt-2">
         <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-800">6.ที่อยู่</label>
-          {errors.address && <p className="text-sm text-red-500 text-right ml-2">{errors.address[0]}</p>}
-        </div>
-        <textarea
-          className="textarea w-full bg-blue-50 text-blue-900 border-blue-300 placeholder:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="ระบุที่อยู่"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        ></textarea>
-      </div>
-      <div className="flex flex-col space-y-2 mt-2">
-        <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-gray-800">
-            7.เบอร์โทรศัพท์
+            6.เบอร์โทรศัพท์
           </label>
           {errors.phone && <p className="text-sm text-red-500 text-right ml-2">{errors.phone[0]}</p>}
         </div>
