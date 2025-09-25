@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon } from 'react-leaflet';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in Leaflet
@@ -13,6 +13,8 @@ L.Icon.Default.mergeOptions({
 
 // Import menu store to get category icons
 import { useMenuStore } from '@/stores/useMenuStore';
+
+const { BaseLayer } = LayersControl;
 
 // ฟังก์ชันคำนวณจุดศูนย์กลางของ polygon
 const calculatePolygonCenter = (coordinates) => {
@@ -64,8 +66,8 @@ const calculatePolygonCenter = (coordinates) => {
 };
 
 // ฟังก์ชันย่อชื่อชุมชนที่ยาวเกินไป
-const shortenCommunityName = (name, maxLength = 18) => {
-  if (name.length <= maxLength) {
+const shortenCommunityName = (name, maxLength = 25) => {
+  if (!name || name.length <= maxLength) {
     return name;
   }
   
@@ -98,7 +100,7 @@ const MapController = ({ onMapReady }) => {
     if (map) {
       // รอให้ map พร้อมใช้งาน
       const checkMapReady = () => {
-        if (map && !map._removed && map._loaded !== false) {
+        if (map && !map._removed && map._loaded && map._mapPane && map._mapPane._leaflet_pos) {
           onMapReady(map);
         } else {
           setTimeout(checkMapReady, 50);
@@ -120,18 +122,43 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
 
   // Filter complaints with valid location data
-  const complaintsWithLocation = complaints?.filter(complaint => 
-    complaint.location && 
-    typeof complaint.location.lat === 'number' && 
-    typeof complaint.location.lng === 'number' &&
-    !isNaN(complaint.location.lat) && 
-    !isNaN(complaint.location.lng)
-  ) || [];
+  const complaintsWithLocation = useMemo(() => {
+    return complaints?.filter(complaint => 
+      complaint.location && 
+      typeof complaint.location.lat === 'number' && 
+      typeof complaint.location.lng === 'number' &&
+      !isNaN(complaint.location.lat) && 
+      !isNaN(complaint.location.lng)
+    ) || [];
+  }, [complaints]);
 
   // Calculate center point and zoom for map
-  const getMapCenter = () => {
+  const getMapCenter = useCallback(() => {
+    // ถ้ามี polygon ให้ใช้จุดศูนย์กลางของ polygon ทั้งหมด
+    if (polygons && polygons.length > 0) {
+      let totalLat = 0;
+      let totalLng = 0;
+      let validPolygons = 0;
+      
+      polygons.forEach(polygon => {
+        if (polygon.coordinates && polygon.coordinates.length > 0) {
+          const centerPoint = calculatePolygonCenter(polygon.coordinates);
+          if (centerPoint && !isNaN(centerPoint[0]) && !isNaN(centerPoint[1])) {
+            totalLat += centerPoint[0];
+            totalLng += centerPoint[1];
+            validPolygons++;
+          }
+        }
+      });
+      
+      if (validPolygons > 0) {
+        return [totalLat / validPolygons, totalLng / validPolygons];
+      }
+    }
+    
+    // Fallback: ใช้พิกัดของ complaints
     if (complaintsWithLocation.length === 0) {
-      return [13.7563, 100.5018]; // Bangkok coordinates as default
+      return [18.7883, 99.0000]; // พิกัดกลางของจังหวัดเชียงใหม่
     }
     
     // Calculate the center of all markers
@@ -139,22 +166,34 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
     const totalLng = complaintsWithLocation.reduce((sum, complaint) => sum + complaint.location.lng, 0);
     
     return [totalLat / complaintsWithLocation.length, totalLng / complaintsWithLocation.length];
-  };
+  }, [polygons, complaintsWithLocation]);
 
-  const getMapZoom = () => {
+  const getMapZoom = useCallback(() => {
+    // ถ้ามี polygon ให้ปรับ zoom ให้เหมาะสมกับ polygon
+    if (polygons && polygons.length > 0) {
+      if (polygons.length === 1) {
+        return 17; // Zoom เข้าใกล้สำหรับ polygon เดียว (ลดจาก 18 เป็น 17 = -1 ระดับ)
+      } else if (polygons.length <= 5) {
+        return 15; // Zoom ปานกลางสำหรับ polygon น้อย (ลดจาก 16 เป็น 15 = -1 ระดับ)
+      } else {
+        return 14; // Zoom ออกสำหรับ polygon หลายตัว (ลดจาก 15 เป็น 14 = -1 ระดับ)
+      }
+    }
+    
+    // Fallback: ใช้ zoom ตาม complaints
     if (complaintsWithLocation.length === 0) {
-      return 12; // Default zoom (เพิ่มจาก 10 เป็น 12 = +25%)
+      return 14; // Default zoom สำหรับจังหวัดเชียงใหม่ (ลดจาก 15 เป็น 14 = -1 ระดับ)
     }
     
     // Calculate appropriate zoom based on number of markers
     if (complaintsWithLocation.length === 1) {
-      return 17; // Close zoom for single marker (เพิ่มจาก 15 เป็น 17 = +25%)
+      return 18; // Close zoom for single marker (ลดจาก 19 เป็น 18 = -1 ระดับ)
     } else if (complaintsWithLocation.length <= 5) {
-      return 14; // Medium zoom for few markers (เพิ่มจาก 12 เป็น 14 = +25%)
+      return 16; // Medium zoom for few markers (ลดจาก 17 เป็น 16 = -1 ระดับ)
     } else {
-      return 12; // Wide zoom for many markers (เพิ่มจาก 10 เป็น 12 = +25%)
+      return 14; // Wide zoom for many markers (ลดจาก 15 เป็น 14 = -1 ระดับ)
     }
-  };
+  }, [polygons, complaintsWithLocation]);
 
   const getMarkerColor = (status) => {
     switch (status) {
@@ -235,6 +274,8 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
     fetchMenu();
   }, [fetchMenu]);
 
+
+
   // Force re-render when complaints change
   useEffect(() => {
     setMapKey(prev => prev + 1);
@@ -244,24 +285,58 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   useEffect(() => {
     if (polygons && polygons.length > 0) {
       setShowPolygons(true);
+      
+      // ปรับแผนที่ให้อยู่กึ่งกลางของ polygon เมื่อโหลดครั้งแรก
+      // รอให้ map พร้อมใช้งานอย่างสมบูรณ์
+      const adjustMapView = () => {
+        if (mapInstance && !mapInstance._removed && mapInstance._loaded && mapInstance._mapPane) {
+          try {
+            const center = getMapCenter();
+            const zoom = getMapZoom();
+            mapInstance.setView(center, zoom, {
+              animate: true,
+              duration: 1
+            });
+          } catch (error) {
+            console.warn('Error adjusting map view:', error);
+            // ลองใหม่อีกครั้งหลังจากรอสักครู่
+            setTimeout(adjustMapView, 500);
+          }
+        } else {
+          // ถ้า map ยังไม่พร้อม ให้ลองใหม่อีกครั้ง
+          setTimeout(adjustMapView, 200);
+        }
+      };
+      
+      // เริ่มต้นการปรับแผนที่หลังจากรอให้ map พร้อม
+      setTimeout(adjustMapView, 1000);
     }
-  }, [polygons]);
+  }, [polygons, mapInstance, getMapCenter, getMapZoom]);
 
 
 
   // Function to fly to marker position
   const flyToMarker = (lat, lng) => {
     try {
-      if (mapInstance && !mapInstance._removed && mapInstance._loaded) {
+      if (mapInstance && !mapInstance._removed && mapInstance._loaded && mapInstance._mapPane) {
         // ตรวจสอบว่า map พร้อมใช้งาน
-        setTimeout(() => {
-          if (mapInstance && !mapInstance._removed) {
-            mapInstance.setView([lat, lng], 18, { // เพิ่มจาก 16 เป็น 18 = +25%
-              animate: true,
-              duration: 1
-            });
+        const flyToPosition = () => {
+          if (mapInstance && !mapInstance._removed && mapInstance._mapPane && mapInstance._mapPane._leaflet_pos) {
+            try {
+              mapInstance.setView([lat, lng], 19, { // ลดจาก 20 เป็น 19 = -1 ระดับ
+                animate: true,
+                duration: 1
+              });
+            } catch (error) {
+              console.warn('Error flying to marker:', error);
+            }
+          } else {
+            // ถ้า map ยังไม่พร้อม ให้ลองใหม่อีกครั้ง
+            setTimeout(flyToPosition, 100);
           }
-        }, 100);
+        };
+        
+        setTimeout(flyToPosition, 100);
       }
     } catch (error) {
       console.warn('Error flying to marker:', error);
@@ -271,12 +346,18 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   // Handle map ready
   const handleMapReady = (map) => {
     // รอให้ map พร้อมใช้งานก่อน
-    setTimeout(() => {
-      if (map && !map._removed) {
+    const checkMapReady = () => {
+      if (map && !map._removed && map._loaded && map._mapPane && map._mapPane._leaflet_pos) {
         map._loaded = true;
         setMapInstance(map);
+      } else {
+        // ถ้า map ยังไม่พร้อม ให้ลองใหม่อีกครั้ง
+        setTimeout(checkMapReady, 100);
       }
-    }, 100);
+    };
+    
+    // เริ่มต้นตรวจสอบหลังจาก map initialize
+    setTimeout(checkMapReady, 200);
   };
 
   if (!complaints || complaints.length === 0) {
@@ -324,10 +405,40 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
         style={{ zIndex: 1 }}
       >
         <MapController onMapReady={handleMapReady} />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="© OpenStreetMap contributors"
-        />
+        <LayersControl
+          position="bottomleft"
+          className="custom-layers-control"
+          onAdd={() => {
+            // console.log('🗺️ LayersControl added at bottomleft');
+            // Force positioning after component is added
+            setTimeout(() => {
+              const layersControl = document.querySelector('.leaflet-control-layers');
+              if (layersControl) {
+                layersControl.style.bottom = '10px';
+                layersControl.style.left = '10px';
+                layersControl.style.top = 'auto';
+                layersControl.style.right = 'auto';
+                // console.log('🗺️ Forced LayersControl positioning');
+              }
+            }, 100);
+          }}
+        >
+          {/* 🗺️ แผนที่ถนน */}
+          <BaseLayer checked name="🗺️ แผนที่ถนน">
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+          </BaseLayer>
+
+          {/* 🛰️ แผนที่ดาวเทียม */}
+          <BaseLayer name="🛰️ แผนที่ดาวเทียม">
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri"
+            />
+          </BaseLayer>
+        </LayersControl>
         
         {/* Render Polygons */}
         {showPolygons && polygons.map((polygon, index) => {
@@ -345,7 +456,7 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
           
           // Debug: แสดงข้อมูลชุมชน
           const shortenedName = shortenCommunityName(polygon.name);
-          console.log(`Community ${index + 1}: "${polygon.name}" -> "${shortenedName}" at ${centerPoint[0].toFixed(6)}, ${centerPoint[1].toFixed(6)}`);
+          // console.log(`Community ${index + 1}: "${polygon.name}" -> "${shortenedName}" at ${centerPoint[0].toFixed(6)}, ${centerPoint[1].toFixed(6)}`);
           
           return (
             <div key={uniqueKey}>
@@ -392,27 +503,28 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
                     <div class="community-label" style="
                       background-color: rgba(255, 255, 255, 0.95);
                       border: 2px solid ${polygon.color || '#3b82f6'};
-                      border-radius: 6px;
-                      padding: 4px 8px;
-                      font-size: 11px;
+                      border-radius: 8px;
+                      padding: 6px 12px;
+                      font-size: 13px;
                       font-weight: 700;
                       color: ${polygon.color || '#3b82f6'};
                       white-space: nowrap;
-                      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
                       pointer-events: none;
                       text-align: center;
-                      min-width: 90px;
-                      max-width: 140px;
+                      min-width: 110px;
+                      max-width: 180px;
                       overflow: hidden;
                       text-overflow: ellipsis;
                       z-index: 1000;
                       cursor: help;
+                      user-select: none;
                     " title="${polygon.name}">
                       ${shortenedName}
                     </div>
                   `,
-                  iconSize: [120, 30],
-                  iconAnchor: [60, 15]
+                  iconSize: [160, 40],
+                  iconAnchor: [80, 20]
                 })}
               />
             </div>
@@ -477,7 +589,7 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
           <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
             <p className="font-medium text-blue-800">📊 สรุป:</p>
             {polygons.some(p => p.boundaryor) ? (
-              <p className="text-blue-700">ชุมชน: {polygons.length} หมู่บ้าน</p>
+              <p className="text-blue-700">ชุมชน: {polygons.length} ชุมชน</p>
             ) : (
               <p className="text-blue-700">ปัญหา: {polygons.length} พื้นที่</p>
             )}
@@ -546,18 +658,27 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
             <button
               onClick={() => {
                 try {
-                  if (complaintsWithLocation.length > 0 && mapInstance && !mapInstance._removed && mapInstance._loaded) {
+                  if (complaintsWithLocation.length > 0 && mapInstance && !mapInstance._removed && mapInstance._loaded && mapInstance._mapPane) {
                     // ตรวจสอบว่า map พร้อมใช้งาน
-                    setTimeout(() => {
-                      if (mapInstance && !mapInstance._removed) {
-                        const center = getMapCenter();
-                        const zoom = getMapZoom();
-                        mapInstance.setView(center, zoom, {
-                          animate: true,
-                          duration: 1
-                        });
+                    const centerMap = () => {
+                      if (mapInstance && !mapInstance._removed && mapInstance._mapPane && mapInstance._mapPane._leaflet_pos) {
+                        try {
+                          const center = getMapCenter();
+                          const zoom = getMapZoom();
+                          mapInstance.setView(center, zoom, {
+                            animate: true,
+                            duration: 1
+                          });
+                        } catch (error) {
+                          console.warn('Error centering map:', error);
+                        }
+                      } else {
+                        // ถ้า map ยังไม่พร้อม ให้ลองใหม่อีกครั้ง
+                        setTimeout(centerMap, 100);
                       }
-                    }, 100);
+                    };
+                    
+                    setTimeout(centerMap, 100);
                   }
                 } catch (error) {
                   console.warn('Error setting view:', error);

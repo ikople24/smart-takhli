@@ -23,12 +23,12 @@ export const convertGeoJSONToPolygons = (geojsonData) => {
     // แปลงพิกัดจาก [lng, lat] เป็น [lat, lng] สำหรับ Leaflet
     const coordinates = geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
     
-    // สร้างสีตามชื่อหมู่บ้าน
-    const color = generateColorFromName(properties.title || `หมู่${index + 1}`);
+    // สร้างสีตามชื่อชุมชน
+    const color = generateColorFromName(properties.title || `ชุมชน${index + 1}`);
     
     return {
-      id: `geojson-${properties.title || `หมู่${index + 1}`}-${index}`,
-      name: properties.title || `หมู่${index + 1}`,
+      id: `geojson-${properties.title || `ชุมชน${index + 1}`}-${index}`,
+      name: properties.title || `ชุมชน${index + 1}`,
       boundaryor: properties.boundaryor || 'ไม่ระบุ',
       coordinates: coordinates,
       color: color,
@@ -36,12 +36,9 @@ export const convertGeoJSONToPolygons = (geojsonData) => {
       fillOpacity: 0.2,
       weight: 2,
       popup: {
-        title: properties.title || `หมู่${index + 1}`,
-        description: `พื้นที่${properties.boundaryor || 'ไม่ระบุ'}`,
         content: `
           <div class="text-sm">
-            <p><strong>ชื่อหมู่บ้าน:</strong> ${properties.title || `หมู่${index + 1}`}</p>
-            <p><strong>ตำบล:</strong> ${properties.boundaryor || 'ไม่ระบุ'}</p>
+            <p><strong>ชื่อชุมชน:</strong> ${properties.title || `ชุมชน${index + 1}`}</p>
             <p><strong>จำนวนพิกัด:</strong> ${coordinates.length} จุด</p>
           </div>
         `
@@ -55,8 +52,8 @@ export const convertGeoJSONToPolygons = (geojsonData) => {
 };
 
 /**
- * สร้างสีจากชื่อหมู่บ้าน
- * @param {string} name - ชื่อหมู่บ้าน
+ * สร้างสีจากชื่อชุมชน
+ * @param {string} name - ชื่อชุมชน
  * @returns {string} hex color code
  */
 const generateColorFromName = (name) => {
@@ -243,7 +240,7 @@ export const createProblemAreaPolygonsFromGeoJSON = (geojsonData, complaints, op
         description: `พบปัญหา ${complaintCount} รายการในพื้นที่นี้`,
         content: `
           <div class="text-sm">
-            <p><strong>ชื่อหมู่บ้าน:</strong> ${polygon.name}</p>
+            <p><strong>ชื่อชุมชน:</strong> ${polygon.name}</p>
             <p><strong>จำนวนปัญหา:</strong> ${complaintCount} รายการ</p>
             <p><strong>ระดับความรุนแรง:</strong> ${severity === 'high' ? 'สูง' : severity === 'medium' ? 'ปานกลาง' : 'ต่ำ'}</p>
             ${complaintCount > 0 ? `<p><strong>ประเภทหลัก:</strong> ${getTopCategory(complaintsInArea)}</p>` : ''}
