@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   // สร้าง polygons เมื่อ GeoJSON และ complaints พร้อม
   useEffect(() => {
     if (!geojsonLoading && geojsonData && complaints.length > 0) {
-      console.log('Creating polygons from GeoJSON data...');
+      // console.log('Creating polygons from GeoJSON data...');
       
       // สร้าง polygon จากข้อมูล GeoJSON (14 ชุมชน) เท่านั้น
       const communityPolygons = createCommunityPolygonsFromGeoJSON(geojsonData, {
@@ -90,9 +90,9 @@ export default function AdminDashboard() {
       });
       
       setPolygons(communityPolygons);
-      console.log('Polygons created from GeoJSON:', communityPolygons.length, 'communities:', communityPolygons.length);
+      // console.log('Polygons created from GeoJSON:', communityPolygons.length, 'communities:', communityPolygons.length);
     } else if (!geojsonLoading && !geojsonData && complaints.length > 0) {
-      console.log('GeoJSON not available, creating fallback polygons...');
+      // console.log('GeoJSON not available, creating fallback polygons...');
       // Fallback: สร้างเฉพาะ polygon สำหรับพื้นที่ที่มีปัญหามาก (ไม่มีชุมชนตัวอย่าง)
       const problemAreaPolygons = createProblemAreaPolygons(complaints, 3);
       setPolygons(problemAreaPolygons);
@@ -102,16 +102,16 @@ export default function AdminDashboard() {
   const loadGeoJSONData = async () => {
     try {
       setGeojsonLoading(true);
-      console.log('Starting to load GeoJSON data...');
+      // console.log('Starting to load GeoJSON data...');
       const data = await loadGeoJSONFromFile('/takhli.geojson');
       setGeojsonData(data);
-      console.log('GeoJSON data loaded successfully:', data);
-      console.log('Number of communities:', data.features?.length || 0);
+      // console.log('GeoJSON data loaded successfully:', data);
+      // console.log('Number of communities:', data.features?.length || 0);
     } catch (error) {
       console.error('Error loading GeoJSON data:', error);
     } finally {
       setGeojsonLoading(false);
-      console.log('GeoJSON loading finished');
+      // console.log('GeoJSON loading finished');
     }
   };
 
