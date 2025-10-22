@@ -128,7 +128,7 @@ useEffect(() => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-app-id': process.env.NEXT_PUBLIC_APP_ID || 'app_a',
+          'x-app-id': process.env.NEXT_PUBLIC_APP_ID || 'app_b',
         },
         body: JSON.stringify(payload),
       });
