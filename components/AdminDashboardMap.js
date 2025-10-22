@@ -65,8 +65,8 @@ const calculatePolygonCenter = (coordinates) => {
   }
 };
 
-// ฟังก์ชันย่อชื่อชุมชนที่ยาวเกินไป
-const shortenCommunityName = (name, maxLength = 25) => {
+// ฟังก์ชันย่อ–ที่ยาวเกินไป
+const shortenCommunityName = (name, maxLength = 15) => {
   if (!name || name.length <= maxLength) {
     return name;
   }
@@ -90,6 +90,48 @@ const shortenCommunityName = (name, maxLength = 25) => {
   
   // ถ้าไม่มีเครื่องหมาย - หรือไม่สามารถย่อได้ ให้ย่อท้าย
   return name.substring(0, maxLength - 3) + '...';
+};
+
+// ฟังก์ชันปรับตำแหน่งชื่อชุมชนให้ไม่ซ้อนทับ
+const adjustLabelPositions = (polygons) => {
+  const adjustedPolygons = [];
+  const usedPositions = new Set();
+  
+  polygons.forEach((polygon, index) => {
+    const centerPoint = calculatePolygonCenter(polygon.coordinates);
+    if (!centerPoint) return;
+    
+    let adjustedPosition = [...centerPoint];
+    let offset = 0;
+    const maxOffset = 0.01; // ระยะสูงสุดที่ย้ายได้
+    const offsetStep = 0.002; // ขั้นตอนการย้าย
+    
+    // ตรวจสอบว่าตำแหน่งซ้อนทับหรือไม่
+    while (offset <= maxOffset) {
+      const positionKey = `${adjustedPosition[0].toFixed(4)},${adjustedPosition[1].toFixed(4)}`;
+      
+      if (!usedPositions.has(positionKey)) {
+        usedPositions.add(positionKey);
+        break;
+      }
+      
+      // ย้ายตำแหน่งในรูปแบบวงกลม
+      const angle = (index * 45 + offset * 100) * (Math.PI / 180);
+      adjustedPosition = [
+        centerPoint[0] + Math.cos(angle) * offset,
+        centerPoint[1] + Math.sin(angle) * offset
+      ];
+      
+      offset += offsetStep;
+    }
+    
+    adjustedPolygons.push({
+      ...polygon,
+      adjustedCenter: adjustedPosition
+    });
+  });
+  
+  return adjustedPolygons;
 };
 
 // Component to handle map instance
@@ -118,7 +160,10 @@ const MapController = ({ onMapReady }) => {
 const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   const [mapKey, setMapKey] = useState(0);
   const [mapInstance, setMapInstance] = useState(null);
+  const [fullscreenMapInstance, setFullscreenMapInstance] = useState(null);
   const [showPolygons, setShowPolygons] = useState(false);
+  const [showCommunityLabels, setShowCommunityLabels] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { menu, fetchMenu, menuLoading } = useMenuStore();
 
   // Filter complaints with valid location data
@@ -276,10 +321,12 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
 
 
 
-  // Force re-render when complaints change
+  // Force re-render when complaints change (but not for fullscreen)
   useEffect(() => {
-    setMapKey(prev => prev + 1);
-  }, [complaints]);
+    if (!isFullscreen) {
+      setMapKey(prev => prev + 1);
+    }
+  }, [complaints, isFullscreen]);
 
   // Show polygons when data is loaded
   useEffect(() => {
@@ -312,6 +359,87 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
       setTimeout(adjustMapView, 1000);
     }
   }, [polygons, mapInstance, getMapCenter, getMapZoom]);
+
+  // Update fullscreen map when polygons change (but don't force center)
+  useEffect(() => {
+    if (isFullscreen && fullscreenMapInstance && polygons && polygons.length > 0) {
+      // ไม่บังคับให้แผนที่เต็มจอกลับไปตำแหน่งเดิม
+      // ให้ผู้ใช้สามารถเลื่อนและซูมได้อย่างอิสระ
+      console.log('Fullscreen map polygons updated, but keeping current view');
+    }
+  }, [polygons, isFullscreen, fullscreenMapInstance]);
+
+  // Handle fullscreen toggle
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      // กำลังจะเข้าสู่โหมดเต็มจอ - บันทึกตำแหน่งปัจจุบันของแผนที่ปกติ
+      if (mapInstance && !mapInstance._removed && mapInstance._loaded) {
+        const currentCenter = mapInstance.getCenter();
+        const currentZoom = mapInstance.getZoom();
+        // เก็บตำแหน่งปัจจุบันไว้ใน localStorage
+        localStorage.setItem('mapCenter', JSON.stringify([currentCenter.lat, currentCenter.lng]));
+        localStorage.setItem('mapZoom', currentZoom.toString());
+      }
+    }
+    setIsFullscreen(!isFullscreen);
+  };
+
+  // Handle escape key to exit fullscreen
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
+    if (isFullscreen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isFullscreen]);
+
+  // Handle fullscreen map ready
+  const handleFullscreenMapReady = (map) => {
+    const checkMapReady = () => {
+      if (map && !map._removed && map._loaded && map._mapPane && map._mapPane._leaflet_pos) {
+        setFullscreenMapInstance(map);
+        
+        // ใช้ตำแหน่งที่บันทึกไว้ หรือใช้ตำแหน่งเริ่มต้น
+        const savedCenter = localStorage.getItem('mapCenter');
+        const savedZoom = localStorage.getItem('mapZoom');
+        
+        if (savedCenter && savedZoom) {
+          try {
+            const center = JSON.parse(savedCenter);
+            const zoom = parseInt(savedZoom);
+            map.setView(center, zoom, { animate: false });
+          } catch (error) {
+            console.warn('Error loading saved map position:', error);
+            // ใช้ตำแหน่งเริ่มต้น
+            const center = getMapCenter();
+            const zoom = getMapZoom();
+            map.setView(center, zoom, { animate: false });
+          }
+        } else {
+          // ใช้ตำแหน่งเริ่มต้น
+          const center = getMapCenter();
+          const zoom = getMapZoom();
+          map.setView(center, zoom, { animate: false });
+        }
+      } else {
+        setTimeout(checkMapReady, 100);
+      }
+    };
+    
+    setTimeout(checkMapReady, 200);
+  };
 
 
 
@@ -396,14 +524,157 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   }
 
   return (
-    <div className="relative">
-      <MapContainer
-        key={mapKey}
-        center={getMapCenter()}
-        zoom={getMapZoom()}
-        className="h-[441px] w-full rounded-lg"
-        style={{ zIndex: 1 }}
-      >
+    <>
+      {/* Fullscreen Map */}
+      {isFullscreen && (
+        <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+          <div className="relative w-full h-full">
+            <button
+              onClick={toggleFullscreen}
+              className="absolute top-4 right-4 z-10 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+            >
+              <span>✕</span>
+              <span>ปิดเต็มจอ</span>
+            </button>
+            <MapContainer
+              key={`fullscreen-${mapKey}`}
+              center={getMapCenter()}
+              zoom={getMapZoom()}
+              className="w-full h-full"
+              style={{ zIndex: 1 }}
+            >
+              <MapController onMapReady={handleFullscreenMapReady} />
+              <LayersControl
+                position="bottomleft"
+                className="custom-layers-control"
+              >
+                <BaseLayer checked name="🗺️ แผนที่ถนน">
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="&copy; OpenStreetMap contributors"
+                  />
+                </BaseLayer>
+                <BaseLayer name="🛰️ แผนที่ดาวเทียม">
+                  <TileLayer
+                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    attribution="Tiles &copy; Esri"
+                  />
+                </BaseLayer>
+              </LayersControl>
+              
+              {/* Render Polygons for Fullscreen */}
+              {showPolygons && (() => {
+                const adjustedPolygons = adjustLabelPositions(polygons);
+                return adjustedPolygons.map((polygon, index) => {
+                  const uniqueKey = `fullscreen-polygon-${polygon.id || polygon.name || `index-${index}`}-${index}`;
+                  const centerPoint = calculatePolygonCenter(polygon.coordinates);
+                  
+                  if (!centerPoint || isNaN(centerPoint[0]) || isNaN(centerPoint[1])) {
+                    return null;
+                  }
+                  
+                  const labelPosition = polygon.adjustedCenter || centerPoint;
+                  const shortenedName = shortenCommunityName(polygon.name);
+                  
+                  return (
+                    <div key={uniqueKey}>
+                      <Polygon
+                        positions={polygon.coordinates}
+                        pathOptions={{
+                          color: polygon.color || '#3b82f6',
+                          fillColor: polygon.fillColor || '#3b82f6',
+                          fillOpacity: polygon.fillOpacity || 0.2,
+                          weight: polygon.weight || 2
+                        }}
+                      />
+                      
+                      {showCommunityLabels && (
+                        <Marker
+                          position={labelPosition}
+                          icon={L.divIcon({
+                            className: 'community-label-marker',
+                            html: `
+                              <div class="community-label" style="
+                                background-color: rgba(255, 255, 255, 0.95);
+                                border: 2px solid ${polygon.color || '#3b82f6'};
+                                border-radius: 6px;
+                                padding: 4px 8px;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: ${polygon.color || '#3b82f6'};
+                                white-space: nowrap;
+                                box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+                                pointer-events: none;
+                                text-align: center;
+                                min-width: 80px;
+                                max-width: 120px;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                z-index: 1000;
+                                cursor: help;
+                                user-select: none;
+                                line-height: 1.2;
+                              " title="${polygon.name}">
+                                ${shortenedName}
+                              </div>
+                            `,
+                            iconSize: [120, 30],
+                            iconAnchor: [60, 15]
+                          })}
+                        />
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+              
+              {complaintsWithLocation.map((complaint, index) => (
+                <Marker
+                  key={`fullscreen-marker-${complaint._id || complaint.id || index}`}
+                  position={[complaint.location.lat, complaint.location.lng]}
+                  icon={createCustomIcon(complaint)}
+                >
+                  <Popup>
+                    <div className="popup-content">
+                      <h3 className="popup-title">
+                        {complaint.category || 'ไม่ระบุประเภท'}
+                      </h3>
+                      <p className="popup-text">
+                        <strong>รายละเอียด:</strong> {complaint.detail?.substring(0, 100) || 'ไม่มีรายละเอียด'}...
+                      </p>
+                      <p className="popup-text">
+                        <strong>ผู้แจ้ง:</strong> {complaint.fullName || 'ไม่ระบุ'}
+                      </p>
+                      <p className="popup-text">
+                        <strong>ชุมชน:</strong> {complaint.community || 'ไม่ระบุ'}
+                      </p>
+                      <p className="popup-text">
+                        <strong>สถานะ:</strong> 
+                        <span className={`status-badge status-${complaint.status}`}>
+                          {getStatusText(complaint.status)}
+                        </span>
+                      </p>
+                      <p className="popup-text">
+                        <strong>วันที่:</strong> {new Date(complaint.timestamp || complaint.createdAt).toLocaleDateString('th-TH')}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Normal Map */}
+      <div className="relative">
+        <MapContainer
+          key={mapKey}
+          center={getMapCenter()}
+          zoom={getMapZoom()}
+          className="h-[441px] w-full rounded-lg"
+          style={{ zIndex: 1 }}
+        >
         <MapController onMapReady={handleMapReady} />
         <LayersControl
           position="bottomleft"
@@ -441,95 +712,103 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
         </LayersControl>
         
         {/* Render Polygons */}
-        {showPolygons && polygons.map((polygon, index) => {
-          // สร้าง unique key ที่ปลอดภัย
-          const uniqueKey = `polygon-${polygon.id || polygon.name || `index-${index}`}-${index}`;
+        {showPolygons && (() => {
+          // ปรับตำแหน่งชื่อชุมชนให้ไม่ซ้อนทับ
+          const adjustedPolygons = adjustLabelPositions(polygons);
           
-          // คำนวณจุดศูนย์กลางของ polygon สำหรับแสดงชื่อ
-          const centerPoint = calculatePolygonCenter(polygon.coordinates);
-          
-          // ตรวจสอบว่าจุดศูนย์กลางถูกต้อง
-          if (!centerPoint || isNaN(centerPoint[0]) || isNaN(centerPoint[1])) {
-            console.warn(`Invalid center point for polygon ${polygon.name}:`, centerPoint);
-            return null;
-          }
-          
-          // Debug: แสดงข้อมูลชุมชน
-          const shortenedName = shortenCommunityName(polygon.name);
-          // console.log(`Community ${index + 1}: "${polygon.name}" -> "${shortenedName}" at ${centerPoint[0].toFixed(6)}, ${centerPoint[1].toFixed(6)}`);
-          
-          return (
-            <div key={uniqueKey}>
-              <Polygon
-                positions={polygon.coordinates}
-                pathOptions={{
-                  color: polygon.color || '#3b82f6',
-                  fillColor: polygon.fillColor || '#3b82f6',
-                  fillOpacity: polygon.fillOpacity || 0.2,
-                  weight: polygon.weight || 2
-                }}
-                eventHandlers={{
-                  click: () => {
-                    if (polygon.onClick) {
-                      polygon.onClick(polygon);
+          return adjustedPolygons.map((polygon, index) => {
+            // สร้าง unique key ที่ปลอดภัย
+            const uniqueKey = `polygon-${polygon.id || polygon.name || `index-${index}`}-${index}`;
+            
+            // คำนวณจุดศูนย์กลางของ polygon สำหรับแสดงชื่อ
+            const centerPoint = calculatePolygonCenter(polygon.coordinates);
+            
+            // ตรวจสอบว่าจุดศูนย์กลางถูกต้อง
+            if (!centerPoint || isNaN(centerPoint[0]) || isNaN(centerPoint[1])) {
+              console.warn(`Invalid center point for polygon ${polygon.name}:`, centerPoint);
+              return null;
+            }
+            
+            // ใช้ตำแหน่งที่ปรับแล้วสำหรับชื่อชุมชน
+            const labelPosition = polygon.adjustedCenter || centerPoint;
+            const shortenedName = shortenCommunityName(polygon.name);
+            
+            return (
+              <div key={uniqueKey}>
+                <Polygon
+                  positions={polygon.coordinates}
+                  pathOptions={{
+                    color: polygon.color || '#3b82f6',
+                    fillColor: polygon.fillColor || '#3b82f6',
+                    fillOpacity: polygon.fillOpacity || 0.2,
+                    weight: polygon.weight || 2
+                  }}
+                  eventHandlers={{
+                    click: () => {
+                      if (polygon.onClick) {
+                        polygon.onClick(polygon);
+                      }
                     }
-                  }
-                }}
-              >
-                            {polygon.popup && (
-              <Popup>
-                <div className="popup-content">
-                  <h3 className="popup-title">{polygon.popup.title || 'พื้นที่'}</h3>
-                  {polygon.popup.description && (
-                    <p className="popup-text">{polygon.popup.description}</p>
-                  )}
-                  {polygon.popup.content && (
-                    <div 
-                      className="popup-text"
-                      dangerouslySetInnerHTML={{ __html: polygon.popup.content }}
-                    />
-                  )}
-                </div>
-              </Popup>
-            )}
-              </Polygon>
-              
-              {/* แสดงชื่อชุมชนที่จุดศูนย์กลางของ polygon */}
-              <Marker
-                position={centerPoint}
-                icon={L.divIcon({
-                  className: 'community-label-marker',
-                  html: `
-                    <div class="community-label" style="
-                      background-color: rgba(255, 255, 255, 0.95);
-                      border: 2px solid ${polygon.color || '#3b82f6'};
-                      border-radius: 8px;
-                      padding: 6px 12px;
-                      font-size: 13px;
-                      font-weight: 700;
-                      color: ${polygon.color || '#3b82f6'};
-                      white-space: nowrap;
-                      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-                      pointer-events: none;
-                      text-align: center;
-                      min-width: 110px;
-                      max-width: 180px;
-                      overflow: hidden;
-                      text-overflow: ellipsis;
-                      z-index: 1000;
-                      cursor: help;
-                      user-select: none;
-                    " title="${polygon.name}">
-                      ${shortenedName}
-                    </div>
-                  `,
-                  iconSize: [160, 40],
-                  iconAnchor: [80, 20]
-                })}
-              />
-            </div>
-          );
-        })}
+                  }}
+                >
+                              {polygon.popup && (
+                <Popup>
+                  <div className="popup-content">
+                    <h3 className="popup-title">{polygon.popup.title || 'พื้นที่'}</h3>
+                    {polygon.popup.description && (
+                      <p className="popup-text">{polygon.popup.description}</p>
+                    )}
+                    {polygon.popup.content && (
+                      <div 
+                        className="popup-text"
+                        dangerouslySetInnerHTML={{ __html: polygon.popup.content }}
+                      />
+                    )}
+                  </div>
+                </Popup>
+              )}
+                </Polygon>
+                
+                {/* แสดงชื่อชุมชนที่ตำแหน่งที่ปรับแล้ว */}
+                {showCommunityLabels && (
+                  <Marker
+                    position={labelPosition}
+                    icon={L.divIcon({
+                      className: 'community-label-marker',
+                      html: `
+                        <div class="community-label" style="
+                          background-color: rgba(255, 255, 255, 0.95);
+                          border: 2px solid ${polygon.color || '#3b82f6'};
+                          border-radius: 6px;
+                          padding: 4px 8px;
+                          font-size: 11px;
+                          font-weight: 600;
+                          color: ${polygon.color || '#3b82f6'};
+                          white-space: nowrap;
+                          box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+                          pointer-events: none;
+                          text-align: center;
+                          min-width: 80px;
+                          max-width: 120px;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          z-index: 1000;
+                          cursor: help;
+                          user-select: none;
+                          line-height: 1.2;
+                        " title="${polygon.name}">
+                          ${shortenedName}
+                        </div>
+                      `,
+                      iconSize: [120, 30],
+                      iconAnchor: [60, 15]
+                    })}
+                  />
+                )}
+              </div>
+            );
+          });
+        })()}
         
         {complaintsWithLocation.map((complaint, index) => (
           <Marker
@@ -582,7 +861,17 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
       
       {/* Legend */}
       <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
-        <h4 className="text-sm font-semibold mb-3">คำอธิบายแผนที่</h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold">คำอธิบายแผนที่</h4>
+          <button
+            onClick={toggleFullscreen}
+            className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors flex items-center gap-1"
+            title="ขยายเต็มจอ"
+          >
+            <span>⛶</span>
+            <span>เต็มจอ</span>
+          </button>
+        </div>
         
         {/* สรุปข้อมูล */}
         {polygons.length > 0 && (
@@ -594,7 +883,7 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
               <p className="text-blue-700">ปัญหา: {polygons.length} พื้นที่</p>
             )}
             <p className="text-blue-700">หมุด: {complaintsWithLocation.length} จุด</p>
-            <p className="text-blue-700">แสดงชื่อ: {polygons.length} ชุมชน</p>
+            <p className="text-blue-700">แสดงชื่อ: {showCommunityLabels ? polygons.length : 0} ชุมชน</p>
           </div>
         )}
         
@@ -648,6 +937,16 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
                     (polygons.some(p => p.boundaryor) ? '🔼 แสดงชุมชน' : '🔼 แสดงปัญหา')
                   }
                 </button>
+                <button
+                  onClick={() => setShowCommunityLabels(!showCommunityLabels)}
+                  className={`w-full px-2 py-1 text-xs rounded transition-colors ${
+                    showCommunityLabels
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                >
+                  {showCommunityLabels ? '🔽 ซ่อนชื่อชุมชน' : '🔼 แสดงชื่อชุมชน'}
+                </button>
                 <div className="text-xs text-gray-500 text-center">
                   คลิกเพื่อดูรายละเอียด
                 </div>
@@ -691,7 +990,8 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

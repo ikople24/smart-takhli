@@ -138,6 +138,7 @@ export default function MapEducationPoints({ data }) {
     'ไม่ระบุ': <FaMapMarkerAlt />
   };
 
+
   return (
     <div className="space-y-4">
       {/* ตัวกรองระดับการศึกษา */}
@@ -192,6 +193,7 @@ export default function MapEducationPoints({ data }) {
             attribution="© OpenStreetMap contributors"
           />
           
+          {/* แสดงจุดข้อมูลการศึกษา */}
           {filteredData.map((item, i) => {
             if (!item.location || !item.location.lat || !item.location.lng) return null;
             
