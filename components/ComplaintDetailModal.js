@@ -97,6 +97,18 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
     return url.startsWith('http') || url.startsWith('/');
   };
 
+  // ฟังก์ชันซ่อนนามสกุลของเจ้าหน้าที่
+  const hideLastName = (fullName) => {
+    if (!fullName) return 'ไม่ระบุ';
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length <= 1) {
+      // ถ้ามีแค่ชื่อเดียว ให้แสดงชื่อเดิม
+      return fullName;
+    }
+    // แสดงชื่อตัว + xxxxxx แทนนามสกุล
+    return nameParts.slice(0, -1).join(' ') + ' xxxxxx';
+  };
+
   return (
     <dialog className="modal modal-open">
       <div className="modal-box max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
@@ -234,7 +246,7 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-gray-600">👤 ชื่อ:</span>
-                          <span className="text-sm font-medium">{assignedUser.name || 'ไม่ระบุ'}</span>
+                          <span className="text-sm font-medium">{hideLastName(assignedUser.name) || 'ไม่ระบุ'}</span>
                         </div>
                         {assignedUser.position && (
                           <div className="flex items-center gap-2">
