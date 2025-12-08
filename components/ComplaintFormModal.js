@@ -38,6 +38,7 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [formErrors, setFormErrors] = useState({});
   const reporterValidRef = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
 
@@ -48,8 +49,16 @@ useEffect(() => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ป้องกันการกดปุ่มซ้ำ
-    if (isSubmitting) {
+    // ป้องกันการกดปุ่มซ้ำ หรือขณะอัปโหลดรูปภาพ
+    if (isSubmitting || isUploadingImages) {
+      if (isUploadingImages) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณารอสักครู่',
+          text: 'กำลังอัปโหลดรูปภาพอยู่ กรุณารอจนกว่าจะเสร็จสิ้น',
+          confirmButtonText: 'ตกลง',
+        });
+      }
       return;
     }
 
@@ -243,7 +252,10 @@ useEffect(() => {
             </div>
           </div>
           <p className="font-semibold text-sm text-gray-700">3.แนบรูปภาพ 📁 เลือกรูปภาพ (ไม่เกิน 3 ภาพ)</p>
-          <ImageUploads onChange={(urls) => setImageUrls(urls)} />
+          <ImageUploads 
+            onChange={(urls) => setImageUrls(urls)} 
+            onUploadingChange={setIsUploadingImages}
+          />
           <ReporterInput
             prefix={prefix}
             setPrefix={setPrefix}
@@ -267,12 +279,17 @@ useEffect(() => {
             type="button"
             onClick={handleClearForm}
             className="btn btn-outline btn-warning"
+            disabled={isSubmitting || isUploadingImages}
           >
             ล้างฟอร์ม
           </button>
-          <button type="submit" className="btn btn-info" disabled={isSubmitting}>
-            {isSubmitting && <span className="loading loading-infinity loading-xs mr-2" />}
-            ส่งเรื่อง
+          <button 
+            type="submit" 
+            className="btn btn-info" 
+            disabled={isSubmitting || isUploadingImages}
+          >
+            {(isSubmitting || isUploadingImages) && <span className="loading loading-infinity loading-xs mr-2" />}
+            {isUploadingImages ? 'กำลังอัปโหลดรูป...' : 'ส่งเรื่อง'}
           </button>
         </div>
         </form>

@@ -1,92 +1,108 @@
 import Image from "next/image";
-import { useState } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Loader2 } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 
-const ImageUploads = ({ onChange }) => {
+const ImageUploads = ({ onChange, onUploadingChange }) => {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const deleteFromCloudinary = async (url) => {
-    try {
-      await fetch("/api/delete-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url }),
-      });
-    } catch (err) {
-      console.error("Failed to delete image:", err);
-    }
-  };
+  // แจ้ง parent component เมื่อสถานะการอัปโหลดเปลี่ยน
+  useEffect(() => {
+    onUploadingChange?.(isUploading);
+  }, [isUploading, onUploadingChange]);
 
   const handleFiles = async (e) => {
     const selectedFiles = Array.from(e.target.files);
-    if (previews.length >= 3) {
-      const confirmReplace = window.confirm("คุณอัปโหลดครบ 3 ภาพแล้ว ต้องการแทนที่ภาพแรกหรือไม่?");
-      if (confirmReplace) {
-        const file = selectedFiles[0];
+    if (selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      if (previews.length >= 3) {
+        const confirmReplace = window.confirm("คุณอัปโหลดครบ 3 ภาพแล้ว ต้องการแทนที่ภาพแรกหรือไม่?");
+        if (confirmReplace) {
+          const file = selectedFiles[0];
+          try {
+            const cloudUrl = await uploadToCloudinary(file);
+            const updatedPreviews = [...previews];
+            updatedPreviews[0] = cloudUrl;
+            setPreviews(updatedPreviews);
+            onChange?.(updatedPreviews);
+          } catch (err) {
+            console.error("Upload error:", err);
+          }
+        }
+        return;
+      }
+
+      const remainingSlots = 3 - previews.length;
+      const filesToAdd = selectedFiles.slice(0, remainingSlots);
+      const newPreviews = [...previews];
+      const newFiles = [...files];
+
+      for (const file of filesToAdd) {
         try {
           const cloudUrl = await uploadToCloudinary(file);
-          const updatedPreviews = [...previews];
-          const removedUrl = updatedPreviews[0];
-          updatedPreviews[0] = cloudUrl;
-          setPreviews(updatedPreviews);
-          onChange?.(updatedPreviews);
-          deleteFromCloudinary(removedUrl);
+          if (cloudUrl) {
+            newPreviews.push(cloudUrl);
+            newFiles.push(file);
+          }
         } catch (err) {
           console.error("Upload error:", err);
         }
       }
-      return;
+
+      setPreviews(newPreviews);
+      setFiles(newFiles);
+      onChange?.(newPreviews);
+    } finally {
+      setIsUploading(false);
+      // Reset input เพื่อให้สามารถเลือกไฟล์เดิมซ้ำได้
+      e.target.value = '';
     }
-
-    const remainingSlots = 3 - files.length;
-    const filesToAdd = selectedFiles.slice(0, remainingSlots);
-    const newPreviews = [...previews];
-    const newFiles = [...files];
-
-    for (const file of filesToAdd) {
-      try {
-        const cloudUrl = await uploadToCloudinary(file);
-        newPreviews.push(cloudUrl);
-      } catch (err) {
-        console.error("Upload error:", err);
-      }
-    }
-
-    setPreviews(newPreviews);
-    setFiles([...newFiles, ...filesToAdd]);
-    onChange?.(newPreviews);
   };
 
   const removeImage = (index) => {
     const newPreviews = [...previews];
-    const removedUrl = newPreviews[index];
-
     newPreviews.splice(index, 1);
-    setPreviews(newPreviews);
-    onChange?.(newPreviews);
+    
+    const newFiles = [...files];
+    newFiles.splice(index, 1);
 
-    deleteFromCloudinary(removedUrl);
+    setPreviews(newPreviews);
+    setFiles(newFiles);
+    onChange?.(newPreviews);
   };
 
   return (
     <div className="form-control">
       <div className="w-full flex items-center rounded-md border border-blue-200 bg-blue-50 px-4 py-2">
-        <label className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-none cursor-pointer">
-          เลือกรูป
+        <label className={`btn btn-sm bg-blue-600 hover:bg-blue-700 text-white border-none ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+          {isUploading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              กำลังอัปโหลด...
+            </>
+          ) : (
+            'เลือกรูป'
+          )}
           <input
             type="file"
             accept="image/*"
             multiple
             onChange={handleFiles}
             className="hidden"
+            disabled={isUploading}
           />
         </label>
         <span className="ml-4 text-sm text-gray-600">
-          {previews.length > 0 ? `${previews.length} ไฟล์ที่อัปโหลดแล้ว` : "ยังไม่ได้แนบรูป"}
+          {isUploading 
+            ? "กรุณารอสักครู่..." 
+            : previews.length > 0 
+              ? `${previews.length} ไฟล์ที่อัปโหลดแล้ว` 
+              : "ยังไม่ได้แนบรูป"}
         </span>
       </div>
       <p className="text-xs text-gray-500 mt-1">
@@ -107,7 +123,8 @@ const ImageUploads = ({ onChange }) => {
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 transition"
+                disabled={isUploading}
+                className={`absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600 transition ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="ลบภาพ"
               >
                 <X size={14} />
