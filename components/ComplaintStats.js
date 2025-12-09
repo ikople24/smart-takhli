@@ -9,10 +9,16 @@ export default function ComplaintStats({ complaints, assignments }) {
   });
 
   useEffect(() => {
-    if (!complaints || !assignments) return;
+    if (!complaints) return;
+
+    // รวบรวม complaintIds ที่ถูก assign แล้ว
+    const assignedComplaintIds = new Set(
+      (assignments || []).map(a => a.complaintId)
+    );
 
     const total = complaints.length;
-    const pending = complaints.filter(c => c.status === "รอการมอบหมาย").length;
+    // นับเรื่องที่ยังไม่มีการกดรับงาน (ไม่มี assignment)
+    const pending = complaints.filter(c => !assignedComplaintIds.has(c._id)).length;
     const inProgress = complaints.filter(c => c.status === "อยู่ระหว่างดำเนินการ").length;
     const completed = complaints.filter(c => c.status === "ดำเนินการเสร็จสิ้น").length;
 

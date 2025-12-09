@@ -50,22 +50,26 @@ export default function ManageComplaintsPage() {
       const data = await response.json();
       setAssignments(data);
       
-      // Fetch assigned users info
-      const usersData = {};
-      for (const assignment of data) {
-        if (assignment.userId) {
-          try {
-            const userResponse = await fetch(`/api/users/get-by-id?userId=${assignment.userId}`);
-            const userData = await userResponse.json();
-            if (userData.success && userData.user) {
-              usersData[assignment.userId] = userData.user;
-            }
-          } catch (error) {
-            console.error("Error fetching user:", error);
-          }
+      // รวบรวม userIds ที่ไม่ซ้ำกัน
+      const uniqueUserIds = [...new Set(
+        data
+          .filter(assignment => assignment.userId)
+          .map(assignment => assignment.userId)
+      )];
+      
+      if (uniqueUserIds.length > 0) {
+        // ดึงข้อมูลผู้ใช้ทั้งหมดในครั้งเดียว (batch API)
+        const usersResponse = await fetch("/api/users/get-by-ids", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds: uniqueUserIds }),
+        });
+        const usersData = await usersResponse.json();
+        
+        if (usersData.success) {
+          setAssignedUsers(usersData.users);
         }
       }
-      setAssignedUsers(usersData);
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
@@ -101,6 +105,9 @@ export default function ManageComplaintsPage() {
     checkUser();
   }, [userId, getToken]);
 
+  // รวบรวม complaintIds ที่ถูก assign แล้ว สำหรับใช้ในการกรอง
+  const assignedComplaintIds = new Set(assignments.map(a => a.complaintId));
+
   // Enhanced filtering and search logic
   const filteredComplaints = complaints
     .filter((complaint) => {
@@ -108,7 +115,17 @@ export default function ManageComplaintsPage() {
                            complaint.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            complaint.fullName?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
+      // กรณี "รอการมอบหมาย" ให้เช็คจาก assignment แทน status
+      let matchesStatus = false;
+      if (statusFilter === "all") {
+        matchesStatus = true;
+      } else if (statusFilter === "รอการมอบหมาย") {
+        // เรื่องที่ยังไม่มีใครกดรับงาน
+        matchesStatus = !assignedComplaintIds.has(complaint._id);
+      } else {
+        matchesStatus = complaint.status === statusFilter;
+      }
+      
       const matchesCategory = categoryFilter === "all" || complaint.category === categoryFilter;
       
       return matchesSearch && matchesStatus && matchesCategory;
