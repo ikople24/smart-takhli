@@ -15,6 +15,7 @@ const CompletedCard = ({
   afterImage,
   problems,
   updatedAt,
+  assignment: propAssignment, // รับ assignment จาก prop แทนการ fetch เอง
 }) => {
   const { menu, fetchMenu } = useMenuStore();
   useEffect(() => {
@@ -23,7 +24,14 @@ const CompletedCard = ({
   const { fetchProblemOptions } = useProblemOptionStore();
   const { problemOptions } = useProblemOptionStore();
   const [activeIcons, setActiveIcons] = useState([]);
-  const [assignment, setAssignment] = useState(null);
+  const [assignment, setAssignment] = useState(propAssignment || null);
+
+  // อัปเดต assignment เมื่อ prop เปลี่ยน
+  useEffect(() => {
+    if (propAssignment) {
+      setAssignment(propAssignment);
+    }
+  }, [propAssignment]);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,7 +58,10 @@ const CompletedCard = ({
     }
   }, [problems, problemOptions]);
 
+  // Fetch assignment เฉพาะเมื่อไม่มี prop assignment (fallback สำหรับ backward compatibility)
   useEffect(() => {
+    if (propAssignment) return; // ถ้ามี prop แล้วไม่ต้อง fetch
+    
     let isMounted = true;
     const fetchAssignment = async () => {
       try {
@@ -69,7 +80,7 @@ const CompletedCard = ({
     return () => {
       isMounted = false;
     };
-  }, [complaintMongoId]);
+  }, [complaintMongoId, propAssignment]);
 
   // Get menu icon for the category
   const menuIcon = menu?.find((item) => item.Prob_name === title)?.Prob_pic;
