@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Circle } from "lucide-react";
 import Papa from "papaparse";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 
 // URL สำหรับข้อมูล realtime
 const CSV_URL =
@@ -195,6 +196,51 @@ const Pm25Dashboard = () => {
       .reverse();
     
     return processed;
+  }, [dailyData]);
+
+  // คำนวณข้อมูลรายเดือน 12 เดือน (เรียงจากเดือนปัจจุบันย้อนกลับไป)
+  const monthlyAverages = useMemo(() => {
+    if (!dailyData || dailyData.length === 0) return [];
+    
+    const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    
+    // จัดกลุ่มข้อมูลตามเดือน
+    const groupedByMonth = {};
+    
+    dailyData
+      .filter(row => row?.date_pm_sensor && row?.pm25_avg)
+      .forEach(row => {
+        const parts = row.date_pm_sensor.split('/');
+        if (parts.length === 3) {
+          const month = parseInt(parts[1]);
+          const year = parseInt(parts[2]);
+          const key = `${year}-${month.toString().padStart(2, '0')}`;
+          const avg = parseFloat(row.pm25_avg);
+          
+          if (!isNaN(avg) && avg > 0) {
+            if (!groupedByMonth[key]) {
+              groupedByMonth[key] = { values: [], month, year };
+            }
+            groupedByMonth[key].values.push(avg);
+          }
+        }
+      });
+    
+    // คำนวณค่าเฉลี่ยรายเดือน และเรียงจากล่าสุด(ซ้าย)ไปเก่าสุด(ขวา)
+    const monthlyData = Object.entries(groupedByMonth)
+      .map(([key, data]) => ({
+        key,
+        month: data.month,
+        year: data.year,
+        name: monthNames[data.month - 1],
+        fullName: `${monthNames[data.month - 1]} ${data.year + 543}`, // พ.ศ.
+        avg: Math.round(data.values.reduce((a, b) => a + b, 0) / data.values.length),
+        count: data.values.length,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key)) // เรียงจากล่าสุดไปเก่าสุด
+      .slice(0, 12); // เอา 12 เดือนล่าสุด (ธ.ค. อยู่ซ้าย, ม.ค. อยู่ขวา)
+    
+    return monthlyData;
   }, [dailyData]);
 
   const getLatestEntry = (dataArr) => {
@@ -410,6 +456,142 @@ const Pm25Dashboard = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* กราฟรายเดือน 12 เดือน */}
+                  {monthlyAverages.length > 0 && (
+                    <div className="mt-4 pt-3 border-t">
+                      <h5 className="font-semibold text-gray-700 mb-3 text-xs">
+                        📈 สรุปรายเดือน ({monthlyAverages.length} เดือน)
+                      </h5>
+                      
+                      <div className="h-[150px] w-full">
+                        {(() => {
+                          // สร้าง gradient แบบแบ่งช่วงตามแต่ละเดือน
+                          const totalMonths = monthlyAverages.length;
+                          const colorStops = monthlyAverages.map((month, index) => {
+                            const info = getPm25LevelInfo(month.avg);
+                            const offset = totalMonths > 1 ? (index / (totalMonths - 1)) * 100 : 0;
+                            return { offset, color: info.textColor };
+                          });
+                          
+                          return (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={monthlyAverages} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                <defs>
+                                  {/* Gradient แนวนอนสำหรับเส้น */}
+                                  <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+                                    {colorStops.map((stop, i) => (
+                                      <stop 
+                                        key={i} 
+                                        offset={`${stop.offset}%`} 
+                                        stopColor={stop.color} 
+                                      />
+                                    ))}
+                                  </linearGradient>
+                                  {/* Gradient แนวตั้งสำหรับ fill (ใช้สีผสมจากทุกเดือน) */}
+                                  <linearGradient id="areaGradient" x1="0" y1="0" x2="1" y2="0">
+                                    {colorStops.map((stop, i) => (
+                                      <stop 
+                                        key={i} 
+                                        offset={`${stop.offset}%`} 
+                                        stopColor={stop.color}
+                                        stopOpacity={0.25}
+                                      />
+                                    ))}
+                                  </linearGradient>
+                                </defs>
+                                <XAxis 
+                                  dataKey="name" 
+                                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                  axisLine={{ stroke: '#e5e7eb' }}
+                                  tickLine={false}
+                                />
+                                <YAxis 
+                                  tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                  axisLine={false}
+                                  tickLine={false}
+                                  domain={[0, 'auto']}
+                                />
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    backgroundColor: 'white', 
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                                  }}
+                                  formatter={(value) => [`${value} µg/m³`, 'PM2.5']}
+                                  labelFormatter={(label, payload) => {
+                                    if (payload && payload[0]) {
+                                      return `เดือน ${payload[0].payload.fullName || label}`;
+                                    }
+                                    return `เดือน ${label}`;
+                                  }}
+                                />
+                                <Area 
+                                  type="monotone" 
+                                  dataKey="avg" 
+                                  stroke="url(#lineGradient)"
+                                  strokeWidth={2.5}
+                                  fill="url(#areaGradient)"
+                                  dot={(props) => {
+                                    const { cx, cy, payload } = props;
+                                    const info = getPm25LevelInfo(payload.avg);
+                                    return (
+                                      <circle 
+                                        cx={cx} 
+                                        cy={cy} 
+                                        r={4} 
+                                        fill={info.textColor}
+                                        stroke="#fff"
+                                        strokeWidth={1.5}
+                                      />
+                                    );
+                                  }}
+                                  activeDot={(props) => {
+                                    const { cx, cy, payload } = props;
+                                    const info = getPm25LevelInfo(payload.avg);
+                                    return (
+                                      <circle 
+                                        cx={cx} 
+                                        cy={cy} 
+                                        r={6} 
+                                        fill={info.textColor}
+                                        stroke="#fff"
+                                        strokeWidth={2}
+                                      />
+                                    );
+                                  }}
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          );
+                        })()}
+                      </div>
+
+                      {/* สรุปสถิติรายเดือน */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs mt-2">
+                        <div className="bg-green-50 p-1.5 rounded">
+                          <p className="text-gray-500 text-[10px]">ต่ำสุด</p>
+                          <p className="font-bold text-green-600">
+                            {Math.min(...monthlyAverages.map(d => d.avg))}
+                          </p>
+                        </div>
+                        <div className="bg-yellow-50 p-1.5 rounded">
+                          <p className="text-gray-500 text-[10px]">เฉลี่ย</p>
+                          <p className="font-bold text-yellow-600">
+                            {Math.round(monthlyAverages.reduce((a, b) => a + b.avg, 0) / monthlyAverages.length)}
+                          </p>
+                        </div>
+                        <div className="bg-red-50 p-1.5 rounded">
+                          <p className="text-gray-500 text-[10px]">สูงสุด</p>
+                          <p className="font-bold text-red-600">
+                            {Math.max(...monthlyAverages.map(d => d.avg))}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
