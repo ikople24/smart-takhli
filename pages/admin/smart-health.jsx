@@ -12,6 +12,7 @@ import DashboardTabs from "@/components/sm-health/DashboardTabs";
 import RequestTable from "@/components/sm-health/RequestTable";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
+import ElderlyDataTable from "@/components/sm-health/ElderlyDataTable";
 import BorrowModal from "@/components/sm-health/BorrowModal";
 import ReturnModal from "@/components/sm-health/ReturnModal";
 
@@ -223,6 +224,9 @@ export default function SmartHealthPage() {
               )}
               {selectedTab === "borrow-return" && (
                 <BorrowReturnTable borrows={borrows} />
+              )}
+              {selectedTab === "elderly" && (
+                <ElderlyDataTable />
               )}
             </>
           )}
