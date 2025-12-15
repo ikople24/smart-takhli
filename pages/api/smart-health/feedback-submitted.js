@@ -1,8 +1,5 @@
+import dbConnect from '@/lib/dbConnect';
 
-
-import { MongoClient } from 'mongodb';
-
-const uri = process.env.MONGODB_URI;
 const dbName = 'db_takhli';
 
 export default async function handler(req, res) {
@@ -11,16 +8,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = await MongoClient.connect(uri);
-    const db = client.db(dbName);
+    const mongoose = await dbConnect();
+    const db = mongoose.connection.useDb(dbName);
     const collection = db.collection('feedback_sm_health');
 
     const feedbacks = await collection.find({}).toArray();
 
-    client.close();
-    return res.status(200).json(feedbacks);
+    return res.status(200).json(feedbacks || []);
   } catch (error) {
-    console.error('Error fetching feedback submissions:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching feedback submissions:', error.message);
+    // Return empty array instead of error to prevent frontend crash
+    return res.status(200).json([]);
   }
 }

@@ -9,35 +9,30 @@ export default async function handler(req, res) {
     const db = (await dbConnect()).connection.db;
     const borrowCollection = db.collection("resoles_sm_health");
 
-    // Get all active borrows (where date_return is empty, "_", "-", or null)
-    const activeBorrows = await borrowCollection.find({
+    const { citizenId } = req.query;
+
+    // Build query for active borrows (where date_return is empty, "_", "-", or null)
+    const query = {
       $or: [
         { date_return: "" },
         { date_return: "_" },
         { date_return: "-" },
         { date_return: null }
       ]
-    }).sort({ date_lend: -1 }).toArray();
+    };
 
-    // Return active borrows directly without request info
-    const enrichedActiveBorrows = activeBorrows;
+    // If citizenId is provided, add filter
+    if (citizenId) {
+      // Support partial matching for citizen ID
+      query.id_personal_use = { $regex: citizenId, $options: "i" };
+    }
 
-    console.log("=== Debug Active Borrows ===");
-    console.log("Total active borrows:", enrichedActiveBorrows.length);
-    console.log("Sample borrow records:");
-    enrichedActiveBorrows.slice(0, 3).forEach((borrow, index) => {
-      console.log(`Record ${index + 1}:`, {
-        id_use_object: borrow.id_use_object,
-        index_id_tk: borrow.index_id_tk,
-        id_personal_use: borrow.id_personal_use,
-        date_lend: borrow.date_lend,
-        date_return: borrow.date_return,
-        requestInfo: borrow.requestInfo
-      });
-    });
-    console.log("============================");
+    const activeBorrows = await borrowCollection
+      .find(query)
+      .sort({ date_lend: -1 })
+      .toArray();
 
-    return res.status(200).json(enrichedActiveBorrows);
+    return res.status(200).json(activeBorrows);
 
   } catch (error) {
     console.error("❌ Failed to fetch active borrows:", error);

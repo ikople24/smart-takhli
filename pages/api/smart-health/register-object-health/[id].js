@@ -16,15 +16,22 @@ export default async function handler(req, res) {
   if (req.method === "PATCH") {
     try {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      const { ob_status } = body;
+      const { ob_status, device_status } = body;
+      
+      // Build update object
+      const updateFields = {};
+      if (ob_status !== undefined) updateFields.ob_status = ob_status;
+      if (device_status !== undefined) updateFields.device_status = device_status;
+      updateFields.updatedAt = new Date();
+
       const result = await collection.updateOne(
         { _id: new ObjectId(id) },
-        { $set: { ob_status } }
+        { $set: updateFields }
       );
       if (result.matchedCount === 0) {
         return res.status(404).json({ message: "Not found" });
       }
-      res.status(200).json({ message: "Updated" });
+      res.status(200).json({ message: "Updated", updated: updateFields });
     } catch (err) {
       res.status(500).json({ error: "Update failed", detail: err.message });
     }
