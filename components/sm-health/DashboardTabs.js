@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Clipboard, ArrowRightLeft } from "lucide-react";
+import { FileText, Clipboard, ArrowRightLeft, Users } from "lucide-react";
 
 const tabs = [
   {
@@ -16,6 +16,11 @@ const tabs = [
     key: "borrow-return",
     label: "ประวัติการยืม-คืน",
     icon: ArrowRightLeft,
+  },
+  {
+    key: "elderly",
+    label: "ข้อมูลผู้สูงอายุ",
+    icon: Users,
   },
 ];
 
