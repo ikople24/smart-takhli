@@ -1,210 +1,366 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Search, PackageCheck, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  Search,
+  PackageCheck,
+  User,
+  CreditCard,
+  Package,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import Image from "next/image";
+import Swal from "sweetalert2";
 
 export default function SmartHealthReturnPage() {
-  const [activeBorrows, setActiveBorrows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [citizenId, setCitizenId] = useState("");
+  const [borrowedItems, setBorrowedItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [menuIcons, setMenuIcons] = useState([]);
+  const [returningId, setReturningId] = useState(null);
 
+  // Fetch menu icons for device images
   useEffect(() => {
-    fetchActiveBorrows();
+    const fetchMenuIcons = async () => {
+      try {
+        const res = await fetch("/api/smart-health/menu-ob-health");
+        const data = await res.json();
+        setMenuIcons(data);
+      } catch (err) {
+        console.error("Error fetching menu icons:", err);
+      }
+    };
+    fetchMenuIcons();
   }, []);
 
-  const fetchActiveBorrows = async () => {
+  const getIconUrl = (index_id_tk) => {
+    const code = index_id_tk?.substring(0, 8);
+    const match = menuIcons.find((menu) => menu.id_code_th === code);
+    return match?.image_icon || "";
+  };
+
+  const getObjectName = (index_id_tk) => {
+    const code = index_id_tk?.substring(0, 8);
+    const match = menuIcons.find((menu) => menu.id_code_th === code);
+    return match?.shot_name || "อุปกรณ์";
+  };
+
+  const handleSearch = async () => {
+    if (!citizenId || citizenId.length < 5) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกเลขบัตรประชาชน",
+        text: "กรอกเลขบัตรประชาชนอย่างน้อย 5 หลัก",
+      });
+      return;
+    }
+
+    setLoading(true);
+    setSearched(true);
+
     try {
-      setLoading(true);
-      const response = await fetch('/api/smart-health/active-borrows');
+      const response = await fetch(
+        `/api/smart-health/active-borrows?citizenId=${citizenId}`
+      );
       const data = await response.json();
-      setActiveBorrows(data);
+      setBorrowedItems(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Failed to fetch active borrows:", error);
+      console.error("Failed to fetch borrows:", error);
+      setBorrowedItems([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReturn = async (borrowId) => {
+  const handleReturn = async (item) => {
+    const result = await Swal.fire({
+      title: "ยืนยันการคืนอุปกรณ์",
+      html: `
+        <div class="text-left">
+          <p class="mb-2"><strong>อุปกรณ์:</strong> ${getObjectName(item.index_id_tk)}</p>
+          <p class="mb-2"><strong>รหัส:</strong> ${item.index_id_tk}</p>
+          <p><strong>วันที่ยืม:</strong> ${item.date_lend}</p>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "ยืนยันคืน",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setReturningId(item.id_use_object);
+
     try {
-      console.log("กำลังคืนอุปกรณ์:", borrowId);
-      
-      const response = await fetch('/api/smart-health/return-device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ borrowId })
+      const response = await fetch("/api/smart-health/return-device", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ borrowId: item.id_use_object }),
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
       if (response.ok) {
-        console.log("คืนสำเร็จ:", result);
-        alert("คืนอุปกรณ์สำเร็จ!");
-        
-        // Refresh data immediately
-        await fetchActiveBorrows();
+        Swal.fire({
+          icon: "success",
+          title: "คืนอุปกรณ์สำเร็จ!",
+          text: `คืน ${getObjectName(item.index_id_tk)} เรียบร้อยแล้ว`,
+          showConfirmButton: false,
+          timer: 2000,
+        });
+
+        // Remove from list
+        setBorrowedItems((prev) =>
+          prev.filter((b) => b.id_use_object !== item.id_use_object)
+        );
       } else {
-        console.error("คืนไม่สำเร็จ:", result);
-        alert(`เกิดข้อผิดพลาด: ${result.message}`);
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: data.message || "ไม่สามารถคืนอุปกรณ์ได้",
+        });
       }
     } catch (error) {
-      console.error("Failed to return device:", error);
-      alert("เกิดข้อผิดพลาดในการคืนอุปกรณ์");
+      console.error("Return error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์",
+      });
+    } finally {
+      setReturningId(null);
     }
   };
 
-  const fixDateFormats = async () => {
-    try {
-      console.log("กำลังแปลงรูปแบบวันที่...");
-      
-      const response = await fetch('/api/smart-health/fix-date-formats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        console.log("แปลงรูปแบบวันที่สำเร็จ:", result);
-        alert(`แปลงรูปแบบวันที่สำเร็จ!\nจำนวนรายการทั้งหมด: ${result.totalRecords}\nจำนวนรายการที่อัปเดต: ${result.updatedRecords}\nจำนวนรายการที่ยังไม่ได้คืน: ${result.activeBorrows}`);
-        
-        // Refresh data immediately
-        await fetchActiveBorrows();
-      } else {
-        console.error("แปลงรูปแบบวันที่ไม่สำเร็จ:", result);
-        alert(`เกิดข้อผิดพลาด: ${result.message}`);
-      }
-    } catch (error) {
-      console.error("Failed to fix date formats:", error);
-      alert("เกิดข้อผิดพลาดในการแปลงรูปแบบวันที่");
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleSearch();
     }
   };
-
-  const filteredBorrows = activeBorrows.filter(borrow =>
-    borrow.id_use_object?.includes(searchTerm) ||
-    borrow.index_id_tk?.includes(searchTerm) ||
-    borrow.id_personal_use?.includes(searchTerm)
-  );
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => window.history.back()}
-          className="btn btn-outline btn-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          กลับ
-        </button>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 text-transparent bg-clip-text">
-          จัดการการคืนอุปกรณ์
-        </h1>
-        {activeBorrows.length > 0 && (
-          <div className="text-sm text-gray-600">
-            รายการที่ยังไม่ได้คืน: <span className="font-bold text-orange-600">{activeBorrows.length}</span> รายการ
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => window.history.back()}
+            className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              คืนอุปกรณ์
+            </h1>
+            <p className="text-gray-500 text-sm">
+              กรอกเลขบัตรประชาชนเพื่อค้นหาอุปกรณ์ที่ยืม
+            </p>
+          </div>
+        </div>
+
+        {/* Search Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900">ค้นหาผู้ยืม</h2>
+              <p className="text-xs text-gray-500">
+                กรอกเลขบัตรประชาชนของผู้ที่ต้องการคืนอุปกรณ์
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="กรอกเลขบัตรประชาชน 13 หลัก"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-lg"
+                value={citizenId}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  if (value.length <= 13) {
+                    setCitizenId(value);
+                  }
+                }}
+                onKeyPress={handleKeyPress}
+                maxLength={13}
+              />
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl hover:shadow-lg hover:scale-[1.02] transition-all font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Search className="w-5 h-5" />
+              )}
+              ค้นหา
+            </button>
+          </div>
+
+          {citizenId && (
+            <div className="mt-3 text-sm text-gray-500">
+              {citizenId.length}/13 หลัก
+            </div>
+          )}
+        </div>
+
+        {/* Results */}
+        {searched && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Results Header */}
+            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-gray-500" />
+                  <span className="font-medium text-gray-700">
+                    ผลการค้นหา
+                  </span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {borrowedItems.length} รายการที่ยังไม่ได้คืน
+                </span>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="p-12 text-center">
+                <Loader2 className="w-10 h-10 text-orange-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">กำลังค้นหา...</p>
+              </div>
+            ) : borrowedItems.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                  ไม่มีอุปกรณ์ที่ต้องคืน
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  ไม่พบรายการยืมอุปกรณ์ที่ยังไม่ได้คืน
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {borrowedItems.map((item) => {
+                  const iconUrl = getIconUrl(item.index_id_tk);
+                  const objectName = getObjectName(item.index_id_tk);
+                  const isReturning = returningId === item.id_use_object;
+
+                  return (
+                    <div
+                      key={item._id || item.id_use_object}
+                      className="p-4 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Device Image */}
+                        <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 p-2">
+                          {iconUrl ? (
+                            <Image
+                              src={iconUrl}
+                              alt={objectName}
+                              width={48}
+                              height={48}
+                              className="object-contain"
+                              unoptimized
+                            />
+                          ) : (
+                            <Package className="w-8 h-8 text-gray-400" />
+                          )}
+                        </div>
+
+                        {/* Device Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900">
+                            {objectName}
+                          </h3>
+                          <p className="text-sm text-gray-500 font-mono">
+                            {item.index_id_tk}
+                          </p>
+                          <div className="flex items-center gap-4 mt-1">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              ยืมเมื่อ: {item.date_lend}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              <AlertCircle className="w-3 h-3" />
+                              กำลังยืม
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Return Button */}
+                        <button
+                          onClick={() => handleReturn(item)}
+                          disabled={isReturning}
+                          className={`
+                            flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all
+                            ${isReturning
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg hover:scale-[1.02]"
+                            }
+                          `}
+                        >
+                          {isReturning ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              กำลังคืน...
+                            </>
+                          ) : (
+                            <>
+                              <PackageCheck className="w-4 h-4" />
+                              คืนอุปกรณ์
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      <div className="mb-6">
-        <div className="flex gap-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="ค้นหารหัสการยืม, รหัสอุปกรณ์, หรือเลขบัตรประชาชน"
-              className="input input-bordered pl-10 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={fetchActiveBorrows}
-            className="btn btn-outline"
-          >
-            รีเฟรช
-          </button>
-          <button
-            onClick={fixDateFormats}
-            className="btn btn-warning"
-          >
-            แปลงรูปแบบวันที่
-          </button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="loading loading-spinner loading-lg"></div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>รหัสการยืม</th>
-                <th>เลขบัตรประชาชน</th>
-                <th>อุปกรณ์</th>
-                <th>วันที่ยืม</th>
-                <th>สถานะ</th>
-                <th>การดำเนินการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBorrows.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-500">
-                    {searchTerm ? "ไม่พบข้อมูลที่ค้นหา" : "ไม่มีอุปกรณ์ที่ถูกยืม"}
-                  </td>
-                </tr>
-              ) : (
-                filteredBorrows.map((borrow, index) => (
-                  <tr key={borrow._id || index}>
-                    <td className="font-mono">{borrow.id_use_object}</td>
-                    <td>{borrow.id_personal_use}</td>
-                    <td>{borrow.index_id_tk}</td>
-                    <td>{borrow.date_lend}</td>
-                    <td>
-                      <span className="badge badge-warning">
-                        ถูกยืม
-                      </span>
-                    </td>
-                    <td className="flex gap-1">
-                      {(!borrow.date_return || borrow.date_return === "" || borrow.date_return === "_" || borrow.date_return === "-") && (
-                        <button
-                          onClick={() => handleReturn(borrow.id_use_object)}
-                          className="btn btn-error btn-sm flex items-center gap-2"
-                        >
-                          <PackageCheck className="w-3 h-3" />
-                          คืน
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          // เปิด Google Maps ในแท็บใหม่
-                          const location = "โรงพยาบาลตาคลี"; // ใช้ตำแหน่งโรงพยาบาลเป็นค่าเริ่มต้น
-                          const encodedLocation = encodeURIComponent(location);
-                          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
-                          window.open(googleMapsUrl, '_blank');
-                        }}
-                        className="btn btn-primary btn-sm flex items-center gap-2"
-                        title="เปิดแผนที่: โรงพยาบาลตาคลี"
-                      >
-                        <MapPin className="w-3 h-3" />
-                        แผนที่
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="mt-6 text-center text-sm text-gray-600">
-        แสดง {filteredBorrows.length} รายการจากทั้งหมด {activeBorrows.length} รายการ
-        {activeBorrows.length >= 42 && (
-          <div className="mt-2 text-green-600 font-medium">
-            ✅ ดึงข้อมูลครบถ้วนแล้ว! (มากกว่า 40 รายการ)
+        {/* Quick Tips */}
+        {!searched && (
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-100 p-6">
+            <h3 className="font-semibold text-orange-900 mb-3">
+              💡 วิธีการคืนอุปกรณ์
+            </h3>
+            <ol className="space-y-2 text-sm text-orange-800">
+              <li className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  1
+                </span>
+                <span>กรอกเลขบัตรประชาชนของผู้ที่ต้องการคืนอุปกรณ์</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  2
+                </span>
+                <span>ระบบจะแสดงรายการอุปกรณ์ที่ยืมอยู่</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="w-5 h-5 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  3
+                </span>
+                <span>กดปุ่ม "คืนอุปกรณ์" เพื่อทำการคืน</span>
+              </li>
+            </ol>
           </div>
         )}
       </div>
