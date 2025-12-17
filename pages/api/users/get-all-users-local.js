@@ -20,19 +20,28 @@ export default async function handler(req, res) {
         role: String,
         phone: String,
         profileImage: String,
+        profileUrl: String,
         assignedTask: String,
         clerkId: String,
         isActive: { type: Boolean, default: true },
         isArchived: { type: Boolean, default: false },
         exitDate: { type: Date, default: null },
         exitNote: { type: String, default: "" },
+        allowedPages: { type: [String], default: [] },
       },
       { collection: "users", timestamps: true }
     );
 
     const User = mongoose.models.User || mongoose.model("User", UserSchema);
     
-    const users = await User.find({ isActive: true, isArchived: false }).lean();
+    // ดึง user ทั้งหมดที่ไม่ถูก archive (หรือยังไม่ได้ตั้งค่า isArchived)
+    const users = await User.find({ 
+      $or: [
+        { isArchived: false },
+        { isArchived: { $exists: false } },
+        { isArchived: null }
+      ]
+    }).lean();
     
     res.status(200).json({ success: true, users });
   } catch (error) {
