@@ -9,7 +9,16 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
 
-    const availableDevices = await RegisterObjectHealth.find({ ob_status: true });
+    // Only get devices that are available and not broken/repair
+    const availableDevices = await RegisterObjectHealth.find({ 
+      ob_status: true,
+      $or: [
+        { device_status: { $exists: false } },
+        { device_status: null },
+        { device_status: "available" }
+      ]
+    });
+    
     const devicesWithType = availableDevices.map(device => ({
       ...device.toObject(),
       display_label: `${device.id_code_th} - ${device.ob_type || '-'}`,

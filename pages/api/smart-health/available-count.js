@@ -5,10 +5,20 @@ import MenuHealthModel from '@/models/MenuHealthModel';
 export default async function handler(req, res) {
   await dbConnect();
   try {
-    // ดึง available count
-    console.log(dbConnect)
+    // ดึง available count - exclude broken and repair devices
     const availableCounts = await RegisterHealthModel.aggregate([
-      { $match: { ob_status: true, id_code_th: { $ne: null } } },
+      { 
+        $match: { 
+          ob_status: true, 
+          id_code_th: { $ne: null },
+          // Exclude broken and repair devices
+          $or: [
+            { device_status: { $exists: false } },
+            { device_status: null },
+            { device_status: "available" }
+          ]
+        } 
+      },
       {
         $group: {
           _id: "$id_code_th",
@@ -16,13 +26,11 @@ export default async function handler(req, res) {
         }
       }
     ]);
-    console.log("availableCounts (aggregate result):", availableCounts);
 
     const menus = await MenuHealthModel.find({});
 
     const mergedData = menus.map(menu => {
       const match = availableCounts.find(c => String(c._id) === String(menu.id_code_th));
-      console.log(`Matching for menu.id_code_th=${menu.id_code_th}:`, match);
       return {
         label: menu.shot_name || menu.ob_type,
         image_icon: menu.image_icon,

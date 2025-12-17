@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       "cdn-icons-png.flaticon.com",
       "images.clerk.dev",
       "storage.googleapis.com",
+      "ppim.pea.co.th",
     ],
   },
 };

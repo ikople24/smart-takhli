@@ -14,7 +14,6 @@ const complaintFormSchema = z.object({
   community: z.string().min(1, 'กรุณาระบุ 1 ชุมชน'),
   prefix: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
   fullName: z.string().min(2, 'ชื่อ-นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร'),
-  address: z.string().min(10, 'ที่อยู่ต้องมีอย่างน้อย 10 ตัวอักษร'),
   phone: z.string().length(10, 'เบอร์โทรศัพท์ต้องมี 10 หลัก'),
   detail: z.string().min(1, 'กรุณากรอกรายละเอียด'),
   imageUrls: z.array(z.string()).min(1, 'กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป'),
@@ -29,7 +28,6 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [prefix, setPrefix] = useState('นาย');
   const [fullName, setFullName] = useState('');
-  const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [detail, setDetail] = useState('');
   const [imageUrls, setImageUrls] = useState([]);
@@ -40,6 +38,7 @@ const ComplaintFormModal = ({ selectedLabel, onClose }) => {
   const [formErrors, setFormErrors] = useState({});
   const reporterValidRef = useRef(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
 
@@ -50,8 +49,16 @@ useEffect(() => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ป้องกันการกดปุ่มซ้ำ
-    if (isSubmitting) {
+    // ป้องกันการกดปุ่มซ้ำ หรือขณะอัปโหลดรูปภาพ
+    if (isSubmitting || isUploadingImages) {
+      if (isUploadingImages) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณารอสักครู่',
+          text: 'กำลังอัปโหลดรูปภาพอยู่ กรุณารอจนกว่าจะเสร็จสิ้น',
+          confirmButtonText: 'ตกลง',
+        });
+      }
       return;
     }
 
@@ -63,7 +70,6 @@ useEffect(() => {
       community: selectedCommunity,
       prefix,
       fullName: fullName.trim(),
-      address: address.trim(),
       phone,
       detail: detail.trim(),
       imageUrls,
@@ -77,7 +83,6 @@ useEffect(() => {
       const errorOrder = [
         'community',
         'fullName', 
-        'address',
         'phone',
         'detail',
         'imageUrls',
@@ -110,7 +115,6 @@ useEffect(() => {
     const payload = {
       prefix,
       fullName,
-      address,
       phone,
       community: selectedCommunity,
       problems: selectedProblems.map(id => {
@@ -133,7 +137,7 @@ useEffect(() => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-app-id': process.env.NEXT_PUBLIC_APP_ID || 'app_a',
+          'x-app-id': process.env.NEXT_PUBLIC_APP_ID || 'app_b',
         },
         body: JSON.stringify(payload),
       });
@@ -167,7 +171,6 @@ useEffect(() => {
     setSelectedCommunity('');
     setPrefix('นาย');
     setFullName('');
-    setAddress('');
     setPhone('');
     setDetail('');
     setImageUrls([]); // Explicitly clear imageUrls
@@ -249,14 +252,15 @@ useEffect(() => {
             </div>
           </div>
           <p className="font-semibold text-sm text-gray-700">3.แนบรูปภาพ 📁 เลือกรูปภาพ (ไม่เกิน 3 ภาพ)</p>
-          <ImageUploads onChange={(urls) => setImageUrls(urls)} />
+          <ImageUploads 
+            onChange={(urls) => setImageUrls(urls)} 
+            onUploadingChange={setIsUploadingImages}
+          />
           <ReporterInput
             prefix={prefix}
             setPrefix={setPrefix}
             fullName={fullName}
             setFullName={setFullName}
-            address={address}
-            setAddress={setAddress}
             phone={phone}
             setPhone={setPhone}
             detail={detail}
@@ -275,12 +279,17 @@ useEffect(() => {
             type="button"
             onClick={handleClearForm}
             className="btn btn-outline btn-warning"
+            disabled={isSubmitting || isUploadingImages}
           >
             ล้างฟอร์ม
           </button>
-          <button type="submit" className="btn btn-info" disabled={isSubmitting}>
-            {isSubmitting && <span className="loading loading-infinity loading-xs mr-2" />}
-            ส่งเรื่อง
+          <button 
+            type="submit" 
+            className="btn btn-info" 
+            disabled={isSubmitting || isUploadingImages}
+          >
+            {(isSubmitting || isUploadingImages) && <span className="loading loading-infinity loading-xs mr-2" />}
+            {isUploadingImages ? 'กำลังอัปโหลดรูป...' : 'ส่งเรื่อง'}
           </button>
         </div>
         </form>

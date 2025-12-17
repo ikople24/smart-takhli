@@ -23,33 +23,30 @@ const StatusPage = () => {
     });
   }, []);
 
-  // Fetch assignments for all complaints to get accurate completion dates
+  // Fetch assignments for all complaints to get accurate completion dates (batch API)
   useEffect(() => {
     const fetchAllAssignments = async () => {
-      const assignmentPromises = complaints.map(async (complaint) => {
-        try {
-          const res = await fetch(`/api/assignments/by-complaint?complaintId=${complaint._id}`);
-          const json = await res.json();
-          if (json.success && json.data.length > 0) {
-            return { complaintId: complaint._id, assignment: json.data[0] };
-          }
-        } catch (error) {
-          console.error("Error fetching assignment for complaint:", complaint._id, error);
+      if (complaints.length === 0) return;
+      
+      try {
+        // ดึง assignments ทั้งหมดในครั้งเดียวด้วย batch API
+        const complaintIds = complaints.map(c => c._id);
+        const res = await fetch("/api/assignments/by-complaints", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ complaintIds }),
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+          setAssignments(json.data);
         }
-        return { complaintId: complaint._id, assignment: null };
-      });
-
-      const results = await Promise.all(assignmentPromises);
-      const assignmentsMap = {};
-      results.forEach(({ complaintId, assignment }) => {
-        assignmentsMap[complaintId] = assignment;
-      });
-      setAssignments(assignmentsMap);
+      } catch (error) {
+        console.error("Error fetching assignments:", error);
+      }
     };
 
-    if (complaints.length > 0) {
-      fetchAllAssignments();
-    }
+    fetchAllAssignments();
   }, [complaints]);
 
   // Filter complaints based on time filter - ใช้การคำนวณเดียวกับ CompletedCard
@@ -158,6 +155,7 @@ const StatusPage = () => {
                         afterImage={item.images?.[1]}
                         problems={item.problems}
                         updatedAt={item.completedAt}
+                        assignment={assignments[item._id]}
                       />
                     </div>
                   </div>

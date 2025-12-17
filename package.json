@@ -2,7 +2,6 @@
   "name": "smart-takhli",
   "version": "0.1.0",
   "private": true,
-
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,6 +14,7 @@
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/nextjs": "^6.20.0",
     "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
     "animejs": "^4.0.2",
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
@@ -28,7 +28,7 @@
     "lucide-react": "^0.511.0",
     "mongoose": "^8.15.0",
     "multer": "^2.0.2",
-    "next": "15.3.2",
+    "next": "^15.5.9",
     "next-cloudinary": "^6.16.0",
     "next-connect": "^1.0.0",
     "papaparse": "^5.5.3",

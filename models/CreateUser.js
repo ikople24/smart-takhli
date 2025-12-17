@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema(
     isArchived: { type: Boolean, default: false },
     exitDate: { type: Date, default: null },
     exitNote: { type: String, default: "" },
+    allowedPages: { type: [String], default: [] }, // หน้าที่อนุญาตให้เข้าถึง
   },
   { collection: "users", timestamps: true }
 );

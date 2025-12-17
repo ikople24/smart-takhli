@@ -82,6 +82,13 @@ body {
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;
   }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* Custom styles for map popups */
@@ -156,6 +163,111 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Thin scrollbar for specific elements */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Map Community Labels */
+.community-label-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.community-label {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.community-label:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* Map Controls */
+.custom-layers-control {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+.custom-layers-control .leaflet-control-layers-list {
+  padding: 8px !important;
+}
+
+.custom-layers-control .leaflet-control-layers-base label {
+  margin: 4px 0 !important;
+  font-size: 12px !important;
+}
+
+/* Map Popups */
+.popup-content {
+  max-width: 300px;
+}
+
+.popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.popup-text {
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #4b5563;
+}
+
+/* Map Markers */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.marker-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.marker-icon-category {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  border: 2px solid white;
+}
+
+.category-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 

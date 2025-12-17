@@ -1,23 +1,26 @@
-import {
-  CircleDot,
-  Stethoscope,
-  ClipboardCheck,
-  PackageCheck,
-} from "lucide-react";
-import { countStatuses } from "@/components/sm-health/StatusSmHealth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
-import AvailableItems from "@/components/sm-health/AvailableItems";
+import { countStatuses } from "@/components/sm-health/StatusSmHealth";
+
+// New Components
+import WorkflowPipeline from "@/components/sm-health/WorkflowPipeline";
+import EquipmentStats from "@/components/sm-health/EquipmentStats";
+import QuickActions from "@/components/sm-health/QuickActions";
+import DashboardTabs from "@/components/sm-health/DashboardTabs";
+
+// Existing Components
 import RequestTable from "@/components/sm-health/RequestTable";
-import DemographicSummaryCards from "@/components/sm-health/DemographicSummaryCards";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
-import SatisfactionPieChart from "@/components/sm-health/SatisfactionPieChart";
+import ElderlyDataTable from "@/components/sm-health/ElderlyDataTable";
+import BorrowModal from "@/components/sm-health/BorrowModal";
+import ReturnModal from "@/components/sm-health/ReturnModal";
 
 export default function SmartHealthPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("request");
+  const [selectedStatus, setSelectedStatus] = useState(null);
   const { menu, fetchMenu } = useHealthMenuStore();
 
   const [devices, setDevices] = useState([]);
@@ -25,6 +28,11 @@ export default function SmartHealthPage() {
 
   const [borrows, setBorrows] = useState([]);
 
+  // Modal States
+  const [showBorrowModal, setShowBorrowModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+
+  // Fetch functions
   const fetchRequests = async () => {
     try {
       const res = await fetch("/api/smart-health/ob-registration");
@@ -33,10 +41,9 @@ export default function SmartHealthPage() {
     } catch (err) {
       console.error("Failed to fetch requests", err);
     } finally {
-      // ดีเลย์ก่อนค่อย setLoading(false)
       setTimeout(() => {
         setLoading(false);
-      }, 1200); // 1200 ms หรือ 1.2 วินาที
+      }, 800);
     }
   };
 
@@ -75,7 +82,6 @@ export default function SmartHealthPage() {
   };
 
   const updateStatus = async (id, newStatus) => {
-    console.log("Updating status for:", id, "to:", newStatus); // Add this line
     try {
       await fetch(`/api/smart-health/ob-registration?id=${id}`, {
         method: "PATCH",
@@ -94,10 +100,11 @@ export default function SmartHealthPage() {
     }
   };
 
-useEffect(() => {
-  fetchRequests();
-  fetchMenu();
-}, []);
+  // Effects
+  useEffect(() => {
+    fetchRequests();
+    fetchMenu();
+  }, []);
 
   useEffect(() => {
     if (selectedTab === "register-device") {
@@ -108,112 +115,145 @@ useEffect(() => {
     }
   }, [selectedTab]);
 
+  // Computed values
+  const statusCounts = useMemo(() => countStatuses(requests), [requests]);
+
+  const filteredRequests = useMemo(() => {
+    if (!selectedStatus) return requests;
+    return requests.filter(
+      (req) => (req.status || "รับคำร้อง") === selectedStatus
+    );
+  }, [requests, selectedStatus]);
+
+  const tabCounts = useMemo(
+    () => ({
+      request: requests.length,
+      "register-device": devices.length,
+      "borrow-return": borrows.length,
+    }),
+    [requests, devices, borrows]
+  );
+
+  // Handlers
+  const handleStatusClick = (status) => {
+    setSelectedStatus(status);
+    if (status) {
+      setSelectedTab("request");
+    }
+  };
+
+  const handleBorrow = () => {
+    setShowBorrowModal(true);
+  };
+
+  const handleReturn = () => {
+    setShowReturnModal(true);
+  };
+
   return (
-    <div className="p-6">
-      <h1 className="text-4xl font-bold text-center mb-6 bg-gradient-to-r from-violet-600 via-pink-500 to-cyan-500 text-transparent bg-clip-text animate-pulse">
-        HEALTH-CARE-DASHBOARD
-      </h1>
-      <div className="flex justify-center mb-6 w-full">
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 justify-center w-full max-w-5xl mx-auto px-2">
-          {Object.entries(countStatuses(requests)).map(([status, count]) => {
-            const borderColor =
-              status === "รับคำร้อง"
-                ? "border-yellow-500"
-                : status === "ประเมินโดยพยาบาลวิชาชีพ"
-                ? "border-blue-500"
-                : status === "ลงทะเบียนอุปกรณ์"
-                ? "border-orange-500"
-                : status === "ส่งมอบอุปกรณ์"
-                ? "border-green-500"
-                : "border-gray-300";
-            return (
-              <div
-                key={status}
-                className={`bg-white ${borderColor} border-2 rounded-xl px-3 py-2 text-center shadow-md w-full sm:w-40 flex min-h-[5.5rem]`}
-              >
-                <div className="flex items-center space-x-2 text-left w-full">
-                  <div>
-                    {status === "รับคำร้อง" && (
-                      <CircleDot size={30} className="text-yellow-500" />
-                    )}
-                    {status === "ประเมินโดยพยาบาลวิชาชีพ" && (
-                      <Stethoscope size={30} className="text-blue-500" />
-                    )}
-                    {status === "ลงทะเบียนอุปกรณ์" && (
-                      <ClipboardCheck size={30} className="text-orange-500" />
-                    )}
-                    {status === "ส่งมอบอุปกรณ์" && (
-                      <PackageCheck size={30} className="text-green-500" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-700 break-words text-[0.85rem] leading-tight sm:text-sm">
-                      {status}
-                    </div>
-                    <div className="text-primary text-xl font-bold">{count} ราย</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Health Care Dashboard
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              ระบบจัดการกายอุปกรณ์ เทศบาลเมืองตาคลี
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            อัปเดตล่าสุด: {new Date().toLocaleTimeString("th-TH")}
+          </div>
+        </div>
+
+        {/* Quick Actions - Mobile First */}
+        <div className="block sm:hidden">
+          <QuickActions onBorrow={handleBorrow} onReturn={handleReturn} />
+        </div>
+
+        {/* Workflow Pipeline */}
+        <WorkflowPipeline
+          counts={statusCounts}
+          selectedStatus={selectedStatus}
+          onStatusClick={handleStatusClick}
+        />
+
+        {/* Two Column Layout for Desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Equipment Stats - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <EquipmentStats menu={menu} loading={loading} />
+          </div>
+
+          {/* Quick Actions - Desktop */}
+          <div className="hidden sm:block">
+            <QuickActions onBorrow={handleBorrow} onReturn={handleReturn} />
+          </div>
+        </div>
+
+        {/* Tabs & Content */}
+        <DashboardTabs
+          selectedTab={selectedTab}
+          onTabChange={setSelectedTab}
+          counts={tabCounts}
+        />
+
+        {/* Tab Content */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center">
+              <div className="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-2 text-gray-500">กำลังโหลดข้อมูล...</p>
+            </div>
+          ) : (
+            <>
+              {selectedTab === "request" && (
+                <RequestTable
+                  requests={filteredRequests}
+                  menu={menu}
+                  loading={loading}
+                  onDelete={deleteRequest}
+                  onUpdateStatus={updateStatus}
+                />
+              )}
+              {selectedTab === "register-device" && (
+                <RegisterDeviceTable devices={devices} loading={loadingDevices} />
+              )}
+              {selectedTab === "borrow-return" && (
+                <BorrowReturnTable borrows={borrows} />
+              )}
+              {selectedTab === "elderly" && (
+                <ElderlyDataTable />
+              )}
+            </>
+          )}
         </div>
       </div>
-          <DemographicSummaryCards />
-      <AvailableItems menu={menu} loading={loading} />
-      <SatisfactionPieChart />
-      {loading ? (
-        <p>กำลังโหลด...</p>
-      ) : (
-        <div className="join w-full">
-          <input
-            className="join-item btn"
-            type="radio"
-            name="options"
-            aria-label="คำขออุปกรณ์"
-            checked={selectedTab === "request"}
-            onChange={() => setSelectedTab("request")}
-          />
-          <input
-            className="join-item btn"
-            type="radio"
-            name="options"
-            aria-label="ข้อมูลบุคคล"
-            checked={selectedTab === "person"}
-            onChange={() => setSelectedTab("person")}
-          />
-          <input
-            className="join-item btn"
-            type="radio"
-            name="options"
-            aria-label="ลงทะเบียนอุปกรณ์"
-            checked={selectedTab === "register-device"}
-            onChange={() => setSelectedTab("register-device")}
-          />
-          <input
-            className="join-item btn"
-            type="radio"
-            name="options"
-            aria-label="ข้อมูลการยืม-คืนอุปกรณ์"
-            checked={selectedTab === "borrow-return"}
-            onChange={() => setSelectedTab("borrow-return")}
-          />
-          <div className="join-item flex-1"></div>
-        </div>
-      )}
-      {selectedTab === "request" && (
-        <RequestTable
-          requests={requests}
-          menu={menu}
-          loading={loading}
-          onDelete={deleteRequest}
-          onUpdateStatus={updateStatus}
+
+      {/* Borrow Modal */}
+      {showBorrowModal && (
+        <BorrowModal
+          onClose={() => setShowBorrowModal(false)}
+          onSuccess={() => {
+            setShowBorrowModal(false);
+            fetchRequests();
+            fetchMenu();
+          }}
         />
       )}
-      {selectedTab === "register-device" && (
-        <RegisterDeviceTable devices={devices} loading={loadingDevices} />
-      )}
-      {selectedTab === "borrow-return" && (
-        <BorrowReturnTable borrows={borrows} />
+
+      {/* Return Modal */}
+      {showReturnModal && (
+        <ReturnModal
+          onClose={() => setShowReturnModal(false)}
+          onSuccess={() => {
+            fetchRequests();
+            fetchMenu();
+          }}
+        />
       )}
     </div>
   );

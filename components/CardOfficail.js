@@ -13,6 +13,18 @@ export default function CardOfficail(props) {
     const [complaintStatus, setComplaintStatus] = useState(null);
     const [assignedUser, setAssignedUser] = useState(null);
 
+    // ฟังก์ชันซ่อนนามสกุลของเจ้าหน้าที่
+    const hideLastName = (fullName) => {
+      if (!fullName) return 'ไม่ระบุ';
+      const nameParts = fullName.trim().split(/\s+/);
+      if (nameParts.length <= 1) {
+        // ถ้ามีแค่ชื่อเดียว ให้แสดงชื่อเดิม
+        return fullName;
+      }
+      // แสดงชื่อตัว + xxxxxx แทนนามสกุล
+      return nameParts.slice(0, -1).join(' ') + ' xxxxxx';
+    };
+
     // ฟังก์ชันคำนวณเวลาการประมวลผล
     const calculateProcessingTime = (assignedDate, completedDate) => {
       if (!assignedDate || !completedDate) return null;
@@ -143,7 +155,7 @@ export default function CardOfficail(props) {
                 </div>
               </div>
               <div className="flex-1">
-                <div className="text-lg font-medium text-gray-900">{assignedUser.name}</div>
+                <div className="text-lg font-medium text-gray-900">{hideLastName(assignedUser.name)}</div>
                 <div className="text-sm text-gray-600">{assignedUser.position}</div>
                 <div className="text-sm text-gray-600">{assignedUser.department}</div>
                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
