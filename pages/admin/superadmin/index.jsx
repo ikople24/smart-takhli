@@ -7,14 +7,18 @@ import {
   Users, 
   Search, 
   Crown,
-  User as UserIcon,
   RefreshCw,
   ChevronDown,
   ChevronUp,
   Check,
   X,
-  Save
+  Save,
+  AlertTriangle,
+  Building2
 } from "lucide-react";
+
+// App ID ปัจจุบัน (ดึงจาก env)
+const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
 
 // รายการหน้าทั้งหมดที่สามารถจำกัดได้
 const ALL_PAGES = [
@@ -41,6 +45,7 @@ export default function SuperAdminPage() {
   const [saving, setSaving] = useState({});
   const [expandedUser, setExpandedUser] = useState(null);
   const [editedPages, setEditedPages] = useState({});
+  const [showOnlyCurrentApp, setShowOnlyCurrentApp] = useState(true); // กรองเฉพาะ app ปัจจุบัน
 
   const isSuperAdmin = user?.publicMetadata?.role === 'superadmin';
 
@@ -146,10 +151,61 @@ export default function SuperAdminPage() {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.department?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // กำหนด appId ให้ user
+  const assignAppId = async (userData) => {
+    try {
+      setSaving(prev => ({ ...prev, [userData._id]: true }));
+      
+      const res = await fetch('/api/users/update-app-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userData._id,
+          appId: CURRENT_APP_ID,
+        }),
+      });
+
+      if (res.ok) {
+        Swal.fire({
+          icon: 'success',
+          title: 'กำหนด App สำเร็จ',
+          text: `${userData.name} ถูกกำหนดให้ใช้ ${CURRENT_APP_ID} แล้ว`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        
+        // Update local state
+        setUsers(prev => prev.map(u => 
+          u._id === userData._id 
+            ? { ...u, appId: CURRENT_APP_ID } 
+            : u
+        ));
+      } else {
+        throw new Error('Failed');
+      }
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถกำหนด App ได้' });
+    } finally {
+      setSaving(prev => ({ ...prev, [userData._id]: false }));
+    }
+  };
+
+  // กรอง users ตาม search และ appId
+  const filteredUsers = users.filter(u => {
+    const matchSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.department?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!showOnlyCurrentApp) return matchSearch;
+    
+    // กรองเฉพาะ user ที่มี appId ตรงกัน หรือยังไม่ได้กำหนด appId
+    const userAppId = u.appId || "";
+    return matchSearch && (userAppId === "" || userAppId === CURRENT_APP_ID);
+  });
+
+  // นับจำนวน user ที่ยังไม่ได้กำหนด appId
+  const usersWithoutAppId = users.filter(u => !u.appId || u.appId === "").length;
+  const usersWithCurrentApp = users.filter(u => u.appId === CURRENT_APP_ID).length;
 
   if (!isSuperAdmin) {
     return (
@@ -176,7 +232,7 @@ export default function SuperAdminPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-blue-400" />
@@ -188,10 +244,28 @@ export default function SuperAdminPage() {
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
             <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-emerald-400" />
+              <Building2 className="w-8 h-8 text-emerald-400" />
+              <div>
+                <div className="text-2xl font-bold text-white">{usersWithCurrentApp}</div>
+                <div className="text-sm text-emerald-200">{CURRENT_APP_ID}</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-8 h-8 text-amber-400" />
+              <div>
+                <div className="text-2xl font-bold text-white">{usersWithoutAppId}</div>
+                <div className="text-sm text-amber-200">ยังไม่กำหนด App</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+            <div className="flex items-center gap-3">
+              <Shield className="w-8 h-8 text-purple-400" />
               <div>
                 <div className="text-2xl font-bold text-white">{ALL_PAGES.length}</div>
-                <div className="text-sm text-emerald-200">หน้าทั้งหมด</div>
+                <div className="text-sm text-purple-200">หน้าทั้งหมด</div>
               </div>
             </div>
           </div>
@@ -210,21 +284,36 @@ export default function SuperAdminPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <button
-              onClick={fetchUsers}
-              className="btn btn-outline border-white/30 text-white hover:bg-white/10"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              รีเฟรช
-            </button>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showOnlyCurrentApp}
+                  onChange={(e) => setShowOnlyCurrentApp(e.target.checked)}
+                  className="checkbox checkbox-sm checkbox-primary"
+                />
+                <span className="text-white text-sm">เฉพาะ {CURRENT_APP_ID}</span>
+              </label>
+              <button
+                onClick={fetchUsers}
+                className="btn btn-outline border-white/30 text-white hover:bg-white/10"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                รีเฟรช
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Info */}
         <div className="bg-blue-500/20 border border-blue-500/40 rounded-xl p-4 mb-6">
-          <p className="text-blue-200 text-sm">
+          <p className="text-blue-200 text-sm mb-2">
             💡 <strong>วิธีใช้:</strong> กดลูกศรเพื่อขยายและเลือกหน้าที่อนุญาตให้แต่ละ user เข้าถึงได้ 
             จากนั้นกดบันทึก
+          </p>
+          <p className="text-amber-200 text-sm">
+            🔒 <strong>ความปลอดภัย:</strong> User ที่มี badge &quot;ยังไม่กำหนด App&quot; จะ<strong>ไม่สามารถเข้าใช้งานได้</strong> 
+            คุณต้องกด &quot;กำหนด App&quot; เพื่ออนุมัติให้ใช้งาน <strong>{CURRENT_APP_ID}</strong>
           </p>
         </div>
 
@@ -263,7 +352,23 @@ export default function SuperAdminPage() {
                         </div>
                       )}
                       <div>
-                        <div className="font-semibold text-white">{userData.name}</div>
+                        <div className="font-semibold text-white flex items-center gap-2">
+                          {userData.name}
+                          {/* แสดงสถานะ appId */}
+                          {userData.appId === CURRENT_APP_ID ? (
+                            <span className="badge badge-sm bg-emerald-600 border-0 text-white">
+                              {CURRENT_APP_ID}
+                            </span>
+                          ) : userData.appId ? (
+                            <span className="badge badge-sm bg-orange-600 border-0 text-white">
+                              {userData.appId}
+                            </span>
+                          ) : (
+                            <span className="badge badge-sm bg-amber-600 border-0 text-white">
+                              ยังไม่กำหนด App
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-300">
                           {userData.position} • {userData.department}
                         </div>
@@ -271,6 +376,23 @@ export default function SuperAdminPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      {/* ปุ่มกำหนด App สำหรับ user ที่ยังไม่ได้กำหนด */}
+                      {(!userData.appId || userData.appId === "") && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); assignAppId(userData); }}
+                          disabled={isSavingThis}
+                          className="btn btn-xs bg-amber-600 hover:bg-amber-700 text-white border-0"
+                        >
+                          {isSavingThis ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                          ) : (
+                            <>
+                              <Building2 className="w-3 h-3 mr-1" />
+                              กำหนด App
+                            </>
+                          )}
+                        </button>
+                      )}
                       <span className="text-purple-300 text-sm">
                         {userPages.length}/{ALL_PAGES.length} หน้า
                       </span>
