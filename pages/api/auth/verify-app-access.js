@@ -25,6 +25,9 @@ export default async function handler(req, res) {
   }
 
   const currentAppId = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
+  
+  console.log("🔍 verify-app-access called for userId:", userId);
+  console.log("🏷️ Current App ID:", currentAppId);
 
   try {
     // ขั้นตอนที่ 1: ตรวจสอบจาก Clerk publicMetadata ก่อน

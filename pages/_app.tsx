@@ -44,13 +44,35 @@ function AppContent({ Component, pageProps }: AppProps) {
       try {
         // ขั้นตอนที่ 1: ตรวจสอบว่า user อยู่ใน MongoDB และ appId ตรงกันหรือไม่
         const token = await getToken();
+        console.log("🔍 Checking app access for:", user?.primaryEmailAddress?.emailAddress);
+        
         const verifyRes = await fetch('/api/auth/verify-app-access', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store', // ป้องกัน caching
         });
+        
+        if (!verifyRes.ok) {
+          console.error("❌ API returned error status:", verifyRes.status);
+          throw new Error(`API error: ${verifyRes.status}`);
+        }
+        
         const verifyData = await verifyRes.json();
+        console.log("📦 Verify response:", {
+          hasAccess: verifyData.hasAccess,
+          source: verifyData.source,
+          reason: verifyData.reason,
+          success: verifyData.success,
+        });
 
-        // ถ้าไม่มีสิทธิ์เข้า app นี้
-        if (!verifyData.hasAccess) {
+        // ตรวจสอบว่า API ทำงานสำเร็จ
+        if (!verifyData.success) {
+          console.error("❌ API returned success: false", verifyData.message);
+          throw new Error(verifyData.message || "API failed");
+        }
+
+        // ถ้าไม่มีสิทธิ์เข้า app นี้ (ต้องเป็น false อย่างชัดเจน)
+        if (verifyData.hasAccess !== true) {
+          console.log("🚫 Access denied:", verifyData.reason);
           setHasAccess(false);
           setDeniedReason(verifyData.reason || 'no_access');
           setDeniedMessage(verifyData.message || 'ไม่มีสิทธิ์เข้าถึง');
@@ -96,8 +118,11 @@ function AppContent({ Component, pageProps }: AppProps) {
         }
         setHasAccess(isAllowed);
       } catch (error) {
-        console.error("Error checking access:", error);
-        setHasAccess(true); // Default to allow on error
+        console.error("❌ Error checking access:", error);
+        // ถ้า API error → บล็อกการเข้าถึง (ปลอดภัยกว่า)
+        setHasAccess(false);
+        setDeniedReason('no_access');
+        setDeniedMessage('ไม่สามารถตรวจสอบสิทธิ์ได้ กรุณาลองใหม่อีกครั้ง');
       } finally {
         setChecking(false);
       }
