@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
     profileImage: String,
     assignedTask: String,
     clerkId: String,
+    appId: { type: String, default: "" }, // ระบุว่า user นี้อยู่ใน app ไหน (เช่น "smart-takhli", "app_b")
     isActive: { type: Boolean, default: true },
     isArchived: { type: Boolean, default: false },
     exitDate: { type: Date, default: null },
