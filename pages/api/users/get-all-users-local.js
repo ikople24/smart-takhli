@@ -23,6 +23,7 @@ export default async function handler(req, res) {
         profileUrl: String,
         assignedTask: String,
         clerkId: String,
+        appId: { type: String, default: "" }, // ระบุว่า user นี้อยู่ใน app ไหน
         isActive: { type: Boolean, default: true },
         isArchived: { type: Boolean, default: false },
         exitDate: { type: Date, default: null },
