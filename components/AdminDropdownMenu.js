@@ -1,10 +1,24 @@
 import { useRouter } from "next/router";
-import { AlignJustify } from "lucide-react";
+import { AlignJustify, Lock } from "lucide-react";
 
-const AdminDropdownMenu = ({ links, show, loading }) => {
+const AdminDropdownMenu = ({ links, show, loading, disabled }) => {
   const router = useRouter();
 
   if (!show) return null;
+
+  // ถ้าถูก disabled → แสดงไอคอนล็อค
+  if (disabled) {
+    return (
+      <div className="tooltip tooltip-right" data-tip="ไม่มีสิทธิ์เข้าถึงเมนู">
+        <button
+          className="btn btn-sm btn-ghost text-gray-400 cursor-not-allowed"
+          disabled
+        >
+          <Lock className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="dropdown dropdown-right">
@@ -13,7 +27,11 @@ const AdminDropdownMenu = ({ links, show, loading }) => {
         role="button"
         className="btn btn-sm btn-ghost text-gray-700 hover:text-gray-900"
       >
-        <AlignJustify className="w-5 h-5" />
+        {loading ? (
+          <span className="loading loading-spinner loading-sm"></span>
+        ) : (
+          <AlignJustify className="w-5 h-5" />
+        )}
       </div>
       <ul
         tabIndex={0}
@@ -24,8 +42,11 @@ const AdminDropdownMenu = ({ links, show, loading }) => {
             <span className="loading loading-spinner loading-sm"></span>
           </li>
         ) : links.length === 0 ? (
-          <li className="text-center py-4">
-            <span className="text-gray-400">ไม่มีเมนู</span>
+          <li className="text-center py-4 text-gray-400">
+            <span className="flex items-center gap-2">
+              <Lock className="w-4 h-4" />
+              ไม่มีสิทธิ์เข้าถึงเมนู
+            </span>
           </li>
         ) : (
           links.map(({ path, label }, index) => (

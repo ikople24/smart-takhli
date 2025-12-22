@@ -23,41 +23,66 @@ const TopNavbar = () => {
   const { getToken } = useAuth();
   const [allowedPages, setAllowedPages] = useState([]);
   const [menuLoading, setMenuLoading] = useState(true);
+  const [hasAppAccess, setHasAppAccess] = useState(false); // เพิ่ม state สำหรับตรวจสอบสิทธิ์ app
 
   const userRole = user?.publicMetadata?.role || "admin";
   const isSuperAdmin = userRole === "superadmin";
   const isAdmin = userRole === "admin" || isSuperAdmin;
 
-  // ดึง allowedPages จาก MongoDB
+  // ดึง allowedPages และตรวจสอบสิทธิ์ app
   useEffect(() => {
-    const fetchAllowedPages = async () => {
+    const fetchAccessAndPages = async () => {
       if (!user) {
         setMenuLoading(false);
+        setHasAppAccess(false);
         return;
       }
 
       try {
         const token = await getToken();
-        const res = await fetch('/api/users/get-by-clerkId', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
         
-        if (data.user?.allowedPages) {
-          setAllowedPages(data.user.allowedPages);
+        // ตรวจสอบสิทธิ์ app ก่อน
+        const verifyRes = await fetch('/api/auth/verify-app-access', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        const verifyData = await verifyRes.json();
+        
+        // ถ้าไม่มีสิทธิ์เข้า app → ซ่อนเมนูทั้งหมด
+        if (!verifyData.success || verifyData.hasAccess !== true) {
+          console.log("🚫 No app access - hiding menu");
+          setHasAppAccess(false);
+          setAllowedPages([]);
+          setMenuLoading(false);
+          return;
+        }
+        
+        // มีสิทธิ์เข้า app
+        setHasAppAccess(true);
+        
+        // ดึง allowedPages จาก response
+        if (verifyData.user?.allowedPages) {
+          setAllowedPages(verifyData.user.allowedPages);
         }
       } catch (error) {
-        console.error("Error fetching allowed pages:", error);
+        console.error("Error fetching access:", error);
+        setHasAppAccess(false);
+        setAllowedPages([]);
       } finally {
         setMenuLoading(false);
       }
     };
 
-    fetchAllowedPages();
+    fetchAccessAndPages();
   }, [user, getToken]);
 
   // เมนูตาม role และ allowedPages จาก MongoDB
   const getMenuLinks = () => {
+    // ถ้าไม่มีสิทธิ์เข้า app → ไม่แสดงเมนูเลย
+    if (!hasAppAccess) {
+      return [];
+    }
+    
     // Super Admin เห็นทุกหน้า + หน้า Super Admin
     if (isSuperAdmin) {
       return [
@@ -88,6 +113,7 @@ const TopNavbar = () => {
           show={isSignedIn && (isAdmin || userRole === "user")}
           links={getMenuLinks()}
           loading={menuLoading}
+          disabled={!hasAppAccess && !menuLoading} // ปิดเมนูถ้าไม่มีสิทธิ์
         />
       </div>
       <div className="text-2xl font-semibold text-blue-950 flex justify-center items-center">
