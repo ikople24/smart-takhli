@@ -66,7 +66,8 @@ const StatusPage = () => {
         assignment?.completedAt || complaint.completedAt || complaint.updatedAt || complaint.createdAt
       );
       
-      const processingTimeHours = Math.floor((completionDate - startDate) / (1000 * 60 * 60));
+      // ใช้ค่าสัมบูรณ์เพื่อป้องกันค่าติดลบ
+      const processingTimeHours = Math.floor(Math.abs(completionDate - startDate) / (1000 * 60 * 60));
       
       // ปรับการกรองตามช่วงเวลาที่ไม่ซ้อนทับกัน
       switch (selectedTimeFilter) {

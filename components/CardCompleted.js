@@ -95,13 +95,17 @@ const CompletedCard = ({
     // ใช้การคำนวณเดียวกับหน้า status
     const startDate = new Date(timestamp);
     const endDate = new Date(completionDate);
-    const processingTimeHours = Math.floor((endDate - startDate) / (1000 * 60 * 60));
+    const diffMs = Math.abs(endDate - startDate); // ใช้ค่าสัมบูรณ์เพื่อป้องกันค่าติดลบ
+    const processingTimeHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(processingTimeHours / 24);
+    const remainingHours = processingTimeHours % 24;
     
     if (processingTimeHours < 24) {
-      return { value: processingTimeHours, unit: 'ชั่วโมง', hours: processingTimeHours };
+      return { value: processingTimeHours, unit: 'ชั่วโมง', hours: processingTimeHours, display: `${processingTimeHours} ชม.` };
+    } else if (remainingHours > 0) {
+      return { value: diffDays, unit: 'วัน', hours: processingTimeHours, display: `${diffDays} วัน ${remainingHours} ชม.` };
     } else {
-      return { value: diffDays, unit: 'วัน', hours: processingTimeHours };
+      return { value: diffDays, unit: 'วัน', hours: processingTimeHours, display: `${diffDays} วัน` };
     }
   }, [timestamp, completionDate]);
 
@@ -166,7 +170,7 @@ const CompletedCard = ({
           <Clock size={14} />
           <span>{getTimeRangeLabel(processingTime.hours)}</span>
           <span className="text-xs opacity-75">
-            ({processingTime.value} {processingTime.unit})
+            ({processingTime.display})
           </span>
         </div>
       )}
