@@ -18,6 +18,8 @@ export default function CardOfficail(props) {
   const [showRating, setShowRating] = useState(false);
   const [complaintStatus, setComplaintStatus] = useState(null);
   const [assignedUser, setAssignedUser] = useState(null);
+  const [satisfactionCount, setSatisfactionCount] = useState(0);
+  const MAX_RATINGS = 4; // จำนวนครั้งสูงสุดที่สามารถประเมินได้
 
   // ฟังก์ชันซ่อนนามสกุลของเจ้าหน้าที่
   const hideLastName = (fullName) => {
@@ -159,8 +161,23 @@ export default function CardOfficail(props) {
       }
     };
 
+    const fetchSatisfactionCount = async () => {
+      try {
+        if (props.probId) {
+          const res = await fetch(`/api/satisfaction/count?complaintId=${props.probId}`);
+          const data = await res.json();
+          if (data.success) {
+            setSatisfactionCount(data.count || 0);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching satisfaction count:", error);
+      }
+    };
+
     fetchAssignments();
     fetchComplaintStatus();
+    fetchSatisfactionCount();
   }, [props.probId]);
 
   if (!assignedDate) {
@@ -173,20 +190,23 @@ export default function CardOfficail(props) {
     <div className="w-full">
       {/* Officer Card */}
       <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-50 rounded-2xl p-4 border border-blue-100 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <User size={16} className="text-white" />
+        {/* Header with title and processing time */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <User size={16} className="text-white" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-800">เจ้าหน้าที่รับผิดชอบ</h3>
           </div>
-          <h3 className="text-sm font-bold text-gray-800">เจ้าหน้าที่รับผิดชอบ</h3>
+          
+          {/* Processing Time Badge - moved to right */}
+          {processingTime && (
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r ${processingTime.gradientFrom} ${processingTime.gradientTo} text-white shadow-sm`}>
+              <Zap size={10} />
+              {processingTime.text}
+            </div>
+          )}
         </div>
-
-        {/* Processing Time Badge */}
-        {processingTime && (
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-4 bg-gradient-to-r ${processingTime.gradientFrom} ${processingTime.gradientTo} text-white shadow-sm`}>
-            <Zap size={12} />
-            {processingTime.text}
-          </div>
-        )}
 
         {assignedUser ? (
           <div className="flex items-start gap-4">
@@ -264,36 +284,50 @@ export default function CardOfficail(props) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap justify-between items-center gap-2 mt-3">
+      <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
         <button className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400 border border-gray-200 rounded-xl opacity-50 cursor-not-allowed">
           <AlertCircle size={14} />
           รายงาน
         </button>
         
-        {complaintStatus === "ดำเนินการเสร็จสิ้น" && (
+        {complaintStatus === "ดำเนินการเสร็จสิ้น" && satisfactionCount < MAX_RATINGS && (
           <button
             onClick={() => setShowRating(!showRating)}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-200 ${
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
               showRating 
                 ? "bg-gray-100 text-gray-600" 
-                : "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-xl hover:shadow-pink-500/40"
+                : "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-xl hover:shadow-pink-500/40 hover:scale-105"
             }`}
           >
-            <MessageCircleHeart size={14} />
-            {showRating ? "ซ่อน" : "ประเมินความพึงพอใจ"}
+            <MessageCircleHeart size={16} />
+            {showRating ? "ซ่อน" : "ให้คะแนนความพึงพอใจ"}
           </button>
+        )}
+
+        {complaintStatus === "ดำเนินการเสร็จสิ้น" && satisfactionCount >= MAX_RATINGS && (
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 text-xs font-medium rounded-xl border border-green-200">
+            <CheckCircle2 size={14} />
+            ประเมินครบ {MAX_RATINGS} ครั้งแล้ว
+          </div>
+        )}
+
+        {complaintStatus === "ดำเนินการเสร็จสิ้น" && satisfactionCount > 0 && satisfactionCount < MAX_RATINGS && (
+          <span className="text-xs text-gray-500">
+            ({satisfactionCount}/{MAX_RATINGS} ครั้ง)
+          </span>
         )}
       </div>
 
       {/* Satisfaction Form */}
-      {showRating && complaintStatus === "ดำเนินการเสร็จสิ้น" && (
+      {showRating && complaintStatus === "ดำเนินการเสร็จสิ้น" && satisfactionCount < MAX_RATINGS && (
         <div className="mt-4 animate-fade-in">
           <SatisfactionForm
             complaintId={props.probId}
             status={complaintStatus}
-            onSubmit={(data) => {
-              console.log("ส่งความคิดเห็น:", data);
+            onSubmit={() => {
               setShowRating(false);
+              // Refresh satisfaction count
+              setSatisfactionCount(prev => prev + 1);
             }}
           />
         </div>
