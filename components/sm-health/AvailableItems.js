@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, ArrowLeft, User } from "lucide-react";
+import ReturnModal from "./ReturnModal";
 
 const skeletonCount = 6; // จำนวน skeleton ที่แสดงขณะโหลด
 
 const AvailableItems = ({ menu = [], loading = false }) => {
   const [showModal, setShowModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
   const [availableDevices, setAvailableDevices] = useState([]);
   const [registeredUsers, setRegisteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -185,10 +187,7 @@ const AvailableItems = ({ menu = [], loading = false }) => {
         </button>
         <button 
           className="btn btn-warning flex items-center gap-2"
-          onClick={() => {
-            // Navigate to return page
-            window.location.href = '/admin/smart-health-return';
-          }}
+          onClick={() => setShowReturnModal(true)}
         >
           <ArrowLeft className="w-4 h-4" />
           คืนอุปกรณ์
@@ -390,6 +389,20 @@ const AvailableItems = ({ menu = [], loading = false }) => {
               </div>
             </div>
           </dialog>
+        )}
+
+        {/* Return Modal */}
+        {showReturnModal && (
+          <ReturnModal
+            onClose={() => setShowReturnModal(false)}
+            onSuccess={() => {
+              // Refresh available devices after return
+              fetch("/api/smart-health/available-devices")
+                .then((res) => res.json())
+                .then((data) => setAvailableDevices(data))
+                .catch((err) => console.error("Error refreshing devices", err));
+            }}
+          />
         )}
     </div>
   );

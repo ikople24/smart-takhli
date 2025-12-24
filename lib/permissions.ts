@@ -45,20 +45,6 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
-    path: '/admin/smart-health-delivery',
-    label: 'smart-health ส่งของ',
-    icon: '📦',
-    description: 'จัดส่งอุปกรณ์สุขภาพ',
-    category: 'management'
-  },
-  {
-    path: '/admin/smart-health-return',
-    label: 'smart-health รับคืน',
-    icon: '↩️',
-    description: 'รับคืนอุปกรณ์สุขภาพ',
-    category: 'management'
-  },
-  {
     path: '/admin/education-map',
     label: 'smart-school',
     icon: '🏫',

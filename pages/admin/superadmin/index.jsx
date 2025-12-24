@@ -27,8 +27,6 @@ const ALL_PAGES = [
   { path: '/admin/manage-complaints', label: 'จัดการเรื่องร้องเรียน', icon: '📋' },
   { path: '/admin/dashboard', label: 'แดชบอร์ด', icon: '📊' },
   { path: '/admin/smart-health', label: 'smart-health', icon: '🟣' },
-  { path: '/admin/smart-health-delivery', label: 'smart-health ส่งของ', icon: '📦' },
-  { path: '/admin/smart-health-return', label: 'smart-health รับคืน', icon: '↩️' },
   { path: '/admin/education-map', label: 'smart-school', icon: '🏫' },
   { path: '/admin/manage-activities', label: 'จัดการกิจกรรม', icon: '📅' },
   { path: '/admin/feedback-analysis', label: 'วิเคราะห์ความคิดเห็น', icon: '📈' },
