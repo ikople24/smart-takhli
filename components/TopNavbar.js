@@ -10,8 +10,6 @@ const ALL_PAGES = [
   { path: '/admin/manage-complaints', label: '📋 จัดการเรื่องร้องเรียน' },
   { path: '/admin/dashboard', label: '📊 แดชบอร์ด' },
   { path: '/admin/smart-health', label: '🟣 smart-health' },
-  { path: '/admin/smart-health-delivery', label: '📦 smart-health ส่งของ' },
-  { path: '/admin/smart-health-return', label: '↩️ smart-health รับคืน' },
   { path: '/admin/education-map', label: '🏫 smart-school' },
   { path: '/admin/manage-activities', label: '📅 จัดการกิจกรรม' },
   { path: '/admin/feedback-analysis', label: '📈 วิเคราะห์ความคิดเห็น' },

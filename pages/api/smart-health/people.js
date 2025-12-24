@@ -2,7 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
 
 const dbName = "db_takhli";
-const collectionName = "elderly_data";
+const collectionName = "person_data";
 
 export default async function handler(req, res) {
   try {
@@ -10,13 +10,13 @@ export default async function handler(req, res) {
     const db = mongoose.connection.useDb(dbName);
     const collection = db.collection(collectionName);
 
-    // GET - Fetch all elderly data
+    // GET - Fetch all person data
     if (req.method === "GET") {
       const data = await collection.find({}).sort({ createdAt: -1 }).toArray();
       return res.status(200).json(data);
     }
 
-    // POST - Add new elderly record
+    // POST - Add new person record
     if (req.method === "POST") {
       const {
         title,
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // DELETE - Delete elderly record
+    // DELETE - Delete person record
     if (req.method === "DELETE") {
       const { id } = req.query;
 
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // PUT - Update elderly record
+    // PUT - Update person record
     if (req.method === "PUT") {
       const { id } = req.query;
       const updateData = req.body;
@@ -131,10 +131,11 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (error) {
-    console.error("Elderly API error:", error);
+    console.error("People API error:", error);
     return res.status(500).json({
       message: "เกิดข้อผิดพลาดในระบบ",
       error: error.message,
     });
   }
 }
+

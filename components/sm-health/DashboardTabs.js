@@ -18,8 +18,8 @@ const tabs = [
     icon: ArrowRightLeft,
   },
   {
-    key: "elderly",
-    label: "ข้อมูลผู้สูงอายุ",
+    key: "people",
+    label: "ข้อมูลบุคคล",
     icon: Users,
   },
 ];
