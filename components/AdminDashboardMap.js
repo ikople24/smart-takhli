@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import Image from 'next/image';
 
 // Fix for default markers in Leaflet
 import L from 'leaflet';
@@ -13,6 +14,7 @@ L.Icon.Default.mergeOptions({
 
 // Import menu store to get category icons
 import { useMenuStore } from '@/stores/useMenuStore';
+import CardModalDetail from './CardModalDetail';
 
 const { BaseLayer } = LayersControl;
 
@@ -164,7 +166,18 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   const [showPolygons, setShowPolygons] = useState(false);
   const [showCommunityLabels, setShowCommunityLabels] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
   const { menu, fetchMenu, menuLoading } = useMenuStore();
+
+  // Handle opening detail modal
+  const handleOpenDetail = useCallback((complaint) => {
+    setSelectedComplaint(complaint);
+  }, []);
+
+  // Handle closing detail modal
+  const handleCloseDetail = useCallback(() => {
+    setSelectedComplaint(null);
+  }, []);
 
   // Filter complaints with valid location data
   const complaintsWithLocation = useMemo(() => {
@@ -295,8 +308,8 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
               <img src="${categoryIcon}" alt="${complaint.category}" class="category-icon" />
             </div>
           `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         });
       }
     }
@@ -309,8 +322,8 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
           ${getStatusIcon(complaint.status)}
         </div>
       `,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
     });
   };
 
@@ -490,10 +503,13 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
 
   if (!complaints || complaints.length === 0) {
     return (
-      <div className="h-96 w-full rounded-lg bg-gray-100 flex items-center justify-center">
+      <div className="h-[600px] w-full rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-400 text-6xl mb-4">🗺️</div>
-          <p className="text-gray-500">ไม่มีข้อมูลในกรอบเวลาที่เลือก</p>
+          <div className="w-20 h-20 mx-auto mb-4 bg-white rounded-2xl shadow-lg flex items-center justify-center">
+            <span className="text-4xl">🗺️</span>
+          </div>
+          <p className="text-slate-600 font-medium">ไม่มีข้อมูลในกรอบเวลาที่เลือก</p>
+          <p className="text-slate-400 text-sm mt-1">ลองเปลี่ยนช่วงเวลาหรือตัวกรอง</p>
         </div>
       </div>
     );
@@ -501,11 +517,13 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
 
   if (complaintsWithLocation.length === 0) {
     return (
-      <div className="h-96 w-full rounded-lg bg-gray-100 flex items-center justify-center">
+      <div className="h-[600px] w-full rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-400 text-6xl mb-4">📍</div>
-          <p className="text-gray-500">ไม่มีข้อมูลตำแหน่งในกรอบเวลาที่เลือก</p>
-          <p className="text-gray-400 text-sm mt-2">ลองเปลี่ยนกรอบเวลาหรือตัวกรอง</p>
+          <div className="w-20 h-20 mx-auto mb-4 bg-white rounded-2xl shadow-lg flex items-center justify-center">
+            <span className="text-4xl">📍</span>
+          </div>
+          <p className="text-slate-600 font-medium">ไม่มีข้อมูลตำแหน่งในกรอบเวลาที่เลือก</p>
+          <p className="text-slate-400 text-sm mt-1">ลองเปลี่ยนช่วงเวลาหรือตัวกรอง</p>
         </div>
       </div>
     );
@@ -514,10 +532,10 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
   // Show loading state while menu is loading
   if (menuLoading) {
     return (
-      <div className="h-96 w-full rounded-lg bg-gray-100 flex items-center justify-center">
+      <div className="h-[600px] w-full rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">กำลังโหลดแผนที่...</p>
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">กำลังโหลดแผนที่...</p>
         </div>
       </div>
     );
@@ -634,29 +652,79 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
                   position={[complaint.location.lat, complaint.location.lng]}
                   icon={createCustomIcon(complaint)}
                 >
-                  <Popup>
-                    <div className="popup-content">
-                      <h3 className="popup-title">
-                        {complaint.category || 'ไม่ระบุประเภท'}
-                      </h3>
-                      <p className="popup-text">
-                        <strong>รายละเอียด:</strong> {complaint.detail?.substring(0, 100) || 'ไม่มีรายละเอียด'}...
-                      </p>
-                      <p className="popup-text">
-                        <strong>ผู้แจ้ง:</strong> {complaint.fullName || 'ไม่ระบุ'}
-                      </p>
-                      <p className="popup-text">
-                        <strong>ชุมชน:</strong> {complaint.community || 'ไม่ระบุ'}
-                      </p>
-                      <p className="popup-text">
-                        <strong>สถานะ:</strong> 
-                        <span className={`status-badge status-${complaint.status}`}>
-                          {getStatusText(complaint.status)}
-                        </span>
-                      </p>
-                      <p className="popup-text">
-                        <strong>วันที่:</strong> {new Date(complaint.timestamp || complaint.createdAt).toLocaleDateString('th-TH')}
-                      </p>
+                  <Popup className="custom-popup">
+                    <div className="popup-modern">
+                      {/* Header */}
+                      <div 
+                        className="popup-modern-header"
+                        style={{
+                          '--popup-color': getMarkerColor(complaint.status),
+                          '--popup-color-dark': complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '#059669' : '#1d4ed8'
+                        }}
+                      >
+                        <div className="popup-modern-title">
+                          <div className="popup-modern-title-icon">
+                            {(() => {
+                              const categoryIcon = menu?.find(m => m.Prob_name === complaint.category)?.Prob_pic;
+                              return categoryIcon ? (
+                                <Image src={categoryIcon} alt={complaint.category || ''} width={24} height={24} unoptimized />
+                              ) : (
+                                <span>{getStatusIcon(complaint.status)}</span>
+                              );
+                            })()}
+                          </div>
+                          <span>{complaint.category || 'ไม่ระบุประเภท'}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Body */}
+                      <div className="popup-modern-body">
+                        <div className="popup-modern-row">
+                          <div className="popup-modern-row-icon" style={{ background: '#f1f5f9' }}>📝</div>
+                          <div className="popup-modern-row-content">
+                            <div className="popup-modern-row-label">รายละเอียด</div>
+                            <div className="popup-modern-row-value">{complaint.detail?.substring(0, 80) || 'ไม่มีรายละเอียด'}...</div>
+                          </div>
+                        </div>
+                        <div className="popup-modern-row">
+                          <div className="popup-modern-row-icon" style={{ background: '#e0e7ff' }}>🏘️</div>
+                          <div className="popup-modern-row-content">
+                            <div className="popup-modern-row-label">ชุมชน</div>
+                            <div className="popup-modern-row-value">{complaint.community || 'ไม่ระบุ'}</div>
+                          </div>
+                        </div>
+                        <div className="popup-modern-row">
+                          <div className="popup-modern-row-icon" style={{ background: '#fef3c7' }}>👤</div>
+                          <div className="popup-modern-row-content">
+                            <div className="popup-modern-row-label">ผู้แจ้ง</div>
+                            <div className="popup-modern-row-value">
+                              {(() => {
+                                const name = complaint.fullName || 'ไม่ระบุ';
+                                if (name === 'ไม่ระบุ') return name;
+                                const parts = name.trim().split(/\s+/);
+                                if (parts.length >= 2) {
+                                  return `${parts[0]} XXXXX`;
+                                }
+                                return name;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="popup-modern-row">
+                          <div className="popup-modern-row-icon" style={{ background: complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '#dcfce7' : '#dbeafe' }}>
+                            {complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '✅' : '🔄'}
+                          </div>
+                          <div className="popup-modern-row-content">
+                            <div className="popup-modern-row-label">สถานะ • {new Date(complaint.timestamp || complaint.createdAt).toLocaleDateString('th-TH')}</div>
+                            <div className="popup-modern-row-value">
+                              <span className={`popup-modern-status ${complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? 'completed' : 'in_progress'}`}>
+                                <span>{complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '✓' : '●'}</span>
+                                {getStatusText(complaint.status)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </Popup>
                 </Marker>
@@ -672,7 +740,7 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
           key={mapKey}
           center={getMapCenter()}
           zoom={getMapZoom()}
-          className="h-[441px] w-full rounded-lg"
+          className="h-[600px] w-full rounded-2xl"
           style={{ zIndex: 1 }}
         >
         <MapController onMapReady={handleMapReady} />
@@ -754,15 +822,17 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
                               {polygon.popup && (
                 <Popup>
                   <div className="popup-content">
-                    <h3 className="popup-title">{polygon.popup.title || 'พื้นที่'}</h3>
-                    {polygon.popup.description && (
-                      <p className="popup-text">{polygon.popup.description}</p>
-                    )}
-                    {polygon.popup.content && (
+                    {polygon.popup.content ? (
                       <div 
-                        className="popup-text"
                         dangerouslySetInnerHTML={{ __html: polygon.popup.content }}
                       />
+                    ) : (
+                      <>
+                        {polygon.popup.title && <h3 className="popup-title">{polygon.popup.title}</h3>}
+                        {polygon.popup.description && (
+                          <p className="popup-text">{polygon.popup.description}</p>
+                        )}
+                      </>
                     )}
                   </div>
                 </Popup>
@@ -824,48 +894,118 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
               }
             }}
           >
-                         <Popup>
-               <div className="popup-content">
-                 <h3 className="popup-title">
-                   {complaint.category || 'ไม่ระบุประเภท'}
-                 </h3>
-                 <p className="popup-text">
-                   <strong>รายละเอียด:</strong> {complaint.detail?.substring(0, 100) || 'ไม่มีรายละเอียด'}...
-                 </p>
-                 <p className="popup-text">
-                   <strong>ผู้แจ้ง:</strong> {complaint.fullName || 'ไม่ระบุ'}
-                 </p>
-                 <p className="popup-text">
-                   <strong>ชุมชน:</strong> {complaint.community || 'ไม่ระบุ'}
-                 </p>
-                 <p className="popup-text">
-                   <strong>สถานะ:</strong> 
-                   <span className={`status-badge status-${complaint.status}`}>
-                     {getStatusText(complaint.status)}
-                   </span>
-                 </p>
-                 <p className="popup-text">
-                   <strong>วันที่:</strong> {new Date(complaint.timestamp || complaint.createdAt).toLocaleDateString('th-TH')}
-                 </p>
-                 <button
-                   onClick={() => flyToMarker(complaint.location.lat, complaint.location.lng)}
-                   className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
-                 >
-                   📍 ไปที่ตำแหน่งนี้
-                 </button>
-               </div>
-             </Popup>
+            <Popup className="custom-popup">
+              <div className="popup-modern">
+                {/* Header with gradient */}
+                <div 
+                  className="popup-modern-header"
+                  style={{
+                    '--popup-color': getMarkerColor(complaint.status),
+                    '--popup-color-dark': complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '#059669' : '#1d4ed8'
+                  }}
+                >
+                  <div className="popup-modern-title">
+                    <div className="popup-modern-title-icon">
+                      {(() => {
+                        const categoryIcon = menu?.find(m => m.Prob_name === complaint.category)?.Prob_pic;
+                        return categoryIcon ? (
+                          <Image src={categoryIcon} alt={complaint.category || ''} width={24} height={24} unoptimized />
+                        ) : (
+                          <span>{getStatusIcon(complaint.status)}</span>
+                        );
+                      })()}
+                    </div>
+                    <span>{complaint.category || 'ไม่ระบุประเภท'}</span>
+                  </div>
+                </div>
+                
+                {/* Body content */}
+                <div className="popup-modern-body">
+                  {/* Detail */}
+                  <div className="popup-modern-row">
+                    <div className="popup-modern-row-icon" style={{ background: '#f1f5f9' }}>
+                      📝
+                    </div>
+                    <div className="popup-modern-row-content">
+                      <div className="popup-modern-row-label">รายละเอียด</div>
+                      <div className="popup-modern-row-value">
+                        {complaint.detail?.substring(0, 80) || 'ไม่มีรายละเอียด'}...
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Community - First */}
+                  <div className="popup-modern-row">
+                    <div className="popup-modern-row-icon" style={{ background: '#e0e7ff' }}>
+                      🏘️
+                    </div>
+                    <div className="popup-modern-row-content">
+                      <div className="popup-modern-row-label">ชุมชน</div>
+                      <div className="popup-modern-row-value">{complaint.community || 'ไม่ระบุ'}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Reporter - Second (Censored last name) */}
+                  <div className="popup-modern-row">
+                    <div className="popup-modern-row-icon" style={{ background: '#fef3c7' }}>
+                      👤
+                    </div>
+                    <div className="popup-modern-row-content">
+                      <div className="popup-modern-row-label">ผู้แจ้ง</div>
+                      <div className="popup-modern-row-value">
+                        {(() => {
+                          const name = complaint.fullName || 'ไม่ระบุ';
+                          if (name === 'ไม่ระบุ') return name;
+                          const parts = name.trim().split(/\s+/);
+                          if (parts.length >= 2) {
+                            return `${parts[0]} XXXXX`;
+                          }
+                          return name;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Status & Date - Moved from Community position */}
+                  <div className="popup-modern-row">
+                    <div className="popup-modern-row-icon" style={{ background: complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '#dcfce7' : '#dbeafe' }}>
+                      {complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '✅' : '🔄'}
+                    </div>
+                    <div className="popup-modern-row-content">
+                      <div className="popup-modern-row-label">สถานะ • {new Date(complaint.timestamp || complaint.createdAt).toLocaleDateString('th-TH')}</div>
+                      <div className="popup-modern-row-value">
+                        <span className={`popup-modern-status ${complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? 'completed' : 'in_progress'}`}>
+                          <span>{complaint.status === 'completed' || complaint.status === 'ดำเนินการเสร็จสิ้น' ? '✓' : '●'}</span>
+                          {getStatusText(complaint.status)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Footer with action button */}
+                <div className="popup-modern-footer">
+                  <button
+                    onClick={() => handleOpenDetail(complaint)}
+                    className="popup-modern-btn"
+                  >
+                    <span>📋</span>
+                    <span>ดูรายละเอียด</span>
+                  </button>
+                </div>
+              </div>
+            </Popup>
           </Marker>
         ))}
       </MapContainer>
       
-      {/* Legend */}
-      <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg z-10 w-64 max-h-96 overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold">คำอธิบายแผนที่</h4>
+      {/* Legend - Modern Design */}
+      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xl p-4 rounded-2xl shadow-2xl z-10 w-72 max-h-[500px] overflow-y-auto border border-slate-200/50">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-bold text-slate-800">คำอธิบายแผนที่</h4>
           <button
             onClick={toggleFullscreen}
-            className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors flex items-center gap-1"
+            className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-1.5 shadow-md"
             title="ขยายเต็มจอ"
           >
             <span>⛶</span>
@@ -875,125 +1015,126 @@ const AdminDashboardMap = ({ complaints, polygons = [] }) => {
         
         {/* สรุปข้อมูล */}
         {polygons.length > 0 && (
-          <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
-            <p className="font-medium text-blue-800">📊 สรุป:</p>
-            {polygons.some(p => p.boundaryor) ? (
-              <p className="text-blue-700">ชุมชน: {polygons.length} ชุมชน</p>
-            ) : (
-              <p className="text-blue-700">ปัญหา: {polygons.length} พื้นที่</p>
-            )}
-            <p className="text-blue-700">หมุด: {complaintsWithLocation.length} จุด</p>
-            <p className="text-blue-700">แสดงชื่อ: {showCommunityLabels ? polygons.length : 0} ชุมชน</p>
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl text-xs border border-blue-100">
+            <p className="font-semibold text-blue-800 mb-2">📊 สรุปข้อมูล</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/80 rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-blue-600">{polygons.length}</div>
+                <div className="text-blue-700 text-xs">ชุมชน</div>
+              </div>
+              <div className="bg-white/80 rounded-lg p-2 text-center">
+                <div className="text-lg font-bold text-emerald-600">{complaintsWithLocation.length}</div>
+                <div className="text-emerald-700 text-xs">หมุด</div>
+              </div>
+            </div>
           </div>
         )}
         
-        <div className="space-y-3 text-xs">
+        <div className="space-y-4 text-xs">
           <div>
-            <p className="font-medium mb-2">สถานะ:</p>
-            <div className="space-y-1">
+            <p className="font-semibold text-slate-700 mb-2">สถานะหมุด</p>
+            <div className="flex gap-4">
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-                <span>ดำเนินการ</span>
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-400 to-blue-500 mr-2 shadow-sm"></div>
+                <span className="text-slate-600">ดำเนินการ</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                <span>เสร็จสิ้น</span>
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 mr-2 shadow-sm"></div>
+                <span className="text-slate-600">เสร็จสิ้น</span>
               </div>
             </div>
           </div>
-          <div>
-            <p className="font-medium mb-2">หมุด:</p>
-            <p className="text-gray-600">ไอคอนตามประเภทปัญหา</p>
-          </div>
+          
           {polygons.length > 0 && (
             <div>
-              <p className="font-medium mb-2">
-                {polygons.some(p => p.boundaryor) ? 
-                  `ชุมชน (${polygons.filter(p => p.boundaryor && p.boundaryor !== 'ไม่ระบุ').length}):` : 
-                  `ปัญหา (${polygons.length}):`
-                }
-              </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-semibold text-slate-700">
+                  {polygons.some(p => p.boundaryor) ? 'ชุมชน' : 'พื้นที่ปัญหา'}
+                </p>
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{polygons.length}</span>
+              </div>
+              <div className="space-y-1 max-h-36 overflow-y-auto pr-1 scrollbar-thin">
                 {polygons.map((polygon, index) => (
-                  <div key={`legend-polygon-${polygon.id || polygon.name || `index-${index}`}-${index}`} className="flex items-center hover:bg-gray-50 p-1 rounded">
+                  <div key={`legend-polygon-${polygon.id || polygon.name || `index-${index}`}-${index}`} className="flex items-center hover:bg-slate-50 p-1.5 rounded-lg transition-colors">
                     <div 
-                      className="w-3 h-3 mr-2 flex-shrink-0 rounded-sm" 
+                      className="w-3 h-3 mr-2 flex-shrink-0 rounded" 
                       style={{ 
                         backgroundColor: polygon.color,
-                        opacity: polygon.fillOpacity || 0.2 
+                        boxShadow: `0 0 0 1px ${polygon.color}20`
                       }}
                     ></div>
-                    <span className="text-xs truncate">{polygon.name}</span>
+                    <span className="text-xs text-slate-600 truncate">{polygon.name}</span>
                   </div>
                 ))}
               </div>
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 space-y-2">
                 <button
                   onClick={() => setShowPolygons(!showPolygons)}
-                  className="w-full px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
+                  className={`w-full px-3 py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    showPolygons 
+                      ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
+                      : 'bg-gradient-to-r from-slate-600 to-slate-700 text-white'
+                  }`}
                 >
-                  {showPolygons ? 
-                    (polygons.some(p => p.boundaryor) ? '🔽 ซ่อนชุมชน' : '🔽 ซ่อนปัญหา') : 
-                    (polygons.some(p => p.boundaryor) ? '🔼 แสดงชุมชน' : '🔼 แสดงปัญหา')
-                  }
+                  {showPolygons ? '🔽 ซ่อนพื้นที่ชุมชน' : '🔼 แสดงพื้นที่ชุมชน'}
                 </button>
                 <button
                   onClick={() => setShowCommunityLabels(!showCommunityLabels)}
-                  className={`w-full px-2 py-1 text-xs rounded transition-colors ${
+                  className={`w-full px-3 py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 ${
                     showCommunityLabels
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {showCommunityLabels ? '🔽 ซ่อนชื่อชุมชน' : '🔼 แสดงชื่อชุมชน'}
+                  {showCommunityLabels ? '✓ ชื่อชุมชน: เปิด' : '○ ชื่อชุมชน: ปิด'}
                 </button>
-                <div className="text-xs text-gray-500 text-center">
-                  คลิกเพื่อดูรายละเอียด
-                </div>
               </div>
             </div>
           )}
-          <div className="pt-2 border-t border-gray-200">
+          
+          <div className="pt-3 border-t border-slate-100">
             <button
               onClick={() => {
                 try {
                   if (complaintsWithLocation.length > 0 && mapInstance && !mapInstance._removed && mapInstance._loaded && mapInstance._mapPane) {
-                    // ตรวจสอบว่า map พร้อมใช้งาน
                     const centerMap = () => {
                       if (mapInstance && !mapInstance._removed && mapInstance._mapPane && mapInstance._mapPane._leaflet_pos) {
                         try {
                           const center = getMapCenter();
                           const zoom = getMapZoom();
-                          mapInstance.setView(center, zoom, {
-                            animate: true,
-                            duration: 1
-                          });
+                          mapInstance.setView(center, zoom, { animate: true, duration: 1 });
                         } catch (error) {
                           console.warn('Error centering map:', error);
                         }
                       } else {
-                        // ถ้า map ยังไม่พร้อม ให้ลองใหม่อีกครั้ง
                         setTimeout(centerMap, 100);
                       }
                     };
-                    
                     setTimeout(centerMap, 100);
                   }
                 } catch (error) {
                   console.warn('Error setting view:', error);
                 }
               }}
-              className="w-full px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
+              className="w-full px-3 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md flex items-center justify-center gap-2"
             >
-              🗺️ จัดกึ่งกลาง ({complaintsWithLocation.length})
+              <span>🗺️</span>
+              <span>จัดกึ่งกลาง ({complaintsWithLocation.length} ตำแหน่ง)</span>
             </button>
           </div>
         </div>
       </div>
       </div>
+
+      {/* CardModalDetail for viewing complaint details */}
+      <CardModalDetail 
+        modalData={selectedComplaint} 
+        onClose={handleCloseDetail} 
+      />
     </>
   );
 };
 
 export default AdminDashboardMap;
+
 
