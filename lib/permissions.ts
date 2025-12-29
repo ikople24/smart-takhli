@@ -52,6 +52,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/smart-papar/water-quality',
+    label: 'smart-papar (คุณภาพน้ำ)',
+    icon: '💧',
+    description: 'ระบบบันทึกคุณภาพน้ำรายวัน (งานประปา)',
+    category: 'management'
+  },
+  {
     path: '/admin/manage-activities',
     label: 'จัดการกิจกรรม',
     icon: '📅',
@@ -102,6 +109,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/dashboard',
     '/admin/smart-health',
     '/admin/education-map',
+    '/admin/smart-papar/water-quality',
     '/admin/feedback-analysis',
     '/user/satisfaction',
   ],
