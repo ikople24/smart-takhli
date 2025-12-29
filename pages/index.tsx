@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
 import ComplaintFormModal from "@/components/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
+import WaterQualityCard from "@/components/smart-papar/WaterQualityCard";
 import Footer from "@/components/Footer";
 
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
@@ -113,7 +114,12 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
-      <Pm25Dashboard />
+      <div className="mt-4 px-4 w-full max-w-screen-sm mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-stretch gap-3">
+          <Pm25Dashboard className="sm:w-[60%] h-full" />
+          <WaterQualityCard className="sm:w-[40%] h-full" />
+        </div>
+      </div>
       <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">

@@ -11,6 +11,7 @@ const ALL_PAGES = [
   { path: '/admin/dashboard', label: '📊 แดชบอร์ด' },
   { path: '/admin/smart-health', label: '🟣 smart-health' },
   { path: '/admin/education-map', label: '🏫 smart-school' },
+  { path: '/admin/smart-papar/water-quality', label: '💧 smart-papar (คุณภาพน้ำ)' },
   { path: '/admin/manage-activities', label: '📅 จัดการกิจกรรม' },
   { path: '/admin/feedback-analysis', label: '📈 วิเคราะห์ความคิดเห็น' },
   { path: '/user/satisfaction', label: '⭐ ประเมินความพึงพอใจ' },

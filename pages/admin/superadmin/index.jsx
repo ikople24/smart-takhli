@@ -28,6 +28,7 @@ const ALL_PAGES = [
   { path: '/admin/dashboard', label: 'แดชบอร์ด', icon: '📊' },
   { path: '/admin/smart-health', label: 'smart-health', icon: '🟣' },
   { path: '/admin/education-map', label: 'smart-school', icon: '🏫' },
+  { path: '/admin/smart-papar/water-quality', label: 'smart-papar (คุณภาพน้ำ)', icon: '💧' },
   { path: '/admin/manage-activities', label: 'จัดการกิจกรรม', icon: '📅' },
   { path: '/admin/feedback-analysis', label: 'วิเคราะห์ความคิดเห็น', icon: '📈' },
   { path: '/user/satisfaction', label: 'ประเมินความพึงพอใจ', icon: '⭐' },

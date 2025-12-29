@@ -113,7 +113,7 @@ const getDayName = (dateStr) => {
   return dateStr;
 };
 
-const Pm25Dashboard = () => {
+const Pm25Dashboard = ({ className = "" } = {}) => {
   const [data, setData] = useState([]);
   const [dailyData, setDailyData] = useState([]);
   const [error, setError] = useState(false);
@@ -263,7 +263,7 @@ const Pm25Dashboard = () => {
   // Loading state
   if (!mounted) {
     return (
-      <div className="flex flex-col-2 justify-between mt-4 p-2 w-full max-w-[350px] h-[100px] mx-auto rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md">
+      <div className={`flex flex-col-2 justify-between p-2 w-full min-h-[100px] rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md ${className}`}>
         <div className="flex flex-col gap-2 justify-between">
           <h2 className="text-xl font-semibold text-gray-500">เช็คฝุ่นPM 2.5</h2>
           <p className="text-sm text-gray-400">กำลังโหลด...</p>
@@ -283,7 +283,7 @@ const Pm25Dashboard = () => {
     return (
       <>
         <div 
-          className={`flex flex-col-2 justify-between mt-4 p-2 w-full max-w-[350px] h-[100px] mx-auto rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md cursor-pointer hover:bg-white/40 transition-all duration-200 ${errorInfo.bgColor}`}
+          className={`flex flex-col-2 justify-between p-2 w-full min-h-[100px] rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md cursor-pointer hover:bg-white/40 transition-all duration-200 ${errorInfo.bgColor} ${className}`}
           onClick={() => {
             setCurrentInfo(errorInfo);
             setShowModal(true);
@@ -327,7 +327,7 @@ const Pm25Dashboard = () => {
   return (
     <>
       <div
-        className={`flex flex-col-2 justify-between mt-4 p-2 w-full max-w-[350px] h-[100px] mx-auto rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md cursor-pointer hover:bg-white/40 transition-all duration-200 ${pm25Info.bgColor}`}
+        className={`flex flex-col-2 justify-between p-2 w-full min-h-[100px] rounded-xl shadow-md space-y-2 text-black bg-white/30 backdrop-blur-md cursor-pointer hover:bg-white/40 transition-all duration-200 ${pm25Info.bgColor} ${className}`}
         onClick={handleClick}
       >
         <div className="flex flex-col grap-2 justify-between">
