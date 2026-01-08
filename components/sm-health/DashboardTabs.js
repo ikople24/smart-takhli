@@ -1,11 +1,16 @@
 import React from "react";
-import { FileText, Clipboard, ArrowRightLeft, Users } from "lucide-react";
+import { FileText, Clipboard, ArrowRightLeft, Users, GraduationCap } from "lucide-react";
 
 const tabs = [
   {
     key: "request",
     label: "คำขออุปกรณ์",
     icon: FileText,
+  },
+  {
+    key: "elderly-school",
+    label: "โรงเรียนผู้สูงอายุ",
+    icon: GraduationCap,
   },
   {
     key: "register-device",

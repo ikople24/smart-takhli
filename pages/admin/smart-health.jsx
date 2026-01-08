@@ -7,6 +7,7 @@ import WorkflowPipeline from "@/components/sm-health/WorkflowPipeline";
 import EquipmentStats from "@/components/sm-health/EquipmentStats";
 import QuickActions from "@/components/sm-health/QuickActions";
 import DashboardTabs from "@/components/sm-health/DashboardTabs";
+import ElderlySchoolDashboard from "@/components/sm-health/ElderlySchoolDashboard";
 
 // Existing Components
 import RequestTable from "@/components/sm-health/RequestTable";
@@ -128,6 +129,7 @@ export default function SmartHealthPage() {
   const tabCounts = useMemo(
     () => ({
       request: requests.length,
+      "elderly-school": 0,
       "register-device": devices.length,
       "borrow-return": borrows.length,
     }),
@@ -219,6 +221,7 @@ export default function SmartHealthPage() {
                   onUpdateStatus={updateStatus}
                 />
               )}
+              {selectedTab === "elderly-school" && <ElderlySchoolDashboard />}
               {selectedTab === "register-device" && (
                 <RegisterDeviceTable devices={devices} loading={loadingDevices} />
               )}
