@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AlertTriangle, Activity, HeartPulse, RefreshCw } from "lucide-react";
 import { usePermissions } from "@/components/PermissionGuard";
 
@@ -120,6 +121,53 @@ export default function ElderlySchoolDashboard() {
     bp1: "",
     bp2: "",
   });
+
+  // QR Check-in UI (public link)
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrYear, setQrYear] = useState(() => getCurrentYearBE());
+  const [qrUrl, setQrUrl] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+
+  const makeCheckinUrl = (origin, personId, year) => {
+    const qs = new URLSearchParams();
+    qs.set("personId", String(personId));
+    if (year) qs.set("yearBE", String(year));
+    return `${origin}/elderly/checkin?${qs.toString()}`;
+  };
+
+  const openQr = async (year) => {
+    if (!editPerson?._id) return;
+    setQrYear(year || yearBE);
+    setQrOpen(true);
+  };
+
+  const regenQr = async (year) => {
+    if (typeof window === "undefined") return;
+    if (!editPerson?._id) return;
+    setQrLoading(true);
+    setQrError("");
+    try {
+      const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN || window.location.origin;
+      const url = makeCheckinUrl(origin, editPerson._id, year);
+      setQrUrl(url);
+      const QRCode = (await import("qrcode")).default;
+      const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 220 });
+      setQrDataUrl(dataUrl);
+    } catch (e) {
+      setQrDataUrl("");
+      setQrError(e?.message || "สร้าง QR ไม่สำเร็จ");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!qrOpen) return;
+    regenQr(qrYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrOpen, qrYear, editPerson?._id]);
 
   const fetchSummary = async () => {
     setLoading(true);
@@ -405,6 +453,22 @@ export default function ElderlySchoolDashboard() {
               className="flex-1 h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
             />
             <div className="flex items-center gap-2">
+              <button
+                onClick={() =>
+                  window.open(`/admin/elderly-schedule?yearBE=${encodeURIComponent(String(yearBE))}`, "_blank")
+                }
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                title="ตั้งค่าวันเรียนส่วนกลาง 16 ครั้ง/ปี (มีผลกับหน้าเช็คอิน public)"
+              >
+                ตั้งค่าวันเรียน
+              </button>
+              <button
+                onClick={() => window.open(`/admin/elderly-cards?yearBE=${encodeURIComponent(String(yearBE))}`, "_blank")}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                title="พิมพ์บัตร QR สำหรับเช็คอิน"
+              >
+                พิมพ์บัตร QR
+              </button>
               <button
                 onClick={async () => {
                   setImporting(true);
@@ -831,12 +895,21 @@ export default function ElderlySchoolDashboard() {
                   ปี {yearBE} | {editPerson?.citizenId ? `เลขบัตร: ${editPerson.citizenId}` : ""}
                 </p>
               </div>
-              <button
-                onClick={() => setEditOpen(false)}
-                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
-              >
-                ปิด
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openQr(yearBE)}
+                  className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                  title="สร้าง QR สำหรับผู้เรียนสแกนและกรอกข้อมูล (ต้องยืนยันเลขบัตร 4 ตัวท้าย)"
+                >
+                  QR เช็คอิน
+                </button>
+                <button
+                  onClick={() => setEditOpen(false)}
+                  className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                >
+                  ปิด
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-auto p-4 sm:p-5 space-y-5">
@@ -955,6 +1028,106 @@ export default function ElderlySchoolDashboard() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Modal (public check-in link) */}
+      {qrOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden ring-1 ring-gray-200/60">
+            <div className="p-4 sm:p-5 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-900">QR เช็คอิน (ลิงก์สาธารณะ)</p>
+                <p className="text-xs text-gray-500">
+                  ผู้เรียนต้องกรอกเลขบัตร 4 ตัวท้ายก่อนบันทึก • 1 วันบันทึกได้ 1 ครั้ง
+                </p>
+              </div>
+              <button
+                onClick={() => setQrOpen(false)}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+              >
+                ปิด
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">ปี</label>
+                <select
+                  value={qrYear}
+                  onChange={(e) => setQrYear(Number(e.target.value))}
+                  className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                >
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      ปี {y}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => regenQr(qrYear)}
+                  disabled={qrLoading}
+                  className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm disabled:opacity-50"
+                >
+                  {qrLoading ? "กำลังสร้าง..." : "สร้างใหม่"}
+                </button>
+              </div>
+
+              {qrError && (
+                <div className="rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 p-3 text-sm text-amber-800">
+                  {qrError}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-gray-200/70 bg-gray-50 p-4 flex items-center justify-center">
+                {qrDataUrl ? (
+                  <Image
+                    src={qrDataUrl}
+                    alt="QR check-in"
+                    width={220}
+                    height={220}
+                    unoptimized
+                    className="w-[220px] h-[220px] object-contain"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-500">ยังไม่มี QR</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs text-gray-500">ลิงก์เช็คอิน</label>
+                <input
+                  value={qrUrl}
+                  readOnly
+                  className="w-full h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(qrUrl);
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    className="h-10 px-4 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+                  >
+                    คัดลอกลิงก์
+                  </button>
+                  <a
+                    href={qrUrl || "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm inline-flex items-center justify-center ${
+                      qrUrl ? "" : "pointer-events-none opacity-50"
+                    }`}
+                  >
+                    เปิดลิงก์
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
