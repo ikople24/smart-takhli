@@ -214,6 +214,7 @@ export default function SmartPaparWaterQualityPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   const [form, setForm] = useState(() => emptyForm(today));
   const [saving, setSaving] = useState(false);
@@ -241,6 +242,59 @@ export default function SmartPaparWaterQualityPage() {
     fetchItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const syncFromSheet = async () => {
+    try {
+      setSyncing(true);
+      setError("");
+      Swal.fire({
+        title: "กำลังซิ้งจาก Google Sheet...",
+        text: "โปรดรอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 20000);
+      const res = await fetch("/api/smart-papar/water-quality/sync-sheet?maxRows=500", {
+        method: "POST",
+        credentials: "same-origin",
+        signal: controller.signal,
+      }).finally(() => clearTimeout(t));
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "ซิ้งไม่สำเร็จ");
+
+      const s = data.stats || {};
+      Swal.close();
+      await Swal.fire({
+        icon: "success",
+        title: "ซิ้งสำเร็จ",
+        html: `
+          <div style="text-align:left">
+            <div>ประมวลผล: <b>${s.processed ?? 0}</b> วัน</div>
+            <div>เพิ่มใหม่: <b>${s.inserted ?? 0}</b> วัน</div>
+            <div>อัปเดต: <b>${s.updated ?? 0}</b> วัน</div>
+            <div>ข้าม/ผิดพลาด: <b>${s.skipped ?? 0}</b> วัน</div>
+          </div>
+        `,
+        confirmButtonText: "ตกลง",
+      });
+
+      await fetchItems();
+    } catch (e) {
+      Swal.close();
+      await Swal.fire({
+        icon: "error",
+        title: "ซิ้งไม่สำเร็จ",
+        text: e.message || "เกิดข้อผิดพลาด",
+        confirmButtonText: "ตกลง",
+      });
+    } finally {
+      Swal.close();
+      setSyncing(false);
+    }
+  };
 
   const startCreateToday = () => {
     setEditingId(null);
@@ -792,9 +846,20 @@ export default function SmartPaparWaterQualityPage() {
             <div className="bg-white rounded-2xl border shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-gray-800">รายการย้อนหลัง</h2>
-                <button className="btn btn-sm btn-ghost" onClick={fetchItems} type="button">
-                  รีเฟรช
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={syncFromSheet}
+                    type="button"
+                    disabled={syncing}
+                    title="ดึงข้อมูลล่าสุดจาก Google Sheet แล้วบันทึกลงระบบ"
+                  >
+                    {syncing ? "กำลังซิ้ง..." : "Sync จาก Sheet"}
+                  </button>
+                  <button className="btn btn-sm btn-ghost" onClick={fetchItems} type="button" disabled={loading || syncing}>
+                    รีเฟรช
+                  </button>
+                </div>
               </div>
 
               {loading ? (

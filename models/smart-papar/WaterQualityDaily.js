@@ -22,6 +22,30 @@ const WaterQualityDailySchema = new mongoose.Schema(
 
     note: { type: String, default: "" },
 
+    // เก็บรายละเอียดการวัดหลายครั้งต่อวัน (เช้า/เย็น ฯลฯ)
+    // โดยยังคง raw/tap/note ด้านบนเป็น "ค่าล่าสุดของวัน" เพื่อให้ UI เดิมใช้งานได้
+    latestMeasuredAt: { type: Date, default: null },
+    measurements: [
+      {
+        measuredAt: { type: Date, default: null },
+        sourceTimestamp: { type: String, default: "" }, // ค่าดิบจากชีต (ใช้กันซ้ำ)
+        village: { type: String, default: "" },
+        raw: {
+          turbidityNtu: { type: Number, default: null },
+          ph: { type: Number, default: null },
+          tdsMgL: { type: Number, default: null },
+        },
+        tap: {
+          turbidityNtu: { type: Number, default: null },
+          ph: { type: Number, default: null },
+          tdsMgL: { type: Number, default: null },
+          freeChlorineSourceMgL: { type: Number, default: null },
+          freeChlorineEndMgL: { type: Number, default: null },
+        },
+        note: { type: String, default: "" },
+      },
+    ],
+
     createdByClerkId: { type: String, default: "" },
     createdByName: { type: String, default: "" },
     updatedByClerkId: { type: String, default: "" },

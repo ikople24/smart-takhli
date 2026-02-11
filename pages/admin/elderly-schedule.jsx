@@ -14,16 +14,6 @@ function emptySessions() {
   return Array.from({ length: 16 }, (_, i) => ({ visitNo: i + 1, dateISO: "", note: "" }));
 }
 
-function toISODate(d) {
-  // d: Date -> YYYY-MM-DD in Bangkok
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
-
 export default function ElderlySchedulePage() {
   const [yearBE, setYearBE] = useState(() => getCurrentYearBE());
   const [sessions, setSessions] = useState(() => emptySessions());
@@ -31,7 +21,6 @@ export default function ElderlySchedulePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [autoStartDate, setAutoStartDate] = useState("");
   const [clearArmed, setClearArmed] = useState(false);
 
   const yearOptions = useMemo(() => {
@@ -111,24 +100,6 @@ export default function ElderlySchedulePage() {
     }
   };
 
-  const autoFillWeekly = () => {
-    const start = String(autoStartDate || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) {
-      setError("กรุณาเลือกวันเริ่มให้ถูกต้องก่อน (YYYY-MM-DD)");
-      return;
-    }
-    const [y, m, d] = start.split("-").map((x) => Number(x));
-    const dt = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
-    const next = sessions.map((s, i) => {
-      const date = new Date(dt.getTime());
-      date.setUTCDate(date.getUTCDate() + i * 7);
-      return { ...s, dateISO: toISODate(date) };
-    });
-    setSessions(next);
-    setSuccess("");
-    setError("");
-  };
-
   const clearAll = () => {
     if (!clearArmed) {
       setClearArmed(true);
@@ -168,19 +139,6 @@ export default function ElderlySchedulePage() {
                   </option>
                 ))}
               </select>
-              <input
-                type="date"
-                value={autoStartDate}
-                onChange={(e) => setAutoStartDate(e.target.value)}
-                className="h-10 px-3 text-sm rounded-xl border border-gray-200 bg-white"
-                title="วันเริ่มสำหรับเติมทุก 7 วัน"
-              />
-              <button
-                onClick={autoFillWeekly}
-                className="h-10 px-4 text-sm rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
-              >
-                เติมทุก 7 วัน
-              </button>
               <button
                 onClick={clearAll}
                 className="h-10 px-4 text-sm rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800"
