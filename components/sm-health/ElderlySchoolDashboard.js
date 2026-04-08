@@ -13,6 +13,21 @@ function getCurrentYearBE() {
   return Number.isFinite(y) ? y + 543 : new Date().getFullYear() + 543;
 }
 
+/** dateISO = YYYY-MM-DD จากหน้าตั้งค่าวันเรียน */
+function formatScheduleDateISOToThai(dateISO) {
+  const raw = String(dateISO || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const [y, m, d] = raw.split("-").map((x) => Number(x));
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 function StatCard({ title, icon: Icon, normal, risk, extra, loading }) {
   return (
     <div className="rounded-3xl bg-white/80 backdrop-blur ring-1 ring-gray-200/60 shadow-sm hover:shadow-md transition-shadow p-5">
@@ -121,6 +136,9 @@ export default function ElderlySchoolDashboard() {
     bp1: "",
     bp2: "",
   });
+
+  /** ตารางวันเรียน (ครั้งที่ → dateISO) สำหรับแสดงในตารางแก้ไขรายคน */
+  const [editScheduleSessions, setEditScheduleSessions] = useState([]);
 
   // QR Check-in UI (public link)
   const [qrOpen, setQrOpen] = useState(false);
@@ -240,19 +258,38 @@ export default function ElderlySchoolDashboard() {
     return [y - 1, y, y + 1];
   }, []);
 
+  const studyDateByVisitNo = useMemo(() => {
+    const m = {};
+    for (const s of editScheduleSessions) {
+      const n = Number(s?.visitNo);
+      if (Number.isFinite(n) && n >= 1 && n <= 16 && s?.dateISO) {
+        m[n] = String(s.dateISO).trim();
+      }
+    }
+    return m;
+  }, [editScheduleSessions]);
+
   const openEdit = async (personId) => {
     setEditOpen(true);
     setEditLoading(true);
     setError("");
+    setEditScheduleSessions([]);
     try {
-      const [pRes, vRes] = await Promise.all([
+      const [pRes, vRes, sRes] = await Promise.all([
         fetch(`/api/smart-health/elderly/people?id=${encodeURIComponent(personId)}`),
         fetch(`/api/smart-health/elderly/visits?personId=${encodeURIComponent(personId)}&yearBE=${encodeURIComponent(String(yearBE))}`),
+        fetch(`/api/smart-health/elderly/schedule?yearBE=${encodeURIComponent(String(yearBE))}`),
       ]);
       const pJson = await pRes.json();
       const vJson = await vRes.json();
+      const sJson = await sRes.json().catch(() => ({}));
       if (!pRes.ok || !pJson?.success) throw new Error(pJson?.message || "โหลดข้อมูลคนไม่สำเร็จ");
       if (!vRes.ok || !vJson?.success) throw new Error(vJson?.message || "โหลดข้อมูลครั้งไม่สำเร็จ");
+      if (sRes.ok && sJson?.success && Array.isArray(sJson.schedule?.sessions)) {
+        setEditScheduleSessions(sJson.schedule.sessions);
+      } else {
+        setEditScheduleSessions([]);
+      }
       setEditPerson(pJson.person);
       const visits = Array.isArray(vJson.visits) ? vJson.visits : [];
       setEditVisits(visits);
@@ -444,7 +481,10 @@ export default function ElderlySchoolDashboard() {
       {isSuperAdmin && (
         <div className="rounded-3xl bg-white/80 backdrop-blur ring-1 ring-gray-200/60 shadow-sm p-5">
           <p className="text-base font-semibold text-gray-900">นำเข้าข้อมูลจาก Google Sheet (รายปี)</p>
-          <p className="text-xs text-gray-500 mt-1">เฉพาะ superadmin</p>
+          <p className="text-xs text-gray-500 mt-1">
+            เฉพาะ superadmin — การนำเข้าจะอัปเดตเฉพาะช่องที่ Sheet มีค่า ไม่ล้างข้อมูลที่แก้ในหน้านี้หรือจากเช็คอิน
+            (ช่วยเมื่อ Sheet เพิ่มคอลัมน์หรือมีช่องว่าง)
+          </p>
           <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
             <input
               value={importUrl}
@@ -980,13 +1020,27 @@ export default function ElderlySchoolDashboard() {
                   <div className="bg-white rounded-3xl border border-gray-200/60 overflow-hidden">
                     <div className="p-4 border-b border-gray-200/60 bg-gray-50/50">
                       <p className="text-sm font-semibold text-gray-900">ข้อมูลการมาเรียน (1–16 ครั้ง)</p>
-                      <p className="text-xs text-gray-500">แก้ไขครั้งไหนกด “บันทึก” ที่แถวนั้น</p>
+                      <p className="text-xs text-gray-500">
+                        คอลัมน์ “ครั้งที่ / วันที่เรียน” ดึงจาก{" "}
+                        <a
+                          href={`/admin/elderly-schedule?yearBE=${encodeURIComponent(String(yearBE))}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-700 hover:underline font-medium"
+                        >
+                          ตั้งค่าวันเรียน
+                        </a>{" "}
+                        (ปี {yearBE})
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">แก้ไขครั้งไหนกด “แก้ไข” ที่แถวนั้น</p>
                     </div>
                     <div className="overflow-auto">
                       <table className="min-w-[1000px] w-full">
                         <thead>
                           <tr className="bg-white/70 backdrop-blur border-b border-gray-200/60 sticky top-0">
-                            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">ครั้ง</th>
+                            <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500 min-w-[9rem]">
+                              ครั้งที่ / วันที่เรียน
+                            </th>
                             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">นน.(กก.)</th>
                             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">รอบเอว</th>
                             <th className="text-left py-2 px-3 text-xs font-semibold text-gray-500">ชีพจร</th>
@@ -1001,7 +1055,17 @@ export default function ElderlySchoolDashboard() {
                             // We avoid state per row; use prompt-like minimal editing via window.prompt to keep code small
                             return (
                               <tr key={no} className="hover:bg-gray-50/60">
-                                <td className="py-2 px-3 text-sm font-medium">{no}</td>
+                                <td className="py-2 px-3 text-sm align-top">
+                                  <div className="font-medium text-gray-900">ครั้งที่ {no}</div>
+                                  {studyDateByVisitNo[no] ? (
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      {formatScheduleDateISOToThai(studyDateByVisitNo[no]) ??
+                                        studyDateByVisitNo[no]}
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-gray-400 mt-0.5">ยังไม่ตั้งวัน</div>
+                                  )}
+                                </td>
                                 <td className="py-2 px-3 text-sm">{v.weightKg ?? "-"}</td>
                                 <td className="py-2 px-3 text-sm">{v.waistCm ?? "-"}</td>
                                 <td className="py-2 px-3 text-sm">{v.pulseBpm ?? "-"}</td>
@@ -1141,6 +1205,28 @@ export default function ElderlySchoolDashboard() {
               <div>
                 <p className="font-semibold text-gray-900">แก้ไขข้อมูลครั้งที่ {visitEditNo}</p>
                 <p className="text-xs text-gray-500">ปี {yearBE}</p>
+                {visitEditNo != null && (
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {studyDateByVisitNo[visitEditNo] ? (
+                      <>
+                        วันที่เรียน (จาก{" "}
+                        <a
+                          href={`/admin/elderly-schedule?yearBE=${encodeURIComponent(String(yearBE))}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-700 hover:underline"
+                        >
+                          ตั้งค่าวันเรียน
+                        </a>
+                        ):{" "}
+                        {formatScheduleDateISOToThai(studyDateByVisitNo[visitEditNo]) ??
+                          studyDateByVisitNo[visitEditNo]}
+                      </>
+                    ) : (
+                      <>ยังไม่กำหนดวันเรียนสำหรับครั้งนี้ — ตั้งได้ที่เมนูตั้งค่าวันเรียน</>
+                    )}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => setVisitEditOpen(false)}

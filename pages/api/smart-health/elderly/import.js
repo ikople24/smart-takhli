@@ -4,6 +4,53 @@ import ElderlyVisit from "@/models/ElderlyVisit";
 import { fetchAndParseSheetCSV } from "@/lib/elderlySchoolDashboard";
 import { parseSheetRowToPersonAndVisits } from "@/lib/elderlySchoolImport";
 
+function hasSheetString(v) {
+  if (v === null || v === undefined) return false;
+  return String(v).trim() !== "";
+}
+
+/** ผสมข้อมูลคน: ช่องว่างใน Sheet ไม่ทับค่าที่แก้ในระบบแล้ว */
+function mergePersonFieldsFromSheet(incoming, existing, yearBE) {
+  const ex = existing || null;
+  const pick = (inc, prev) => (hasSheetString(inc) ? inc : prev ?? null);
+
+  const firstYear = (() => {
+    const a = ex?.sourceYearFirstSeen;
+    if (a != null && Number.isFinite(a)) return Math.min(a, yearBE);
+    return yearBE;
+  })();
+
+  return {
+    fullName: pick(incoming.fullName, ex?.fullName) || incoming.fullName,
+    ageYears: incoming.ageYears != null ? incoming.ageYears : ex?.ageYears ?? null,
+    birthDateText: pick(incoming.birthDateText, ex?.birthDateText),
+    bloodType: pick(incoming.bloodType, ex?.bloodType),
+    address: pick(incoming.address, ex?.address),
+    phone: pick(incoming.phone, ex?.phone),
+    occupation: pick(incoming.occupation, ex?.occupation),
+    heightCm: incoming.heightCm != null ? incoming.heightCm : ex?.heightCm ?? null,
+    baselineWeightKg:
+      incoming.baselineWeightKg != null ? incoming.baselineWeightKg : ex?.baselineWeightKg ?? null,
+    sourceYearFirstSeen: firstYear,
+  };
+}
+
+/** อัปเดต visit จาก Sheet เฉพาะฟิลด์ที่มีค่า — ไม่ล้างค่าที่กรอกใน dashboard/check-in */
+function buildVisitSetNonDestructive(v, yearBE) {
+  const set = {};
+  if (v.heightCm != null) set.heightCm = v.heightCm;
+  if (v.weightKg != null) set.weightKg = v.weightKg;
+  if (v.waistCm != null) set.waistCm = v.waistCm;
+  if (v.pulseBpm != null) set.pulseBpm = v.pulseBpm;
+  if (v.bp1Sys != null) set.bp1Sys = v.bp1Sys;
+  if (v.bp1Dia != null) set.bp1Dia = v.bp1Dia;
+  if (v.bp2Sys != null) set.bp2Sys = v.bp2Sys;
+  if (v.bp2Dia != null) set.bp2Dia = v.bp2Dia;
+  if (Object.keys(set).length === 0) return null;
+  set.source = `sheet${yearBE}`;
+  return set;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
@@ -79,27 +126,37 @@ export default async function handler(req, res) {
       });
     }
 
-    // Upsert people
-    const upsertOps = Array.from(peopleByCitizenId.values()).map((p) => ({
-      updateOne: {
-        filter: { citizenId: p.citizenId },
-        update: {
-          $set: {
-            fullName: p.fullName,
-            ageYears: p.ageYears ?? null,
-            birthDateText: p.birthDateText ?? null,
-            bloodType: p.bloodType ?? null,
-            address: p.address ?? null,
-            phone: p.phone ?? null,
-            occupation: p.occupation ?? null,
-            heightCm: p.heightCm ?? null,
-            baselineWeightKg: p.baselineWeightKg ?? null,
-            sourceYearFirstSeen: p.sourceYearFirstSeen ?? year,
+    const citizenIdsForMerge = Array.from(peopleByCitizenId.keys());
+    const existingPeople = await ElderlyPerson.find({
+      citizenId: { $in: citizenIdsForMerge },
+    }).lean();
+    const existingByCitizenId = new Map(existingPeople.map((doc) => [doc.citizenId, doc]));
+
+    // Upsert people (ช่องว่างใน Sheet ไม่ทับข้อมูลเดิมใน DB)
+    const upsertOps = Array.from(peopleByCitizenId.values()).map((p) => {
+      const merged = mergePersonFieldsFromSheet(p, existingByCitizenId.get(p.citizenId), year);
+      return {
+        updateOne: {
+          filter: { citizenId: p.citizenId },
+          update: {
+            $set: {
+              citizenId: p.citizenId,
+              fullName: merged.fullName,
+              ageYears: merged.ageYears ?? null,
+              birthDateText: merged.birthDateText ?? null,
+              bloodType: merged.bloodType ?? null,
+              address: merged.address ?? null,
+              phone: merged.phone ?? null,
+              occupation: merged.occupation ?? null,
+              heightCm: merged.heightCm ?? null,
+              baselineWeightKg: merged.baselineWeightKg ?? null,
+              sourceYearFirstSeen: merged.sourceYearFirstSeen ?? year,
+            },
           },
+          upsert: true,
         },
-        upsert: true,
-      },
-    }));
+      };
+    });
 
     if (upsertOps.length) {
       await ElderlyPerson.bulkWrite(upsertOps, { ordered: false });
@@ -113,28 +170,18 @@ export default async function handler(req, res) {
     ).lean();
     const personIdByCitizenId = new Map(persons.map((p) => [p.citizenId, p._id]));
 
-    // Upsert visits
+    // Upsert visits — เฉพาะฟิลด์ที่ Sheet มีค่า (ไม่ล้างค่าที่บันทึกผ่านหน้าแอดมิน/check-in)
     const visitOps = [];
     for (const [citizenId, visits] of visitsByCitizenId.entries()) {
       const personId = personIdByCitizenId.get(citizenId);
       if (!personId) continue;
       for (const v of visits) {
+        const $set = buildVisitSetNonDestructive(v, year);
+        if (!$set) continue;
         visitOps.push({
           updateOne: {
             filter: { personId, yearBE: year, visitNo: v.visitNo },
-            update: {
-              $set: {
-                heightCm: v.heightCm ?? null,
-                weightKg: v.weightKg ?? null,
-                waistCm: v.waistCm ?? null,
-                pulseBpm: v.pulseBpm ?? null,
-                bp1Sys: v.bp1Sys ?? null,
-                bp1Dia: v.bp1Dia ?? null,
-                bp2Sys: v.bp2Sys ?? null,
-                bp2Dia: v.bp2Dia ?? null,
-                source: `sheet${year}`,
-              },
-            },
+            update: { $set },
             upsert: true,
           },
         });
