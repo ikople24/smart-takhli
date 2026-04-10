@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { AlertTriangle, Activity, HeartPulse, RefreshCw } from "lucide-react";
+import { AlertTriangle, Activity, HeartPulse, RefreshCw, Ruler, Gauge, Brain, Info } from "lucide-react";
 import { usePermissions } from "@/components/PermissionGuard";
+import { score9Q, severityLabelThai } from "@/lib/elderlyMentalHealth";
 
 function getCurrentYearBE() {
   // Use Bangkok timezone to avoid edge cases around midnight
@@ -28,9 +29,24 @@ function formatScheduleDateISOToThai(dateISO) {
   }).format(date);
 }
 
-function StatCard({ title, icon: Icon, normal, risk, extra, loading }) {
+function StatCard({
+  title,
+  icon: Icon,
+  normal,
+  risk,
+  extra,
+  loading,
+  onClickNormal,
+  onClickRisk,
+  info,
+  onOpenInfo,
+}) {
   return (
-    <div className="rounded-3xl bg-white/80 backdrop-blur ring-1 ring-gray-200/60 shadow-sm hover:shadow-md transition-shadow p-5">
+    <div
+      className={`rounded-3xl bg-white/80 backdrop-blur ring-1 ring-gray-200/60 shadow-sm hover:shadow-md transition-shadow p-5 relative ${
+        info ? "pb-12" : ""
+      }`}
+    >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 ring-1 ring-emerald-100 flex items-center justify-center">
@@ -44,19 +60,44 @@ function StatCard({ title, icon: Icon, normal, risk, extra, loading }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl p-4 bg-gradient-to-br from-emerald-50/70 to-white ring-1 ring-emerald-100">
-          <p className="text-xs text-emerald-700">ปกติ</p>
-          <p className="text-3xl font-bold text-emerald-700 mt-1">
+        <button
+          type="button"
+          onClick={typeof onClickNormal === "function" ? onClickNormal : undefined}
+          className={`rounded-2xl p-4 bg-gradient-to-br from-emerald-50/70 to-white ring-1 ring-emerald-100 text-left min-h-[88px] flex flex-col items-start ${
+            typeof onClickNormal === "function" ? "hover:shadow-sm transition-shadow cursor-pointer" : ""
+          }`}
+          title={typeof onClickNormal === "function" ? "กดเพื่อกรอง: ปกติ" : undefined}
+        >
+          <p className="text-xs text-emerald-700 leading-none">ปกติ</p>
+          <p className="text-3xl font-bold text-emerald-700 mt-auto leading-none">
             {loading ? "-" : normal ?? 0}
           </p>
-        </div>
-        <div className="rounded-2xl p-4 bg-gradient-to-br from-amber-50/70 to-white ring-1 ring-amber-100">
-          <p className="text-xs text-amber-700">เสี่ยง/ผิดปกติ</p>
-          <p className="text-3xl font-bold text-amber-700 mt-1">
+        </button>
+        <button
+          type="button"
+          onClick={typeof onClickRisk === "function" ? onClickRisk : undefined}
+          className={`rounded-2xl p-4 bg-gradient-to-br from-amber-50/70 to-white ring-1 ring-amber-100 text-left min-h-[88px] flex flex-col items-start ${
+            typeof onClickRisk === "function" ? "hover:shadow-sm transition-shadow cursor-pointer" : ""
+          }`}
+          title={typeof onClickRisk === "function" ? "กดเพื่อกรอง: เสี่ยง/ผิดปกติ" : undefined}
+        >
+          <p className="text-xs text-amber-700 leading-none">เสี่ยง/ผิดปกติ</p>
+          <p className="text-3xl font-bold text-amber-700 mt-auto leading-none">
             {loading ? "-" : risk ?? 0}
           </p>
-        </div>
+        </button>
       </div>
+
+      {info && (
+        <button
+          type="button"
+          onClick={() => onOpenInfo?.(info)}
+          className="absolute bottom-4 right-4 h-9 w-9 rounded-2xl border border-gray-200/70 bg-white/80 backdrop-blur shadow-sm hover:bg-white hover:shadow transition"
+          title="ข้อมูลเพิ่มเติม"
+        >
+          <Info className="w-4 h-4 text-gray-600 mx-auto" />
+        </button>
+      )}
 
       {extra}
     </div>
@@ -97,6 +138,19 @@ function bpCategoryLabel(cat) {
   }
 }
 
+function mhBadge(mh) {
+  if (!mh) return { label: "ไม่ระบุ", className: "bg-gray-50 text-gray-600 border-gray-200" };
+  if (mh.suicidalRisk) return { label: "เร่งด่วน", className: "bg-red-50 text-red-700 border-red-200" };
+  const sev = mh.q9Severity || "unknown";
+  if (sev === "severe" || sev === "moderate") {
+    return { label: `เสี่ยง (${severityLabelThai(sev)})`, className: "bg-amber-50 text-amber-800 border-amber-200" };
+  }
+  if (mh.q2Positive && (sev === "unknown" || mh.q9TotalScore == null)) {
+    return { label: "2Q+ (รอ 9Q)", className: "bg-amber-50 text-amber-800 border-amber-200" };
+  }
+  return { label: "ปกติ", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+}
+
 export default function ElderlySchoolDashboard() {
   const { isSuperAdmin } = usePermissions();
   const [yearBE, setYearBE] = useState(() => getCurrentYearBE());
@@ -108,6 +162,34 @@ export default function ElderlySchoolDashboard() {
   const [search, setSearch] = useState("");
   const [bmiFilter, setBmiFilter] = useState("all"); // all|underweight|normal|overweight|obese1|obese2|unknown
   const [bpFilter, setBpFilter] = useState("all"); // all|normal|low|risk|high|unknown
+  const [mhFilter, setMhFilter] = useState("all"); // all|ok|risk|urgent|unknown
+  const [abdominalFilter, setAbdominalFilter] = useState("all"); // all|normal|risk|unknown
+  const [metabolicFilter, setMetabolicFilter] = useState("all"); // all|low|high|unknown
+  const [pulseFilter, setPulseFilter] = useState("all"); // all|normal|low|high|abnormal|unknown
+  const [bmiRiskOnly, setBmiRiskOnly] = useState(false);
+  const [bpRiskOnly, setBpRiskOnly] = useState(false);
+
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoPayload, setInfoPayload] = useState(null); // { title, body, footnote }
+
+  const resetAllFilters = (keepSearch = true) => {
+    setRiskOnly(false);
+    setBmiFilter("all");
+    setBpFilter("all");
+    setMhFilter("all");
+    setAbdominalFilter("all");
+    setMetabolicFilter("all");
+    setPulseFilter("all");
+    setBmiRiskOnly(false);
+    setBpRiskOnly(false);
+    if (!keepSearch) setSearch("");
+  };
+
+  const openInfo = (payload) => {
+    if (!payload) return;
+    setInfoPayload(payload);
+    setInfoOpen(true);
+  };
 
   // Import UI
   const [importUrl, setImportUrl] = useState("");
@@ -136,6 +218,15 @@ export default function ElderlySchoolDashboard() {
     bp1: "",
     bp2: "",
   });
+
+  // Mental health assessment UI (2Q→9Q)
+  const [mhOpen, setMhOpen] = useState(false);
+  const [mhLoading, setMhLoading] = useState(false);
+  const [mhError, setMhError] = useState("");
+  const [mhHistory, setMhHistory] = useState([]);
+  const [mhStep, setMhStep] = useState("2q"); // 2q|9q|review
+  const [mh2q, setMh2q] = useState({ q1: false, q2: false });
+  const [mh9q, setMh9q] = useState(Array.from({ length: 9 }, () => 0));
 
   /** ตารางวันเรียน (ครั้งที่ → dateISO) สำหรับแสดงในตารางแก้ไขรายคน */
   const [editScheduleSessions, setEditScheduleSessions] = useState([]);
@@ -232,6 +323,46 @@ export default function ElderlySchoolDashboard() {
       if (riskOnly && !p.overallRisk) return false;
       if (bmiFilter !== "all" && (p.bmiCategory || "unknown") !== bmiFilter) return false;
       if (bpFilter !== "all" && (p?.bp?.category || "unknown") !== bpFilter) return false;
+      if (bmiRiskOnly && !p.bmiRisk) return false;
+      if (bpRiskOnly && !p?.bp?.risk) return false;
+
+      if (abdominalFilter !== "all") {
+        const v = p?.abdominalRisk;
+        if (abdominalFilter === "risk" && v !== true) return false;
+        if (abdominalFilter === "normal" && v !== false) return false;
+        if (abdominalFilter === "unknown" && v !== null) return false;
+      }
+
+      if (metabolicFilter !== "all") {
+        const score = p?.metabolicRiskScore;
+        const high = p?.metabolicRiskHigh;
+        if (metabolicFilter === "unknown" && score !== null) return false;
+        if (metabolicFilter === "high" && high !== true) return false;
+        if (metabolicFilter === "low" && !(score !== null && high === false)) return false;
+      }
+
+      if (pulseFilter !== "all") {
+        const cat = p?.pulseCategory || "unknown";
+        if (pulseFilter === "abnormal" && !(cat === "low" || cat === "high")) return false;
+        if (pulseFilter !== "abnormal" && cat !== pulseFilter) return false;
+      }
+
+      if (mhFilter !== "all") {
+        const mh = p.mentalHealth || null;
+        const urgent = mh?.suicidalRisk === true;
+        const risk =
+          urgent ||
+          mh?.q9Severity === "moderate" ||
+          mh?.q9Severity === "severe" ||
+          (mh?.q2Positive === true && (mh?.q9Severity === "unknown" || mh?.q9TotalScore == null));
+        const ok = Boolean(mh) && !urgent && !risk;
+        const unknown = !mh;
+        if (mhFilter === "urgent" && !urgent) return false;
+        // "risk" includes urgent (to match dashboard risk card)
+        if (mhFilter === "risk" && !risk) return false;
+        if (mhFilter === "ok" && !ok) return false;
+        if (mhFilter === "unknown" && !unknown) return false;
+      }
       if (!q) return true;
       return (
         (p.fullName || "").toLowerCase().includes(q) ||
@@ -251,7 +382,19 @@ export default function ElderlySchoolDashboard() {
     });
 
     return filtered;
-  }, [data, riskOnly, search, bmiFilter, bpFilter]);
+  }, [
+    data,
+    riskOnly,
+    search,
+    bmiFilter,
+    bpFilter,
+    mhFilter,
+    abdominalFilter,
+    metabolicFilter,
+    pulseFilter,
+    bmiRiskOnly,
+    bpRiskOnly,
+  ]);
 
   const yearOptions = useMemo(() => {
     const y = getCurrentYearBE();
@@ -324,6 +467,67 @@ export default function ElderlySchoolDashboard() {
       setEditOpen(false);
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const openMentalHealth = async () => {
+    if (!editPerson?._id) return;
+    setMhOpen(true);
+    setMhLoading(true);
+    setMhError("");
+    setMhStep("2q");
+    setMh2q({ q1: false, q2: false });
+    setMh9q(Array.from({ length: 9 }, () => 0));
+    try {
+      const qs = new URLSearchParams();
+      qs.set("personId", String(editPerson._id));
+      qs.set("yearBE", String(yearBE));
+      qs.set("limit", "10");
+      const res = await fetch(`/api/smart-health/elderly/assessments?${qs.toString()}`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) throw new Error(json?.message || "โหลดแบบประเมินไม่สำเร็จ");
+      setMhHistory(Array.isArray(json.items) ? json.items : []);
+    } catch (e) {
+      setMhHistory([]);
+      setMhError(e?.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setMhLoading(false);
+    }
+  };
+
+  const saveMentalHealth = async () => {
+    if (!editPerson?._id) return;
+    setMhLoading(true);
+    setMhError("");
+    try {
+      const q2Positive = Boolean(mh2q.q1 || mh2q.q2);
+      const payload = {
+        personId: editPerson._id,
+        yearBE,
+        q2: { q1: mh2q.q1, q2: mh2q.q2 },
+        q9: q2Positive ? { answers: mh9q } : null,
+      };
+      const res = await fetch("/api/smart-health/elderly/assessments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.success === false) throw new Error(json?.message || "บันทึกไม่สำเร็จ");
+      setMhStep("review");
+      await fetchSummary();
+      // refresh history
+      const qs = new URLSearchParams();
+      qs.set("personId", String(editPerson._id));
+      qs.set("yearBE", String(yearBE));
+      qs.set("limit", "10");
+      const hRes = await fetch(`/api/smart-health/elderly/assessments?${qs.toString()}`);
+      const hJson = await hRes.json().catch(() => ({}));
+      if (hRes.ok && hJson?.success) setMhHistory(Array.isArray(hJson.items) ? hJson.items : []);
+    } catch (e) {
+      setMhError(e?.message || "เกิดข้อผิดพลาด");
+    } finally {
+      setMhLoading(false);
     }
   };
 
@@ -682,6 +886,25 @@ export default function ElderlySchoolDashboard() {
           normal={data?.bmi?.normal}
           risk={data?.bmi?.risk}
           loading={loading}
+          info={{
+            title: "BMI คืออะไร",
+            body: [
+              "BMI = น้ำหนัก(กก.) / (ส่วนสูง(ม.)²)",
+              "ใช้คัดกรองภาวะผอม/น้ำหนักเกิน/อ้วน",
+              "ในแดชบอร์ดนี้ “เสี่ยง/ผิดปกติ” = ทุกค่า BMI ที่ไม่ใช่ “ปกติ” (ไม่นับค่าว่าง)",
+            ],
+            footnote:
+              "หมายเหตุ: BMI เป็นการคัดกรอง ไม่ใช่การวินิจฉัย ควรดูร่วมกับรอบเอว/โรคประจำตัว",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setBmiFilter("normal");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setBmiRiskOnly(true);
+          }}
           extra={
             <div className="mt-3 space-y-2">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
@@ -732,6 +955,25 @@ export default function ElderlySchoolDashboard() {
           normal={data?.bp?.normal}
           risk={data?.bp?.riskTotal}
           loading={loading}
+          info={{
+            title: "ความดันโลหิต (BP) คืออะไร",
+            body: [
+              "BP แสดงเป็น ตัวบน/ตัวล่าง (เช่น 120/80)",
+              "แดชบอร์ดนี้จัดกลุ่ม: ต่ำ (<90 หรือ <60), ปกติ (<120 และ <80), สูง (≥140 หรือ ≥90), เสี่ยง (ค่ากลาง)",
+              "สรุป “เสี่ยง/ผิดปกติ” = ต่ำ + เสี่ยง + สูง",
+            ],
+            footnote:
+              "หมายเหตุ: ค่าความดันแปรผันได้ ควรวัดซ้ำ/ดูแนวโน้มหลายครั้งก่อนสรุป",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setBpFilter("normal");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setBpRiskOnly(true);
+          }}
           extra={
             <div className="mt-3 space-y-2">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
@@ -771,6 +1013,159 @@ export default function ElderlySchoolDashboard() {
         />
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="อ้วนลงพุง (WHtR)"
+          icon={Ruler}
+          normal={data?.abdominal?.normal}
+          risk={data?.abdominal?.risk}
+          loading={loading}
+          info={{
+            title: "WHtR คืออะไร",
+            body: [
+              "WHtR = รอบเอว(ซม.) ÷ ส่วนสูง(ซม.)",
+              "เกณฑ์คัดกรองที่ใช้บ่อย: ≥ 0.5 = เสี่ยงอ้วนลงพุง/เมตาบอลิก",
+              "เหมาะเมื่อไม่รู้เพศหรืออยากใช้เกณฑ์เดียวกันทั้งกลุ่ม",
+            ],
+            footnote:
+              "หมายเหตุ: เป็นการคัดกรอง ควรดูร่วมกับ BMI/ความดัน และประวัติโรค",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setAbdominalFilter("normal");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setAbdominalFilter("risk");
+          }}
+          extra={
+            <div className="mt-3 text-xs text-gray-600">
+              <p>
+                เกณฑ์คัดกรอง: WHtR = รอบเอว/ส่วนสูง (ซม.) •{" "}
+                <span className="font-medium">เสี่ยง</span> เมื่อ ≥ 0.5
+              </p>
+              <p className="text-gray-500 mt-1">
+                ค่าเฉลี่ย:{" "}
+                {typeof data?.averages?.whtRAvg === "number" ? data.averages.whtRAvg.toFixed(2) : "-"}{" "}
+                (จาก {data?.averages?.whtRN ?? 0} คน)
+              </p>
+            </div>
+          }
+        />
+
+        <StatCard
+          title="เมตาบอลิก (คัดกรอง)"
+          icon={Gauge}
+          normal={data?.metabolic?.low}
+          risk={data?.metabolic?.high}
+          loading={loading}
+          info={{
+            title: "เมตาบอลิก (คัดกรอง) คืออะไร",
+            body: [
+              "เป็นคะแนนคัดกรองความเสี่ยงกลุ่มเมตาบอลิก/เบาหวาน/หัวใจ จากข้อมูลที่มีในระบบ (ไม่ใช่วินิจฉัย)",
+              "คะแนน 0–3 จาก: WHtR≥0.5, BMI≥25, BP≥130/85",
+              "ในแดชบอร์ดนี้: คะแนน ≥ 2 = เสี่ยงสูง (ควรพิจารณาส่งตรวจ/ติดตาม)",
+            ],
+            footnote:
+              "หมายเหตุ: ถ้าอยากแม่นขึ้นควรมีผลน้ำตาล (FBS/HbA1c) และประวัติสุขภาพ",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setMetabolicFilter("low");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setMetabolicFilter("high");
+          }}
+          extra={
+            <div className="mt-3 text-xs text-gray-600">
+              <p>
+                คะแนน 0–3 จาก WHtR≥0.5, BMI≥25, BP≥130/85 •{" "}
+                <span className="font-medium">เสี่ยงสูง</span> เมื่อคะแนน ≥ 2
+              </p>
+            </div>
+          }
+        />
+
+        <StatCard
+          title="ชีพจร (คัดกรอง)"
+          icon={HeartPulse}
+          normal={data?.pulse?.normal}
+          risk={(data?.pulse?.low ?? 0) + (data?.pulse?.high ?? 0)}
+          loading={loading}
+          info={{
+            title: "ชีพจร (คัดกรอง) คืออะไร",
+            body: [
+              "ชีพจรคืออัตราการเต้นของหัวใจ (ครั้ง/นาที)",
+              "ในแดชบอร์ดนี้คัดกรองแบบคร่าว ๆ: <50 = ต่ำ, 50–100 = ปกติ, >100 = สูง",
+              "ใช้เป็นสัญญาณเตือนเพื่อให้เจ้าหน้าที่ประเมินซ้ำ/สอบถามอาการ",
+            ],
+            footnote:
+              "หมายเหตุ: ไม่ใช่การวินิจฉัยหัวใจเต้นผิดจังหวะ ถ้ามีอาการควรส่งประเมินต่อ",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setPulseFilter("normal");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setPulseFilter("abnormal");
+          }}
+          extra={
+            <div className="mt-3 text-xs text-gray-600">
+              <p className="text-gray-500">
+                ต่ำ: <span className="font-medium">{data?.pulse?.low ?? 0}</span> • สูง:{" "}
+                <span className="font-medium">{data?.pulse?.high ?? 0}</span> • ไม่ระบุ:{" "}
+                <span className="font-medium">{data?.pulse?.unknown ?? 0}</span>
+              </p>
+              <p className="text-gray-500 mt-1">เกณฑ์คร่าว ๆ: &lt;50 ต่ำ, 50–100 ปกติ, &gt;100 สูง</p>
+            </div>
+          }
+        />
+
+        <StatCard
+          title="สุขภาพจิต (2Q/9Q)"
+          icon={Brain}
+          normal={data?.mentalHealth?.ok}
+          risk={(data?.mentalHealth?.risk ?? 0) + (data?.mentalHealth?.urgent ?? 0)}
+          loading={loading}
+          info={{
+            title: "2Q/9Q คืออะไร",
+            body: [
+              "2Q เป็นแบบคัดกรองภาวะซึมเศร้าอย่างรวดเร็ว (2 ข้อ)",
+              "ถ้า 2Q เป็นบวก ระบบแนะนำให้ทำ 9Q ต่อเพื่อประเมินระดับความรุนแรง",
+              "ถ้าข้อ 9 ของ 9Q > 0 จะถูกจัดเป็น “เร่งด่วน” เพื่อให้ประสานทีมดูแลโดยเร็ว",
+            ],
+            footnote:
+              "หมายเหตุ: แบบประเมินเป็นเครื่องมือคัดกรอง ควรใช้ร่วมกับการสัมภาษณ์และแนวทางหน่วยงาน",
+          }}
+          onOpenInfo={openInfo}
+          onClickNormal={() => {
+            resetAllFilters(true);
+            setMhFilter("ok");
+          }}
+          onClickRisk={() => {
+            resetAllFilters(true);
+            setMhFilter("risk");
+          }}
+          extra={
+            <div className="mt-3 text-xs text-gray-600">
+              <p className="text-gray-500">
+                เร่งด่วน: <span className="font-medium text-red-700">{data?.mentalHealth?.urgent ?? 0}</span>{" "}
+                • เสี่ยง: <span className="font-medium text-amber-800">{data?.mentalHealth?.risk ?? 0}</span>{" "}
+                • ไม่ระบุ: <span className="font-medium">{data?.mentalHealth?.unknown ?? 0}</span>
+              </p>
+              <p className="text-gray-500 mt-1">
+                ทำแบบประเมินได้ในหน้า “ดู/แก้ไข” รายบุคคล
+              </p>
+            </div>
+          }
+        />
+      </div>
+
       {/* Summary moved into header card */}
 
       {/* People table */}
@@ -795,7 +1190,10 @@ export default function ElderlySchoolDashboard() {
               </label>
               <select
                 value={bmiFilter}
-                onChange={(e) => setBmiFilter(e.target.value)}
+                onChange={(e) => {
+                  setBmiRiskOnly(false);
+                  setBmiFilter(e.target.value);
+                }}
                 className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
                 title="กรองตามสถานะ BMI"
               >
@@ -809,7 +1207,10 @@ export default function ElderlySchoolDashboard() {
               </select>
               <select
                 value={bpFilter}
-                onChange={(e) => setBpFilter(e.target.value)}
+                onChange={(e) => {
+                  setBpRiskOnly(false);
+                  setBpFilter(e.target.value);
+                }}
                 className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
                 title="กรองตามสถานะความดัน"
               >
@@ -820,6 +1221,61 @@ export default function ElderlySchoolDashboard() {
                 <option value="high">BP: สูง</option>
                 <option value="unknown">BP: ไม่ระบุ</option>
               </select>
+              <select
+                value={abdominalFilter}
+                onChange={(e) => setAbdominalFilter(e.target.value)}
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                title="กรองตามอ้วนลงพุง (WHtR)"
+              >
+                <option value="all">WHtR: ทั้งหมด</option>
+                <option value="normal">WHtR: ปกติ</option>
+                <option value="risk">WHtR: เสี่ยง</option>
+                <option value="unknown">WHtR: ไม่ระบุ</option>
+              </select>
+              <select
+                value={metabolicFilter}
+                onChange={(e) => setMetabolicFilter(e.target.value)}
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                title="กรองตามเมตาบอลิก (คัดกรอง)"
+              >
+                <option value="all">เมตาบอลิก: ทั้งหมด</option>
+                <option value="low">เมตาบอลิก: ต่ำ</option>
+                <option value="high">เมตาบอลิก: สูง</option>
+                <option value="unknown">เมตาบอลิก: ไม่ระบุ</option>
+              </select>
+              <select
+                value={pulseFilter}
+                onChange={(e) => setPulseFilter(e.target.value)}
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                title="กรองตามชีพจร"
+              >
+                <option value="all">ชีพจร: ทั้งหมด</option>
+                <option value="normal">ชีพจร: ปกติ</option>
+                <option value="abnormal">ชีพจร: ผิดปกติ</option>
+                <option value="low">ชีพจร: ต่ำ</option>
+                <option value="high">ชีพจร: สูง</option>
+                <option value="unknown">ชีพจร: ไม่ระบุ</option>
+              </select>
+              <select
+                value={mhFilter}
+                onChange={(e) => setMhFilter(e.target.value)}
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+                title="กรองตามสุขภาพจิต (2Q/9Q)"
+              >
+                <option value="all">2Q/9Q: ทั้งหมด</option>
+                <option value="ok">2Q/9Q: ปกติ</option>
+                <option value="risk">2Q/9Q: เสี่ยง</option>
+                <option value="urgent">2Q/9Q: เร่งด่วน</option>
+                <option value="unknown">2Q/9Q: ไม่ระบุ</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => resetAllFilters(true)}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                title="ล้างตัวกรอง (ไม่ล้างคำค้นหา)"
+              >
+                ล้างตัวกรอง
+              </button>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -829,8 +1285,49 @@ export default function ElderlySchoolDashboard() {
             </div>
           </div>
 
+          {(bmiRiskOnly ||
+            bpRiskOnly ||
+            abdominalFilter !== "all" ||
+            metabolicFilter !== "all" ||
+            pulseFilter !== "all" ||
+            mhFilter !== "all" ||
+            bmiFilter !== "all" ||
+            bpFilter !== "all" ||
+            riskOnly) && (
+            <div className="px-4 sm:px-5 pb-3 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+              <span className="text-gray-500">ตัวกรอง:</span>
+              {riskOnly && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">เฉพาะคนเสี่ยง</span>
+              )}
+              {bmiRiskOnly && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">BMI: เสี่ยง/ผิดปกติ</span>
+              )}
+              {bmiFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">BMI: {bmiFilter}</span>
+              )}
+              {bpRiskOnly && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">BP: ผิดปกติ</span>
+              )}
+              {bpFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">BP: {bpFilter}</span>
+              )}
+              {abdominalFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">WHtR: {abdominalFilter}</span>
+              )}
+              {metabolicFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">เมตาบอลิก: {metabolicFilter}</span>
+              )}
+              {pulseFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">ชีพจร: {pulseFilter}</span>
+              )}
+              {mhFilter !== "all" && (
+                <span className="px-2 py-0.5 rounded-full border bg-white">2Q/9Q: {mhFilter}</span>
+              )}
+            </div>
+          )}
+
           <div className="overflow-auto">
-            <table className="min-w-[880px] w-full">
+            <table className="min-w-[1180px] w-full">
               <thead>
                 <tr className="bg-white/70 backdrop-blur border-b border-gray-200/50 sticky top-0">
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase w-12">
@@ -855,6 +1352,18 @@ export default function ElderlySchoolDashboard() {
                     สถานะ BP
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
+                    รอบเอว / WHtR
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
+                    ชีพจร
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
+                    เมตาบอลิก
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
+                    2Q/9Q
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
                     สรุป
                   </th>
                   <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
@@ -869,6 +1378,14 @@ export default function ElderlySchoolDashboard() {
                   const bpText =
                     p?.bp?.systolic && p?.bp?.diastolic
                       ? `${p.bp.systolic}/${p.bp.diastolic}`
+                      : "-";
+                  const mhInfo = mhBadge(p?.mentalHealth);
+                  const waistText = typeof p?.waistCm === "number" ? `${p.waistCm}` : "-";
+                  const whtRText = typeof p?.whtR === "number" ? p.whtR.toFixed(1) : "-";
+                  const pulseText = typeof p?.pulseBpm === "number" ? `${p.pulseBpm}` : "-";
+                  const metaText =
+                    typeof p?.metabolicRiskScore === "number"
+                      ? `${p.metabolicRiskScore}/3${p.metabolicRiskHigh ? " (สูง)" : ""}`
                       : "-";
                   return (
                     <tr key={`${p?.citizenIdMasked || p?.fullName || idx}`} className="hover:bg-gray-50/60">
@@ -887,6 +1404,16 @@ export default function ElderlySchoolDashboard() {
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${bpInfo.className}`}>
                           {bpInfo.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-900">
+                        {waistText} / {whtRText}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-900">{pulseText}</td>
+                      <td className="py-3 px-4 text-sm text-gray-900">{metaText}</td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${mhInfo.className}`}>
+                          {mhInfo.label}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -913,7 +1440,7 @@ export default function ElderlySchoolDashboard() {
                 })}
                 {peopleFiltered.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-sm text-gray-500">
+                    <td colSpan={13} className="py-8 text-center text-sm text-gray-500">
                       ไม่พบรายการ
                     </td>
                   </tr>
@@ -942,6 +1469,13 @@ export default function ElderlySchoolDashboard() {
                   title="สร้าง QR สำหรับผู้เรียนสแกนและกรอกข้อมูล (ต้องยืนยันเลขบัตร 4 ตัวท้าย)"
                 >
                   QR เช็คอิน
+                </button>
+                <button
+                  onClick={openMentalHealth}
+                  className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                  title="ทำแบบประเมินสุขภาพจิต 2Q-9Q สำหรับบุคคลนี้"
+                >
+                  2Q/9Q
                 </button>
                 <button
                   onClick={() => setEditOpen(false)}
@@ -1298,6 +1832,337 @@ export default function ElderlySchoolDashboard() {
               >
                 บันทึก
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mental Health Modal */}
+      {mhOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col ring-1 ring-gray-200/60">
+            <div className="p-4 sm:p-5 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-900">แบบประเมินสุขภาพจิต (2Q → 9Q)</p>
+                <p className="text-xs text-gray-500">
+                  {editPerson?.fullName || ""} • ปี {yearBE}
+                </p>
+              </div>
+              <button
+                onClick={() => setMhOpen(false)}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+              >
+                ปิด
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 sm:p-5 space-y-4">
+              {mhError && (
+                <div className="rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 p-3 text-sm text-amber-800">
+                  {mhError}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-gray-200/70 bg-gray-50 p-3">
+                <p className="text-xs text-gray-600">
+                  ผลล่าสุด:
+                  {mhHistory?.[0] ? (
+                    <span className="font-medium text-gray-900">
+                      {" "}
+                      {mhHistory[0].assessmentDate} • 2Q: {mhHistory[0]?.q2?.positive ? "บวก" : "ลบ"}
+                      {typeof mhHistory[0]?.q9?.totalScore === "number"
+                        ? ` • 9Q: ${mhHistory[0].q9.totalScore} (${severityLabelThai(mhHistory[0].q9.severity)})`
+                        : ""}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500"> ยังไม่มี</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Stepper */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`px-2 py-1 rounded-full border ${mhStep === "2q" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-600"}`}>
+                  1) 2Q
+                </span>
+                <span className={`px-2 py-1 rounded-full border ${mhStep === "9q" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-600"}`}>
+                  2) 9Q
+                </span>
+                <span className={`px-2 py-1 rounded-full border ${mhStep === "review" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-gray-200 text-gray-600"}`}>
+                  3) สรุป
+                </span>
+              </div>
+
+              {mhStep === "2q" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700">
+                    ใน 2 สัปดาห์ที่ผ่านมา คุณมีอาการต่อไปนี้หรือไม่
+                  </p>
+
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-gray-900">ข้อ 1</p>
+                        <p className="text-sm text-gray-600">รู้สึกซึมเศร้า หดหู่ หรือหมดหวัง</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setMh2q((s) => ({ ...s, q1: false }))}
+                          className={`h-9 px-4 text-sm rounded-2xl border ${mh2q.q1 ? "bg-white border-gray-200 text-gray-600" : "bg-emerald-600 border-emerald-600 text-white"}`}
+                        >
+                          ไม่
+                        </button>
+                        <button
+                          onClick={() => setMh2q((s) => ({ ...s, q1: true }))}
+                          className={`h-9 px-4 text-sm rounded-2xl border ${mh2q.q1 ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-gray-200 text-gray-600"}`}
+                        >
+                          ใช่
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-gray-900">ข้อ 2</p>
+                        <p className="text-sm text-gray-600">รู้สึกเบื่อ ไม่สนใจ หรือไม่อยากทำอะไร</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setMh2q((s) => ({ ...s, q2: false }))}
+                          className={`h-9 px-4 text-sm rounded-2xl border ${mh2q.q2 ? "bg-white border-gray-200 text-gray-600" : "bg-emerald-600 border-emerald-600 text-white"}`}
+                        >
+                          ไม่
+                        </button>
+                        <button
+                          onClick={() => setMh2q((s) => ({ ...s, q2: true }))}
+                          className={`h-9 px-4 text-sm rounded-2xl border ${mh2q.q2 ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-gray-200 text-gray-600"}`}
+                        >
+                          ใช่
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => {
+                        setMhOpen(false);
+                      }}
+                      className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                    >
+                      ยกเลิก
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          const q2Positive = Boolean(mh2q.q1 || mh2q.q2);
+                          if (q2Positive) setMhStep("9q");
+                          else await saveMentalHealth();
+                        }}
+                        disabled={mhLoading}
+                        className="h-10 px-5 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 shadow-sm"
+                      >
+                        {mhLoading ? "กำลังบันทึก..." : mh2q.q1 || mh2q.q2 ? "ทำ 9Q ต่อ" : "บันทึกผล 2Q"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {mhStep === "9q" && (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-700">
+                    9Q: ใน 2 สัปดาห์ที่ผ่านมา คุณมีอาการเหล่านี้บ่อยแค่ไหน
+                  </p>
+                  <div className="text-xs text-gray-500">
+                    0=ไม่มีเลย • 1=บางวัน • 2=บ่อย • 3=ทุกวัน/เกือบทุกวัน
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      "เบื่อ ทำอะไร ๆ ก็ไม่เพลิดเพลิน",
+                      "ไม่สบายใจ ซึมเศร้า ท้อแท้",
+                      "หลับยาก หรือหลับ ๆ ตื่น ๆ หรือหลับมากไป",
+                      "เหนื่อยง่าย หรือไม่ค่อยมีแรง",
+                      "เบื่ออาหาร หรือกินมากเกินไป",
+                      "รู้สึกไม่ดีกับตัวเอง คิดว่าตัวเองล้มเหลว/ทำให้ครอบครัวผิดหวัง",
+                      "สมาธิไม่ดี เช่น อ่านหนังสือ/ดูโทรทัศน์",
+                      "พูดช้า/ทำอะไรช้า หรือกระสับกระส่ายมากกว่าปกติ",
+                      "คิดทำร้ายตัวเอง หรือคิดว่าถ้าตายไปคงจะดี",
+                    ].map((qText, i) => (
+                      <div key={i} className="rounded-2xl border border-gray-200 bg-white p-4">
+                        <p className="text-sm text-gray-900">
+                          <span className="font-semibold">ข้อ {i + 1}</span> {qText}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {[0, 1, 2, 3].map((v) => (
+                            <button
+                              key={v}
+                              onClick={() =>
+                                setMh9q((arr) => {
+                                  const next = [...arr];
+                                  next[i] = v;
+                                  return next;
+                                })
+                              }
+                              className={`h-9 px-4 text-sm rounded-2xl border ${
+                                mh9q[i] === v
+                                  ? "bg-emerald-600 border-emerald-600 text-white"
+                                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const scored = score9Q(mh9q);
+                    const urgent = scored.suicidalRisk === true;
+                    return (
+                      <div className={`rounded-2xl border p-4 ${urgent ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
+                        <p className={`text-sm font-semibold ${urgent ? "text-red-800" : "text-emerald-800"}`}>
+                          คะแนนรวม 9Q: {scored.totalScore ?? "-"} • ระดับ: {severityLabelThai(scored.severity)}
+                        </p>
+                        {urgent && (
+                          <p className="text-xs text-red-700 mt-1">
+                            * พบข้อคิดทำร้ายตัวเอง (ข้อ 9 &gt; 0) ควรประสานเจ้าหน้าที่/ทีมดูแลโดยเร็ว
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setMhStep("2q")}
+                      className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                    >
+                      ย้อนกลับ 2Q
+                    </button>
+                    <button
+                      onClick={saveMentalHealth}
+                      disabled={mhLoading}
+                      className="h-10 px-5 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 shadow-sm"
+                    >
+                      {mhLoading ? "กำลังบันทึก..." : "บันทึกผล 2Q/9Q"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {mhStep === "review" && (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="font-semibold text-emerald-900">บันทึกสำเร็จ</p>
+                    <p className="text-sm text-emerald-800 mt-1">
+                      ผลจะไปแสดงในแดชบอร์ดทันที (รีเฟรชแล้ว)
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setMhStep("2q")}
+                      className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+                    >
+                      ทำใหม่
+                    </button>
+                    <button
+                      onClick={() => setMhOpen(false)}
+                      className="h-10 px-4 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+                    >
+                      ปิด
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* History */}
+              <details className="rounded-2xl border border-gray-200/70 bg-white p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+                  ประวัติแบบประเมิน (ล่าสุด 10 รายการ)
+                </summary>
+                <div className="mt-3 overflow-auto">
+                  <table className="min-w-[680px] w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-500 border-b">
+                        <th className="text-left py-2">วันที่</th>
+                        <th className="text-left py-2">2Q</th>
+                        <th className="text-left py-2">9Q</th>
+                        <th className="text-left py-2">ระดับ</th>
+                        <th className="text-left py-2">เร่งด่วน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(mhHistory || []).map((h) => (
+                        <tr key={String(h?._id || h?.assessmentDate)}>
+                          <td className="py-2">{h?.assessmentDate || "-"}</td>
+                          <td className="py-2">{h?.q2?.positive ? "บวก" : "ลบ"}</td>
+                          <td className="py-2">
+                            {typeof h?.q9?.totalScore === "number" ? h.q9.totalScore : "-"}
+                          </td>
+                          <td className="py-2">{severityLabelThai(h?.q9?.severity)}</td>
+                          <td className="py-2">
+                            {h?.q9?.suicidalRisk ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-red-50 text-red-700 border-red-200">
+                                ใช่
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {(!mhHistory || mhHistory.length === 0) && (
+                        <tr>
+                          <td colSpan={5} className="py-4 text-center text-gray-500">
+                            ยังไม่มีประวัติ
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Modal (shared) */}
+      {infoOpen && infoPayload && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden ring-1 ring-gray-200/60">
+            <div className="p-4 sm:p-5 border-b border-gray-200/60 bg-gradient-to-r from-white to-gray-50 flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-gray-900">{infoPayload.title || "ข้อมูลเพิ่มเติม"}</p>
+                <p className="text-xs text-gray-500 mt-0.5">สำหรับทำความเข้าใจและการสื่อสารกับทีม</p>
+              </div>
+              <button
+                onClick={() => {
+                  setInfoOpen(false);
+                  setInfoPayload(null);
+                }}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm"
+              >
+                ปิด
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-3">
+              {Array.isArray(infoPayload.body) && infoPayload.body.length > 0 && (
+                <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
+                  {infoPayload.body.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              )}
+              {infoPayload.footnote && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  {infoPayload.footnote}
+                </div>
+              )}
             </div>
           </div>
         </div>
