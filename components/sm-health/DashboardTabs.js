@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Clipboard, ArrowRightLeft, Users, GraduationCap } from "lucide-react";
+import { FileText, Clipboard, ArrowRightLeft, Users, GraduationCap, BriefcaseMedical } from "lucide-react";
 
 const tabs = [
   {
@@ -11,6 +11,11 @@ const tabs = [
     key: "elderly-school",
     label: "โรงเรียนผู้สูงอายุ",
     icon: GraduationCap,
+  },
+  {
+    key: "employee-health",
+    label: "สุขภาพพนักงาน",
+    icon: BriefcaseMedical,
   },
   {
     key: "register-device",
