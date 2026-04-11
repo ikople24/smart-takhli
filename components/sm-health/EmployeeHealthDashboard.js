@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Activity, HeartPulse, Droplets, RefreshCw, Info, AlertTriangle } from "lucide-react";
 import { usePermissions } from "@/components/PermissionGuard";
+import { buildEmployeeHealthRecommendations } from "@/lib/employeeHealthRecommendations";
 
 function StatCard({ title, icon: Icon, normal, risk, loading, info, onOpenInfo, onClickNormal, onClickRisk }) {
   return (
@@ -121,6 +122,7 @@ export default function EmployeeHealthDashboard() {
   const [sugarFilter, setSugarFilter] = useState("all");
   const [infoOpen, setInfoOpen] = useState(false);
   const [infoPayload, setInfoPayload] = useState(null);
+  const [recommendationPerson, setRecommendationPerson] = useState(null);
 
   const resetFilters = () => {
     setRiskOnly(false);
@@ -275,49 +277,48 @@ export default function EmployeeHealthDashboard() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <input
-            value={sheetUrl}
-            onChange={(e) => setSheetUrl(e.target.value)}
-            placeholder="วางลิงก์ Google Sheet (/edit...)"
-            className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-          />
-          <input
-            value={gids}
-            onChange={(e) => setGids(e.target.value)}
-            placeholder="gid ของชีต (คั่นด้วย ,) เช่น 0,123,456"
-            className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
-          />
-          <input
-            value={deptLabels}
-            onChange={(e) => setDeptLabels(e.target.value)}
-            placeholder="ชื่อแผนก (คั่นด้วย ,) ให้ตรงกับ gid เช่น กองสาธารณสุข,กองช่าง,กองประปา"
-            className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
-          />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={syncFromSheetToDb}
-              disabled={syncing || !sheetUrl.trim() || !mappingStatus.ok || (!permissionLoading && !isSuperAdmin)}
-              className="h-10 px-4 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 shadow-sm"
-            >
-              {syncing ? "กำลังซิงค์..." : "ซิงค์เข้า DB"}
-            </button>
-            {syncMsg && <span className="text-xs text-emerald-700">{syncMsg}</span>}
-          </div>
-        </div>
-        {!permissionLoading && !isSuperAdmin && (
-          <p className="text-xs text-amber-700 mt-2">
-            * เฉพาะ superadmin เท่านั้นที่ซิงค์เข้า DB ได้
-          </p>
+        {!permissionLoading && isSuperAdmin && (
+          <>
+            <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <input
+                value={sheetUrl}
+                onChange={(e) => setSheetUrl(e.target.value)}
+                placeholder="วางลิงก์ Google Sheet (/edit...)"
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+              <input
+                value={gids}
+                onChange={(e) => setGids(e.target.value)}
+                placeholder="gid ของชีต (คั่นด้วย ,) เช่น 0,123,456"
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+              />
+              <input
+                value={deptLabels}
+                onChange={(e) => setDeptLabels(e.target.value)}
+                placeholder="ชื่อแผนก (คั่นด้วย ,) ให้ตรงกับ gid เช่น กองสาธารณสุข,กองช่าง,กองประปา"
+                className="h-10 px-3 text-sm rounded-2xl bg-white border border-gray-200/70 shadow-sm"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={syncFromSheetToDb}
+                  disabled={syncing || !sheetUrl.trim() || !mappingStatus.ok}
+                  className="h-10 px-4 text-sm rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 shadow-sm"
+                >
+                  {syncing ? "กำลังซิงค์..." : "ซิงค์เข้า DB"}
+                </button>
+                {syncMsg && <span className="text-xs text-emerald-700">{syncMsg}</span>}
+              </div>
+            </div>
+            {!mappingStatus.ok && (
+              <p className="text-xs text-amber-700 mt-2">
+                * กรุณากรอกชื่อแผนกให้ครบทุก gid (ตอนนี้ gid {mappingStatus.gidsCount} ค่า, ชื่อแผนก {mappingStatus.labelsCount} ค่า)
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              ถ้าไม่แน่ใจ gid ของชีต: เปิดแต่ละชีตใน Google Sheet แล้วดูเลขหลัง `#gid=` ใน URL
+            </p>
+          </>
         )}
-        {!mappingStatus.ok && (
-          <p className="text-xs text-amber-700 mt-2">
-            * กรุณากรอกชื่อแผนกให้ครบทุก gid (ตอนนี้ gid {mappingStatus.gidsCount} ค่า, ชื่อแผนก {mappingStatus.labelsCount} ค่า)
-          </p>
-        )}
-        <p className="text-xs text-gray-500 mt-2">
-          ถ้าไม่แน่ใจ gid ของชีต: เปิดแต่ละชีตใน Google Sheet แล้วดูเลขหลัง `#gid=` ใน URL
-        </p>
       </div>
 
       {error && (
@@ -452,7 +453,7 @@ export default function EmployeeHealthDashboard() {
         </div>
 
         <div className="overflow-auto">
-          <table className="min-w-[980px] w-full">
+          <table className="min-w-[1080px] w-full">
             <thead>
               <tr className="bg-white/70 backdrop-blur border-b border-gray-200/50 sticky top-0">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase w-12">#</th>
@@ -465,6 +466,7 @@ export default function EmployeeHealthDashboard() {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">น้ำตาล</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">สถานะน้ำตาล</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">สรุป</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase w-[140px]">คำแนะนำ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200/50">
@@ -498,12 +500,21 @@ export default function EmployeeHealthDashboard() {
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-emerald-50 text-emerald-700 border-emerald-200">ปกติ</span>
                       )}
                     </td>
+                    <td className="py-3 px-4">
+                      <button
+                        type="button"
+                        onClick={() => setRecommendationPerson(p)}
+                        className="h-9 px-3 text-xs rounded-2xl border border-emerald-200/80 bg-emerald-50/80 text-emerald-800 hover:bg-emerald-50 shadow-sm whitespace-nowrap"
+                      >
+                        ดูคำแนะนำ
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
               {peopleFiltered.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-sm text-gray-500">
+                  <td colSpan={11} className="py-8 text-center text-sm text-gray-500">
                     ไม่พบรายการ
                   </td>
                 </tr>
@@ -512,6 +523,50 @@ export default function EmployeeHealthDashboard() {
           </table>
         </div>
       </div>
+
+      {/* คำแนะนำรายบุคคล (อ่านอย่างเดียว — ไม่ใช่การแก้ไขข้อมูล) */}
+      {recommendationPerson && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden ring-1 ring-gray-200/60 flex flex-col">
+            <div className="p-4 sm:p-5 border-b border-gray-200/60 bg-gradient-to-r from-emerald-50/80 to-white flex items-start justify-between gap-3 shrink-0">
+              <div>
+                <p className="font-semibold text-gray-900">คำแนะสุขภาพและการทำงาน</p>
+                <p className="text-sm text-gray-800 mt-1">
+                  {recommendationPerson?.name || "-"}{" "}
+                  <span className="text-gray-500">({String(recommendationPerson?.department || "-")})</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  ข้อความนี้สร้างจากแผนก + ค่า BMI ความดัน น้ำตาลในระบบ — ไม่ใช่การวินิจฉัยโรค หากมีอาการหรือค่าผิดปกติควรปรึกษาแพทย์
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecommendationPerson(null)}
+                className="h-10 px-4 text-sm rounded-2xl border border-gray-200/70 bg-white hover:bg-gray-50 shadow-sm shrink-0"
+              >
+                ปิด
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-2 text-sm text-gray-700">
+              {(Array.isArray(recommendationPerson?.recommendations) && recommendationPerson.recommendations.length > 0
+                ? recommendationPerson.recommendations
+                : buildEmployeeHealthRecommendations(recommendationPerson)
+              ).map((line, i) => (
+                <p
+                  key={i}
+                  className={
+                    String(line).startsWith("—")
+                      ? "text-xs font-semibold text-emerald-800 pt-2 first:pt-0"
+                      : "leading-relaxed pl-0"
+                  }
+                >
+                  {String(line).startsWith("—") ? line : `• ${line}`}
+                </p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info modal */}
       {infoOpen && infoPayload && (
