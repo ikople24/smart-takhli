@@ -2,6 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import EmployeeHealthRecord from "@/models/EmployeeHealthRecord";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
 import { sugarCategoryMgDl } from "@/lib/employeeHealthDashboard";
+import { buildEmployeeHealthRecommendations } from "@/lib/employeeHealthRecommendations";
 
 function toNum(v) {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -91,7 +92,7 @@ export default async function handler(req, res) {
       const overallRisk = bmiRisk || bpRisk || sugarRisk;
 
       if (includePeople) {
-        people.push({
+        const personRow = {
           personId: String(p._id || r.personId),
           department: r.department || "",
           name: p.fullName || "",
@@ -105,7 +106,9 @@ export default async function handler(req, res) {
           sugarMgDl: sugar,
           sugarCategory: sugarCat,
           overallRisk,
-        });
+        };
+        personRow.recommendations = buildEmployeeHealthRecommendations(personRow);
+        people.push(personRow);
       }
     }
 
