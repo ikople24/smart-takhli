@@ -1381,10 +1381,13 @@ export default function ElderlySchoolDashboard() {
                   const waistText = typeof p?.waistCm === "number" ? `${p.waistCm}` : "-";
                   const whtRText = typeof p?.whtR === "number" ? p.whtR.toFixed(1) : "-";
                   const pulseText = typeof p?.pulseBpm === "number" ? `${p.pulseBpm}` : "-";
-                  const metaText =
-                    typeof p?.metabolicRiskScore === "number"
-                      ? `${p.metabolicRiskScore}/3${p.metabolicRiskHigh ? " (สูง)" : ""}`
-                      : "-";
+                  const metaText = (() => {
+                    const s = p?.metabolicRiskScore;
+                    if (typeof s !== "number") return "-";
+                    if (p?.metabolicRiskHigh) return `${s}/3 (สูง)`;
+                    if (s === 1) return "1/3 (เฝ้าระวัง)";
+                    return `${s}/3`;
+                  })();
                   return (
                     <tr key={`${p?.citizenIdMasked || p?.fullName || idx}`} className="hover:bg-gray-50/60">
                       <td className="py-3 px-4 text-sm text-gray-500">{idx + 1}</td>
