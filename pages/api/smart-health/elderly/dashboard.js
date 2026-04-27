@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import ElderlyVisit from "@/models/ElderlyVisit";
-import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
+import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/elderlySchoolDashboard";
 import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
 import { ObjectId } from "mongodb";
 
@@ -177,7 +177,7 @@ export default async function handler(req, res) {
     const pulseCounts = { normal: 0, low: 0, high: 0, unknown: 0 };
     const abdominalCounts = { normal: 0, risk: 0, unknown: 0 }; // WHtR>=0.5
     const metabolicCounts = { low: 0, high: 0, unknown: 0 }; // score>=2
-    const mentalCounts = { ok: 0, risk: 0, urgent: 0, unknown: 0 };
+    const mentalCounts = { ok: 0, risk: 0, unknown: 0 };
 
     // Averages
     let bmiSum = 0;
@@ -195,8 +195,11 @@ export default async function handler(req, res) {
     for (const r of rows) {
       const p = r.person || {};
       const personKey = String(p._id || r.personId);
-      const heightCm = toNum(r.heightCm) ?? toNum(p.heightCm);
-      const bmi = computeBMI(r.weightKg, heightCm);
+      // สูง: ใช้จากโปรไฟล์คนก่อน แล้วค่อยค่าใน visit (ชีต) เมื่อโปรไฟล์ไม่มี — BMI/WHtR จะสอดคล้องกับส่วนสูงที่แก้ในหน้าคน
+      const heightRaw = p.heightCm ?? r.heightCm;
+      const heightCm = coerceMeasurementNumber(heightRaw);
+      // BMI เฉพาะรอบนี้: ไม่ย้อนใช้น้ำหนักครั้งก่อน — ไม่มีน้ำหนักใน visit นี้จะไม่คำนวณ
+      const bmi = computeBMI(r.weightKg, heightRaw);
       const bmiCat = bmiCategoryThai(bmi);
 
       // BP: prefer bp1 if present, else bp2
@@ -354,19 +357,14 @@ export default async function handler(req, res) {
         };
       }
 
-      const mhUrgent = mh?.suicidalRisk === true;
-      const mhRisk =
-        mhUrgent ||
-        mh?.q9Severity === "moderate" ||
-        mh?.q9Severity === "severe" ||
-        (mh?.q2Positive === true && (mh?.q9Severity === "unknown" || mh?.q9TotalScore === null));
+      // Dashboard สุขภาพจิต: ใช้เฉพาะผล 2Q บวก/ไม่บวก (ไม่นับเกณฑ์จาก 9Q ในการสรุปการ์ด)
+      const mhRisk2q = mh?.q2Positive === true;
 
       if (!mh) mentalCounts.unknown++;
-      else if (mhUrgent) mentalCounts.urgent++;
-      else if (mhRisk) mentalCounts.risk++;
+      else if (mhRisk2q) mentalCounts.risk++;
       else mentalCounts.ok++;
 
-      const overallRisk = bmiRisk || bpRisk || (!metabolicUnknown && meta.score >= 2) || mhRisk;
+      const overallRisk = bmiRisk || bpRisk || (!metabolicUnknown && meta.score >= 2) || mhRisk2q;
 
       if (includePeople) {
         people.push({
@@ -375,6 +373,8 @@ export default async function handler(req, res) {
           citizenIdMasked: p.citizenId ? maskCitizenId(p.citizenId) : "",
           yearBE,
           visitNo: r.visitNo,
+          weightKg: coerceMeasurementNumber(r.weightKg),
+          heightCmForBmi: heightCm,
           bmi,
           bmiCategory: bmiCat,
           bmiRisk,

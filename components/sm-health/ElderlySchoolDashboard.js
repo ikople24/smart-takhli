@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { AlertTriangle, Activity, HeartPulse, RefreshCw, Ruler, Gauge, Brain, Info } from "lucide-react";
 import { usePermissions } from "@/components/PermissionGuard";
-import { severityLabelThai } from "@/lib/elderlyMentalHealth";
 
 function getCurrentYearBE() {
   // Use Bangkok timezone to avoid edge cases around midnight
@@ -140,14 +139,7 @@ function bpCategoryLabel(cat) {
 
 function mhBadge(mh) {
   if (!mh) return { label: "ไม่ระบุ", className: "bg-gray-50 text-gray-600 border-gray-200" };
-  if (mh.suicidalRisk) return { label: "เร่งด่วน", className: "bg-red-50 text-red-700 border-red-200" };
-  const sev = mh.q9Severity || "unknown";
-  if (sev === "severe" || sev === "moderate") {
-    return { label: `เสี่ยง (${severityLabelThai(sev)})`, className: "bg-amber-50 text-amber-800 border-amber-200" };
-  }
-  if (mh.q2Positive && (sev === "unknown" || mh.q9TotalScore == null)) {
-    return { label: "2Q บวก", className: "bg-amber-50 text-amber-800 border-amber-200" };
-  }
+  if (mh.q2Positive) return { label: "2Q บวก", className: "bg-amber-50 text-amber-800 border-amber-200" };
   return { label: "ปกติ", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
 }
 
@@ -162,7 +154,7 @@ export default function ElderlySchoolDashboard() {
   const [search, setSearch] = useState("");
   const [bmiFilter, setBmiFilter] = useState("all"); // all|underweight|normal|overweight|obese1|obese2|unknown
   const [bpFilter, setBpFilter] = useState("all"); // all|normal|low|risk|high|unknown
-  const [mhFilter, setMhFilter] = useState("all"); // all|ok|risk|urgent|unknown
+  const [mhFilter, setMhFilter] = useState("all"); // all|ok|risk|unknown
   const [abdominalFilter, setAbdominalFilter] = useState("all"); // all|normal|risk|unknown
   const [metabolicFilter, setMetabolicFilter] = useState("all"); // all|low|high|unknown
   const [pulseFilter, setPulseFilter] = useState("all"); // all|normal|low|high|abnormal|unknown
@@ -348,16 +340,9 @@ export default function ElderlySchoolDashboard() {
 
       if (mhFilter !== "all") {
         const mh = p.mentalHealth || null;
-        const urgent = mh?.suicidalRisk === true;
-        const risk =
-          urgent ||
-          mh?.q9Severity === "moderate" ||
-          mh?.q9Severity === "severe" ||
-          (mh?.q2Positive === true && (mh?.q9Severity === "unknown" || mh?.q9TotalScore == null));
-        const ok = Boolean(mh) && !urgent && !risk;
+        const risk = mh?.q2Positive === true;
+        const ok = Boolean(mh) && !risk;
         const unknown = !mh;
-        if (mhFilter === "urgent" && !urgent) return false;
-        // "risk" includes urgent (to match dashboard risk card)
         if (mhFilter === "risk" && !risk) return false;
         if (mhFilter === "ok" && !ok) return false;
         if (mhFilter === "unknown" && !unknown) return false;
@@ -1127,13 +1112,13 @@ export default function ElderlySchoolDashboard() {
           title="สุขภาพจิต 2Q"
           icon={Brain}
           normal={data?.mentalHealth?.ok}
-          risk={(data?.mentalHealth?.risk ?? 0) + (data?.mentalHealth?.urgent ?? 0)}
+          risk={data?.mentalHealth?.risk ?? 0}
           loading={loading}
           info={{
             title: "สุขภาพจิต 2Q คืออะไร",
             body: [
               "2Q เป็นแบบคัดกรองภาวะซึมเศร้าอย่างรวดเร็ว 2 ข้อ โดยถ้าตอบ “ใช่” อย่างน้อย 1 ข้อ จะถือว่า “2Q บวก” และจัดกลุ่มเสี่ยงในแดชบอร์ดเพื่อติดตามต่อ",
-              "ในแดชบอร์ดนี้: ฝั่ง “เสี่ยง/ผิดปกติ” รวมผู้ที่ 2Q บวก และกรณีที่มีข้อมูล 9Q เก่าในระบบที่ระดับปานกลาง–รุนแรงหรือเร่งด่วน",
+              "ในแดชบอร์ดนี้: ฝั่ง “เสี่ยง/ผิดปกติ” หมายถึงผู้ที่ 2Q บวกจากการประเมินล่าสุดของแต่ละคน",
             ],
             footnote:
               "หมายเหตุ: เป็นเครื่องมือคัดกรอง ไม่ใช่การวินิจฉัย ควรใช้ร่วมกับการสัมภาษณ์และแนวทางหน่วยงาน",
@@ -1150,11 +1135,8 @@ export default function ElderlySchoolDashboard() {
           extra={
             <div className="mt-3 text-xs text-gray-600">
               <p className="text-gray-500">
-                เร่งด่วน: <span className="font-medium text-red-700">{data?.mentalHealth?.urgent ?? 0}</span>{" "}
-                <span className="text-gray-400">(จากข้อมูล 9Q เดิม)</span>
-                {" "}• เสี่ยงคัดกรอง:{" "}
-                <span className="font-medium text-amber-800">{data?.mentalHealth?.risk ?? 0}</span>{" "}
-                • ไม่ระบุ: <span className="font-medium">{data?.mentalHealth?.unknown ?? 0}</span>
+                2Q บวก: <span className="font-medium text-amber-800">{data?.mentalHealth?.risk ?? 0}</span>
+                {" "}• ไม่ระบุ: <span className="font-medium">{data?.mentalHealth?.unknown ?? 0}</span>
               </p>
               <p className="text-gray-500 mt-1">
                 ทำแบบ 2Q ได้ในหน้า “ดู/แก้ไข” รายบุคคล
@@ -1263,7 +1245,6 @@ export default function ElderlySchoolDashboard() {
                 <option value="all">2Q: ทั้งหมด</option>
                 <option value="ok">2Q: ปกติ</option>
                 <option value="risk">2Q: เสี่ยง/บวก</option>
-                <option value="urgent">2Q: เร่งด่วน (ข้อมูลเดิม)</option>
                 <option value="unknown">2Q: ไม่ระบุ</option>
               </select>
               <button
@@ -1325,7 +1306,7 @@ export default function ElderlySchoolDashboard() {
           )}
 
           <div className="overflow-auto">
-            <table className="min-w-[1180px] w-full">
+            <table className="min-w-[1320px] w-full">
               <thead>
                 <tr className="bg-white/70 backdrop-blur border-b border-gray-200/50 sticky top-0">
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase w-12">
@@ -1336,6 +1317,15 @@ export default function ElderlySchoolDashboard() {
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
                     เลขบัตร (ปิดบางส่วน)
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
+                    นน. (รอบนี้)
+                  </th>
+                  <th
+                    className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase"
+                    title="ใช้ส่วนสูงจากโปรไฟล์คนก่อน ถ้าไม่มีจึงใช้ค่าใน visit"
+                  >
+                    สูงคำนวณ (ซม.)
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
                     BMI
@@ -1394,6 +1384,12 @@ export default function ElderlySchoolDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-900">{p?.fullName || "-"}</td>
                       <td className="py-3 px-4 text-sm font-mono text-gray-700">{p?.citizenIdMasked || "-"}</td>
                       <td className="py-3 px-4 text-sm text-gray-900">
+                        {typeof p?.weightKg === "number" ? p.weightKg : "-"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-900">
+                        {typeof p?.heightCmForBmi === "number" ? p.heightCmForBmi : "-"}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-900">
                         {typeof p?.bmi === "number" ? p.bmi.toFixed(1) : "-"}
                       </td>
                       <td className="py-3 px-4">
@@ -1441,7 +1437,7 @@ export default function ElderlySchoolDashboard() {
                 })}
                 {peopleFiltered.length === 0 && (
                   <tr>
-                    <td colSpan={13} className="py-8 text-center text-sm text-gray-500">
+                    <td colSpan={15} className="py-8 text-center text-sm text-gray-500">
                       ไม่พบรายการ
                     </td>
                   </tr>
