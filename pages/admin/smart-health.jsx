@@ -15,6 +15,7 @@ import RequestTable from "@/components/sm-health/RequestTable";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
 import PersonDataTable from "@/components/sm-health/PersonDataTable";
+import CommunityPlanningSummary from "@/components/sm-health/CommunityPlanningSummary";
 import BorrowModal from "@/components/sm-health/BorrowModal";
 import ReturnModal from "@/components/sm-health/ReturnModal";
 
@@ -130,6 +131,7 @@ export default function SmartHealthPage() {
   const tabCounts = useMemo(
     () => ({
       request: requests.length,
+      "community-summary": 0,
       "elderly-school": 0,
       "employee-health": 0,
       "register-device": devices.length,
@@ -223,6 +225,7 @@ export default function SmartHealthPage() {
                   onUpdateStatus={updateStatus}
                 />
               )}
+              {selectedTab === "community-summary" && <CommunityPlanningSummary />}
               {selectedTab === "elderly-school" && <ElderlySchoolDashboard />}
               {selectedTab === "employee-health" && <EmployeeHealthDashboard />}
               {selectedTab === "register-device" && (

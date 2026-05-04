@@ -3,6 +3,7 @@ import ElderlyPerson from "@/models/ElderlyPerson";
 import ElderlyVisit from "@/models/ElderlyVisit";
 import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
 import { ObjectId } from "mongodb";
+import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -97,16 +98,19 @@ export default async function handler(req, res) {
         : null;
 
     if (action === "verify") {
-      if (!scheduledVisitNo) {
+      const isClassDay = scheduledVisitNo !== null;
+      if (!isClassDay) {
         return res.status(200).json({
           success: true,
           yearBE: year,
           today,
           person: { fullName: person.fullName },
           canSubmitToday: false,
-          alreadySubmittedToday: Boolean(existingToday),
+          alreadySubmittedToday: false,
           scheduledVisitNo: null,
-          message: "วันนี้ไม่ใช่วันเรียนที่กำหนดไว้ (ยังไม่เปิดให้บันทึก)",
+          isClassDay: false,
+          info:
+            "วันนี้ไม่ใช่วันตามตารางเรียน — เปิดดูสรุปสุขภาพของท่านได้ด้านล่าง",
         });
       }
 
@@ -119,7 +123,8 @@ export default async function handler(req, res) {
           canSubmitToday: false,
           alreadySubmittedToday: Boolean(existingToday || existingVisitNo),
           scheduledVisitNo,
-          message: `วันนี้มีการบันทึกไปแล้วสำหรับครั้งที่ ${scheduledVisitNo} (1 วันบันทึกได้ 1 ครั้ง)`,
+          isClassDay: true,
+          info: `บันทึกครั้งที่ ${scheduledVisitNo} แล้วในวันนี้ — ดูสรุปผลด้านล่าง`,
         });
       }
 
@@ -131,7 +136,49 @@ export default async function handler(req, res) {
         canSubmitToday: true,
         alreadySubmittedToday: false,
         scheduledVisitNo,
-        message: "ยืนยันตัวตนสำเร็จ",
+        isClassDay: true,
+        info: "ยืนยันตัวตนสำเร็จ — กรอกข้อมูลสุขภาพของวันนี้ได้",
+      });
+    }
+
+    if (action === "summary") {
+      const visits = await ElderlyVisit.find({
+        personId: new ObjectId(personId),
+        yearBE: year,
+      })
+        .sort({ visitNo: 1 })
+        .lean();
+
+      const enriched = visits.map((v) => {
+        const h = v.heightCm ?? person.heightCm ?? null;
+        const bmi = computeBMI(v.weightKg, h);
+        const bmiCat = bmiCategoryThai(bmi);
+        const bpCat = bpCategory(v.bp1Sys, v.bp1Dia);
+        return {
+          visitNo: v.visitNo,
+          checkinDate: v.checkinDate ?? null,
+          weightKg: v.weightKg ?? null,
+          waistCm: v.waistCm ?? null,
+          pulseBpm: v.pulseBpm ?? null,
+          bp1Sys: v.bp1Sys ?? null,
+          bp1Dia: v.bp1Dia ?? null,
+          bp2Sys: v.bp2Sys ?? null,
+          bp2Dia: v.bp2Dia ?? null,
+          bmi: bmi != null ? Math.round(bmi * 10) / 10 : null,
+          bmiCategory: bmiCat,
+          bp1Category: bpCat,
+        };
+      });
+
+      return res.status(200).json({
+        success: true,
+        yearBE: year,
+        person: {
+          fullName: person.fullName,
+          heightCm: person.heightCm ?? null,
+        },
+        visits: enriched,
+        stats: { visitCount: enriched.length },
       });
     }
 

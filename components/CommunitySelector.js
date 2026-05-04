@@ -1,27 +1,4 @@
-const communities  = [
-    "สามล",
-    "รจนา",
-    "หัวเขาตาคลี",
-    "สว่างวงษ์",
-    "ตาคลีพัฒนา",
-    "ตีคลี",
-    "ทิพย์พิมาน",
-    "ตาคลีใหญ่",
-    "บ้านใหม่โพนทอง",
-    "วิลาวัลย์",
-    "โพธิ์งาม",
-    "พุทธนิมิต",
-    "ยศวิมล",
-    "ศรีเทพ",
-    "สังข์ทอง",
-    "ศรีสวัสดิ์",
-    "เขาใบไม้",
-    "จันทร์เทวี",
-    "รวมใจ",
-    "ตลาดโพนทอง",
-    "มาลัย",
-    "สารภี"
-  ];
+import { COMMUNITIES } from "@/lib/takhliCommunities";
 
 const CommunitySelector = ({ selected, onSelect = () => {}, error }) => (
     <div className="mb-4">
@@ -30,7 +7,7 @@ const CommunitySelector = ({ selected, onSelect = () => {}, error }) => (
       {error && <div className="text-red-500 text-sm ml-auto">{error}</div>}
       </div>
       <div className="flex flex-wrap gap-2">
-        {communities.map((c) => (
+        {COMMUNITIES.map((c) => (
           <button
             key={c}
             type="button"

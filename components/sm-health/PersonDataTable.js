@@ -30,6 +30,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { COMMUNITIES } from "@/lib/takhliCommunities";
 
 // Dynamic import for map component (ssr: false for leaflet)
 const LocationPickerMap = dynamic(
@@ -88,32 +89,6 @@ const calculateAge = (birthYear) => {
   return currentYear - parseInt(birthYear);
 };
 
-// รายชื่อชุมชนจาก CommunitySelector
-const COMMUNITIES = [
-  "สามล",
-  "รจนา",
-  "หัวเขาตาคลี",
-  "สว่างวงษ์",
-  "ตาคลีพัฒนา",
-  "ตีคลี",
-  "ทิพย์พิมาน",
-  "ตาคลีใหญ่",
-  "บ้านใหม่โพนทอง",
-  "วิลาวัลย์",
-  "โพธิ์งาม",
-  "พุทธนิมิต",
-  "ยศวิมล",
-  "ศรีเทพ",
-  "สังข์ทอง",
-  "ศรีสวัสดิ์",
-  "เขาใบไม้",
-  "จันทร์เทวี",
-  "รวมใจ",
-  "ตลาดโพนทอง",
-  "มาลัย",
-  "สารภี",
-];
-
 export default function PersonDataTable() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +104,10 @@ export default function PersonDataTable() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
+  /** ระบุพิกัดภายหลังจากตาราง (ไม่ต้องเปิดโหมดแก้ไขทั้งแถว) */
+  const [locationOnlyPerson, setLocationOnlyPerson] = useState(null);
+  const [locationOnlyDraft, setLocationOnlyDraft] = useState(null);
+  const [locationOnlySaving, setLocationOnlySaving] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -335,6 +314,51 @@ export default function PersonDataTable() {
         `https://www.google.com/maps?q=${location.lat},${location.lng}&z=17`,
         "_blank"
       );
+    }
+  };
+
+  const openLocationOnlyModal = (item) => {
+    setLocationOnlyPerson(item);
+    setLocationOnlyDraft(
+      item.location?.lat != null && item.location?.lng != null
+        ? { lat: Number(item.location.lat), lng: Number(item.location.lng) }
+        : { lat: 15.253914, lng: 100.351077 }
+    );
+  };
+
+  const handleSaveLocationOnly = async () => {
+    if (!locationOnlyPerson?._id || !locationOnlyDraft) return;
+    setLocationOnlySaving(true);
+    try {
+      const res = await fetch(`/api/smart-health/people?id=${locationOnlyPerson._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: {
+            lat: locationOnlyDraft.lat,
+            lng: locationOnlyDraft.lng,
+          },
+        }),
+      });
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "บันทึกพิกัดแล้ว",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        setLocationOnlyPerson(null);
+        setLocationOnlyDraft(null);
+        fetchData();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        Swal.fire("ผิดพลาด", j.message || "ไม่สามารถบันทึกได้", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      Swal.fire("ผิดพลาด", "เกิดข้อผิดพลาด", "error");
+    } finally {
+      setLocationOnlySaving(false);
     }
   };
 
@@ -626,12 +650,22 @@ export default function PersonDataTable() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      {item.location && (
+                      {item.location ? (
                         <button
                           onClick={() => openGoogleMaps(item.location)}
                           className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                          title="เปิดแผนที่"
                         >
                           <Navigation className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openLocationOnlyModal(item)}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg"
+                          title="ระบุพิกัดภายหลัง"
+                        >
+                          <MapPin className="w-4 h-4" />
                         </button>
                       )}
                       <button
@@ -726,7 +760,14 @@ export default function PersonDataTable() {
                             ดูแผนที่
                           </button>
                         ) : (
-                          <span className="text-xs text-gray-400">-</span>
+                          <button
+                            type="button"
+                            onClick={() => openLocationOnlyModal(item)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-medium hover:bg-amber-100 transition-colors"
+                          >
+                            <MapPin className="w-3 h-3" />
+                            ระบุพิกัด
+                          </button>
                         )}
                       </td>
                       <td className="py-3 px-4">
@@ -1922,6 +1963,63 @@ export default function PersonDataTable() {
               >
                 <Check className="w-4 h-4" />
                 ยืนยันตำแหน่ง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {locationOnlyPerson && locationOnlyDraft && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-semibold text-gray-900">ระบุพิกัดภายหลัง</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {locationOnlyPerson.fullName}
+                  {locationOnlyPerson.community ? ` · ${locationOnlyPerson.community}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationOnlyPerson(null);
+                  setLocationOnlyDraft(null);
+                }}
+                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <LocationPickerMap
+                initialLocation={locationOnlyDraft}
+                onLocationChange={setLocationOnlyDraft}
+              />
+            </div>
+            <div className="flex gap-3 p-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationOnlyPerson(null);
+                  setLocationOnlyDraft(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                disabled={locationOnlySaving}
+                onClick={handleSaveLocationOnly}
+                className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-medium text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {locationOnlySaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                บันทึกพิกัด
               </button>
             </div>
           </div>

@@ -19,6 +19,7 @@ import {
   Map,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { COMMUNITIES } from "@/lib/takhliCommunities";
 
 // Dynamic import for map component (ssr: false for leaflet)
 const LocationPickerMap = dynamic(
@@ -45,33 +46,7 @@ const calculateAge = (birthYear) => {
   return currentYear - parseInt(birthYear);
 };
 
-// รายชื่อชุมชนจาก CommunitySelector
-const COMMUNITIES = [
-  "สามล",
-  "รจนา",
-  "หัวเขาตาคลี",
-  "สว่างวงษ์",
-  "ตาคลีพัฒนา",
-  "ตีคลี",
-  "ทิพย์พิมาน",
-  "ตาคลีใหญ่",
-  "บ้านใหม่โพนทอง",
-  "วิลาวัลย์",
-  "โพธิ์งาม",
-  "พุทธนิมิต",
-  "ยศวิมล",
-  "ศรีเทพ",
-  "สังข์ทอง",
-  "ศรีสวัสดิ์",
-  "เขาใบไม้",
-  "จันทร์เทวี",
-  "รวมใจ",
-  "ตลาดโพนทอง",
-  "มาลัย",
-  "สารภี",
-];
-
-export default function PersonDataTable() {
+export default function ElderlyDataTable() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
