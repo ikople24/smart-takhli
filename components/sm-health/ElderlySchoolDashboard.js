@@ -230,10 +230,12 @@ export default function ElderlySchoolDashboard() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState("");
 
-  const makeCheckinUrl = (origin, personId, year) => {
+  const makeCheckinUrl = (origin, personId, year, displayName) => {
     const qs = new URLSearchParams();
     qs.set("personId", String(personId));
     if (year) qs.set("yearBE", String(year));
+    const label = displayName && String(displayName).trim();
+    if (label) qs.set("n", label);
     return `${origin}/elderly/checkin?${qs.toString()}`;
   };
 
@@ -250,7 +252,7 @@ export default function ElderlySchoolDashboard() {
     setQrError("");
     try {
       const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN || window.location.origin;
-      const url = makeCheckinUrl(origin, editPerson._id, year);
+      const url = makeCheckinUrl(origin, editPerson._id, year, editPerson?.fullName);
       setQrUrl(url);
       const QRCode = (await import("qrcode")).default;
       const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 220 });

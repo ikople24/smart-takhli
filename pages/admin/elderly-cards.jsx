@@ -10,10 +10,12 @@ function getCurrentYearBE() {
   return Number.isFinite(y) ? y + 543 : new Date().getFullYear() + 543;
 }
 
-function makeCheckinUrl(origin, personId, yearBE) {
+function makeCheckinUrl(origin, personId, yearBE, displayName) {
   const qs = new URLSearchParams();
   qs.set("personId", personId);
   if (yearBE) qs.set("yearBE", String(yearBE));
+  const label = displayName && String(displayName).trim();
+  if (label) qs.set("n", label);
   return `${origin}/elderly/checkin?${qs.toString()}`;
 }
 
@@ -61,7 +63,7 @@ export default function ElderlyCardsPage() {
       const QRCode = (await import("qrcode")).default;
       const entries = await Promise.all(
         people.map(async (p) => {
-          const url = makeCheckinUrl(origin, p.personId, yearBE);
+          const url = makeCheckinUrl(origin, p.personId, yearBE, p.fullName);
           const dataUrl = await QRCode.toDataURL(url, { margin: 1, width: 180 });
           return [p.personId, dataUrl];
         })
@@ -137,7 +139,7 @@ export default function ElderlyCardsPage() {
 
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {people.map((p) => {
-                const url = origin ? makeCheckinUrl(origin, p.personId, yearBE) : "";
+                const url = origin ? makeCheckinUrl(origin, p.personId, yearBE, p.fullName) : "";
                 const qr = qrMap[p.personId];
                 return (
                   <div key={p.personId} className="rounded-xl border border-gray-200 p-3 break-inside-avoid">

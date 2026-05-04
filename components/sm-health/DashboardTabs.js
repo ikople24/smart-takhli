@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, Clipboard, ArrowRightLeft, Users, GraduationCap, BriefcaseMedical } from "lucide-react";
+import { FileText, Clipboard, ArrowRightLeft, Users, GraduationCap, BriefcaseMedical, MapPinned } from "lucide-react";
 
 const tabs = [
   {
@@ -26,6 +26,11 @@ const tabs = [
     key: "borrow-return",
     label: "ประวัติการยืม-คืน",
     icon: ArrowRightLeft,
+  },
+  {
+    key: "community-summary",
+    label: "สรุปตามชุมชน",
+    icon: MapPinned,
   },
   {
     key: "people",
