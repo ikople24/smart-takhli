@@ -1,4 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
+import {
+  formatDateLendThai,
+  parseBorrowDateTimeInput,
+} from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const db = (await dbConnect()).connection.db;
-    const { borrowId, returnDateTime } = req.body;
+    const { borrowId, returnDateTime } = req.body || {};
 
     if (!borrowId) {
       return res.status(400).json({ 
@@ -35,15 +39,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // Set return date
-    const returnDate = returnDateTime || new Date().toLocaleString('th-TH', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    let returnDate;
+    if (returnDateTime != null && String(returnDateTime).trim()) {
+      const parsed = parseBorrowDateTimeInput(returnDateTime);
+      returnDate = parsed ? formatDateLendThai(parsed) : null;
+      if (!returnDate) {
+        return res.status(400).json({ message: "รูปแบบวันที่คืนไม่ถูกต้อง" });
+      }
+    } else {
+      returnDate = formatDateLendThai(new Date());
+      if (!returnDate) {
+        return res.status(500).json({ message: "ไม่สามารถสร้างวันที่คืนได้" });
+      }
+    }
 
     console.log("=== คืนอุปกรณ์ ===");
     console.log("รหัสการยืม:", borrowId);

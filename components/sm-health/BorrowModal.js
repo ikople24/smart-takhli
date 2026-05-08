@@ -449,7 +449,7 @@ export default function BorrowModal({ onClose, onSuccess }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="w-4 h-4 inline mr-1" />
-              วันที่และเวลา
+              วันที่และเวลายืม
             </label>
             <input
               type="datetime-local"
@@ -457,6 +457,9 @@ export default function BorrowModal({ onClose, onSuccess }) {
               value={borrowDateTime}
               onChange={(e) => setBorrowDateTime(e.target.value)}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              บันทึกและแสดงผลตามเวลาไทย (GMT+7) และปฏิทินไทย (พ.ศ.)
+            </p>
           </div>
         </div>
 
