@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     try {
       const updated = await SubmittedReport.findOneAndUpdate(
         { _id: complaintId },
-        { status },
+        // Ensure close time is recorded when status changes.
+        { status, updatedAt: new Date() },
         { new: true }
       );
 

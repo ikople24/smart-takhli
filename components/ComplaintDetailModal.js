@@ -290,10 +290,10 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
                     </div>
                   )}
 
-                  {assignment.completedAt && (
+                  {complaint?.status === "ดำเนินการเสร็จสิ้น" && complaint?.updatedAt && (
                     <div>
                       <p className="text-sm font-medium text-green-700">เสร็จสิ้นเมื่อ:</p>
-                      <p className="text-sm text-green-600">{formatDate(assignment.completedAt)}</p>
+                      <p className="text-sm text-green-600">{formatDate(complaint.updatedAt)}</p>
                     </div>
                   )}
 
