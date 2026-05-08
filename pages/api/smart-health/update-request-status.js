@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
+import { formatDateLendThai } from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "PATCH") {
@@ -83,7 +84,7 @@ export default async function handler(req, res) {
             id_use_object: borrowingId,
             index_id_tk: request.equipment || "ไม่ระบุ",
             id_personal_use: request.phone, // ใช้เบอร์โทรเป็น id_personal_use
-            date_lend: today.toLocaleString('th-TH'),
+            date_lend: formatDateLendThai(today),
             date_return: "", // Empty for borrowed status
             request_id: id, // Link to original request
             created_at: new Date(),

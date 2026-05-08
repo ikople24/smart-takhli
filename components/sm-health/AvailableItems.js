@@ -384,7 +384,7 @@ const AvailableItems = ({ menu = [], loading = false }) => {
                 
                 <div>
                   <label className="label">
-                    <span className="label-text">วันที่และเวลา</span>
+                    <span className="label-text">วันที่และเวลายืม</span>
                   </label>
                   <input 
                     type="datetime-local" 
@@ -392,6 +392,9 @@ const AvailableItems = ({ menu = [], loading = false }) => {
                     value={borrowDateTime}
                     onChange={(e) => setBorrowDateTime(e.target.value)}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    บันทึกและแสดงผลตามเวลาไทย (GMT+7) และปฏิทินไทย (พ.ศ.)
+                  </p>
                 </div>
               </div>
               <div className="modal-action">

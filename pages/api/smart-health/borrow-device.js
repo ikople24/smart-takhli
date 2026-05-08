@@ -1,4 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
+import {
+  formatDateLendThai,
+  parseBorrowDateTimeInput,
+} from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -123,19 +127,25 @@ export default async function handler(req, res) {
     console.log("รหัสการยืม:", borrowingId);
     console.log("================================");
 
+    const lendDate = parseBorrowDateTimeInput(borrowDateTime);
+    if (!lendDate) {
+      return res.status(400).json({
+        message: "รูปแบบวันที่และเวลาที่ยืมไม่ถูกต้อง",
+      });
+    }
+    const dateLendFormatted = formatDateLendThai(lendDate);
+    if (!dateLendFormatted) {
+      return res.status(400).json({
+        message: "ไม่สามารถจัดรูปแบบวันที่ยืมได้",
+      });
+    }
+
     // Create borrow record
     const borrowRecord = {
       id_use_object: borrowingId,
       index_id_tk: deviceId,
       id_personal_use: cid,
-      date_lend: today.toLocaleString('th-TH', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }),
+      date_lend: dateLendFormatted,
       date_return: "",
       created_at: new Date(),
       updated_at: new Date()

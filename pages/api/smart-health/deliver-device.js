@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
+import { formatDateLendThai } from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -35,16 +36,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Update borrow record with delivery date
-    const today = new Date();
-    const deliveryDate = today.toLocaleString('th-TH', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    const deliveryDate = formatDateLendThai(new Date());
+    if (!deliveryDate) {
+      return res.status(500).json({ message: "ไม่สามารถสร้างวันที่ส่งมอบได้" });
+    }
 
     console.log("กำลังอัปเดตรายการยืม:", borrowId);
     const borrowUpdateResult = await borrowCollection.updateOne(

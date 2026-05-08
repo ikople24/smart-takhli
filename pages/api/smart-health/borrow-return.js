@@ -1,5 +1,9 @@
 import dbConnect from '@/lib/dbConnect';
 import { ObjectId } from 'mongodb';
+import {
+  formatDateLendThai,
+  parseBorrowDateTimeInput,
+} from '@/lib/smartHealthBorrowDates';
 
 const dbName = 'db_takhli';
 const collectionName = 'resoles_sm_health';
@@ -106,8 +110,25 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing or invalid id' });
       }
 
-      const { community, location } = req.body || {};
+      const { community, location, date_lend_iso } = req.body || {};
       const $set = { updated_at: new Date() };
+
+      if (date_lend_iso !== undefined) {
+        if (!date_lend_iso || !String(date_lend_iso).trim()) {
+          return res.status(400).json({ error: 'กรุณาระบุวันที่ยืม' });
+        }
+        const parsed =
+          parseBorrowDateTimeInput(date_lend_iso) ||
+          parseBorrowDateTimeInput(String(date_lend_iso).replace(' ', 'T'));
+        if (!parsed) {
+          return res.status(400).json({ error: 'รูปแบบวันที่ยืมไม่ถูกต้อง' });
+        }
+        const formatted = formatDateLendThai(parsed);
+        if (!formatted) {
+          return res.status(400).json({ error: 'ไม่สามารถบันทึกวันที่ยืมได้' });
+        }
+        $set.date_lend = formatted;
+      }
 
       if (community !== undefined) {
         if (community && String(community).trim()) {

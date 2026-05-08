@@ -6,6 +6,10 @@ import Image from 'next/image';
 import { Search, Calendar, User, Package, Eye, Star, Clock, CheckCircle, X, MapPin, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { COMMUNITIES } from '@/lib/takhliCommunities';
+import {
+  parseThaiDateLendString,
+  toDatetimeLocalValue,
+} from '@/lib/smartHealthBorrowDates';
 
 const LocationPickerMap = dynamic(
   () => import('@/components/sm-health/LocationPickerMap'),
@@ -36,6 +40,9 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   /** ใช้เปรียบเทียบว่าผู้ใช้ขยับแผนที่หรือไม่ — ไม่ส่ง location ใน PATCH ถ้ายังไม่เคยมี sm_location และไม่ได้ขยับแผนที่ */
   const [geoLocationSnapshot, setGeoLocationSnapshot] = useState(null);
   const [geoSaving, setGeoSaving] = useState(false);
+  const [lendDateEditOpen, setLendDateEditOpen] = useState(false);
+  const [lendDateLocal, setLendDateLocal] = useState('');
+  const [lendDateSaving, setLendDateSaving] = useState(false);
 
   const refreshBorrowData = useCallback(async () => {
     const response = await axios.get('/api/smart-health/borrow-return');
@@ -149,7 +156,43 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
 
   useEffect(() => {
     setGeoEditOpen(false);
+    setLendDateEditOpen(false);
   }, [selectedItem?._id]);
+
+  const openLendDateEdit = () => {
+    if (!selectedItem) return;
+    const parsed = parseThaiDateLendString(selectedItem.date_lend);
+    setLendDateLocal(toDatetimeLocalValue(parsed || new Date()));
+    setLendDateEditOpen(true);
+  };
+
+  const handleSaveLendDate = async () => {
+    if (!selectedItem?._id || !lendDateLocal?.trim()) return;
+    setLendDateSaving(true);
+    try {
+      await axios.patch(
+        `/api/smart-health/borrow-return?id=${encodeURIComponent(String(selectedItem._id))}`,
+        { date_lend_iso: lendDateLocal.trim() }
+      );
+      await refreshBorrowData();
+      setLendDateEditOpen(false);
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกวันที่ยืมแล้ว',
+        showConfirmButton: false,
+        timer: 1200,
+      });
+    } catch (e) {
+      console.error(e);
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        text: e.response?.data?.error || '',
+      });
+    } finally {
+      setLendDateSaving(false);
+    }
+  };
 
   const openGeoEdit = () => {
     if (!selectedItem) return;
@@ -238,9 +281,9 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
 
     // Sort by date_lend descending (newest first)
     result.sort((a, b) => {
-      const dateA = a.date_lend ? new Date(a.date_lend.split('/').reverse().join('-')) : new Date(0);
-      const dateB = b.date_lend ? new Date(b.date_lend.split('/').reverse().join('-')) : new Date(0);
-      return dateB - dateA;
+      const ta = parseThaiDateLendString(a.date_lend)?.getTime() ?? 0;
+      const tb = parseThaiDateLendString(b.date_lend)?.getTime() ?? 0;
+      return tb - ta;
     });
 
     // Filter by type
@@ -314,6 +357,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
           <h2 className="text-xl font-bold text-gray-900">ประวัติการยืม-คืนอุปกรณ์</h2>
           <p className="text-sm text-gray-500">
             ทั้งหมด {stats.total} รายการ | กำลังยืม {stats.borrowing} | คืนแล้ว {stats.returned}
+            <span className="hidden sm:inline"> — วันเวลาในตารางเป็นปฏิทินไทย (พ.ศ.) เวลาไทย</span>
           </p>
         </div>
       </div>
@@ -651,9 +695,52 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                           : '-'}
                       </div>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <div className="text-xs text-gray-500 mb-1">วันที่ยืม</div>
-                      <div className="text-sm font-medium">{selectedItem.date_lend || '-'}</div>
+                    <div className="p-3 bg-gray-50 rounded-xl sm:col-span-2">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="text-xs text-gray-500">วันที่ยืม</div>
+                        {!lendDateEditOpen && (
+                          <button
+                            type="button"
+                            onClick={openLendDateEdit}
+                            className="text-xs font-medium text-primary hover:underline shrink-0"
+                          >
+                            แก้ไข
+                          </button>
+                        )}
+                      </div>
+                      {!lendDateEditOpen ? (
+                        <div className="text-sm font-medium">
+                          {selectedItem.date_lend || '-'}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 pt-1">
+                          <input
+                            type="datetime-local"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                            value={lendDateLocal}
+                            onChange={(e) => setLendDateLocal(e.target.value)}
+                            disabled={lendDateSaving}
+                          />
+                          <div className="flex flex-wrap gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setLendDateEditOpen(false)}
+                              disabled={lendDateSaving}
+                              className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveLendDate}
+                              disabled={lendDateSaving || !lendDateLocal?.trim()}
+                              className="px-3 py-1.5 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                            >
+                              {lendDateSaving ? 'กำลังบันทึก…' : 'บันทึก'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl">
                       <div className="text-xs text-gray-500 mb-1">วันที่คืน</div>
