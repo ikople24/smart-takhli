@@ -2,7 +2,16 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, ArrowLeft, User } from "lucide-react";
+import Swal from "sweetalert2";
 import ReturnModal from "./ReturnModal";
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 const skeletonCount = 6; // จำนวน skeleton ที่แสดงขณะโหลด
 
@@ -10,7 +19,7 @@ const AvailableItems = ({ menu = [], loading = false }) => {
   const [showModal, setShowModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [availableDevices, setAvailableDevices] = useState([]);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
+  const [people, setPeople] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -27,10 +36,10 @@ const AvailableItems = ({ menu = [], loading = false }) => {
   }, []);
 
   useEffect(() => {
-    fetch("/api/smart-health/registered-users")
+    fetch("/api/smart-health/people")
       .then((res) => res.json())
-      .then((data) => setRegisteredUsers(data))
-      .catch((err) => console.error("Error loading registered users", err));
+      .then((data) => setPeople(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error loading people", err));
   }, []);
 
   // Close dropdown when clicking outside
@@ -80,6 +89,7 @@ const AvailableItems = ({ menu = [], loading = false }) => {
     const formData = {
       user: {
         ...selectedUser,
+        fullName: selectedUser?.fullName || selectedUser?.name,
         citizenId: citizenId
       },
       deviceType: selectedDeviceType,
@@ -112,7 +122,19 @@ const AvailableItems = ({ menu = [], loading = false }) => {
       console.log("ข้อความ:", result.message);
       console.log("======================");
 
-      alert(`บันทึกข้อมูลสำเร็จ!\nรหัสการยืม: ${result.borrowingId}\nดูข้อมูลเพิ่มเติมใน Console (F12)`);
+      const borrowerName =
+        selectedUser?.fullName || selectedUser?.name || "-";
+      await Swal.fire({
+        icon: "success",
+        title: "ยืมอุปกรณ์สำเร็จ",
+        html: `<div class="text-left text-sm space-y-2 mt-2">
+          <p><strong>ผู้ยืม:</strong> ${escapeHtml(borrowerName)}</p>
+          <p><strong>ประเภทอุปกรณ์:</strong> ${escapeHtml(selectedDeviceType)}</p>
+          <p><strong>รหัสอุปกรณ์:</strong> ${escapeHtml(selectedDevice)}</p>
+          <p class="text-gray-600"><strong>รหัสการยืม:</strong> ${escapeHtml(result.borrowingId)}</p>
+        </div>`,
+        confirmButtonText: "ตกลง",
+      });
 
       // Reset form
       setShowModal(false);
@@ -225,49 +247,60 @@ const AvailableItems = ({ menu = [], loading = false }) => {
                     {showUserDropdown && (
                       <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                         <div className="p-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
-                          ผู้ขอที่ผ่านการลงทะเบียนอุปกรณ์ ({registeredUsers.filter(user => 
-                            user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            user.phone?.includes(searchTerm)
-                          ).length} รายการ)
+                          บุคคลในระบบ ({people.filter(p => {
+                            const q = searchTerm.toLowerCase();
+                            const name = String(p.fullName || p.name || '').toLowerCase();
+                            const phone = String(p.phone || '');
+                            const cid = String(p.citizenId || '');
+                            return name.includes(q) || phone.includes(searchTerm) || cid.includes(searchTerm);
+                          }).length} รายการ)
                         </div>
-                        {registeredUsers
-                          .filter(user => 
-                            user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            user.phone?.includes(searchTerm)
-                          )
-                          .map((user, index) => (
+                        {people
+                          .filter(p => {
+                            const q = searchTerm.toLowerCase();
+                            const name = String(p.fullName || p.name || '').toLowerCase();
+                            const phone = String(p.phone || '');
+                            const cid = String(p.citizenId || '');
+                            return name.includes(q) || phone.includes(searchTerm) || cid.includes(searchTerm);
+                          })
+                          .map((p, index) => (
                             <div
                               key={index}
                               className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
                               onClick={() => {
-                                setSelectedUser(user);
-                                setSearchTerm(user.name || '');
+                                setSelectedUser(p);
+                                setSearchTerm(p.fullName || p.name || '');
+                                if (p.citizenId) setCitizenId(String(p.citizenId).replace(/\D/g, '').slice(0, 13));
                                 setShowUserDropdown(false);
                               }}
                             >
-                              <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-gray-600">{user.phone}</div>
-                              <div className="text-xs text-green-600">✓ {user.status}</div>
+                              <div className="font-medium">{p.fullName || p.name}</div>
+                              <div className="text-sm text-gray-600">
+                                {p.phone || "-"}{p.citizenId ? ` • ${p.citizenId}` : ""}
+                              </div>
                             </div>
                           ))}
-                        {registeredUsers.filter(user => 
-                          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.phone?.includes(searchTerm)
-                        ).length === 0 && (
+                        {people.filter(p => {
+                          const q = searchTerm.toLowerCase();
+                          const name = String(p.fullName || p.name || '').toLowerCase();
+                          const phone = String(p.phone || '');
+                          const cid = String(p.citizenId || '');
+                          return name.includes(q) || phone.includes(searchTerm) || cid.includes(searchTerm);
+                        }).length === 0 && (
                           <div className="p-3 text-gray-500 text-center">
-                            ไม่พบผู้ขอที่ผ่านการลงทะเบียนอุปกรณ์
+                            ไม่พบบุคคลที่ตรงกับคำค้นหา
                           </div>
                         )}
                       </div>
                     )}
                   </div>
                   
-                                     {selectedUser && (
+                   {selectedUser && (
                      <div className="mt-2 p-3 bg-blue-50 rounded-lg">
                        <div className="text-sm">
-                         <div><strong>ชื่อ:</strong> {selectedUser.name}</div>
-                         <div><strong>เบอร์โทร:</strong> {selectedUser.phone}</div>
-                         <div><strong>สถานะ:</strong> <span className="text-green-600">{selectedUser.status}</span></div>
+                         <div><strong>ชื่อ:</strong> {selectedUser.fullName || selectedUser.name}</div>
+                         <div><strong>เบอร์โทร:</strong> {selectedUser.phone || "-"}</div>
+                         <div><strong>เลขบัตร:</strong> {selectedUser.citizenId || "-"}</div>
                        </div>
                      </div>
                    )}

@@ -42,7 +42,10 @@ export default async function handler(req, res) {
 
       const citizenIds = [
         ...new Set(
-          data.map((e) => e.id_personal_use).filter((id) => id && String(id).length >= 13)
+          data
+            .map((e) => e.id_personal_use)
+            .map((id) => String(id || '').replace(/\D/g, ''))
+            .filter((id) => id.length === 13)
         ),
       ];
       const people =
@@ -50,15 +53,18 @@ export default async function handler(req, res) {
           ? await personColl.find({ citizenId: { $in: citizenIds } }).toArray()
           : [];
       const byCitizen = Object.fromEntries(
-        (people || []).map((p) => [p.citizenId, p])
+        (people || []).map((p) => [String(p.citizenId || '').replace(/\D/g, ''), p])
       );
 
       const mappedData = data.map((entry) => {
+        const entryCitizenId = String(entry.id_personal_use || '').replace(/\D/g, '');
         const matchedMenu = menuItems.find(
-          (menu) => menu.id_code_th === entry.index_id_tk?.substring(0, 8)
+          (menu) =>
+            String(menu.id_code_th || '') ===
+            String(entry.index_id_tk || '').substring(0, 8)
         );
-        const person = entry.id_personal_use
-          ? byCitizen[entry.id_personal_use]
+        const person = entryCitizenId
+          ? byCitizen[entryCitizenId]
           : null;
         const resolvedCommunity =
           (entry.sm_community && String(entry.sm_community).trim()) ||
