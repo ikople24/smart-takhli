@@ -11,6 +11,7 @@ import ComplaintStatsNew from "@/components/ComplaintStatsNew";
 import OverdueComplaintsAlertNew from "@/components/OverdueComplaintsAlertNew";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
+import Swal from "sweetalert2";
 
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
   ssr: false,
@@ -223,12 +224,79 @@ export default function ManageComplaintsPage() {
     }
   };
 
+  const getProcessingTimeCategory = (startDate, endDate) => {
+    const start = startDate instanceof Date ? startDate : new Date(startDate);
+    const end = endDate instanceof Date ? endDate : new Date(endDate);
+    const processingTimeHours = Math.floor((end - start) / (1000 * 60 * 60));
+
+    if (processingTimeHours <= 24) return "≤ 24 ชม.";
+    if (processingTimeHours <= 48) return "1-2 วัน";
+    if (processingTimeHours <= 72) return "2-3 วัน";
+    if (processingTimeHours <= 168) return "3-7 วัน";
+    if (processingTimeHours <= 360) return "7-15 วัน";
+    return "> 15 วัน";
+  };
+
   const handleCloseComplaint = async (complaintId) => {
+    const complaint = complaints.find((c) => c._id === complaintId);
     const assignment = assignments.find((a) => a.complaintId === complaintId);
-    if (!assignment?.completedAt) {
-      alert("กรุณาระบุวันที่ดำเนินการเสร็จสิ้นในแบบฟอร์มอัปเดตก่อน");
+
+    const closeTime = new Date();
+    const startTimeRaw = complaint?.timestamp || complaint?.createdAt;
+    const startTime = startTimeRaw ? new Date(startTimeRaw) : null;
+    const assignedTime = assignment?.assignedAt ? new Date(assignment.assignedAt) : null;
+
+    if (!complaint || !startTime || Number.isNaN(startTime.getTime())) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่พบข้อมูลเวลาเริ่มเรื่อง",
+        text: "ไม่สามารถปิดเรื่องได้เนื่องจากไม่พบ createdAt/timestamp ที่ถูกต้อง",
+        confirmButtonText: "ปิด",
+      });
       return;
     }
+
+    // Guard: close time must not be before report time or assignment time
+    const isBeforeReport = closeTime < startTime;
+    const isBeforeAssigned = assignedTime && !Number.isNaN(assignedTime.getTime()) && closeTime < assignedTime;
+    if (isBeforeReport || isBeforeAssigned) {
+      await Swal.fire({
+        icon: "warning",
+        title: "เวลาปิดเรื่องไม่ถูกต้อง",
+        html: `
+          <div style="text-align:left">
+            <div>เวลาปิดเรื่องต้อง <b>ไม่น้อยกว่า</b> เวลาที่แจ้งเรื่อง${assignedTime ? " หรือเวลาที่ได้รับมอบหมาย" : ""}</div>
+            <div style="margin-top:8px;color:#666">แนะนำ: ตรวจสอบวันเวลาในเครื่อง (Date/Time) แล้วลองใหม่อีกครั้ง</div>
+          </div>
+        `,
+        confirmButtonText: "รับทราบ",
+      });
+      return;
+    }
+
+    const timeCategory = getProcessingTimeCategory(startTime, closeTime);
+
+    const confirm = await Swal.fire({
+      icon: "question",
+      title: "ยืนยันปิดเรื่อง?",
+      html: `
+        <div style="text-align:left">
+          <div><b>ระบบจะบันทึกเวลาปิด</b> โดยใช้ <b>updatedAt</b> ของเรื่อง (เวลาปัจจุบัน)</div>
+          <div style="margin-top:10px"><b>KPI ที่จะได้:</b> ${timeCategory}</div>
+          <div style="margin-top:10px;color:#666">
+            หมายเหตุ: หากปิดตอนนี้ ระบบจะคำนวณระยะเวลาจาก “เวลารับเรื่อง” → “เวลาปิดเรื่อง”
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "ปิดเรื่อง",
+      cancelButtonText: "ยกเลิก",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+
+    if (!confirm.isConfirmed) return;
+
     try {
       const res = await fetch(`/api/submittedreports/update-status`, {
         method: "PUT",
@@ -236,11 +304,22 @@ export default function ManageComplaintsPage() {
         body: JSON.stringify({ complaintId, status: "ดำเนินการเสร็จสิ้น" }),
       });
       if (!res.ok) throw new Error("Failed to close");
-      alert("ปิดเรื่องเรียบร้อย");
+      await Swal.fire({
+        icon: "success",
+        title: "ปิดเรื่องเรียบร้อย",
+        text: `บันทึก KPI: ${timeCategory}`,
+        timer: 1600,
+        showConfirmButton: false,
+      });
       fetchComplaints();
     } catch (error) {
       console.error("Error closing:", error);
-      alert("เกิดข้อผิดพลาดในการปิดเรื่อง");
+      await Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการปิดเรื่อง",
+        text: error?.message || "กรุณาลองใหม่อีกครั้ง",
+        confirmButtonText: "ปิด",
+      });
     }
   };
 
