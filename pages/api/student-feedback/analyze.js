@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import StudentFeedback from '@/models/StudentFeedback';
+import { requireAuth } from '@/lib/requireAuth';
 
 // ฟังก์ชันคำนวณความคล้ายคลึงของข้อความ (Simple Jaccard Similarity)
 function calculateSimilarity(text1, text2) {
@@ -80,6 +81,9 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
+
+  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+  if (!auth) return;
 
   try {
     const { threshold = 0.3, limit = 100 } = req.query;

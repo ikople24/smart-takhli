@@ -1,10 +1,14 @@
 import dbConnect from "@/lib/dbConnect";
 import EducationRegister from "@/models/EducationRegisterModel";
+import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
+
+  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+  if (!auth) return;
 
   try {
     await dbConnect();

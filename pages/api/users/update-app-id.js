@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
+import { requireAuth } from "@/lib/requireAuth";
 
 /**
  * API สำหรับอัพเดท appId ของ user
@@ -13,6 +14,9 @@ export default async function handler(req, res) {
   if (method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
+
+  const auth = await requireAuth(req, res, ["superadmin"]);
+  if (!auth) return;
 
   try {
     const { userId, appId } = req.body;

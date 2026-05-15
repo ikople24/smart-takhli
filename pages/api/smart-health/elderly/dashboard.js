@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
+import { requireAuth } from "@/lib/requireAuth";
 import ElderlyVisit from "@/models/ElderlyVisit";
 import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/elderlySchoolDashboard";
 import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
@@ -61,6 +62,9 @@ export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
+
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
 
   try {
     const yearBE = Number(req.query.yearBE);

@@ -39,6 +39,32 @@ const MapWithNoSSR = dynamic(() => import('@/components/AdminDashboardMap'), {
   )
 });
 
+/** ช่วงละ 4 เดือนในปีงบไทย (1 ต.ค. – 30 ก.ย.) — fyYearBe คือ พ.ศ. ของปีงบ — slot 1..3 */
+function getFiscalFourMonthBounds(fyYearBe, slot) {
+  const fy = parseInt(fyYearBe, 10);
+  if (Number.isNaN(fy) || slot < 1 || slot > 3) return null;
+  const ge = fy - 543;
+  switch (slot) {
+    case 1:
+      return { start: new Date(ge - 1, 9, 1), end: new Date(ge, 0, 31, 23, 59, 59, 999) };
+    case 2:
+      return { start: new Date(ge, 1, 1), end: new Date(ge, 4, 31, 23, 59, 59, 999) };
+    case 3:
+      return { start: new Date(ge, 5, 1), end: new Date(ge, 8, 30, 23, 59, 59, 999) };
+    default:
+      return null;
+  }
+}
+
+function getInitialFiscalFourMonthSlot() {
+  const d = new Date();
+  const month = d.getMonth();
+  const year = d.getFullYear();
+  if (month >= 9 || month === 0) return 1;
+  if (month <= 4) return 2;
+  return 3;
+}
+
 export default function AdminDashboard() {
   const { userId, isLoaded } = useAuth();
   const router = useRouter();
@@ -74,7 +100,8 @@ export default function AdminDashboard() {
   const [dateRange, setDateRange] = useState("all");
   const [fiscalYearFilter, setFiscalYearFilter] = useState(getInitialFiscalYear);
   const [selectedMonth, setSelectedMonth] = useState(null); // Format: "YYYY-MM"
-  const [filterMode, setFilterMode] = useState("fiscal"); // "quick" | "month" | "fiscal"
+  const [filterMode, setFilterMode] = useState("fiscal"); // "quick" | "month" | "fiscal" | "fourmonth"
+  const [fiscalFourMonthSlot, setFiscalFourMonthSlot] = useState(getInitialFiscalFourMonthSlot);
   const [selectedComplaints, setSelectedComplaints] = useState([]);
   const [showComplaintsModal, setShowComplaintsModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -221,7 +248,7 @@ export default function AdminDashboard() {
       };
       loadAllData();
     }
-  }, [userId, dateRange, fiscalYearFilter, selectedMonth]);
+  }, [userId, dateRange, fiscalYearFilter, selectedMonth, filterMode, fiscalFourMonthSlot]);
 
   // Helper function to generate community statistics popup content
   const generateCommunityPopupContent = (polygon, communityComplaints, menuData, problemOptionsData) => {
@@ -473,11 +500,23 @@ export default function AdminDashboard() {
       }
       setOfficerNames(namesMap);
       
-      const filteredComplaints = filterComplaintsByDateRange(complaintsData, dateRange, fiscalYearFilter, selectedMonth);
+      const filteredComplaints = filterComplaintsByDateRange(
+        complaintsData,
+        dateRange,
+        fiscalYearFilter,
+        selectedMonth,
+        filterMode === "fourmonth" ? fiscalFourMonthSlot : null
+      );
       
       // Filter assignments by the same date range
       const allAssignments = assignmentsData.assignments || assignmentsData || [];
-      const filteredAssignments = filterAssignmentsByDateRange(allAssignments, dateRange, fiscalYearFilter, selectedMonth);
+      const filteredAssignments = filterAssignmentsByDateRange(
+        allAssignments,
+        dateRange,
+        fiscalYearFilter,
+        selectedMonth,
+        filterMode === "fourmonth" ? fiscalFourMonthSlot : null
+      );
       
       const calculatedStats = calculateStats(filteredComplaints, satisfactionData, filteredAssignments);
       
@@ -496,7 +535,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const filterComplaintsByDateRange = (complaints, range, fiscalYear = null, month = null) => {
+  const filterComplaintsByDateRange = (complaints, range, fiscalYear = null, month = null, fourMonthSlot = null) => {
     const now = new Date();
     const filtered = complaints.filter(complaint => {
       const complaintDate = new Date(complaint.timestamp || complaint.createdAt);
@@ -510,6 +549,16 @@ export default function AdminDashboard() {
           return false;
         }
         return true; // If month is selected, only filter by month
+      }
+
+      // ช่วงละ 4 เดือน (ปีงบ + ช่วงที่ 1–3)
+      if (fourMonthSlot != null && fiscalYear) {
+        const bounds = getFiscalFourMonthBounds(fiscalYear, fourMonthSlot);
+        if (!bounds) return false;
+        if (complaintDate < bounds.start || complaintDate > bounds.end) {
+          return false;
+        }
+        return true;
       }
       
       // Filter by fiscal year if selected
@@ -542,7 +591,7 @@ export default function AdminDashboard() {
   };
 
   // Filter assignments by date range (similar to complaints)
-  const filterAssignmentsByDateRange = (assignments, range, fiscalYear = null, month = null) => {
+  const filterAssignmentsByDateRange = (assignments, range, fiscalYear = null, month = null, fourMonthSlot = null) => {
     if (!assignments || !Array.isArray(assignments)) return [];
     
     const now = new Date();
@@ -556,6 +605,15 @@ export default function AdminDashboard() {
         const monthStart = new Date(year, monthNum - 1, 1);
         const monthEnd = new Date(year, monthNum, 0, 23, 59, 59);
         if (assignmentDate < monthStart || assignmentDate > monthEnd) {
+          return false;
+        }
+        return true;
+      }
+
+      if (fourMonthSlot != null && fiscalYear) {
+        const bounds = getFiscalFourMonthBounds(fiscalYear, fourMonthSlot);
+        if (!bounds) return false;
+        if (assignmentDate < bounds.start || assignmentDate > bounds.end) {
           return false;
         }
         return true;
@@ -842,6 +900,10 @@ export default function AdminDashboard() {
     return stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : 0;
   }, [stats]);
 
+  const satisfactionPercent = useMemo(() => {
+    return ((stats.satisfaction || 0) / 5) * 100;
+  }, [stats.satisfaction]);
+
   if (!isLoaded || !userId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -987,13 +1049,30 @@ export default function AdminDashboard() {
                     setFiscalYearFilter(getFiscalYearInfo.currentFiscalYear.toString());
                   }
                 }}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
                   filterMode === "fiscal" 
                     ? 'bg-white text-emerald-700 shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 📊 ปีงบประมาณ
+              </button>
+              <button
+                onClick={() => {
+                  setFilterMode("fourmonth");
+                  setSelectedMonth(null);
+                  setDateRange("all");
+                  if (!fiscalYearFilter) {
+                    setFiscalYearFilter(getFiscalYearInfo.currentFiscalYear.toString());
+                  }
+                }}
+                className={`px-2.5 sm:px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  filterMode === "fourmonth"
+                    ? 'bg-white text-amber-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                📐 ช่วง 4 เดือน
               </button>
               <button
                 onClick={() => {
@@ -1004,7 +1083,7 @@ export default function AdminDashboard() {
                     setSelectedMonth(getCurrentMonthValue);
                   }
                 }}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
                   filterMode === "month" 
                     ? 'bg-white text-violet-700 shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
@@ -1018,7 +1097,7 @@ export default function AdminDashboard() {
                   setFiscalYearFilter(null);
                   setSelectedMonth(null);
                 }}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
                   filterMode === "quick" 
                     ? 'bg-white text-blue-700 shadow-sm' 
                     : 'text-slate-500 hover:text-slate-700'
@@ -1051,6 +1130,46 @@ export default function AdminDashboard() {
                     1 ต.ค. {parseInt(fiscalYearFilter) - 1} - 30 ก.ย. {fiscalYearFilter}
                   </span>
                 )}
+              </div>
+            )}
+
+            {filterMode === "fourmonth" && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={fiscalYearFilter || ""}
+                  onChange={(e) => {
+                    setFiscalYearFilter(e.target.value);
+                    setSelectedMonth(null);
+                    setDateRange("all");
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl text-amber-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 cursor-pointer hover:border-amber-300 transition-all"
+                >
+                  {getFiscalYearInfo.availableFiscalYears.map((fy) => (
+                    <option key={fy.year} value={fy.year.toString()}>
+                      ปีงบ {fy.year} {fy.isCurrent ? '(ปัจจุบัน)' : fy.isNext ? '(ถัดไป)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={fiscalFourMonthSlot}
+                  onChange={(e) => setFiscalFourMonthSlot(Number(e.target.value))}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl text-amber-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 cursor-pointer hover:border-amber-300 transition-all min-w-[220px]"
+                >
+                  <option value={1}>ช่วงที่ 1 — ต.ค. – ม.ค. (4 เดือน)</option>
+                  <option value={2}>ช่วงที่ 2 — ก.พ. – พ.ค. (4 เดือน)</option>
+                  <option value={3}>ช่วงที่ 3 — มิ.ย. – ก.ย. (4 เดือน)</option>
+                </select>
+                {fiscalYearFilter && (() => {
+                  const b = getFiscalFourMonthBounds(fiscalYearFilter, fiscalFourMonthSlot);
+                  if (!b) return null;
+                  return (
+                    <span className="text-xs text-amber-800 bg-amber-50 px-2 py-1 rounded-lg">
+                      {b.start.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                      {' – '}
+                      {b.end.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  );
+                })()}
               </div>
             )}
 
@@ -1107,12 +1226,16 @@ export default function AdminDashboard() {
             <div className="ml-auto flex items-center gap-2">
               <div className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full ${
                 filterMode === "fiscal" ? 'bg-emerald-100 text-emerald-700' :
+                filterMode === "fourmonth" ? 'bg-amber-100 text-amber-900' :
                 filterMode === "month" ? 'bg-violet-100 text-violet-700' :
                 'bg-blue-100 text-blue-700'
               }`}>
                 <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
                 <span className="font-medium">
                   {filterMode === "fiscal" && fiscalYearFilter && `ปีงบ ${fiscalYearFilter}`}
+                  {filterMode === "fourmonth" && fiscalYearFilter && (
+                    <>ปีงบ {fiscalYearFilter} · ช่วง {fiscalFourMonthSlot}/3 (4 เดือน)</>
+                  )}
                   {filterMode === "month" && selectedMonth && getAvailableMonths.find(m => m.value === selectedMonth)?.label}
                   {filterMode === "quick" && (
                     dateRange === "7d" ? "7 วันล่าสุด" : 
@@ -1187,7 +1310,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <p className="text-amber-100 text-sm mb-1">ความพึงพอใจ</p>
-            <p className="text-4xl font-bold tracking-tight counter-number">{stats.satisfaction.toFixed(1)}<span className="text-lg font-normal opacity-60">/5</span></p>
+            <p className="text-4xl font-bold tracking-tight counter-number">{satisfactionPercent.toFixed(1)}<span className="text-lg font-normal opacity-60">%</span></p>
           </div>
         </div>
 

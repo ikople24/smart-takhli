@@ -1,11 +1,15 @@
 import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
 import { formatDateLendThai } from "@/lib/smartHealthBorrowDates";
+import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   if (req.method !== "PATCH") {
     return res.status(405).json({ message: "Method not allowed" });
   }
+
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
 
   try {
     const db = (await dbConnect()).connection.db;

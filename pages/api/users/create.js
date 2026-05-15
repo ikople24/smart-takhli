@@ -1,13 +1,21 @@
 import axios from "axios";
+import { requireAuth } from "@/lib/requireAuth";
+import { backendAuthHeaders } from "@/lib/backendAuthHeaders";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
+
   try {
     const appId = req.headers['x-app-id'] || process.env.NEXT_PUBLIC_APP_ID;
-    const authToken = req.headers['authorization'] || req.headers['Authorization'];
+    const headers = await backendAuthHeaders(req);
+    if (!headers.Authorization) {
+      return res.status(401).json({ success: false, message: "Missing session for backend" });
+    }
 
     const response = await axios.post(
       `${process.env.BACKEND_API_URL}/api/users/create`,
@@ -15,7 +23,7 @@ export default async function handler(req, res) {
       {
         headers: {
           'x-app-id': appId,
-          'Authorization': authToken,
+          'Authorization': headers.Authorization,
           'Content-Type': 'application/json'
         },
       }
