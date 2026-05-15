@@ -1,5 +1,6 @@
 import formidable from 'formidable';
 import { uploadToCloudinary } from '../../utils/uploadToCloudinary';
+import { requireAuth } from '@/lib/requireAuth';
 
 export const config = {
   api: {
@@ -11,6 +12,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
+
+  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+  if (!auth) return;
 
   try {
     const form = formidable({

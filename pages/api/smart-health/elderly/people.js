@@ -1,9 +1,13 @@
 import dbConnect from "@/lib/dbConnect";
+import { requireAuth } from "@/lib/requireAuth";
 import ElderlyPerson from "@/models/ElderlyPerson";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
   await dbConnect();
+
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
 
   if (req.method === "GET") {
     const { id, search = "", page = "1", limit = "20" } = req.query;

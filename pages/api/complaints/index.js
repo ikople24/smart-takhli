@@ -1,6 +1,7 @@
 //api/complaints/index.js
 import dbConnect from '@/lib/dbConnect';
 import Complaint from '@/models/Complaint';
+import { requireAuth } from '@/lib/requireAuth';
 
 // คำนวณช่วงปีงบประมาณ (1 ต.ค. - 30 ก.ย.)
 function getFiscalYearRange(fiscalYear) {
@@ -32,7 +33,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const isAdmin = req.query.role === 'admin';
+      const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+      if (!auth) return;
+
+      const isAdmin = ['admin', 'superadmin'].includes(auth.role);
       const projection = isAdmin ? {} : { fullName: 0, phone: 0 };
       
       // Pagination parameters

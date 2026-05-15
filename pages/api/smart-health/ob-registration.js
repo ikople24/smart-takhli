@@ -1,16 +1,22 @@
 import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
+import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   const db = (await dbConnect()).connection.db;
   const collection = db.collection("ob_registration_requests");
 
   if (req.method === "GET") {
+    const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+    if (!auth) return;
     const data = await collection.find().sort({ submitted_at: -1 }).toArray();
     return res.status(200).json(data);
   }
 
   if (req.method === "DELETE") {
+    const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+    if (!auth) return;
+
     const { id } = req.query;
     if (!id) return res.status(400).json({ message: "Missing ID" });
     await collection.deleteOne({ _id: new ObjectId(id) });
@@ -42,6 +48,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "PATCH") {
+    const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+    if (!auth) return;
+
     const { id } = req.query;
     const { status } = req.body;
 

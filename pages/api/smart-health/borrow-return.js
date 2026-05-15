@@ -4,6 +4,7 @@ import {
   formatDateLendThai,
   parseBorrowDateTimeInput,
 } from '@/lib/smartHealthBorrowDates';
+import { requireAuth } from '@/lib/requireAuth';
 
 const dbName = 'db_takhli';
 const collectionName = 'resoles_sm_health';
@@ -36,6 +37,9 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
+      const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+      if (!auth) return;
+
       // ----- Fetch borrow‑return data -----
       const collection = db.collection(collectionName);
       const menuCollection = db.collection(menuCollectionName);
@@ -104,6 +108,9 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH') {
+      const auth = await requireAuth(req, res, ['admin', 'superadmin']);
+      if (!auth) return;
+
       const collection = db.collection(collectionName);
       const { id } = req.query;
       if (!id || !ObjectId.isValid(String(id))) {

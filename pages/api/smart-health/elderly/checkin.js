@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
+import { requireAuth } from "@/lib/requireAuth";
 import ElderlyPerson from "@/models/ElderlyPerson";
 import ElderlyVisit from "@/models/ElderlyVisit";
 import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
@@ -46,6 +47,9 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }
+
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
 
   try {
     const { action } = req.body || {};

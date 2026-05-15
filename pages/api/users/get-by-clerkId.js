@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getAuth } from "@clerk/nextjs/server";
+import { backendAuthHeaders } from "@/lib/backendAuthHeaders";
 
 export default async function handler(req, res) {
   const { userId } = getAuth(req);
@@ -9,10 +10,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const headers = await backendAuthHeaders(req);
+    if (!headers.Authorization) {
+      return res.status(401).json({ message: "Missing session for backend" });
+    }
+
     const response = await axios.get(`${process.env.BACKEND_API_URL}/api/users/get-by-clerkId?clerkId=${userId}`, {
       headers: {
-        Authorization: req.headers.authorization,
-        'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
+        ...headers,
       }
     });
     console.log("📦 AUTH HEADER:", req.headers.authorization);

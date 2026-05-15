@@ -3,6 +3,7 @@ import EmployeeHealthRecord from "@/models/EmployeeHealthRecord";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
 import { sugarCategoryMgDl } from "@/lib/employeeHealthDashboard";
 import { buildEmployeeHealthRecommendations } from "@/lib/employeeHealthRecommendations";
+import { requireAuth } from "@/lib/requireAuth";
 
 function toNum(v) {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -10,6 +11,9 @@ function toNum(v) {
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ success: false, message: "Method not allowed" });
+
+  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
+  if (!auth) return;
 
   try {
     const includePeople = req.query.includePeople === "1" || req.query.includePeople === "true";
