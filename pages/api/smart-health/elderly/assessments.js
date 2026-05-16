@@ -1,5 +1,4 @@
 import dbConnect from "@/lib/dbConnect";
-import { requireAuth } from "@/lib/requireAuth";
 import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
 import { is2QPositive, score9Q } from "@/lib/elderlyMentalHealth";
 import { ObjectId } from "mongodb";
@@ -15,9 +14,6 @@ function getBangkokISODate() {
 
 export default async function handler(req, res) {
   await dbConnect();
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   if (req.method === "GET") {
     const { personId, yearBE, limit = "20" } = req.query;

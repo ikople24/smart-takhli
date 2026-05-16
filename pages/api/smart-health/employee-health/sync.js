@@ -2,7 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import EmployeePerson from "@/models/EmployeePerson";
 import EmployeeHealthRecord from "@/models/EmployeeHealthRecord";
 import { fetchSheetCSVByGid, summarizeEmployeeHealthTable } from "@/lib/employeeHealthDashboard";
-import { requireAuth } from "@/lib/requireAuth";
+import { getAuth, clerkClient } from "@clerk/nextjs/server";
 
 function getBangkokISODate() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -27,8 +27,17 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ success: false, message: "Method not allowed" });
 
   try {
-    const auth = await requireAuth(req, res, ["superadmin"]);
-    if (!auth) return;
+    // Superadmin-only guard (prevents duplicate sync by other users)
+    const { userId } = getAuth(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(userId);
+    const role = clerkUser?.publicMetadata?.role || "";
+    if (role !== "superadmin") {
+      return res.status(403).json({ success: false, message: "Forbidden: superadmin only" });
+    }
 
     const { sheetUrl, gids, deptLabels, measurementDate } = req.body || {};
     const url = String(sheetUrl || "").trim();

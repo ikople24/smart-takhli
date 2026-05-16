@@ -3,16 +3,12 @@
 import dbConnect from '@/lib/dbConnect';
 import Complaint from '@/models/Complaint';
 import Assignment from '@/models/Assignment';
-import { requireAuth } from '@/lib/requireAuth';
 
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === 'GET') {
     try {
-      const auth = await requireAuth(req, res, ['admin', 'superadmin']);
-      if (!auth) return;
-
       const { 
         page = 1, 
         limit = 10, 

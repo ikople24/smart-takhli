@@ -1,5 +1,4 @@
 import dbConnect from "@/lib/dbConnect";
-import { requireAuth } from "@/lib/requireAuth";
 import {
   formatDateLendThai,
   parseBorrowDateTimeInput,
@@ -9,9 +8,6 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   try {
     const db = (await dbConnect()).connection.db;

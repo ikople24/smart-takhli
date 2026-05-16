@@ -1,6 +1,5 @@
 import dbConnect from '@/lib/dbConnect';
 import Activity from '@/models/Activity';
-import { requireAuth } from '@/lib/requireAuth';
 
 export default async function handler(req, res) {
   try {
@@ -15,9 +14,6 @@ export default async function handler(req, res) {
   if (!id) {
     return res.status(400).json({ success: false, message: 'Activity ID is required' });
   }
-
-  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
-  if (!auth) return;
 
   switch (req.method) {
     case 'GET':

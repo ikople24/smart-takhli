@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import SubmittedReport from "@/models/SubmittedReport";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   const {
@@ -9,9 +8,6 @@ export default async function handler(req, res) {
   } = req;
 
   await dbConnect();
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   switch (method) {
     case "PUT":

@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import ProblemOption from "@/models/ProblemOption";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -15,9 +14,6 @@ export default async function handler(req, res) {
     }
   } else if (req.method === "POST") {
     try {
-      const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-      if (!auth) return;
-
       const { label, iconUrl, category, active } = req.body;
       const newProblem = new ProblemOption({ label, iconUrl, category, active });
       await newProblem.save();

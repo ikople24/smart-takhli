@@ -1,14 +1,9 @@
 import dbConnect from "@/lib/dbConnect";
-import { requireAuth } from "@/lib/requireAuth";
 import ElderlyPerson from "@/models/ElderlyPerson";
 import ElderlyVisit from "@/models/ElderlyVisit";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ success: false, message: "Method not allowed" });
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
-
   try {
     const yearBE = Number(req.query?.yearBE);
     if (!Number.isFinite(yearBE)) {

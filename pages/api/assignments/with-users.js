@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import Assignment from "@/models/Assignment";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -8,9 +7,6 @@ export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   try {
     // รับพารามิเตอร์การกรอง

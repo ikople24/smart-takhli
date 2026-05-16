@@ -1,14 +1,10 @@
 import { users } from "@clerk/clerk-sdk-node";
-import { requireAuth } from "@/lib/requireAuth";
 
 // API สำหรับบันทึกหน้าที่อนุญาตให้ user เข้าถึง
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["superadmin"]);
-  if (!auth) return;
 
   try {
     const { clerkId, allowedPages } = req.body;

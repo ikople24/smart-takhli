@@ -2,15 +2,11 @@
 
 import dbConnect from "@/lib/dbConnect"; // ถ้าใช้ MongoDB
 import Assignment from "@/models/Assignment"; // ตรวจสอบ path ให้ตรงกับโครงสร้างของคุณ
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   if (req.method !== "PUT") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   try {
     await dbConnect();

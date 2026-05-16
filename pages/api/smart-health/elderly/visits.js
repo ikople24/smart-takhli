@@ -1,13 +1,9 @@
 import dbConnect from "@/lib/dbConnect";
-import { requireAuth } from "@/lib/requireAuth";
 import ElderlyVisit from "@/models/ElderlyVisit";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
   await dbConnect();
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   if (req.method === "GET") {
     const { personId, yearBE } = req.query;

@@ -1,12 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
 import AdminOption from "@/models/AdminOption";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   await dbConnect();
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   const { method } = req;
 

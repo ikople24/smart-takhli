@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import Assignment from "@/models/Assignment";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   const {
@@ -13,9 +12,6 @@ export default async function handler(req, res) {
   if (method !== "GET") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   try {
     const assignments = await Assignment.find({ complaintId }).lean();

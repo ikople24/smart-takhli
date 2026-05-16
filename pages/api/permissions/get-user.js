@@ -1,14 +1,10 @@
 import axios from "axios";
 import { users } from "@clerk/clerk-sdk-node";
-import { requireAuth } from "@/lib/requireAuth";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
 
   try {
     const appId = req.headers['x-app-id'] || process.env.NEXT_PUBLIC_APP_ID;

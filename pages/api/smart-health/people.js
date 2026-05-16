@@ -1,6 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
-import { requireAuth } from "@/lib/requireAuth";
 
 const dbName = "db_takhli";
 const collectionName = "person_data";
@@ -13,18 +12,12 @@ export default async function handler(req, res) {
 
     // GET - Fetch all person data
     if (req.method === "GET") {
-      const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-      if (!auth) return;
-
       const data = await collection.find({}).sort({ createdAt: -1 }).toArray();
       return res.status(200).json(data);
     }
 
     // POST - Add new person record
     if (req.method === "POST") {
-      const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-      if (!auth) return;
-
       const {
         basic,
         title,
@@ -141,9 +134,6 @@ export default async function handler(req, res) {
 
     // DELETE - Delete person record
     if (req.method === "DELETE") {
-      const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-      if (!auth) return;
-
       const { id } = req.query;
 
       if (!id) {
@@ -164,9 +154,6 @@ export default async function handler(req, res) {
 
     // PUT - Update person record
     if (req.method === "PUT") {
-      const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-      if (!auth) return;
-
       const { id } = req.query;
       const updateData = req.body;
 

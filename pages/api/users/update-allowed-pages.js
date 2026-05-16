@@ -1,15 +1,11 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
-import { requireAuth } from "@/lib/requireAuth";
 
 // API สำหรับอัปเดตหน้าที่อนุญาตให้ user เข้าถึง (เก็บใน MongoDB)
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
-
-  const auth = await requireAuth(req, res, ["superadmin"]);
-  if (!auth) return;
 
   try {
     const { userId, allowedPages } = req.body;

@@ -2,12 +2,7 @@ import dbConnect from '@/lib/dbConnect';
 import RegisterHealthModel from '@/models/RegisterHealthModel';
 import MenuHealthModel from '@/models/MenuHealthModel';
 
-// สาธารณะ: หน้าแรกและ SpacialFormModal ใช้แสดงจำนวนอุปกรณ์คงเหลือ (ไม่ต้องล็อกอิน)
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-
   await dbConnect();
   try {
     // ดึง available count - exclude broken and repair devices

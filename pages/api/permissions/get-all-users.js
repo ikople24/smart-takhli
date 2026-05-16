@@ -1,20 +1,16 @@
 import { users as clerkUsers } from "@clerk/clerk-sdk-node";
-import { requireAuth } from "@/lib/requireAuth";
-import { backendAuthHeaders } from "@/lib/backendAuthHeaders";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-  if (!auth) return;
-
   try {
     // Get users from MongoDB (backend API) - PRIMARY SOURCE
-    const headers = await backendAuthHeaders(req);
     const backendResponse = await fetch(`${process.env.BACKEND_API_URL}/api/users/all-basic`, {
-      headers,
+      headers: {
+        'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
+      },
     });
     const backendData = await backendResponse.json();
     const dbUsers = backendData.users || backendData || [];

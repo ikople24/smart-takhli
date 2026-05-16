@@ -1,5 +1,4 @@
 import dbConnect from '@/lib/dbConnect';
-import { requireAuth } from '@/lib/requireAuth';
 
 const dbName = 'db_takhli';
 
@@ -7,9 +6,6 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
-  if (!auth) return;
 
   try {
     const mongoose = await dbConnect();

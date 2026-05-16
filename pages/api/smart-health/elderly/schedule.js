@@ -1,5 +1,4 @@
 import dbConnect from "@/lib/dbConnect";
-import { requireAuth } from "@/lib/requireAuth";
 import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
 
 function normalizeSessions(sessions) {
@@ -34,9 +33,6 @@ export default async function handler(req, res) {
 
   try {
     await dbConnect();
-
-    const auth = await requireAuth(req, res, ["admin", "superadmin"]);
-    if (!auth) return;
 
     if (req.method === "GET") {
       const doc = await ElderlySchoolSchedule.findOne({ yearBE }).lean();

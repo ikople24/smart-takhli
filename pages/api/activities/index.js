@@ -1,6 +1,5 @@
 import dbConnect from '@/lib/dbConnect';
 import Activity from '@/models/Activity';
-import { requireAuth } from '@/lib/requireAuth';
 
 export default async function handler(req, res) {
   try {
@@ -9,9 +8,6 @@ export default async function handler(req, res) {
     console.error('Database connection error:', error);
     return res.status(500).json({ success: false, message: 'Database connection failed' });
   }
-
-  const auth = await requireAuth(req, res, ['admin', 'superadmin']);
-  if (!auth) return;
 
   switch (req.method) {
     case 'GET':
