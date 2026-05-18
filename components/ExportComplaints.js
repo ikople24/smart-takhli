@@ -50,6 +50,24 @@ export default function ExportComplaints({ complaints, assignments }) {
     return csvContent;
   };
 
+  const downloadCSV = (csvContent, filename) => {
+    const blob = new Blob(['\ufeff' + csvContent], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleExport = async () => {
     setExporting(true);
     
@@ -61,22 +79,7 @@ export default function ExportComplaints({ complaints, assignments }) {
         return;
       }
 
-      // Create blob and download
-      const blob = new Blob(['\ufeff' + csvContent], { 
-        type: 'text/csv;charset=utf-8;' 
-      });
-      
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `complaints_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
+      downloadCSV(csvContent, `complaints_${new Date().toISOString().split('T')[0]}.csv`);
       alert('Export สำเร็จ!');
     } catch (error) {
       console.error('Export error:', error);
@@ -104,21 +107,7 @@ export default function ExportComplaints({ complaints, assignments }) {
         'ดำเนินการเสร็จสิ้น': 'completed'
       }[status] || 'all';
 
-      const blob = new Blob(['\ufeff' + csvContent], { 
-        type: 'text/csv;charset=utf-8;' 
-      });
-      
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `complaints_${statusText}_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
+      downloadCSV(csvContent, `complaints_${statusText}_${new Date().toISOString().split('T')[0]}.csv`);
       alert(`Export ${status} สำเร็จ!`);
     } catch (error) {
       console.error('Export error:', error);
@@ -128,61 +117,91 @@ export default function ExportComplaints({ complaints, assignments }) {
     }
   };
 
+  const countByStatus = (status) => complaints.filter(c => c.status === status).length;
+
+  const exportOptions = [
+    {
+      id: 'all',
+      label: 'Export ทั้งหมด',
+      icon: '📊',
+      count: complaints.length,
+      onClick: handleExport,
+      disabled: complaints.length === 0,
+    },
+    {
+      id: 'pending',
+      label: 'Export รอการมอบหมาย',
+      icon: '⏳',
+      count: countByStatus('รอการมอบหมาย'),
+      onClick: () => handleExportFiltered('รอการมอบหมาย'),
+      disabled: countByStatus('รอการมอบหมาย') === 0,
+    },
+    {
+      id: 'in_progress',
+      label: 'Export กำลังดำเนินการ',
+      icon: '🔄',
+      count: countByStatus('อยู่ระหว่างดำเนินการ'),
+      onClick: () => handleExportFiltered('อยู่ระหว่างดำเนินการ'),
+      disabled: countByStatus('อยู่ระหว่างดำเนินการ') === 0,
+    },
+    {
+      id: 'completed',
+      label: 'Export เสร็จสิ้น',
+      icon: '✅',
+      count: countByStatus('ดำเนินการเสร็จสิ้น'),
+      onClick: () => handleExportFiltered('ดำเนินการเสร็จสิ้น'),
+      disabled: countByStatus('ดำเนินการเสร็จสิ้น') === 0,
+    },
+  ];
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Export ข้อมูล</h3>
-        <span className="text-sm text-gray-500">
-          รวม {complaints.length} เรื่อง
-        </span>
+    <div className="dropdown dropdown-end">
+      <div
+        tabIndex={0}
+        role="button"
+        className="btn btn-sm btn-ghost gap-2"
+        disabled={exporting}
+      >
+        {exporting ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+        )}
+        Export
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <button
-          onClick={handleExport}
-          disabled={exporting || complaints.length === 0}
-          className="btn btn-primary btn-sm"
-        >
-          {exporting ? (
-            <>
-              <span className="loading loading-spinner loading-xs"></span>
-              กำลัง Export...
-            </>
-          ) : (
-            <>
-              📊 Export ทั้งหมด
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={() => handleExportFiltered('รอการมอบหมาย')}
-          disabled={exporting || complaints.filter(c => c.status === 'รอการมอบหมาย').length === 0}
-          className="btn btn-info btn-sm"
-        >
-          ⏳ Export รอการมอบหมาย
-        </button>
-
-        <button
-          onClick={() => handleExportFiltered('อยู่ระหว่างดำเนินการ')}
-          disabled={exporting || complaints.filter(c => c.status === 'อยู่ระหว่างดำเนินการ').length === 0}
-          className="btn btn-warning btn-sm"
-        >
-          🔄 Export กำลังดำเนินการ
-        </button>
-
-        <button
-          onClick={() => handleExportFiltered('ดำเนินการเสร็จสิ้น')}
-          disabled={exporting || complaints.filter(c => c.status === 'ดำเนินการเสร็จสิ้น').length === 0}
-          className="btn btn-success btn-sm"
-        >
-          ✅ Export เสร็จสิ้น
-        </button>
-      </div>
-
-      <div className="mt-3 text-xs text-gray-500">
-        * ไฟล์ CSV จะถูกดาวน์โหลดในรูปแบบ UTF-8 พร้อม BOM เพื่อรองรับภาษาไทย
-      </div>
+      <ul
+        tabIndex={0}
+        className="dropdown-content menu z-[100] mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-lg"
+      >
+        <li className="pointer-events-none px-3 py-2">
+          <span className="text-sm font-semibold text-gray-800">Export ข้อมูล</span>
+          <span className="mt-0.5 block text-xs text-gray-500">รวม {complaints.length} เรื่อง</span>
+        </li>
+        <li className="my-1 border-t border-gray-100" />
+        {exportOptions.map((option) => (
+          <li key={option.id}>
+            <button
+              type="button"
+              onClick={option.onClick}
+              disabled={exporting || option.disabled}
+              className="flex w-full items-center justify-between gap-2 rounded-lg disabled:opacity-40"
+            >
+              <span className="flex items-center gap-2">
+                <span>{option.icon}</span>
+                <span>{option.label}</span>
+              </span>
+              <span className="badge badge-ghost badge-sm">{option.count}</span>
+            </button>
+          </li>
+        ))}
+        <li className="pointer-events-none mt-1 border-t border-gray-100 px-3 pt-2">
+          <span className="text-[11px] leading-snug text-gray-400">
+            ไฟล์ CSV รูปแบบ UTF-8 พร้อม BOM รองรับภาษาไทย
+          </span>
+        </li>
+      </ul>
     </div>
   );
 }

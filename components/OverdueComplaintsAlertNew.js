@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 
-export default function OverdueComplaintsAlertNew({ complaints, assignments, onComplaintClick }) {
+export default function OverdueComplaintsAlertNew({
+  complaints,
+  assignments,
+  onComplaintClick,
+  isExpanded: isExpandedProp,
+  onExpandedChange,
+}) {
   const [overdueComplaints, setOverdueComplaints] = useState([]);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpandedInternal, setIsExpandedInternal] = useState(false);
+  const isExpanded = isExpandedProp ?? isExpandedInternal;
+  const setIsExpanded = onExpandedChange ?? setIsExpandedInternal;
 
   useEffect(() => {
     if (!complaints || !assignments) return;

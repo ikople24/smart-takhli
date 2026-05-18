@@ -11,6 +11,7 @@ import ComplaintStatsNew from "@/components/ComplaintStatsNew";
 import OverdueComplaintsAlertNew from "@/components/OverdueComplaintsAlertNew";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
+import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
 import Swal from "sweetalert2";
 
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
@@ -52,10 +53,10 @@ export default function ManageComplaintsPage() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [overdueExpanded, setOverdueExpanded] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [complaintToDelete, setComplaintToDelete] = useState(null);
-  const [showExportOptions, setShowExportOptions] = useState(false);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -447,15 +448,7 @@ export default function ManageComplaintsPage() {
             
             {/* Quick actions */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowExportOptions(!showExportOptions)}
-                className="btn btn-sm btn-ghost gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                Export
-              </button>
+              <ExportComplaints complaints={complaints} assignments={assignments} />
               
               {/* View toggle */}
               <div className="hidden sm:flex items-center bg-white rounded-lg border p-1">
@@ -486,24 +479,26 @@ export default function ManageComplaintsPage() {
             onStatClick={handleStatClick}
           />
 
-          {/* Alerts and Export Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          {/* Overdue alerts + satisfaction comments */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 items-start">
             <div className="lg:col-span-2">
               <OverdueComplaintsAlertNew 
                 complaints={complaints} 
-                assignments={assignments} 
+                assignments={assignments}
+                isExpanded={overdueExpanded}
+                onExpandedChange={setOverdueExpanded}
                 onComplaintClick={(complaint) => {
                   setSelectedComplaint(complaint);
                   setShowDetailModal(true);
                 }}
               />
             </div>
-            
-            {showExportOptions && (
-              <div className="lg:col-span-1">
-                <ExportComplaints complaints={complaints} assignments={assignments} />
-              </div>
-            )}
+            <div className="lg:col-span-1">
+              <SatisfactionCommentsPanel
+                complaints={complaints}
+                contentExpanded={overdueExpanded}
+              />
+            </div>
           </div>
 
           {/* Filter Section */}
