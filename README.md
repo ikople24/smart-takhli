@@ -79,6 +79,15 @@ Example:
 curl -X POST "https://<your-domain>/api/cron/smart-papar/water-quality-sync?secret=<CRON_SECRET>&maxRows=200"
 ```
 
+## ร้องเรียน: เรื่องลับ / PDPA
+
+- ในหน้า **จัดการเรื่องร้องเรียน** (`/admin/manage-complaints`) สามารถตั้ง **เรื่องลับ** (ซ่อนการ์ดจาก `/complaint` และ `/status` สำหรับผู้ที่ไม่ใช่แอดมิน) และ **PDPA** (ภาพเบลอสำหรับผู้ที่ไม่ใช่แอดมิน) ได้
+- **ข้อความเมื่อเปิด PDPA:** เจ้าหน้าที่เปิดรายละเอียดเรื่องใน **`ComplaintDetailModal`** แล้ว **ลากเลือกช่วงข้อความ** ในกรอบต้นฉบับ → กด **ซ่อนคำที่เลือก** ได้หลายครั้ง → **บันทึกการซ่อนคำ** — ระบบเก็บเป็นช่วง `start`/`end` ใน `pdpaDetailRedactions` (ไม่มีการเซ็นเซอร์อัตโนมัติจากรายการคำ)  
+- หากยังไม่บันทึกช่วงใด ประชาชนจะเห็นข้อความ `detail` เต็ม (ภาพยังเบลอตาม PDPA)
+- แอดมินที่ล็อกอิน (Clerk `publicMetadata.role` เป็น `admin` หรือ `superadmin`) จะเห็นข้อมูลเต็มในระบบหลังบ้านและ API ที่ส่งผ่าน session นั้น
+- ภาพ PDPA ใช้การแปลง URL ของ **Cloudinary** (`e_blur`) — รูปที่ไม่ใช่ Cloudinary อาจไม่แสดงในหน้าสาธารณะเมื่อเปิด PDPA
+- ฟังก์ชัน `maskSensitiveWords` ใน `lib/pdpaTextMask.js` ยังมีอยู่เผื่อใช้ที่อื่น แต่ **ไม่ได้ใช้กับร้องเรียนสาธารณะ** แล้ว
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

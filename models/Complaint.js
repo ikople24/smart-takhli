@@ -15,6 +15,20 @@ const SubmittedReportSchema = new mongoose.Schema({
   complaintId : { type: String },
   status: { type: String },
   officer: { type: String },
+  /** ซ่อนการ์ดจากหน้า complaint / status — แอดมินยังเห็นในระบบหลังบ้าน */
+  isConfidential: { type: Boolean, default: false },
+  /** PDPA: ภาพเบลอ + เซ็นเซอร์ข้อความสำหรับผู้ใช้ที่ไม่ใช่แอดมิน */
+  pdpaSensitive: { type: Boolean, default: false },
+  /** ช่วงตัวอักษรใน detail ที่ซ่อนต่อสาธารณะ (เจ้าหน้าที่กำหนด) — index ตาม JS string */
+  pdpaDetailRedactions: {
+    type: [
+      {
+        start: { type: Number, required: true },
+        end: { type: Number, required: true },
+      },
+    ],
+    default: [],
+  },
   updatedAt: { type: Date },
   timestamp: { type: Date }
 }, {

@@ -12,6 +12,14 @@ interface Complaint {
   completedAt?: string;
   complaintId?: string;
   community?: string;
+  /** ซ่อนการ์ดจากหน้าสาธารณะ */
+  isConfidential?: boolean;
+  /** โหมด PDPA (เบลอรูป + เซ็นเซอร์ข้อความสำหรับผู้ใช้ที่ไม่ใช่แอดมิน) */
+  pdpaSensitive?: boolean;
+  /** ช่วงซ่อนคำใน detail (เจ้าหน้าที่กำหนด) */
+  pdpaDetailRedactions?: { start: number; end: number }[];
+  /** ตั้งโดย API เมื่อส่งข้อมูลที่ปิดบังแล้ว (หน้าประชาชน) */
+  pdpaPublicSanitized?: boolean;
   location?: {
     lat: number;
     lng: number;

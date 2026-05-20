@@ -299,13 +299,16 @@ export default function CardModalDetail({ modalData, onClose }) {
                           </>
                         )}
 
-                        {/* Zoom Button */}
-                        <button
-                          onClick={() => setPreviewImg(modalData.images[currentSlide])}
-                          className="absolute bottom-20 right-3 z-10 w-8 h-8 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-                        >
-                          <ZoomIn size={16} />
-                        </button>
+                        {/* Zoom — ปิดเมื่อเป็นมุมมอง PDPA สาธารณะ (ไม่ให้เปิดดู URL เต็ม) */}
+                        {!modalData.pdpaPublicSanitized && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImg(modalData.images[currentSlide])}
+                            className="absolute bottom-20 right-3 z-10 w-8 h-8 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+                          >
+                            <ZoomIn size={16} />
+                          </button>
+                        )}
                       </div>
 
                       {/* Bottom Info Overlay */}
@@ -367,6 +370,11 @@ export default function CardModalDetail({ modalData, onClose }) {
                     </div>
 
                     <div className="p-4 space-y-5">
+                      {modalData.pdpaPublicSanitized && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 leading-relaxed">
+                          เนื้อหาบางส่วนถูกปกปิดตามนโยบาย PDPA (ภาพเบลอผ่านระบบคลาวด์ / ข้อความเซ็นเซอร์) — ไม่แสดงลิงก์ภาพต้นฉบับ
+                        </div>
+                      )}
                       {/* Step Timeline */}
                       <div className="bg-gradient-to-br from-slate-50 to-blue-50/50 rounded-2xl p-4 border border-slate-100">
                         <StepTimeline status={modalData.status} assignment={assignment} />

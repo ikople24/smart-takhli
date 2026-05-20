@@ -1946,7 +1946,27 @@ export default function AdminDashboard() {
       {/* Modals */}
       <ComplaintsModal />
       {showDetailModal && selectedComplaintDetail && (
-        <ComplaintDetailModal complaint={selectedComplaintDetail} isOpen={showDetailModal} onClose={closeDetailModal} assignments={assignments} menu={menu} assignedUsers={assignedUsersMap} />
+        <ComplaintDetailModal
+          complaint={selectedComplaintDetail}
+          isOpen={showDetailModal}
+          onClose={closeDetailModal}
+          assignments={assignments}
+          menu={menu}
+          assignedUsers={assignedUsersMap}
+          onPrivacySaved={(updated) => {
+            if (updated?._id) {
+              setSelectedComplaintDetail((prev) =>
+                prev && String(prev._id) === String(updated._id) ? { ...prev, ...updated } : prev
+              );
+              setComplaints((list) =>
+                list.map((c) =>
+                  String(c._id) === String(updated._id) ? { ...c, ...updated } : c
+                )
+              );
+            }
+            void fetchDashboardData();
+          }}
+        />
       )}
     </div>
   );

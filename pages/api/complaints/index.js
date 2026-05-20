@@ -1,6 +1,10 @@
 //api/complaints/index.js
 import dbConnect from '@/lib/dbConnect';
 import Complaint from '@/models/Complaint';
+import {
+  isComplaintStaffFromRequest,
+  sanitizeComplaintDocForResponse,
+} from '@/lib/complaintPrivacy';
 
 // คำนวณช่วงปีงบประมาณ (1 ต.ค. - 30 ก.ย.)
 function getFiscalYearRange(fiscalYear) {
@@ -27,13 +31,23 @@ function getCurrentFiscalYear() {
   }
 }
 
+function applyConfidentialFilter(baseQuery, treatAsStaff) {
+  if (treatAsStaff) return baseQuery;
+  const hidden = { isConfidential: { $ne: true } };
+  if (!baseQuery || Object.keys(baseQuery).length === 0) return hidden;
+  return { $and: [baseQuery, hidden] };
+}
+
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === 'GET') {
     try {
-      const isAdmin = req.query.role === 'admin';
-      const projection = isAdmin ? {} : { fullName: 0, phone: 0 };
+      const isStaff = await isComplaintStaffFromRequest(req);
+      const legacyAdmin = req.query.role === 'admin';
+      const treatAsStaff = isStaff || legacyAdmin;
+
+      const projection = treatAsStaff ? {} : { fullName: 0, phone: 0 };
       
       // Pagination parameters
       const page = parseInt(req.query.page) || 1;
@@ -67,6 +81,8 @@ export default async function handler(req, res) {
         const { start, end } = getFiscalYearRange(currentFY);
         query.createdAt = { $gte: start, $lte: end };
       }
+
+      query = applyConfidentialFilter(query, treatAsStaff);
       
       // Build query
       let queryBuilder = Complaint.find(query, projection)
@@ -77,7 +93,11 @@ export default async function handler(req, res) {
         queryBuilder = queryBuilder.skip(skip).limit(limit);
       }
       
-      const complaints = await queryBuilder;
+      const complaintsRaw = await queryBuilder.lean();
+
+      const complaints = (complaintsRaw || [])
+        .map((c) => sanitizeComplaintDocForResponse(c, treatAsStaff))
+        .filter(Boolean);
       
       // ถ้าต้องการข้อมูล pagination
       if (req.query.withCount === 'true') {
