@@ -225,6 +225,92 @@ export default function ManageComplaintsPage() {
     }
   };
 
+  const postComplaintPrivacy = async (complaintId, payload) => {
+    const token = await getToken();
+    const res = await fetch("/api/complaints/privacy", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify({ complaintId, ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || "อัปเดตไม่สำเร็จ");
+    }
+    return data;
+  };
+
+  const toggleConfidential = async (complaint) => {
+    const next = !complaint.isConfidential;
+    if (next) {
+      const c = await Swal.fire({
+        icon: "warning",
+        title: "ตั้งเป็นเรื่องลับ?",
+        html: "เรื่องนี้จะ<strong>ไม่แสดง</strong>บนหน้า ร้องเรียน และ สถานะ สำหรับประชาชน<br/>แอดมินยังเห็นและจัดการได้ตามปกติ",
+        showCancelButton: true,
+        confirmButtonText: "ยืนยัน",
+        cancelButtonText: "ยกเลิก",
+        reverseButtons: true,
+        focusCancel: true,
+      });
+      if (!c.isConfirmed) return;
+    }
+    try {
+      await postComplaintPrivacy(complaint._id, { isConfidential: next });
+      await fetchComplaints();
+      await Swal.fire({
+        icon: "success",
+        title: next ? "ตั้งเป็นเรื่องลับแล้ว" : "ยกเลิกเรื่องลับแล้ว",
+        timer: 1400,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error(err);
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกได้",
+        text: err?.message || "ลองใหม่อีกครั้ง",
+      });
+    }
+  };
+
+  const togglePdpa = async (complaint) => {
+    const next = !complaint.pdpaSensitive;
+    if (next) {
+      const c = await Swal.fire({
+        icon: "question",
+        title: "เปิดโหมด PDPA?",
+        html: "ประชาชนที่ไม่ใช่แอดมินจะเห็น<strong>ภาพเบลอ</strong> (ไม่ใช่ URL ต้นฉบับ)<br/>ส่วนข้อความ: ให้เปิดรายละเอียดเรื่องแล้ว<strong>ลากเลือกคำที่ต้องการซ่อน</strong> และบันทึกการซ่อนคำ (ไม่ใช้การเซ็นเซอร์อัตโนมัติ)<br/><strong>แอดมิน</strong>ยังเห็นภาพชัดและข้อความต้นฉบับในระบบหลังบ้าน",
+        showCancelButton: true,
+        confirmButtonText: "เปิด PDPA",
+        cancelButtonText: "ยกเลิก",
+        reverseButtons: true,
+        focusCancel: true,
+      });
+      if (!c.isConfirmed) return;
+    }
+    try {
+      await postComplaintPrivacy(complaint._id, { pdpaSensitive: next });
+      await fetchComplaints();
+      await Swal.fire({
+        icon: "success",
+        title: next ? "เปิด PDPA แล้ว" : "ปิด PDPA แล้ว",
+        timer: 1400,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error(err);
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกได้",
+        text: err?.message || "ลองใหม่อีกครั้ง",
+      });
+    }
+  };
+
   const getProcessingTimeCategory = (startDate, endDate) => {
     const start = startDate instanceof Date ? startDate : new Date(startDate);
     const end = endDate instanceof Date ? endDate : new Date(endDate);
@@ -738,11 +824,12 @@ export default function ManageComplaintsPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1.5 items-center">
+                            <div className="flex flex-col gap-1.5 items-center w-full max-w-[140px] mx-auto">
                               {!isClosed ? (
                                 isAssigned ? (
                                   <>
                                     <button
+                                      type="button"
                                       className="w-full px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg
                                         hover:bg-blue-100 transition-colors"
                                       onClick={() => handleOpenUpdateForm(assignment)}
@@ -750,6 +837,7 @@ export default function ManageComplaintsPage() {
                                       อัพเดท
                                     </button>
                                     <button
+                                      type="button"
                                       className="w-full px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-lg
                                         hover:bg-emerald-100 transition-colors"
                                       onClick={() => handleCloseComplaint(complaint._id)}
@@ -759,6 +847,7 @@ export default function ManageComplaintsPage() {
                                   </>
                                 ) : (
                                   <button
+                                    type="button"
                                     className="w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg
                                       hover:bg-blue-700 transition-colors shadow-sm"
                                     onClick={() => handleAssign(complaint._id)}
@@ -768,6 +857,7 @@ export default function ManageComplaintsPage() {
                                 )
                               ) : (
                                 <button
+                                  type="button"
                                   className={`w-full px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
                                     ${isSuperAdmin 
                                       ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
@@ -780,6 +870,32 @@ export default function ManageComplaintsPage() {
                                   {isSuperAdmin ? "ลบ" : "🔒 ลบ"}
                                 </button>
                               )}
+                              <div className="w-full pt-2 mt-1 border-t border-gray-100 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
+                                    ${complaint.isConfidential
+                                      ? "bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-200"
+                                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                  onClick={() => toggleConfidential(complaint)}
+                                  title="ซ่อนการ์ดจากหน้า ร้องเรียน / สถานะ (ประชาชน)"
+                                >
+                                  {complaint.isConfidential ? "🔒 เรื่องลับ (ปิด)" : "เรื่องลับ"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
+                                    ${complaint.pdpaSensitive
+                                      ? "bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
+                                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                  onClick={() => togglePdpa(complaint)}
+                                  title="เบลอภาพ + เซ็นเซอร์คำสำหรับผู้ใช้ที่ไม่ใช่แอดมิน"
+                                >
+                                  {complaint.pdpaSensitive ? "PDPA (เปิด)" : "PDPA"}
+                                </button>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -856,11 +972,13 @@ export default function ManageComplaintsPage() {
                       </div>
                       
                       {/* Actions */}
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
                         {!isClosed ? (
                           isAssigned ? (
                             <>
                               <button
+                                type="button"
                                 className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg
                                   hover:bg-blue-100 transition-colors"
                                 onClick={() => handleOpenUpdateForm(assignment)}
@@ -868,6 +986,7 @@ export default function ManageComplaintsPage() {
                                 อัพเดท
                               </button>
                               <button
+                                type="button"
                                 className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-sm font-medium rounded-lg
                                   hover:bg-emerald-100 transition-colors"
                                 onClick={() => handleCloseComplaint(complaint._id)}
@@ -877,6 +996,7 @@ export default function ManageComplaintsPage() {
                             </>
                           ) : (
                             <button
+                              type="button"
                               className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg
                                 hover:bg-blue-700 transition-colors"
                               onClick={() => handleAssign(complaint._id)}
@@ -886,6 +1006,7 @@ export default function ManageComplaintsPage() {
                           )
                         ) : (
                           <button
+                            type="button"
                             className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors
                               ${isSuperAdmin 
                                 ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
@@ -898,6 +1019,31 @@ export default function ManageComplaintsPage() {
                             {isSuperAdmin ? "ลบเรื่อง" : "🔒 ลบเรื่อง"}
                           </button>
                         )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
+                              ${complaint.isConfidential
+                                ? "bg-rose-100 text-rose-800 border-rose-200"
+                                : "bg-gray-50 text-gray-600 border-gray-200"
+                              }`}
+                            onClick={() => toggleConfidential(complaint)}
+                          >
+                            {complaint.isConfidential ? "ลับ ✓" : "เรื่องลับ"}
+                          </button>
+                          <button
+                            type="button"
+                            className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
+                              ${complaint.pdpaSensitive
+                                ? "bg-amber-100 text-amber-900 border-amber-200"
+                                : "bg-gray-50 text-gray-600 border-gray-200"
+                              }`}
+                            onClick={() => togglePdpa(complaint)}
+                          >
+                            {complaint.pdpaSensitive ? "PDPA ✓" : "PDPA"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1054,6 +1200,14 @@ export default function ManageComplaintsPage() {
             const complaint = complaints.find((c) => c._id === assignment.complaintId);
             setSelectedAssignment({ ...assignment, category: complaint?.category });
             setShowUpdateModal(true);
+          }}
+          onPrivacySaved={(updated) => {
+            if (updated?._id) {
+              setSelectedComplaint((prev) =>
+                prev && String(prev._id) === String(updated._id) ? { ...prev, ...updated } : prev
+              );
+            }
+            fetchComplaints();
           }}
         />
       )}

@@ -1,10 +1,44 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import Swal from 'sweetalert2';
+import { useAuth } from '@clerk/nextjs';
+import { applyDetailRedactions, normalizeDetailRedactions } from '@/lib/pdpaTextMask';
 
 const ReporterInfoMap = dynamic(() => import('./ReporterInfoMap'), { ssr: false });
 
-export default function ComplaintDetailModal({ complaint, isOpen, onClose, assignments, menu, assignedUsers, onOpenUpdateModal }) {
+/** คำนวณ offset ใน root จาก window selection (ข้อความต้องอยู่ในโหนดเดียวกับ root) */
+function getTextSelectionOffsetsWithin(rootEl) {
+  if (typeof window === 'undefined' || !rootEl) return null;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  if (!rootEl.contains(range.commonAncestorContainer)) return null;
+  const pre = range.cloneRange();
+  pre.selectNodeContents(rootEl);
+  pre.setEnd(range.startContainer, range.startOffset);
+  const start = pre.toString().length;
+  const selected = range.toString();
+  const end = start + selected.length;
+  if (end <= start) return null;
+  return { start, end };
+}
+
+export default function ComplaintDetailModal({
+  complaint,
+  isOpen,
+  onClose,
+  assignments,
+  menu,
+  assignedUsers,
+  onOpenUpdateModal,
+  onPrivacySaved,
+}) {
+  const { getToken } = useAuth();
+  const detailSelectRef = useRef(null);
+  const [localRedactions, setLocalRedactions] = useState([]);
+  const [saveRedactionsLoading, setSaveRedactionsLoading] = useState(false);
+
   const [assignment, setAssignment] = useState(null);
   const [reporterInfo, setReporterInfo] = useState(null);
   const [assignedUser, setAssignedUser] = useState(null);
@@ -13,7 +47,9 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
   useEffect(() => {
     if (complaint && isOpen) {
       // Find assignment for this complaint
-      const foundAssignment = assignments?.find(a => a.complaintId === complaint._id);
+      const foundAssignment = assignments?.find(
+        (a) => String(a.complaintId) === String(complaint._id)
+      );
       setAssignment(foundAssignment || null);
 
       // Fetch reporter info
@@ -52,6 +88,86 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
       }
     }
   }, [complaint, isOpen, assignments, assignedUsers]);
+
+  useEffect(() => {
+    if (complaint && isOpen) {
+      const r = complaint.pdpaDetailRedactions;
+      setLocalRedactions(
+        Array.isArray(r) ? r.map((x) => ({ start: Number(x.start), end: Number(x.end) })) : []
+      );
+    } else {
+      setLocalRedactions([]);
+    }
+  }, [complaint, isOpen]);
+
+  const publicPreview = useMemo(() => {
+    if (!complaint?.detail) return '';
+    if (!complaint.pdpaSensitive) return complaint.detail;
+    return applyDetailRedactions(complaint.detail, localRedactions);
+  }, [complaint, localRedactions]);
+
+  const pickSelectionAsRedaction = () => {
+    const root = detailSelectRef.current;
+    if (!root || !complaint?.detail) return;
+    const range = getTextSelectionOffsetsWithin(root);
+    if (!range) {
+      void Swal.fire({
+        icon: 'info',
+        title: 'ยังไม่มีข้อความที่เลือก',
+        text: 'ลากเลือกคำหรือประโยคในกรอบ "ข้อความต้นฉบับ" แล้วลองอีกครั้ง',
+        confirmButtonText: 'ตกลง',
+      });
+      return;
+    }
+    const len = complaint.detail.length;
+    const merged = normalizeDetailRedactions([...localRedactions, range], len);
+    setLocalRedactions(merged);
+    window.getSelection()?.removeAllRanges?.();
+  };
+
+  const removeRedactionAt = (index) => {
+    setLocalRedactions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const clearLocalRedactions = () => setLocalRedactions([]);
+
+  const saveRedactionsToServer = async () => {
+    if (!complaint?._id) return;
+    setSaveRedactionsLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/complaints/privacy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          complaintId: complaint._id,
+          pdpaDetailRedactions: localRedactions,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || 'บันทึกไม่สำเร็จ');
+      await Swal.fire({
+        icon: 'success',
+        title: 'บันทึกการซ่อนคำแล้ว',
+        timer: 1400,
+        showConfirmButton: false,
+      });
+      onPrivacySaved?.(json.data);
+    } catch (e) {
+      console.error(e);
+      await Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        text: e?.message || 'ลองใหม่อีกครั้ง',
+      });
+    } finally {
+      setSaveRedactionsLoading(false);
+    }
+  };
 
   if (!isOpen || !complaint) return null;
 
@@ -142,12 +258,91 @@ export default function ComplaintDetailModal({ complaint, isOpen, onClose, assig
               </div>
             </div>
 
-            {/* Subject */}
+            {/* Subject / PDPA manual redactions */}
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">หัวข้อ</h3>
-              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
-                {complaint.detail}
-              </p>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h3 className="text-sm font-medium text-gray-700">หัวข้อ</h3>
+                {complaint.pdpaSensitive && (
+                  <span className="badge badge-warning badge-sm whitespace-nowrap">
+                    PDPA · ซ่อนคำด้วยตนเอง
+                  </span>
+                )}
+              </div>
+
+              {complaint.pdpaSensitive ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    <strong>ขั้นตอน:</strong> ลากเลือกข้อความในกรอบ &quot;ข้อความต้นฉบับ&quot; แล้วกด{' '}
+                    <strong>ซ่อนคำที่เลือก</strong> ได้หลายครั้ง จากนั้นกด{' '}
+                    <strong>บันทึกการซ่อนคำ</strong> เพื่อให้ประชาชนเห็นตามตัวอย่างด้านล่าง
+                  </p>
+
+                  <div>
+                    <p className="text-xs font-medium text-gray-600 mb-1">ข้อความต้นฉบับ (เลือกเพื่อซ่อน)</p>
+                    <p
+                      ref={detailSelectRef}
+                      className="text-gray-900 bg-white border-2 border-amber-200 p-3 rounded-lg whitespace-pre-wrap break-words select-text cursor-text min-h-[6rem]"
+                    >
+                      {complaint.detail}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className="btn btn-sm btn-warning" onClick={pickSelectionAsRedaction}>
+                      ซ่อนคำที่เลือก
+                    </button>
+                    <button type="button" className="btn btn-sm btn-outline" onClick={clearLocalRedactions}>
+                      ล้างรายการช่วง (ยังไม่บันทึก)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      disabled={saveRedactionsLoading}
+                      onClick={saveRedactionsToServer}
+                    >
+                      {saveRedactionsLoading ? 'กำลังบันทึก…' : 'บันทึกการซ่อนคำ'}
+                    </button>
+                  </div>
+
+                  {localRedactions.length > 0 && (
+                    <ul className="text-xs text-gray-700 space-y-1 border border-gray-200 rounded-lg p-2 bg-gray-50">
+                      {localRedactions.map((r, i) => (
+                        <li
+                          key={`${r.start}-${r.end}-${i}`}
+                          className="flex justify-between items-center gap-2 py-0.5 border-b border-gray-100 last:border-0"
+                        >
+                          <span>
+                            ช่วง {r.start}–{r.end} ({r.end - r.start} ตัวอักษร)
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost text-error"
+                            onClick={() => removeRedactionAt(i)}
+                          >
+                            ลบ
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div>
+                    <p className="text-xs font-semibold text-amber-800 mb-1">ตัวอย่างที่ประชาชนจะเห็น</p>
+                    {localRedactions.length === 0 && (
+                      <p className="text-xs text-amber-700 mb-1">
+                        ยังไม่มีช่วงที่ซ่อน — ประชาชนจะเห็นข้อความต้นฉบับเต็ม (ภาพยังเบลอตามโหมด PDPA)
+                      </p>
+                    )}
+                    <p className="text-gray-900 bg-amber-50 border border-amber-100 p-3 rounded-lg whitespace-pre-wrap break-words text-sm">
+                      {publicPreview || '—'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-900 bg-gray-50 p-3 rounded-lg whitespace-pre-wrap break-words">
+                  {complaint.detail}
+                </p>
+              )}
             </div>
 
             {/* Images */}

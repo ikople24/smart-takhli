@@ -1,5 +1,10 @@
 import dbConnect from "@/lib/dbConnect";
 import Assignment from "@/models/Assignment";
+import {
+  isComplaintStaffFromRequest,
+  getPdpaMapByComplaintIds,
+  sanitizeAssignmentsMap,
+} from "@/lib/complaintPrivacy";
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -31,7 +36,11 @@ export default async function handler(req, res) {
       }
     });
 
-    res.status(200).json({ success: true, data: assignmentsMap });
+    const isStaff = await isComplaintStaffFromRequest(req);
+    const pdpaMap = await getPdpaMapByComplaintIds(complaintIds);
+    const safeMap = sanitizeAssignmentsMap(assignmentsMap, isStaff, pdpaMap);
+
+    res.status(200).json({ success: true, data: safeMap });
   } catch (error) {
     console.error("Error fetching assignments:", error);
     res.status(500).json({ success: false, error: error.message });
