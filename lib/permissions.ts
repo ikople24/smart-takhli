@@ -59,6 +59,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/pm25-settings',
+    label: 'จัดการ PM2.5',
+    icon: '🌫️',
+    description: 'ตั้งค่าแหล่งข้อมูลฝุ่น Sheet และ DustBoy API',
+    category: 'management'
+  },
+  {
     path: '/admin/manage-activities',
     label: 'จัดการกิจกรรม',
     icon: '📅',
@@ -110,6 +117,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/smart-health',
     '/admin/education-map',
     '/admin/smart-papar/water-quality',
+    '/admin/pm25-settings',
     '/admin/feedback-analysis',
     '/user/satisfaction',
   ],

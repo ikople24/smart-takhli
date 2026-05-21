@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const WaterQualityDailySchema = new mongoose.Schema(
   {
     // YYYY-MM-DD (อ้างอิงตามวันในไทย) ใช้เป็นคีย์หลักของ "รายวัน"
-    recordDate: { type: String, required: true, index: true },
+    recordDate: { type: String, required: true },
 
     raw: {
       turbidityNtu: { type: Number, default: null }, // ความขุ่น NTU
