@@ -29,8 +29,11 @@ export default function Pm25SettingsPage() {
   const [testing, setTesting] = useState(null);
   const [dataMode, setDataMode] = useState("sheet_with_api_fallback");
   const [config, setConfig] = useState(null);
+  const [cache, setCache] = useState(null);
+  const [recentLogs, setRecentLogs] = useState([]);
   const [testResults, setTestResults] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(null);
+  const [syncing, setSyncing] = useState(null);
 
   const authHeaders = async () => {
     const token = await getToken();
@@ -50,6 +53,8 @@ export default function Pm25SettingsPage() {
       setDataMode(data.settings.dataMode);
       setUpdatedAt(data.settings.updatedAt);
       setConfig(data.config);
+      setCache(data.cache);
+      setRecentLogs(data.recentLogs || []);
     } catch (err) {
       Swal.fire("ผิดพลาด", err.message, "error");
     } finally {
@@ -78,6 +83,26 @@ export default function Pm25SettingsPage() {
       Swal.fire("ผิดพลาด", err.message, "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runSync = async (job) => {
+    setSyncing(job);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch("/api/pm25/settings?action=sync", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ job }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Sync ไม่สำเร็จ");
+      await loadSettings();
+      Swal.fire("สำเร็จ", `Sync ${job} เรียบร้อย`, "success");
+    } catch (err) {
+      Swal.fire("ผิดพลาด", err.message, "error");
+    } finally {
+      setSyncing(null);
     }
   };
 
@@ -185,6 +210,57 @@ export default function Pm25SettingsPage() {
                       บันทึก
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="card bg-white shadow">
+                <div className="card-body">
+                  <h2 className="card-title text-lg">Cache MongoDB (หน้าแรกอ่านจากนี้)</h2>
+                  {cache ? (
+                    <ul className="text-sm space-y-1 text-gray-700">
+                      <li>PM2.5 ล่าสุด: <strong>{cache.pm25}</strong> µg/m³</li>
+                      <li>Sync ล่าสุด: {cache.syncedAt ? new Date(cache.syncedAt).toLocaleString("th-TH") : "-"}</li>
+                      <li>7 วัน: {cache.daysCount} วัน (sync {cache.dailySyncedAt ? new Date(cache.dailySyncedAt).toLocaleString("th-TH") : "-"})</li>
+                      <li>กราฟเดือน: {cache.monthsCount} เดือน</li>
+                      {cache.stale && <li className="text-amber-600">ข้อมูลเก่ากว่า 2 ชม. — รอ cron hourly</li>}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-amber-600">ยังไม่มี cache — รัน Sync ชั่วโมงหรือตั้ง Railway Cron</p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <button type="button" className="btn btn-outline btn-xs" disabled={syncing !== null || !config?.hasDustboyApiKey} onClick={() => runSync("hourly")}>
+                      {syncing === "hourly" ? "..." : "Sync ชั่วโมง"}
+                    </button>
+                    <button type="button" className="btn btn-outline btn-xs" disabled={syncing !== null || !config?.hasDustboyApiKey} onClick={() => runSync("daily")}>
+                      {syncing === "daily" ? "..." : "Sync 7 วัน"}
+                    </button>
+                    <button type="button" className="btn btn-outline btn-xs" disabled={syncing !== null || !config?.hasDustboyApiKey} onClick={() => runSync("monthly")}>
+                      {syncing === "monthly" ? "..." : "Sync เดือน"}
+                    </button>
+                  </div>
+                  {recentLogs.length > 0 && (
+                    <div className="mt-3 text-xs text-gray-500">
+                      <p className="font-medium mb-1">Log ล่าสุด</p>
+                      {recentLogs.map((l, i) => (
+                        <p key={i}>{l.job}: {l.success ? "OK" : "FAIL"} — {l.message}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="card bg-white shadow">
+                <div className="card-body">
+                  <h2 className="card-title text-lg">Railway Cron</h2>
+                  <p className="text-sm text-gray-600 mb-2">
+                    ตั้ง Cron Job ใน Railway ให้ POST มาที่ URL ของแอป (ใส่ <code className="bg-gray-100 px-1 rounded">CRON_SECRET</code> ใน Variables)
+                  </p>
+                  <ul className="text-xs font-mono space-y-2 bg-gray-50 p-3 rounded-lg break-all">
+                    <li><span className="text-gray-500">ทุกชม. นาที 5:</span><br />POST /api/cron/pm25/sync-hourly?secret=CRON_SECRET</li>
+                    <li><span className="text-gray-500">ทุกวัน 00:15 (ไทย):</span><br />POST /api/cron/pm25/sync-daily?secret=CRON_SECRET</li>
+                    <li><span className="text-gray-500">ทุกวัน 03:00 (ไทย, เดือนใหม่):</span><br />POST /api/cron/pm25/sync-monthly?secret=CRON_SECRET</li>
+                  </ul>
+                  <p className="text-xs text-gray-500 mt-2">Timezone ใน Railway Cron: ตั้งเป็น Asia/Bangkok</p>
                 </div>
               </div>
 
@@ -313,9 +389,6 @@ export default function Pm25SettingsPage() {
                 </div>
               </div>
 
-              <div className="text-xs text-gray-500 space-y-1 pt-2 border-t">
-                <p>DustBoy: หน้าหลัก → stations | 7 วัน → data30day | กราฟ 12 เดือน → data1year</p>
-              </div>
             </>
           )}
         </div>
