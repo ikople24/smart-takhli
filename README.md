@@ -79,6 +79,27 @@ Example:
 curl -X POST "https://<your-domain>/api/cron/smart-papar/water-quality-sync?secret=<CRON_SECRET>&maxRows=200"
 ```
 
+### PM2.5 DustBoy sync (Railway Cron)
+
+หน้าแรกอ่าน PM2.5 จาก **MongoDB cache** เท่านั้น — DustBoy API ถูกเรียกเฉพาะตอน cron sync
+
+Env ที่ต้องมีบน Railway:
+
+- `DUSTBOY_API_KEY`
+- `DUSTBOY_STATION_ID` (default `3550`)
+- `CRON_SECRET`
+- `MONGODB_URI` (หรือ connection string ที่โปรเจกต์ใช้อยู่)
+
+| งาน | Cron (Asia/Bangkok) | Endpoint |
+|-----|---------------------|----------|
+| ค่าล่าสุดทุกชม. | `5 * * * *` | `POST /api/cron/pm25/sync-hourly?secret=<CRON_SECRET>` |
+| 7 วันย้อนหลัง | `15 0 * * *` | `POST /api/cron/pm25/sync-daily?secret=<CRON_SECRET>` |
+| กราฟรายเดือน (เดือนใหม่) | `0 3 * * *` | `POST /api/cron/pm25/sync-monthly?secret=<CRON_SECRET>` |
+
+ครั้งแรกของ `sync-monthly` จะ bootstrap 12 เดือนจาก `data1year` — หลังจากนั้น sync เฉพาะเดือนปัจจุบันที่ยังไม่มีใน DB
+
+จัดการโหมดแหล่งข้อมูล: `/admin/pm25-settings`
+
 ## ร้องเรียน: เรื่องลับ / PDPA
 
 - ในหน้า **จัดการเรื่องร้องเรียน** (`/admin/manage-complaints`) สามารถตั้ง **เรื่องลับ** (ซ่อนการ์ดจาก `/complaint` และ `/status` สำหรับผู้ที่ไม่ใช่แอดมิน) และ **PDPA** (ภาพเบลอสำหรับผู้ที่ไม่ใช่แอดมิน) ได้

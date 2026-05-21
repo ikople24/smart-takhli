@@ -26,6 +26,7 @@ export default async function handler(req, res) {
   try {
     const dataMode = await resolveDataMode(req);
     const payload = await getPm25DashboardPayload(dataMode);
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
     return res.status(200).json({ success: true, ...payload });
   } catch (error) {
     console.error("pm25 dashboard error:", error);

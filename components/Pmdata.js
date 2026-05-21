@@ -115,7 +115,12 @@ const Pm25Dashboard = ({ className = "" } = {}) => {
       const data = await res.json();
       if (!data.success || !data.latest) {
         setError(true);
-        setErrorMessage(data.error || "ไม่สามารถโหลดข้อมูลได้");
+        const rawErr = data.error || "";
+        setErrorMessage(
+          /401/.test(rawErr)
+            ? "ไม่สามารถเชื่อมต่อได้ — ตรวจสอบ DUSTBOY_API_KEY ในเซิร์ฟเวอร์"
+            : rawErr || "ไม่สามารถโหลดข้อมูลได้"
+        );
         setLatest(null);
         setDailyAverages(data.dailyAverages || []);
         setMonthlyAverages(data.monthlyAverages || []);
@@ -149,7 +154,7 @@ const Pm25Dashboard = ({ className = "" } = {}) => {
 
   useEffect(() => {
     loadData();
-    const refresh = setInterval(loadData, 5 * 60 * 1000);
+    const refresh = setInterval(loadData, 60 * 60 * 1000);
     return () => clearInterval(refresh);
   }, [loadData]);
 
