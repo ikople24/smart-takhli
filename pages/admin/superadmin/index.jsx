@@ -29,6 +29,7 @@ const ALL_PAGES = [
   { path: '/admin/smart-health', label: 'smart-health', icon: '🟣' },
   { path: '/admin/education-map', label: 'smart-school', icon: '🏫' },
   { path: '/admin/smart-papar/water-quality', label: 'smart-papar (คุณภาพน้ำ)', icon: '💧' },
+  { path: '/admin/pm25-settings', label: 'จัดการ PM2.5', icon: '🌫️' },
   { path: '/admin/manage-activities', label: 'จัดการกิจกรรม', icon: '📅' },
   { path: '/admin/feedback-analysis', label: 'วิเคราะห์ความคิดเห็น', icon: '📈' },
   { path: '/user/satisfaction', label: 'ประเมินความพึงพอใจ', icon: '⭐' },
