@@ -1,6 +1,75 @@
 import { useState } from 'react';
 
-export default function ExportComplaints({ complaints, assignments }) {
+function formatProblemsFound(complaint) {
+  const problems = complaint?.problems;
+  if (!Array.isArray(problems) || problems.length === 0) return '';
+  return problems.map((p) => String(p).trim()).filter(Boolean).join(', ');
+}
+
+function formatComplaintLocation(complaint) {
+  const loc = complaint?.location;
+  const lat = loc?.lat;
+  const lng = loc?.lng;
+  const hasCoords =
+    lat != null &&
+    lng != null &&
+    !Number.isNaN(Number(lat)) &&
+    !Number.isNaN(Number(lng));
+
+  if (!hasCoords) {
+    return { community: complaint?.community || '', lat: '', lng: '', mapsLink: '' };
+  }
+
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  return {
+    community: complaint?.community || '',
+    lat: latNum.toFixed(6),
+    lng: lngNum.toFixed(6),
+    mapsLink: `https://www.google.com/maps?q=${latNum},${lngNum}`,
+  };
+}
+
+function csvCell(value) {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/** ช่วงเวลาเดียวกับสถิติ "การจัดการปัญหาตามระยะเวลา" บน Dashboard */
+function getProcessingTimeCategory(complaint) {
+  const isCompleted =
+    complaint?.status === 'completed' ||
+    complaint?.status === 'ดำเนินการเสร็จสิ้น';
+
+  if (!isCompleted) {
+    return 'ยังไม่เสร็จสิ้น';
+  }
+
+  const startDate = new Date(complaint.timestamp || complaint.createdAt);
+  const endDate = new Date(
+    complaint.updatedAt || complaint.timestamp || complaint.createdAt
+  );
+  const processingTimeHours = Math.floor(
+    (endDate - startDate) / (1000 * 60 * 60)
+  );
+
+  if (processingTimeHours <= 24) return '≤ 24 ชม.';
+  if (processingTimeHours <= 48) return '1-2 วัน';
+  if (processingTimeHours <= 72) return '2-3 วัน';
+  if (processingTimeHours <= 168) return '3-7 วัน';
+  if (processingTimeHours <= 360) return '7-15 วัน';
+  return '> 15 วัน';
+}
+
+export default function ExportComplaints({
+  complaints,
+  assignments,
+  allOnly = false,
+  getFilename,
+  buttonLabel = 'ส่งออก CSV',
+  buttonClassName = 'btn btn-sm btn-ghost gap-2',
+  disabled: disabledProp,
+}) {
   const [exporting, setExporting] = useState(false);
 
   const convertToCSV = (data) => {
@@ -10,41 +79,54 @@ export default function ExportComplaints({ complaints, assignments }) {
       'ลำดับ',
       'สถานะ',
       'หมวดหมู่',
+      'ปัญหาที่พบ',
       'หัวข้อ',
       'ชื่อผู้แจ้ง',
       'เบอร์โทร',
+      'ชุมชน',
+      'ละติจูด',
+      'ลองจิจูด',
+      'ลิงก์แผนที่',
       'วันที่สร้าง',
       'อัปเดตล่าสุด',
       'มอบหมายแล้ว',
       'วันที่มอบหมาย',
       'หมายเหตุ',
       'วิธีการแก้ไข',
-      'วันที่เสร็จสิ้น'
+      'วันที่เสร็จสิ้น',
+      'ช่วงระยะเวลาดำเนินการ'
     ];
 
     const csvData = data.map((complaint, index) => {
       const assignment = assignments?.find(a => a.complaintId === complaint._id);
-      
+      const { community, lat, lng, mapsLink } = formatComplaintLocation(complaint);
+
       return [
         index + 1,
         complaint.status || '',
         complaint.category || '',
+        formatProblemsFound(complaint),
         complaint.detail || '',
         complaint.fullName || '',
         complaint.phone || '',
+        community,
+        lat,
+        lng,
+        mapsLink,
         complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString('th-TH') : '',
         complaint.updatedAt ? new Date(complaint.updatedAt).toLocaleDateString('th-TH') : '',
         assignment ? 'ใช่' : 'ไม่',
         assignment?.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString('th-TH') : '',
         assignment?.note || '',
         assignment?.solution ? assignment.solution.join(', ') : '',
-        assignment?.completedAt ? new Date(assignment.completedAt).toLocaleDateString('th-TH') : ''
+        assignment?.completedAt ? new Date(assignment.completedAt).toLocaleDateString('th-TH') : '',
+        getProcessingTimeCategory(complaint)
       ];
     });
 
     const csvContent = [
       headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...csvData.map(row => row.map(csvCell).join(','))
     ].join('\n');
 
     return csvContent;
@@ -79,7 +161,10 @@ export default function ExportComplaints({ complaints, assignments }) {
         return;
       }
 
-      downloadCSV(csvContent, `complaints_${new Date().toISOString().split('T')[0]}.csv`);
+      const filename = getFilename
+        ? getFilename()
+        : `complaints_${new Date().toISOString().split('T')[0]}.csv`;
+      downloadCSV(csvContent, filename);
       alert('Export สำเร็จ!');
     } catch (error) {
       console.error('Export error:', error);
@@ -118,6 +203,32 @@ export default function ExportComplaints({ complaints, assignments }) {
   };
 
   const countByStatus = (status) => complaints.filter(c => c.status === status).length;
+
+  const isDisabled = disabledProp ?? complaints.length === 0;
+
+  if (allOnly) {
+    return (
+      <button
+        type="button"
+        onClick={handleExport}
+        disabled={exporting || isDisabled}
+        className={buttonClassName}
+        title={isDisabled ? 'ไม่มีข้อมูลในช่วงที่เลือก' : `ส่งออก ${complaints.length} เรื่อง`}
+      >
+        {exporting ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+        )}
+        {buttonLabel}
+        {!exporting && complaints.length > 0 && (
+          <span className="text-xs opacity-70">({complaints.length})</span>
+        )}
+      </button>
+    );
+  }
 
   const exportOptions = [
     {
