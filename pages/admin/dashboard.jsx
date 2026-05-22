@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
+import ExportComplaints from "@/components/ExportComplaints";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -902,6 +903,23 @@ export default function AdminDashboard() {
     return ((stats.satisfaction || 0) / 5) * 100;
   }, [stats.satisfaction]);
 
+  const getDashboardExportFilename = useCallback(() => {
+    const date = new Date().toISOString().split('T')[0];
+    if (filterMode === "fiscal" && fiscalYearFilter) {
+      return `complaints_fy${fiscalYearFilter}_${date}.csv`;
+    }
+    if (filterMode === "fourmonth" && fiscalYearFilter) {
+      return `complaints_fy${fiscalYearFilter}_q${fiscalFourMonthSlot}_${date}.csv`;
+    }
+    if (filterMode === "month" && selectedMonth) {
+      return `complaints_${selectedMonth}_${date}.csv`;
+    }
+    if (filterMode === "quick" && dateRange !== "all") {
+      return `complaints_${dateRange}_${date}.csv`;
+    }
+    return `complaints_${date}.csv`;
+  }, [filterMode, fiscalYearFilter, fiscalFourMonthSlot, selectedMonth, dateRange]);
+
   if (!isLoaded || !userId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -1220,8 +1238,16 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Current Filter Summary */}
-            <div className="ml-auto flex items-center gap-2">
+            {/* Export + filter summary */}
+            <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+              <ExportComplaints
+                complaints={complaints}
+                assignments={assignments}
+                allOnly
+                getFilename={getDashboardExportFilename}
+                disabled={loading}
+                buttonClassName="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-all font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              />
               <div className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full ${
                 filterMode === "fiscal" ? 'bg-emerald-100 text-emerald-700' :
                 filterMode === "fourmonth" ? 'bg-amber-100 text-amber-900' :
