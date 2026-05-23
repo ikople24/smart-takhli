@@ -16,13 +16,21 @@ export default async function handler(req, res) {
       complaintId,
     });
 
+    // n8n workflow อ่านแค่ images[0] — เรียงให้รูปล่าสุดที่ user เลือก/เปลี่ยน
+    // ไปอยู่ index 0 ใน payload ของ webhook (DB ยังเก็บลำดับเดิมตามที่ส่งมา)
+    const reportData = newReport.toObject();
+    const orderedImages = Array.isArray(reportData.images)
+      ? [...reportData.images].filter(Boolean).reverse()
+      : [];
+    const webhookPayload = { ...reportData, images: orderedImages };
+
     // 🔔 POST ไปยัง n8n webhook
     const webhookRes = await fetch(
       "https://primary-production-a1769.up.railway.app/webhook/submit-tk",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newReport),
+        body: JSON.stringify(webhookPayload),
       }
     );
 
