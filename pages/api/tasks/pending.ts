@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from '@clerk/nextjs/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
 import Complaint from '@/models/Complaint';
@@ -18,6 +19,16 @@ interface Task {
   dueDate?: Date;
   actionUrl?: string;
   metadata?: Record<string, unknown>;
+}
+
+interface MongoUser {
+  _id: string;
+  clerkId: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  appId?: string;
+  allowedPages?: string[];
 }
 
 export default async function handler(
@@ -41,11 +52,27 @@ export default async function handler(
   try {
     await dbConnect();
 
+    // First, find the MongoDB user ID from the Clerk ID
+    const UserSchema = new mongoose.Schema({
+      clerkId: String,
+      name: String,
+      email: String,
+      role: String,
+      appId: String,
+      allowedPages: [String],
+    }, { collection: 'users' });
+    const User = mongoose.models.User || mongoose.model('User', UserSchema);
+    const mongoUser = (await User.findOne({ clerkId: targetUserId }).lean()) as MongoUser | null;
+
+    if (!mongoUser) {
+      return res.status(404).json({ error: 'User not found', tasks: [], count: 0 });
+    }
+
     const tasks: Task[] = [];
 
     // Fetch pending complaint assignments
     const pendingAssignments = await Assignment.find({
-      userId: targetUserId,
+      userId: mongoUser._id,
       completedAt: { $exists: false },
     })
       .populate({
@@ -83,7 +110,7 @@ export default async function handler(
 
     // Fetch unresolved satisfaction feedback
     const unresolvedComplaints = await Complaint.find({
-      officer: targetUserId,
+      officer: mongoUser._id,
       status: { $in: ['รอการตรวจสอบ', 'กำลังดำเนิน', 'รอการอนุมัติ'] },
     }).select('_id');
 
@@ -116,7 +143,7 @@ export default async function handler(
     }
 
     // Fetch pending elderly visits (optional - if user manages elderly health)
-    const elderlyPersons = await ElderlyPerson.find({ assignedOfficer: targetUserId }).select('_id');
+    const elderlyPersons = await ElderlyPerson.find({ assignedOfficer: mongoUser._id }).select('_id');
 
     if (elderlyPersons.length > 0) {
       const currentYear = new Date().getFullYear();
