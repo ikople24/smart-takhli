@@ -88,6 +88,20 @@ export const ALL_PAGES: PagePermission[] = [
     description: 'วิเคราะห์ความคิดเห็นผู้ใช้',
     category: 'reports'
   },
+  {
+    path: '/admin/my-tasks',
+    label: 'งานของฉัน',
+    icon: '✓',
+    description: 'ดูและจัดการงานที่รอการดำเนินการ',
+    category: 'management'
+  },
+  {
+    path: '/admin/notifications',
+    label: 'การแจ้งเตือน',
+    icon: '🔔',
+    description: 'ดูและจัดการการแจ้งเตือน',
+    category: 'user'
+  },
   
   // User
   {
@@ -119,6 +133,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/smart-papar/water-quality',
     '/admin/pm25-settings',
     '/admin/feedback-analysis',
+    '/admin/my-tasks',
+    '/admin/notifications',
     '/user/satisfaction',
   ],
   user: [
