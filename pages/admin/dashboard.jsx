@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
+import { PendingTasksWidget } from "@/components/PendingTasksWidget";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -1049,6 +1050,11 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Pending Tasks Widget */}
+        <div>
+          <PendingTasksWidget minimal={true} />
         </div>
 
         {/* Date Range Filters - Compact Dropdown Version */}
