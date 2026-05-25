@@ -2,7 +2,7 @@ import React, { ReactNode, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useUser, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { ChevronDownIcon, MenuIcon, XIcon } from '@heroicons/react/24/outline';
+import { MenuIcon, XIcon } from '@heroicons/react/24/outline';
 
 interface LayoutAdminProps {
   children: ReactNode;
@@ -28,7 +28,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 }) => {
   const router = useRouter();
   const { user } = useUser();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (href: string) => router.pathname === href;

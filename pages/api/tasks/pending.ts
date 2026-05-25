@@ -7,6 +7,19 @@ import Satisfaction from '@/models/Satisfaction';
 import ElderlyVisit from '@/models/ElderlyVisit';
 import ElderlyPerson from '@/models/ElderlyPerson';
 
+interface Task {
+  _id: string;
+  title: string;
+  description?: string;
+  type: 'complaint' | 'feedback' | 'elderly_visit';
+  status: 'pending' | 'overdue' | 'in_progress';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assignedAt: Date;
+  dueDate?: Date;
+  actionUrl?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -24,7 +37,7 @@ export default async function handler(
   try {
     await dbConnect();
 
-    const tasks: any[] = [];
+    const tasks: Task[] = [];
 
     // Fetch pending complaint assignments
     const pendingAssignments = await Assignment.find({

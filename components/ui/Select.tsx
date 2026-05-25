@@ -1,4 +1,4 @@
-import React, { SelectHTMLAttributes, ReactNode } from 'react';
+import React, { SelectHTMLAttributes } from 'react';
 
 interface Option {
   value: string | number;

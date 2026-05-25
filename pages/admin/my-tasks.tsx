@@ -3,7 +3,7 @@ import { LayoutAdmin } from '@/components/LayoutAdmin';
 import { TaskCard, TaskItem } from '@/components/TaskCard';
 import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
-import { Badge, Button, Card } from '@/components/ui';
+import { Button, Card } from '@/components/ui';
 import {
   FunnelIcon,
   CheckCircleIcon,

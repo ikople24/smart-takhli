@@ -1,5 +1,4 @@
 import React, { ButtonHTMLAttributes, ReactNode } from 'react';
-import { BUTTON_SIZES, COLORS } from '@/lib/constants';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'accent' | 'ghost' | 'error' | 'success';

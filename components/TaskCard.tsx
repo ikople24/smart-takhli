@@ -25,17 +25,17 @@ interface TaskCardProps {
   onComplete?: (id: string) => void;
 }
 
-const statusColors = {
-  pending: 'badge-accent',
-  overdue: 'badge-error',
-  in_progress: 'badge-warning',
+const statusVariants: Record<'pending' | 'overdue' | 'in_progress', 'accent' | 'error' | 'warning'> = {
+  pending: 'accent',
+  overdue: 'error',
+  in_progress: 'warning',
 };
 
-const priorityColors = {
-  low: 'badge-neutral',
-  medium: 'badge-info',
-  high: 'badge-warning',
-  urgent: 'badge-error',
+const priorityVariants: Record<'low' | 'medium' | 'high' | 'urgent', 'neutral' | 'info' | 'warning' | 'error'> = {
+  low: 'neutral',
+  medium: 'info',
+  high: 'warning',
+  urgent: 'error',
 };
 
 const typeLabels = {
@@ -69,10 +69,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onAction, onComplete }
             <h3 className="font-semibold text-base text-base-content">
               {task.title}
             </h3>
-            <Badge variant={priorityColors[task.priority] as any} size="sm">
+            <Badge variant={priorityVariants[task.priority]} size="sm">
               {task.priority}
             </Badge>
-            <Badge variant={statusColors[task.status] as any} size="sm">
+            <Badge variant={statusVariants[task.status]} size="sm">
               {task.status === 'pending' && 'รอดำเนิน'}
               {task.status === 'in_progress' && 'กำลังดำเนิน'}
               {task.status === 'overdue' && 'เกินกำหนด'}

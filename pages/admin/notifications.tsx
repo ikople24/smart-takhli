@@ -3,7 +3,7 @@ import { LayoutAdmin } from '@/components/LayoutAdmin';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
-import { Badge, Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const NotificationsPage = () => {
@@ -99,7 +99,7 @@ const NotificationsPage = () => {
                         {notification.type}
                       </Badge>
                       <Badge
-                        variant={priorityColor[notification.priority] as any}
+                        variant={priorityColor[notification.priority as keyof typeof priorityColor]}
                         size="sm"
                       >
                         {notification.priority}
