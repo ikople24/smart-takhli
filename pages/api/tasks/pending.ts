@@ -24,15 +24,19 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { userId } = getAuth(req);
+  const { userId: authUserId } = getAuth(req);
+  const { userId: queryUserId } = req.query;
 
-  if (!userId) {
+  if (!authUserId) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Use query parameter if provided, otherwise use authenticated user
+  const targetUserId = typeof queryUserId === 'string' ? queryUserId : authUserId;
 
   try {
     await dbConnect();
@@ -41,7 +45,7 @@ export default async function handler(
 
     // Fetch pending complaint assignments
     const pendingAssignments = await Assignment.find({
-      userId,
+      userId: targetUserId,
       completedAt: { $exists: false },
     })
       .populate({
@@ -79,7 +83,7 @@ export default async function handler(
 
     // Fetch unresolved satisfaction feedback
     const unresolvedComplaints = await Complaint.find({
-      officer: userId,
+      officer: targetUserId,
       status: { $in: ['รอการตรวจสอบ', 'กำลังดำเนิน', 'รอการอนุมัติ'] },
     }).select('_id');
 
@@ -112,7 +116,7 @@ export default async function handler(
     }
 
     // Fetch pending elderly visits (optional - if user manages elderly health)
-    const elderlyPersons = await ElderlyPerson.find({ assignedOfficer: userId }).select('_id');
+    const elderlyPersons = await ElderlyPerson.find({ assignedOfficer: targetUserId }).select('_id');
 
     if (elderlyPersons.length > 0) {
       const currentYear = new Date().getFullYear();

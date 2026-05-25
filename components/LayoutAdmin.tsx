@@ -2,7 +2,7 @@ import React, { ReactNode, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useUser, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { MenuIcon, XIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface LayoutAdminProps {
   children: ReactNode;
@@ -50,7 +50,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
             onClick={() => setMobileMenuOpen(false)}
             className="md:hidden btn btn-ghost btn-sm btn-circle"
           >
-            <XIcon className="w-5 h-5" />
+            <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -87,7 +87,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden btn btn-ghost btn-sm btn-circle"
               >
-                <MenuIcon className="w-5 h-5" />
+                <Bars3Icon className="w-5 h-5" />
               </button>
               <div>
                 {title && <h2 className="text-xl font-semibold">{title}</h2>}

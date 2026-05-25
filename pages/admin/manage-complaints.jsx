@@ -12,7 +12,6 @@ import OverdueComplaintsAlertNew from "@/components/OverdueComplaintsAlertNew";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
 import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
-import { PendingTasksWidget } from "@/components/PendingTasksWidget";
 import Swal from "sweetalert2";
 
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
@@ -586,11 +585,6 @@ export default function ManageComplaintsPage() {
                 contentExpanded={overdueExpanded}
               />
             </div>
-          </div>
-
-          {/* Pending Tasks Widget */}
-          <div className="mb-6">
-            <PendingTasksWidget minimal={true} />
           </div>
 
           {/* Filter Section */}
