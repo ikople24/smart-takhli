@@ -146,3 +146,5 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
     </div>
   );
 };
+
+export default LayoutAdmin;
