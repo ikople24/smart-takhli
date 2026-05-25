@@ -2,7 +2,8 @@ import React, { ReactNode, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useUser, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface LayoutAdminProps {
   children: ReactNode;
@@ -15,10 +16,9 @@ interface LayoutAdminProps {
 const navigationItems = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
   { label: 'การร้องเรียน', href: '/admin/manage-complaints', icon: '📋' },
-  { label: 'งานที่ได้รับมอบหมาย', href: '/admin/my-tasks', icon: '✅' },
   { label: 'ข้อมูลผู้สูงอายุ', href: '/admin/elderly-cards', icon: '👴' },
+  { label: 'การแจ้งเตือน', href: '/admin/notifications', icon: '🔔' },
   { label: 'การบริหารระบบ', href: '/admin/superadmin', icon: '⚙️' },
-  { label: 'ตั้งค่า', href: '/admin/settings/organizations', icon: '🔧' },
 ];
 
 export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
@@ -101,8 +101,24 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
               </div>
             </div>
 
-            {/* Right: User Menu */}
-            <div className="flex items-center gap-4">
+            {/* Right: Shortcuts + User Menu */}
+            <div className="flex items-center gap-2">
+              {/* My Tasks shortcut */}
+              <Link
+                href="/admin/my-tasks"
+                className={`btn btn-ghost btn-sm btn-circle tooltip tooltip-bottom ${
+                  router.pathname === '/admin/my-tasks' ? 'text-primary' : ''
+                }`}
+                data-tip="KPI งานของฉัน"
+              >
+                <ClipboardDocumentListIcon className="w-5 h-5" />
+              </Link>
+
+              {/* Notification Bell */}
+              <NotificationBell />
+
+              <div className="divider divider-horizontal mx-0 h-6" />
+
               <span className="text-sm font-medium hidden sm:inline">
                 {user?.firstName} {user?.lastName}
               </span>

@@ -22,13 +22,9 @@ export default async function handler(
     await dbConnect();
 
     if (req.method === 'PUT') {
-      // Mark as read
-      const notification = await Notification.findByIdAndUpdate(
-        id,
-        {
-          read: true,
-          readAt: new Date(),
-        },
+      const notification = await Notification.findOneAndUpdate(
+        { _id: id, userId },          // ownership: only owner can mark as read
+        { read: true, readAt: new Date() },
         { new: true }
       );
 
@@ -36,24 +32,17 @@ export default async function handler(
         return res.status(404).json({ error: 'Notification not found' });
       }
 
-      return res.status(200).json({
-        success: true,
-        notification,
-      });
+      return res.status(200).json({ success: true, notification });
     }
 
     if (req.method === 'DELETE') {
-      // Delete notification
-      const result = await Notification.findByIdAndDelete(id);
+      const result = await Notification.findOneAndDelete({ _id: id, userId }); // ownership check
 
       if (!result) {
         return res.status(404).json({ error: 'Notification not found' });
       }
 
-      return res.status(200).json({
-        success: true,
-        message: 'Notification deleted',
-      });
+      return res.status(200).json({ success: true, message: 'Notification deleted' });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

@@ -72,6 +72,13 @@ export const ALL_PAGES: PagePermission[] = [
     description: 'จัดการกิจกรรมต่างๆ',
     category: 'management'
   },
+  {
+    path: '/admin/elderly-cards',
+    label: 'ข้อมูลผู้สูงอายุ',
+    icon: '👴',
+    description: 'จัดการข้อมูลและการเยี่ยมผู้สูงอายุ',
+    category: 'management'
+  },
   
   // Reports
   {
@@ -132,6 +139,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/education-map',
     '/admin/smart-papar/water-quality',
     '/admin/pm25-settings',
+    '/admin/manage-activities',
+    '/admin/elderly-cards',
     '/admin/feedback-analysis',
     '/admin/my-tasks',
     '/admin/notifications',

@@ -34,7 +34,6 @@ export default async function handler(
   res: NextApiResponse
 ) {
   const { userId: authUserId } = getAuth(req);
-  const { userId: queryUserId } = req.query;
 
   if (!authUserId) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -44,8 +43,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Use query parameter if provided, otherwise use authenticated user
-  const targetUserId = typeof queryUserId === 'string' ? queryUserId : authUserId;
+  const targetUserId = authUserId; // always scoped to the authenticated user
 
   try {
     await dbConnect();

@@ -37,7 +37,7 @@ export const ProfileUser: React.FC<ProfileUserProps> = ({ user, compact = false 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await fetch(`/api/tasks/pending?userId=${user._id}`);
+        const res = await fetch(`/api/tasks/pending`);
         if (!res.ok) throw new Error('Failed to fetch tasks');
         const data = await res.json();
         setTasks(data.tasks || []);
