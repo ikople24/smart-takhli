@@ -9,6 +9,7 @@ interface LayoutAdminProps {
   title?: string;
   subtitle?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
+  noSidebar?: boolean;
 }
 
 const navigationItems = [
@@ -25,6 +26,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   title,
   subtitle,
   breadcrumbs = [],
+  noSidebar = false,
 }) => {
   const router = useRouter();
   const { user } = useUser();
@@ -35,6 +37,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   return (
     <div className="flex h-screen bg-base-100">
       {/* Sidebar */}
+      {!noSidebar && (
       <aside
         className={`
           fixed inset-y-0 left-0 z-40 w-64 bg-base-200 border-r border-base-300
@@ -75,6 +78,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           ))}
         </nav>
       </aside>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto flex flex-col">
@@ -83,12 +87,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           <div className="flex items-center justify-between px-6 py-4">
             {/* Left: Menu + Title */}
             <div className="flex items-center gap-4">
+              {!noSidebar && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="md:hidden btn btn-ghost btn-sm btn-circle"
               >
                 <Bars3Icon className="w-5 h-5" />
               </button>
+              )}
               <div>
                 {title && <h2 className="text-xl font-semibold">{title}</h2>}
                 {subtitle && <p className="text-sm text-base-content/60">{subtitle}</p>}
@@ -137,7 +143,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
       </main>
 
       {/* Mobile backdrop */}
-      {mobileMenuOpen && (
+      {!noSidebar && mobileMenuOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
           onClick={() => setMobileMenuOpen(false)}

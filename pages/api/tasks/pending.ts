@@ -5,14 +5,12 @@ import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
 import Complaint from '@/models/Complaint';
 import Satisfaction from '@/models/Satisfaction';
-import ElderlyVisit from '@/models/ElderlyVisit';
-import ElderlyPerson from '@/models/ElderlyPerson';
 
 interface Task {
   _id: string;
   title: string;
   description?: string;
-  type: 'complaint' | 'feedback' | 'elderly_visit';
+  type: 'complaint' | 'feedback';
   status: 'pending' | 'overdue' | 'in_progress';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignedAt: Date;
@@ -140,45 +138,6 @@ export default async function handler(
           complaintId: complaint?._id,
         },
       });
-    }
-
-    // Fetch pending elderly visits (optional - if user manages elderly health)
-    const elderlyPersons = await ElderlyPerson.find({ assignedOfficer: mongoUser._id }).select('_id');
-
-    if (elderlyPersons.length > 0) {
-      const currentYear = new Date().getFullYear();
-      const currentYearBE = currentYear + 543;
-
-      const pendingVisits = await ElderlyVisit.find({
-        personId: { $in: elderlyPersons },
-        yearBE: currentYearBE,
-        measuredAt: { $exists: false },
-      })
-        .populate({
-          path: 'personId',
-          model: 'ElderlyPerson',
-          select: 'fullName',
-        })
-        .lean();
-
-      // Add elderly visit tasks
-      for (const visit of pendingVisits) {
-        const person = visit.personId;
-        tasks.push({
-          _id: `elderly-${visit._id}`,
-          title: `เยี่ยมผู้สูงอายุ - ${person?.fullName || 'ผู้ป่วย'}`,
-          description: `ต้องทำการวัดสุขภาพครั้งที่ ${visit.visitNo}`,
-          type: 'elderly_visit',
-          status: 'pending',
-          priority: 'medium',
-          assignedAt: new Date(), // Use current date
-          actionUrl: `/admin/elderly-cards`,
-          metadata: {
-            personName: person?.fullName,
-            visitNo: visit.visitNo,
-          },
-        });
-      }
     }
 
     // Sort by priority and due date

@@ -6,7 +6,7 @@ export interface TaskItem {
   _id: string;
   title: string;
   description?: string;
-  type: 'complaint' | 'feedback' | 'elderly_visit';
+  type: 'complaint' | 'feedback';
   status: 'pending' | 'overdue' | 'in_progress';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignedAt: Date;
@@ -14,8 +14,6 @@ export interface TaskItem {
   actionUrl?: string;
   metadata?: {
     complaintId?: string;
-    personName?: string;
-    visitNo?: number;
   };
 }
 
@@ -41,7 +39,6 @@ const priorityVariants: Record<'low' | 'medium' | 'high' | 'urgent', 'neutral' |
 const typeLabels = {
   complaint: 'ร้องเรียน',
   feedback: 'ความพึงพอใจ',
-  elderly_visit: 'เยี่ยมผู้สูงอายุ',
 };
 
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onAction, onComplete }) => {

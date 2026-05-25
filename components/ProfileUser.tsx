@@ -7,7 +7,7 @@ interface Task {
   _id: string;
   title: string;
   description?: string;
-  type: 'complaint' | 'feedback' | 'elderly_visit';
+  type: 'complaint' | 'feedback';
   status: 'pending' | 'overdue' | 'in_progress';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignedAt: Date;
