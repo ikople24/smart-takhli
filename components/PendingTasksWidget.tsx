@@ -13,13 +13,13 @@ interface TaskStats {
 }
 
 export const PendingTasksWidget: React.FC<{ minimal?: boolean }> = ({ minimal = false }) => {
-  const { user } = useAuth();
+  const { userId } = useAuth();
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [stats, setStats] = useState<TaskStats>({ total: 0, overdue: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const fetchTasks = async () => {
       try {
@@ -50,7 +50,7 @@ export const PendingTasksWidget: React.FC<{ minimal?: boolean }> = ({ minimal = 
     };
 
     fetchTasks();
-  }, [user]);
+  }, [userId]);
 
   const displayTasks = minimal ? tasks.slice(0, 3) : tasks;
 

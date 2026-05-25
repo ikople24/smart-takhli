@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { UserIcon } from '@heroicons/react/24/outline';
-import TaskCard from '@/components/TaskCard';
+import { TaskCard } from '@/components/TaskCard';
 
 interface Task {
   _id: string;

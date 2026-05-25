@@ -65,7 +65,7 @@ export default async function handler(
         const isOverdue = daysAssigned > 7; // 7 day threshold
 
         tasks.push({
-          _id: assignment._id,
+          _id: String(assignment._id),
           title: `ร้องเรียนจาก ${complaint.fullName}`,
           description: complaint.detail?.substring(0, 100),
           type: 'complaint',
@@ -73,7 +73,7 @@ export default async function handler(
           priority: isOverdue ? 'high' : 'medium',
           assignedAt: assignment.assignedAt,
           dueDate: new Date(new Date(assignment.assignedAt).getTime() + 7 * 24 * 60 * 60 * 1000),
-          actionUrl: `/admin/manage-complaints?complaintId=${complaint._id}`,
+          actionUrl: `/admin/manage-complaints?complaintId=${String(complaint._id)}`,
           metadata: {
             complaintId: complaint._id,
           },

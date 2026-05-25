@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { CheckCircleIcon, ExclamationIcon, InformationCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, ExclamationTriangleIcon, InformationCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface AlertProps {
   variant?: 'success' | 'error' | 'warning' | 'info';
@@ -22,7 +22,7 @@ const variantConfig = {
   },
   warning: {
     bgClass: 'alert-warning',
-    icon: ExclamationIcon,
+    icon: ExclamationTriangleIcon,
   },
   info: {
     bgClass: 'alert-info',

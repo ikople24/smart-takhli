@@ -52,11 +52,11 @@ const NotificationsPage = () => {
     }
   };
 
-  const priorityColor = {
-    low: 'badge-neutral',
-    medium: 'badge-info',
-    high: 'badge-warning',
-    urgent: 'badge-error',
+  const priorityVariant = {
+    low: 'neutral' as const,
+    medium: 'info' as const,
+    high: 'warning' as const,
+    urgent: 'error' as const,
   };
 
   return (
@@ -99,7 +99,7 @@ const NotificationsPage = () => {
                         {notification.type}
                       </Badge>
                       <Badge
-                        variant={priorityColor[notification.priority as keyof typeof priorityColor]}
+                        variant={priorityVariant[notification.priority as keyof typeof priorityVariant]}
                         size="sm"
                       >
                         {notification.priority}
