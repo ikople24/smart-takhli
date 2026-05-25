@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { UserIcon, CheckCircleIcon, ClockIcon, ExclamationIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+import { UserIcon } from '@heroicons/react/24/outline';
 import TaskCard from '@/components/TaskCard';
 
 interface Task {
@@ -66,9 +67,11 @@ export const ProfileUser: React.FC<ProfileUserProps> = ({ user, compact = false 
           {/* User Info */}
           <div className="flex items-center gap-3 mb-4">
             {user.imageUrl ? (
-              <img
+              <Image
                 src={user.imageUrl}
                 alt={`${user.firstName} ${user.lastName}`}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
@@ -109,9 +112,11 @@ export const ProfileUser: React.FC<ProfileUserProps> = ({ user, compact = false 
         <div className="card-body">
           <div className="flex items-start gap-4">
             {user.imageUrl ? (
-              <img
+              <Image
                 src={user.imageUrl}
                 alt={`${user.firstName} ${user.lastName}`}
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-lg object-cover"
               />
             ) : (
