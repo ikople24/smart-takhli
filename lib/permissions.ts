@@ -9,6 +9,12 @@ export interface PagePermission {
   icon: string;
   description: string;
   category: 'settings' | 'management' | 'reports' | 'user';
+  /**
+   * ถ้า true → ซ่อนจาก TopNavbar dropdown และ LayoutAdmin sidebar
+   * แต่ยังคงปรากฏใน superadmin permission UI (เพื่อให้กำหนดสิทธิ์ได้)
+   * และยังเข้าถึงได้ผ่าน internal link ภายในระบบ
+   */
+  hideFromMenu?: boolean;
 }
 
 // รายการหน้าทั้งหมดในระบบ
@@ -77,7 +83,8 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'ข้อมูลผู้สูงอายุ',
     icon: '👴',
     description: 'จัดการข้อมูลและการเยี่ยมผู้สูงอายุ',
-    category: 'management'
+    category: 'management',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน smart-health
   },
   
   // Reports
@@ -93,6 +100,13 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'วิเคราะห์ความคิดเห็น',
     icon: '📈',
     description: 'วิเคราะห์ความคิดเห็นผู้ใช้',
+    category: 'reports'
+  },
+  {
+    path: '/admin/analytics',
+    label: 'สถิติและรายงาน',
+    icon: '📉',
+    description: 'ภาพรวมสถิติเรื่องร้องเรียน ประสิทธิภาพเจ้าหน้าที่ และความพึงพอใจ',
     category: 'reports'
   },
   {
@@ -116,15 +130,19 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'ประเมินความพึงพอใจ',
     icon: '⭐',
     description: 'ประเมินความพึงพอใจการใช้บริการ',
-    category: 'user'
+    category: 'user',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ในระบบร้องเรียน
   },
 ];
 
 // หน้าที่ superadmin เท่านั้นที่เข้าถึงได้
+// ต้องตรงกับไฟล์จริงใน pages/admin/superadmin/
+// ✓ index.jsx  → /admin/superadmin
+// ✓ setup.jsx  → /admin/superadmin/setup
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
-  '/admin/superadmin/users',
-  '/admin/superadmin/permissions',
+  '/admin/superadmin/setup',
+  '/admin/superadmin/audit-log',
 ];
 
 // สิทธิ์เริ่มต้นตาม role
@@ -142,6 +160,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/manage-activities',
     '/admin/elderly-cards',
     '/admin/feedback-analysis',
+    '/admin/analytics',
     '/admin/my-tasks',
     '/admin/notifications',
     '/user/satisfaction',

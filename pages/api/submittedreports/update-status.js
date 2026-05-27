@@ -1,14 +1,22 @@
 // /pages/api/submittedreports/update-status.js
-import dbConnect from "@/lib/dbConnect"; // ถ้ามี
-import SubmittedReport from "@/models/SubmittedReport"; // ชื่อโมเดลต้องตรง
+import dbConnect from "@/lib/dbConnect";
+import SubmittedReport from "@/models/SubmittedReport";
+import { n8n } from "@/lib/n8nWebhook";
+import { logAuditEvent } from "@/lib/auditLogger";
+import { getAuth } from "@clerk/nextjs/server";
 
 export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "PUT") {
     const { complaintId, status } = req.body;
+    const { userId } = getAuth(req);
 
     try {
+      // ดึงสถานะเดิมก่อน update เพื่อส่งใน audit log และ n8n
+      const existing = await SubmittedReport.findById(complaintId).lean();
+      const oldStatus = existing?.status || "";
+
       const updated = await SubmittedReport.findOneAndUpdate(
         { _id: complaintId },
         // Ensure close time is recorded when status changes.
@@ -17,6 +25,28 @@ export default async function handler(req, res) {
       );
 
       if (!updated) return res.status(404).json({ message: "ไม่พบข้อมูล" });
+
+      // Audit log + n8n (fire-and-forget)
+      if (userId) {
+        logAuditEvent({
+          actorClerkId: userId,
+          actorName: "admin",
+          action: "complaint_status_changed",
+          resourceType: "complaint",
+          resourceId: String(complaintId),
+          description: `สถานะเรื่องร้องเรียนเปลี่ยนจาก "${oldStatus}" เป็น "${status}"`,
+          before: { status: oldStatus },
+          after: { status },
+        });
+      }
+
+      n8n.complaintStatusChanged({
+        complaintId: String(complaintId),
+        fullName: existing?.fullName || "",
+        oldStatus,
+        newStatus: status,
+        changedBy: userId || "admin",
+      });
 
       res.status(200).json(updated);
     } catch (err) {

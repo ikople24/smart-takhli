@@ -5,6 +5,8 @@ import { ClerkProvider, useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import Layout from "@/components/Layout";
 import { useEffect, useState } from "react";
+import { usePermissionsStore } from "@/stores/usePermissionsStore";
+import type { Role } from "@/lib/permissions";
 
 // ประเภทของการปฏิเสธการเข้าถึง
 type AccessDeniedReason = 'no_access' | 'user_not_registered' | 'app_mismatch' | 'no_app_assigned' | null;
@@ -17,6 +19,10 @@ function AppContent({ Component, pageProps }: AppProps) {
   const [checking, setChecking] = useState(true);
   const [deniedReason, setDeniedReason] = useState<AccessDeniedReason>(null);
   const [deniedMessage, setDeniedMessage] = useState<string>("");
+
+  // Zustand store — เขียนเมื่อ verify-app-access เสร็จ, อ่านโดย LayoutAdmin / TopNavbar
+  const setPermissions = usePermissionsStore((state) => state.setPermissions);
+  const resetPermissions = usePermissionsStore((state) => state.reset);
 
   const isProtected = ["/admin", "/user"].some((path) =>
     router.pathname.startsWith(path)
@@ -34,6 +40,8 @@ function AppContent({ Component, pageProps }: AppProps) {
   useEffect(() => {
     const checkAccess = async () => {
       if (!isLoaded || !user || !isProtected) {
+        // ล้าง store เมื่อ sign-out หรือออกจากหน้า protected
+        if (!user) resetPermissions();
         setHasAccess(true);
         setChecking(false);
         return;
@@ -82,6 +90,7 @@ function AppContent({ Component, pageProps }: AppProps) {
 
         // Super Admin เข้าได้ทุกหน้า (ตรวจสอบหลังจาก verify app access)
         if (userRole === 'superadmin') {
+          setPermissions('superadmin', [], true);
           setHasAccess(true);
           setChecking(false);
           return;
@@ -101,6 +110,7 @@ function AppContent({ Component, pageProps }: AppProps) {
 
         // ถ้ายังไม่ได้ตั้งค่า allowedPages = เข้าได้ทุกหน้า (default)
         if (!allowedPages || allowedPages.length === 0) {
+          setPermissions(userRole as Role, [], true);
           setHasAccess(true);
           setChecking(false);
           return;
@@ -116,6 +126,9 @@ function AppContent({ Component, pageProps }: AppProps) {
           setDeniedReason('no_access');
           setDeniedMessage('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
         }
+        // บันทึก role + allowedPages ลง store ไม่ว่าหน้านี้จะ allowed หรือเปล่า
+        // เพื่อให้ LayoutAdmin/TopNavbar กรองเมนูได้ถูกต้องบนหน้าอื่น
+        setPermissions(userRole as Role, allowedPages, true);
         setHasAccess(isAllowed);
       } catch (error) {
         console.error("❌ Error checking access:", error);
@@ -129,7 +142,7 @@ function AppContent({ Component, pageProps }: AppProps) {
     };
 
     checkAccess();
-  }, [isLoaded, user, router.pathname, isProtected, isSuperAdminPage, getToken]);
+  }, [isLoaded, user, router.pathname, isProtected, isSuperAdminPage, getToken, setPermissions, resetPermissions]);
 
   if (isProtected && (!isLoaded || !userId || checking)) {
     return <div className="p-8 text-center">กำลังโหลด...</div>;

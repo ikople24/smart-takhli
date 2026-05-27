@@ -1,9 +1,12 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { useUser, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { NotificationBell } from '@/components/NotificationBell';
+import { usePermissionsStore } from '@/stores/usePermissionsStore';
+import { DEFAULT_PERMISSIONS } from '@/lib/permissions';
+import type { Role } from '@/lib/permissions';
 
 interface LayoutAdminProps {
   children: ReactNode;
@@ -13,10 +16,12 @@ interface LayoutAdminProps {
   noSidebar?: boolean;
 }
 
+// Sidebar navigation — เฉพาะรายการหลักที่ใช้บ่อย
+// หน้า hideFromMenu (elderly-cards, satisfaction) ถูกตัดออก — เข้าถึงผ่าน internal link
 const navigationItems = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
   { label: 'การร้องเรียน', href: '/admin/manage-complaints', icon: '📋' },
-  { label: 'ข้อมูลผู้สูงอายุ', href: '/admin/elderly-cards', icon: '👴' },
+  { label: 'สถิติและรายงาน', href: '/admin/analytics', icon: '📉' },
   { label: 'การแจ้งเตือน', href: '/admin/notifications', icon: '🔔' },
   { label: 'การบริหารระบบ', href: '/admin/superadmin', icon: '⚙️' },
 ];
@@ -31,6 +36,29 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   const router = useRouter();
   const { user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // อ่านสิทธิ์จาก store (ถูก populate โดย _app.tsx หลัง verify-app-access เสร็จ)
+  const { role, allowedPages, isLoaded } = usePermissionsStore();
+
+  // กรอง navigationItems ตาม role + allowedPages จาก MongoDB
+  const visibleNavItems = useMemo(() => {
+    return navigationItems.filter((item) => {
+      // หน้า superadmin แสดงเฉพาะ superadmin
+      if (item.href.startsWith('/admin/superadmin')) {
+        return role === 'superadmin';
+      }
+      // superadmin เห็นทุกหน้า
+      if (role === 'superadmin') return true;
+      // ถ้ายังไม่ได้โหลด permissions หรือ allowedPages ว่าง → ใช้ DEFAULT_PERMISSIONS
+      const effectivePaths =
+        isLoaded && allowedPages.length > 0
+          ? allowedPages
+          : DEFAULT_PERMISSIONS[role as Role] ?? DEFAULT_PERMISSIONS['admin'];
+      return effectivePaths.some(
+        (p) => item.href === p || item.href.startsWith(p + '/')
+      );
+    });
+  }, [role, allowedPages, isLoaded]);
 
   const isActive = (href: string) => router.pathname === href;
 
@@ -59,7 +87,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
-          {navigationItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
