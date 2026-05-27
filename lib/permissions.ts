@@ -100,7 +100,8 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'วิเคราะห์ความคิดเห็น',
     icon: '📈',
     description: 'วิเคราะห์ความคิดเห็นผู้ใช้',
-    category: 'reports'
+    category: 'reports',
+    hideFromMenu: true, // พักไว้ก่อน — หน้ายังพัง
   },
   {
     path: '/admin/analytics',
