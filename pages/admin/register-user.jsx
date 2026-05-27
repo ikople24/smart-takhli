@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import LayoutAdmin from "@/components/LayoutAdmin";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { z } from "zod";
@@ -417,6 +418,7 @@ export default function RegisterUserPage() {
   };
 
   return (
+    <LayoutAdmin title="จัดการผู้ใช้งาน">
     <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
       <div
         style={{
@@ -817,5 +819,6 @@ export default function RegisterUserPage() {
         )}
       </div>
     </div>
+    </LayoutAdmin>
   );
 }

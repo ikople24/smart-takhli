@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import LayoutAdmin from "@/components/LayoutAdmin";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
@@ -495,6 +496,7 @@ export default function ManageComplaintsPage() {
   };
 
   return (
+    <LayoutAdmin title="การร้องเรียน">
     <>
       <Head>
         <title>จัดการเรื่องร้องเรียน - Admin</title>
@@ -1212,5 +1214,6 @@ export default function ManageComplaintsPage() {
         />
       )}
     </>
+    </LayoutAdmin>
   );
 }

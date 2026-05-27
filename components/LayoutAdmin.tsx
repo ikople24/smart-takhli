@@ -15,17 +15,33 @@ interface LayoutAdminProps {
   noSidebar?: boolean;
 }
 
-// Sidebar navigation — เฉพาะรายการหลักที่ใช้บ่อย
-// หน้า hideFromMenu (elderly-cards, satisfaction) ถูกตัดออก — เข้าถึงผ่าน internal link
+// Sidebar navigation — รวมทุกหน้าที่เคยอยู่ใน dropdown
+// หน้า hideFromMenu (elderly-cards, satisfaction, feedback-analysis) ไม่อยู่ใน nav
+// แต่ยังเข้าถึงได้ผ่าน internal link
 const navigationItems = [
-  { label: 'Dashboard',        href: '/admin/dashboard',         icon: '📊', group: 'ภาพรวม' },
-  { label: 'การแจ้งเตือน',   href: '/admin/notifications',      icon: '🔔', group: 'ภาพรวม' },
-  { label: 'การร้องเรียน',   href: '/admin/manage-complaints',  icon: '📋', group: 'จัดการ' },
-  { label: 'สถิติและรายงาน', href: '/admin/analytics',          icon: '📉', group: 'จัดการ' },
-  { label: 'การบริหารระบบ', href: '/admin/superadmin',          icon: '⚙️', group: 'ตั้งค่า' },
+  // ภาพรวม
+  { label: 'Dashboard',          href: '/admin/dashboard',                icon: '📊', group: 'ภาพรวม' },
+  { label: 'งานของฉัน',         href: '/admin/my-tasks',                 icon: '✅', group: 'ภาพรวม' },
+  { label: 'การแจ้งเตือน',     href: '/admin/notifications',             icon: '🔔', group: 'ภาพรวม' },
+
+  // จัดการ
+  { label: 'การร้องเรียน',     href: '/admin/manage-complaints',         icon: '📋', group: 'จัดการ' },
+  { label: 'Smart Health',       href: '/admin/smart-health',             icon: '🟣', group: 'จัดการ' },
+  { label: 'Smart School',       href: '/admin/education-map',            icon: '🏫', group: 'จัดการ' },
+  { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
+
+  // รายงาน
+  { label: 'สถิติและรายงาน',   href: '/admin/analytics',                icon: '📉', group: 'รายงาน' },
+
+  // ตั้งค่า
+  { label: 'ตั้งค่าหน้าจอ',   href: '/admin',                           icon: '🛠️', group: 'ตั้งค่า' },
+  { label: 'จัดการผู้ใช้',     href: '/admin/register-user',            icon: '👥', group: 'ตั้งค่า' },
+  { label: 'จัดการ PM2.5',     href: '/admin/pm25-settings',            icon: '🌫️', group: 'ตั้งค่า' },
+  { label: 'การบริหารระบบ',   href: '/admin/superadmin',               icon: '⚙️', group: 'ตั้งค่า' },
 ];
 
-const GROUP_ORDER = ['ภาพรวม', 'จัดการ', 'ตั้งค่า'];
+const GROUP_ORDER = ['ภาพรวม', 'จัดการ', 'รายงาน', 'ตั้งค่า'];
 
 export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   children,
@@ -49,7 +65,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   const visibleNavItems = useMemo(() => {
     return navigationItems.filter((item) => {
       // หน้า superadmin แสดงเฉพาะ superadmin
-      if (item.href.startsWith('/admin/superadmin')) {
+      if (item.href.startsWith('/admin/superadmin') || item.href === '/admin/superadmin') {
         return role === 'superadmin';
       }
       // superadmin เห็นทุกหน้า

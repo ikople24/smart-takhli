@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import LayoutAdmin from "@/components/LayoutAdmin";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
 import { useAuth } from "@clerk/nextjs";
@@ -1024,6 +1025,7 @@ export default function AdminDashboard() {
   };
 
   return (
+    <LayoutAdmin title="แดชบอร์ด">
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
       <div className="max-w-[1800px] mx-auto p-4 lg:p-6 space-y-6">
         
@@ -1995,6 +1997,7 @@ export default function AdminDashboard() {
         />
       )}
     </div>
+    </LayoutAdmin>
   );
 }
 

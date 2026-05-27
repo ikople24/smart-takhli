@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import LayoutAdmin from "@/components/LayoutAdmin";
 import PermissionGuard from "@/components/PermissionGuard";
 
 function getCurrentYearBE() {
@@ -114,6 +115,7 @@ export default function ElderlySchedulePage() {
   };
 
   return (
+    <LayoutAdmin title="ตารางเยี่ยมผู้สูงอายุ">
     <PermissionGuard requiredPath="/admin/smart-health">
       <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-4">
@@ -225,7 +227,7 @@ export default function ElderlySchedulePage() {
         </div>
       </main>
     </PermissionGuard>
+    </LayoutAdmin>
   );
 }
-
 

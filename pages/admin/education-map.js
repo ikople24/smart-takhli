@@ -1,5 +1,6 @@
 // pages/admin/education-map.js
 import { useEffect, useState } from 'react';
+import LayoutAdmin from '@/components/LayoutAdmin';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import EducationDetailModal from '@/components/education/EducationDetailModal';
@@ -1047,6 +1048,7 @@ export default function EducationMapPage() {
   }
 
   return (
+    <LayoutAdmin title="Smart School">
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
@@ -1575,5 +1577,6 @@ export default function EducationMapPage() {
         }}
       />
     </div>
+    </LayoutAdmin>
   );
-} 
+}
