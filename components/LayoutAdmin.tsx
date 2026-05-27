@@ -1,6 +1,5 @@
 import React, { ReactNode, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import { useUser, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -34,7 +33,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   noSidebar = false,
 }) => {
   const router = useRouter();
-  const { user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // อ่านสิทธิ์จาก store (ถูก populate โดย _app.tsx หลัง verify-app-access เสร็จ)
@@ -144,13 +142,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
               {/* Notification Bell */}
               <NotificationBell />
-
-              <div className="divider divider-horizontal mx-0 h-6" />
-
-              <span className="text-sm font-medium hidden sm:inline">
-                {user?.firstName} {user?.lastName}
-              </span>
-              <UserButton afterSignOutUrl="/" />
             </div>
           </div>
 
