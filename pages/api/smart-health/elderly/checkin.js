@@ -3,7 +3,7 @@ import ElderlyPerson from "@/models/ElderlyPerson";
 import ElderlyVisit from "@/models/ElderlyVisit";
 import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
 import { ObjectId } from "mongodb";
-import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
+import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok

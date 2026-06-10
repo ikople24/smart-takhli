@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import EmployeeHealthRecord from "@/models/EmployeeHealthRecord";
-import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/elderlySchoolDashboard";
+import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
 import { sugarCategoryMgDl } from "@/lib/employeeHealthDashboard";
 import { buildEmployeeHealthRecommendations } from "@/lib/employeeHealthRecommendations";
 

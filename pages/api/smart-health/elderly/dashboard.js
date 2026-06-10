@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import ElderlyVisit from "@/models/ElderlyVisit";
-import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/elderlySchoolDashboard";
+import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/health/metrics";
 import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
 import { ObjectId } from "mongodb";
 
