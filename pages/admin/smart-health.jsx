@@ -7,7 +7,6 @@ import WorkflowPipeline from "@/components/sm-health/WorkflowPipeline";
 import EquipmentStats from "@/components/sm-health/EquipmentStats";
 import QuickActions from "@/components/sm-health/QuickActions";
 import DashboardTabs from "@/components/sm-health/DashboardTabs";
-import ElderlySchoolDashboard from "@/components/elderly-school/ElderlySchoolDashboard";
 import EmployeeHealthDashboard from "@/components/sm-health/EmployeeHealthDashboard";
 
 // Existing Components
@@ -132,7 +131,6 @@ export default function SmartHealthPage() {
     () => ({
       request: requests.length,
       "community-summary": 0,
-      "elderly-school": 0,
       "employee-health": 0,
       "register-device": devices.length,
       "borrow-return": borrows.length,
@@ -226,7 +224,6 @@ export default function SmartHealthPage() {
                 />
               )}
               {selectedTab === "community-summary" && <CommunityPlanningSummary />}
-              {selectedTab === "elderly-school" && <ElderlySchoolDashboard />}
               {selectedTab === "employee-health" && <EmployeeHealthDashboard />}
               {selectedTab === "register-device" && (
                 <RegisterDeviceTable devices={devices} loading={loadingDevices} />

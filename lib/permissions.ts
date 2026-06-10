@@ -47,8 +47,23 @@ export const ALL_PAGES: PagePermission[] = [
     path: '/admin/smart-health',
     label: 'smart-health',
     icon: '🟣',
-    description: 'ระบบสุขภาพอัจฉริยะ',
+    description: 'ระบบสุขภาพอัจฉริยะ (ยืม-คืนอุปกรณ์, สุขภาพพนักงาน)',
     category: 'management'
+  },
+  {
+    path: '/admin/elderly-school',
+    label: 'โรงเรียนผู้สูงอายุ',
+    icon: '🎓',
+    description: 'แดชบอร์ดสุขภาพและกิจกรรมโรงเรียนผู้สูงอายุ',
+    category: 'management'
+  },
+  {
+    path: '/admin/elderly-schedule',
+    label: 'ตั้งค่าวันเรียน (โรงเรียนผู้สูงอายุ)',
+    icon: '🗓️',
+    description: 'กำหนดวันเรียนครั้งที่ 1-16 ของแต่ละปีการศึกษา',
+    category: 'management',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   {
     path: '/admin/education-map',
@@ -80,11 +95,11 @@ export const ALL_PAGES: PagePermission[] = [
   },
   {
     path: '/admin/elderly-cards',
-    label: 'ข้อมูลผู้สูงอายุ',
+    label: 'พิมพ์บัตร QR (โรงเรียนผู้สูงอายุ)',
     icon: '👴',
-    description: 'จัดการข้อมูลและการเยี่ยมผู้สูงอายุ',
+    description: 'พิมพ์บัตร QR สำหรับเช็คอินโรงเรียนผู้สูงอายุ',
     category: 'management',
-    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน smart-health
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   
   // Reports
@@ -178,6 +193,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/manage-complaints',
     '/admin/dashboard',
     '/admin/smart-health',
+    '/admin/elderly-school',
+    '/admin/elderly-schedule',
     '/admin/education-map',
     '/admin/smart-papar/water-quality',
     '/admin/pm25-settings',
