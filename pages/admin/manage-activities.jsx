@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import LayoutAdmin from '@/components/LayoutAdmin';
 import Swal from 'sweetalert2';
 
 const ManageActivities = () => {
@@ -196,7 +195,6 @@ const ManageActivities = () => {
   };
 
   return (
-    <LayoutAdmin title="จัดการกิจกรรม">
     <>
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
@@ -406,7 +404,6 @@ const ManageActivities = () => {
         )}
       </div>
     </>
-    </LayoutAdmin>
   );
 };
 

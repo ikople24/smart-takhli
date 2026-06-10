@@ -76,7 +76,6 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
-        console.log('Received data:', req.body);
         const { grade, comment, emotionLevel, category, tags, activityId } = req.body;
 
       // Validation

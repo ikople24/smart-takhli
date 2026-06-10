@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import LayoutAdmin from "@/components/LayoutAdmin";
 import ComplaintDetailModal from "@/components/ComplaintDetailModal";
 import ExportComplaints from "@/components/ExportComplaints";
 import { useAuth } from "@clerk/nextjs";
@@ -26,7 +25,7 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import { createProblemAreaPolygons, createRectanglePolygon, createCommunityPolygon } from '@/utils/polygonUtils';
-import { loadGeoJSONFromFile, createCommunityPolygonsFromGeoJSON, createProblemAreaPolygonsFromGeoJSON } from '@/utils/geojsonUtils';
+import { loadGeoJSONFromDB, loadGeoJSONFromFile, createCommunityPolygonsFromGeoJSON, createProblemAreaPolygonsFromGeoJSON } from '@/utils/geojsonUtils';
 
 // Dynamic import for map component to avoid SSR issues
 const MapWithNoSSR = dynamic(() => import('@/components/AdminDashboardMap'), {
@@ -461,8 +460,15 @@ export default function AdminDashboard() {
   const loadGeoJSONData = async () => {
     try {
       setGeojsonLoading(true);
-      const data = await loadGeoJSONFromFile('/takhli.geojson');
-      setGeojsonData(data);
+      // โหลดจาก DB ก่อน — ถ้ามีข้อมูลใช้นั้น, ถ้าไม่มีค่อย fallback ไฟล์ static
+      const dbData = await loadGeoJSONFromDB();
+      if (dbData) {
+        setGeojsonData(dbData);
+        return;
+      }
+      // Fallback: ไฟล์ GeoJSON ใน /public
+      const fileData = await loadGeoJSONFromFile('/takhli.geojson');
+      setGeojsonData(fileData);
     } catch (error) {
       console.error('Error loading GeoJSON data:', error);
     } finally {
@@ -1025,7 +1031,6 @@ export default function AdminDashboard() {
   };
 
   return (
-    <LayoutAdmin title="แดชบอร์ด">
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
       <div className="max-w-[1800px] mx-auto p-4 lg:p-6 space-y-6">
         
@@ -1997,7 +2002,6 @@ export default function AdminDashboard() {
         />
       )}
     </div>
-    </LayoutAdmin>
   );
 }
 

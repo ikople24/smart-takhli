@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import LayoutAdmin from "@/components/LayoutAdmin";
 import PermissionGuard, { usePermissions } from "@/components/PermissionGuard";
 
 function getCurrentYearBE() {
@@ -80,7 +79,6 @@ export default function ElderlyCardsPage() {
   };
 
   return (
-    <LayoutAdmin title="ข้อมูลผู้สูงอายุ">
     <PermissionGuard requiredPath="/admin/smart-health">
       <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
         <div className="max-w-6xl mx-auto space-y-4">
@@ -154,8 +152,10 @@ export default function ElderlyCardsPage() {
                         </div>
                       )}
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-gray-900 line-clamp-2">{p.fullName || "-"}</p>
-                    <p className="mt-1 text-[10px] text-gray-500 break-all">{url}</p>
+                    <p className="mt-2 text-base font-semibold text-gray-900 line-clamp-2 text-center">{p.fullName || "-"}</p>
+                    <p className="mt-1 text-base text-gray-500 tracking-widest font-mono text-center">
+                      {p.citizenId ? String(p.citizenId).replace(/\D/g, '').slice(-4) : "????"}
+                    </p>
                   </div>
                 );
               })}
@@ -169,7 +169,6 @@ export default function ElderlyCardsPage() {
         </div>
       </main>
     </PermissionGuard>
-    </LayoutAdmin>
   );
 }
 

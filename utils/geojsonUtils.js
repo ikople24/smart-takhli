@@ -11,44 +11,47 @@ export const convertGeoJSONToPolygons = (geojsonData) => {
     return [];
   }
 
-  return geojsonData.features.map((feature, index) => {
+  return geojsonData.features.flatMap((feature, index) => {
     const { properties, geometry } = feature;
-    
-    // ตรวจสอบว่าเป็น Polygon หรือไม่
-    if (geometry.type !== 'Polygon') {
-      console.warn(`Feature ${index} is not a Polygon: ${geometry.type}`);
-      return null;
+
+    // รองรับ MultiPolygon — แตกเป็น entries ย่อย
+    let rings = [];
+    if (geometry.type === 'Polygon') {
+      rings = [{ coords: geometry.coordinates[0], suffix: '' }];
+    } else if (geometry.type === 'MultiPolygon') {
+      rings = geometry.coordinates.map((poly, i) => ({ coords: poly[0], suffix: `-${i}` }));
+    } else {
+      return []; // ข้ามประเภท geometry อื่น (Point, LineString ฯลฯ)
     }
 
-    // แปลงพิกัดจาก [lng, lat] เป็น [lat, lng] สำหรับ Leaflet
-    const coordinates = geometry.coordinates[0].map(coord => [coord[1], coord[0]]);
-    
-    // สร้างสีตามชื่อชุมชน
-    const color = generateColorFromName(properties.title || `ชุมชน${index + 1}`);
-    
-    return {
-      id: `geojson-${properties.title || `ชุมชน${index + 1}`}-${index}`,
-      name: properties.title || `ชุมชน${index + 1}`,
-      boundaryor: properties.boundaryor || 'ไม่ระบุ',
-      coordinates: coordinates,
-      color: color,
-      fillColor: color,
-      fillOpacity: 0.2,
-      weight: 2,
-      popup: {
-        content: `
-          <div class="text-sm">
-            <p><strong>ชื่อชุมชน:</strong> ${properties.title || `ชุมชน${index + 1}`}</p>
-            <p><strong>จำนวนพิกัด:</strong> ${coordinates.length} จุด</p>
-          </div>
-        `
-      },
-      onClick: (polygon) => {
-        console.log('คลิกที่ polygon:', polygon.name);
-        // สามารถเพิ่ม logic เพิ่มเติมได้ เช่น เปิด modal แสดงรายละเอียด
-      }
-    };
-  }).filter(Boolean); // กรอง null values
+    // ใช้ properties.color ถ้ามี (จากฐานข้อมูล) ไม่งั้น generate จากชื่อ
+    const color = properties.color || generateColorFromName(properties.title || `ชุมชน${index + 1}`);
+
+    return rings.map(({ coords, suffix }) => {
+      // แปลงพิกัดจาก [lng, lat] เป็น [lat, lng] สำหรับ Leaflet
+      const coordinates = coords.map(coord => [coord[1], coord[0]]);
+      const featureName = properties.title || `ชุมชน${index + 1}`;
+
+      return {
+        id: `geojson-${featureName}-${index}${suffix}`,
+        name: featureName,
+        boundaryor: properties.boundaryor || 'ไม่ระบุ',
+        coordinates,
+        color,
+        fillColor: color,
+        fillOpacity: 0.2,
+        weight: 2,
+        popup: {
+          content: `
+            <div class="text-sm">
+              <p><strong>ชื่อ:</strong> ${featureName}</p>
+              <p><strong>จำนวนพิกัด:</strong> ${coordinates.length} จุด</p>
+            </div>
+          `
+        },
+      };
+    });
+  });
 };
 
 /**
@@ -81,6 +84,41 @@ const generateColorFromName = (name) => {
   }
   
   return colors[Math.abs(hash) % colors.length];
+};
+
+/**
+ * โหลด GeoJSON features จากฐานข้อมูล (MongoDB ผ่าน /api/admin/geojson-features)
+ * แปลงเป็น FeatureCollection รูปแบบเดิมเพื่อให้ใช้กับ createCommunityPolygonsFromGeoJSON ได้ทันที
+ * @returns {Promise<Object|null>} FeatureCollection หรือ null ถ้า DB ว่างเปล่า
+ */
+export const loadGeoJSONFromDB = async () => {
+  try {
+    // ใช้ public endpoint (ไม่ต้อง auth) เพราะข้อมูลขอบเขตพื้นที่ไม่ใช่ข้อมูลส่วนตัว
+    const res = await fetch('/api/geojson-features');
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.success || !json.features?.length) return null;
+
+    // แปลง DB docs → FeatureCollection มาตรฐาน
+    // properties.color จะถูก convertGeoJSONToPolygons อ่านและใช้แทนการ generate จากชื่อ
+    const features = json.features
+      .filter((f) => f.active !== false)
+      .map((f) => ({
+        type: 'Feature',
+        geometry: f.geometry,
+        properties: {
+          title: f.name,                                    // ชื่อหลัก → polygon.name
+          boundaryor: f.properties?.boundaryor || f.name,  // → polygon.boundaryor
+          color: f.color,                                   // ส่งต่อสีที่บันทึกไว้
+          ...f.properties,                                  // properties อื่นๆ ที่เก็บไว้
+        },
+      }));
+
+    if (!features.length) return null;
+    return { type: 'FeatureCollection', features };
+  } catch {
+    return null;
+  }
 };
 
 /**

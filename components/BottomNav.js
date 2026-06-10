@@ -10,9 +10,11 @@ const navs = [
 
 export default function BottomNav() {
   const router = useRouter();
+  // ซ่อนบน desktop สำหรับ admin — sidebar ทำหน้าที่ navigation แทนแล้ว
+  const isAdminRoute = router.pathname.startsWith("/admin");
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-white/30 backdrop-blur-md border-t border-white/40 shadow-md z-50 flex justify-around items-center h-14 px-safe">
+    <div className={`fixed bottom-0 left-0 w-full bg-white/30 backdrop-blur-md border-t border-white/40 shadow-md z-50 flex justify-around items-center h-14 px-safe${isAdminRoute ? " md:hidden" : ""}`}>
       {navs.map((nav) =>
         nav.disabled ? (
           <div

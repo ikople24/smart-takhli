@@ -125,6 +125,29 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'user'
   },
   
+  // Settings — Configuration
+  {
+    path: '/admin/settings/organizations',
+    label: 'ข้อมูลองค์กร',
+    icon: '🏛️',
+    description: 'จัดการข้อมูลองค์กรและสำนักงาน',
+    category: 'settings'
+  },
+  {
+    path: '/admin/settings/communities',
+    label: 'ข้อมูลชุมชน',
+    icon: '🏘️',
+    description: 'จัดการข้อมูลชุมชนในพื้นที่',
+    category: 'settings'
+  },
+  {
+    path: '/admin/settings/geojson-map',
+    label: 'แผนที่ GeoJSON',
+    icon: '🗺️',
+    description: 'จัดการและแสดงผล GeoJSON พื้นที่บริการบนแผนที่',
+    category: 'settings'
+  },
+
   // User
   {
     path: '/user/satisfaction',
@@ -164,6 +187,9 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/analytics',
     '/admin/my-tasks',
     '/admin/notifications',
+    '/admin/settings/organizations',
+    '/admin/settings/communities',
+    '/admin/settings/geojson-map',
     '/user/satisfaction',
   ],
   user: [

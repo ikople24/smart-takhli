@@ -9,21 +9,18 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
 
-    console.log('🔄 Starting bulk prefix update...');
 
     // แก้ไขคำนำหน้า "ดช." เป็น "ด.ช."
     const result1 = await EducationRegister.updateMany(
       { prefix: "ดช." },
       { $set: { prefix: "ด.ช." } }
     );
-    console.log(`✅ แก้ไข "ดช." เป็น "ด.ช." จำนวน ${result1.modifiedCount} รายการ`);
 
     // แก้ไขคำนำหน้า "ดญ." เป็น "ด.ญ."
     const result2 = await EducationRegister.updateMany(
       { prefix: "ดญ." },
       { $set: { prefix: "ด.ญ." } }
     );
-    console.log(`✅ แก้ไข "ดญ." เป็น "ด.ญ." จำนวน ${result2.modifiedCount} รายการ`);
 
     // นับจำนวนข้อมูลทั้งหมด
     const totalCount = await EducationRegister.countDocuments();
@@ -31,7 +28,6 @@ export default async function handler(req, res) {
       { $group: { _id: "$prefix", count: { $sum: 1 } } }
     ]);
 
-    console.log('📊 สรุปข้อมูล:', { totalCount, countByPrefix });
 
     return res.status(200).json({
       message: 'แก้ไขคำนำหน้าสำเร็จ',

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { LayoutAdmin } from '@/components/LayoutAdmin';
 import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import {
@@ -81,15 +80,6 @@ export default function MyTasksPage() {
       : assignments.filter((a) => a.status === statusFilter);
 
   return (
-    <LayoutAdmin
-      title="KPI งานของฉัน"
-      subtitle="สรุปภาระงานและผลการดำเนินการ"
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/admin/dashboard' },
-        { label: 'KPI งานของฉัน' },
-      ]}
-      noSidebar
-    >
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* KPI Cards */}
@@ -245,6 +235,5 @@ export default function MyTasksPage() {
           </div>
         )}
       </div>
-    </LayoutAdmin>
   );
 }

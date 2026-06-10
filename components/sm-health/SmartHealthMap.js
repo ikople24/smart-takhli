@@ -14,6 +14,7 @@ import "leaflet/dist/leaflet.css";
 import { Filter } from "lucide-react";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import {
+  loadGeoJSONFromDB,
   loadGeoJSONFromFile,
   createCommunityPolygonsFromGeoJSON,
   convertGeoJSONToPolygons,
@@ -128,19 +129,21 @@ export default function SmartHealthMap({
 
   useEffect(() => {
     let cancelled = false;
-    loadGeoJSONFromFile("/takhli.geojson")
-      .then((d) => {
-        if (!cancelled) setGeojsonData(d);
-      })
-      .catch(() => {
+    // โหลดจาก DB ก่อน — fallback ไฟล์ static ถ้าไม่มีข้อมูล
+    (async () => {
+      try {
+        const dbData = await loadGeoJSONFromDB();
+        if (!cancelled) setGeojsonData(dbData || null);
+        if (dbData) return;
+        const fileData = await loadGeoJSONFromFile("/takhli.geojson");
+        if (!cancelled) setGeojsonData(fileData);
+      } catch {
         if (!cancelled) setGeojsonData(null);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setGeojsonLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const hitPolys = useMemo(() => {

@@ -1,30 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { useNotificationStore } from '@/stores/useNotificationStore';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 import Link from 'next/link';
 
 export const NotificationBell: React.FC = () => {
-  const { user } = useUser();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const { notifications, unreadCount, setNotifications, markAsRead, isLoading, setLoading } =
     useNotificationStore();
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Fetch notifications on mount and periodically refresh
   useEffect(() => {
-    if (!user) return;
+    // รอให้ Clerk โหลดเสร็จและ user ล็อกอินแล้วจริงๆ ก่อน
+    if (!isLoaded || !isSignedIn) return;
 
     const fetchNotifications = async () => {
       try {
         setLoading(true);
+        // ดึง session token — ถ้าได้ null แสดงว่า session ยังไม่พร้อม ให้ข้ามไป
+        const token = await getToken();
+        if (!token) return;
+
         const response = await axios.get('/api/notifications/unread', {
           headers: {
+            Authorization: `Bearer ${token}`,
             'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
           },
         });
         setNotifications(response.data.notifications || []);
-      } catch (error) {
+      } catch (error: unknown) {
+        // 401 = session หมดอายุหรือยังไม่พร้อม — ไม่ต้อง log เป็น error
+        if (axios.isAxiosError(error) && error.response?.status === 401) return;
         console.error('Failed to fetch notifications:', error);
       } finally {
         setLoading(false);
@@ -36,7 +44,7 @@ export const NotificationBell: React.FC = () => {
     // Refresh every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [user, setNotifications, setLoading]);
+  }, [isLoaded, isSignedIn, getToken, setNotifications, setLoading]);
 
   const recentNotifications = notifications.slice(0, 5);
 

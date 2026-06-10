@@ -44,34 +44,6 @@ export default async function handler(req, res) {
       }
     ]).toArray();
 
-    // Debug: Check all statuses in database
-    const allStatuses = await collection.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { count: -1 }
-      }
-    ]).toArray();
-
-    console.log("=== Debug Registered Users ===");
-    console.log("All statuses in database:");
-    allStatuses.forEach(status => {
-      console.log(`- ${status._id}: ${status.count} records`);
-    });
-    console.log("Total users with 'ลงทะเบียนอุปกรณ์' status:", users.length);
-    if (users.length > 0) {
-      console.log("Sample user:", users[0]);
-      console.log("All users status:");
-      users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.name} - ${user.status}`);
-      });
-    }
-    console.log("==============================");
-
     return res.status(200).json(users);
 
   } catch (error) {

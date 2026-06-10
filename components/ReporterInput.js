@@ -20,12 +20,17 @@ const ReporterInput = ({
   setDetail,
   validateTrigger = false,
   setValid = () => {},
+  phoneOptional = false,  // true เมื่อ login ด้วย LINE — เบอร์โทรไม่บังคับ
 }) => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!validateTrigger) return;
-    const result = reporterSchema.safeParse({ prefix, fullName, phone, detail });
+    // ถ้า phoneOptional → ไม่ validate เบอร์ (ปล่อยให้ parent schema จัดการ)
+    const schema = phoneOptional
+      ? reporterSchema.omit({ phone: true })
+      : reporterSchema;
+    const result = schema.safeParse({ prefix, fullName, phone, detail });
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors);
       setValid(false);
@@ -33,7 +38,7 @@ const ReporterInput = ({
       setErrors({});
       setValid(true);
     }
-  }, [validateTrigger, prefix, fullName, phone, detail, setValid]);
+  }, [validateTrigger, prefix, fullName, phone, detail, setValid, phoneOptional]);
 
   return (
     <div className="flex flex-col space-y-2">
@@ -95,6 +100,9 @@ const ReporterInput = ({
         <div className="flex justify-between items-center">
           <label className="text-sm font-medium text-gray-800">
             6.เบอร์โทรศัพท์
+            {phoneOptional && (
+              <span className="ml-1 text-xs font-normal text-gray-400">(ไม่บังคับ)</span>
+            )}
           </label>
           {errors.phone && <p className="text-sm text-red-500 text-right ml-2">{errors.phone[0]}</p>}
         </div>

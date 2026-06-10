@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     const personIds = await ElderlyVisit.distinct("personId", { yearBE });
     const people = await ElderlyPerson.find({ _id: { $in: personIds } })
-      .select({ fullName: 1 })
+      .select({ fullName: 1, citizenId: 1 })
       .lean();
 
     people.sort((a, b) => String(a.fullName || "").localeCompare(String(b.fullName || ""), "th"));
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       yearBE,
-      people: people.map((p) => ({ personId: String(p._id), fullName: p.fullName || "" })),
+      people: people.map((p) => ({ personId: String(p._id), fullName: p.fullName || "", citizenId: p.citizenId || "" })),
     });
   } catch (e) {
     console.error("cards error:", e);

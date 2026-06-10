@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import LayoutAdmin from '@/components/LayoutAdmin';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/router';
 
@@ -87,7 +86,6 @@ const FeedbackAnalysis = () => {
   }
 
   return (
-    <LayoutAdmin title="วิเคราะห์ความคิดเห็น">
     <div className="min-h-screen flex flex-col bg-gray-100 w-full min-w-[320px]">
       
       <main className="flex-1 pb-16 px-4 pt-4 flex flex-col gap-4 w-full overflow-x-hidden">
@@ -294,7 +292,6 @@ const FeedbackAnalysis = () => {
       </main>
       
     </div>
-    </LayoutAdmin>
   );
 };
 

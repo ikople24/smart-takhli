@@ -1,15 +1,23 @@
-import React, { useEffect } from 'react';
-import { LayoutAdmin } from '@/components/LayoutAdmin';
+import React, { useCallback, useEffect } from 'react';
 import { useNotificationStore } from '@/stores/useNotificationStore';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 import { Badge } from '@/components/ui';
 import { CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 
+const APP_ID = process.env.NEXT_PUBLIC_APP_ID;
+
 const NotificationsPage = () => {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const { notifications, setNotifications, markAsRead, removeNotification } =
     useNotificationStore();
+
+  // helper — สร้าง headers พร้อม Clerk Bearer token
+  const authHeaders = useCallback(async () => {
+    const token = await getToken();
+    return { Authorization: `Bearer ${token}`, 'x-app-id': APP_ID };
+  }, [getToken]);
 
   useEffect(() => {
     if (!user) return;
@@ -17,9 +25,7 @@ const NotificationsPage = () => {
     const fetchNotifications = async () => {
       try {
         const response = await axios.get('/api/notifications/unread', {
-          headers: {
-            'x-app-id': process.env.NEXT_PUBLIC_APP_ID,
-          },
+          headers: await authHeaders(),
         });
         setNotifications(response.data.notifications || []);
       } catch (error) {
@@ -28,12 +34,12 @@ const NotificationsPage = () => {
     };
 
     fetchNotifications();
-  }, [user, setNotifications]);
+  }, [user, authHeaders, setNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
       await axios.put(`/api/notifications/${id}/read`, {}, {
-        headers: { 'x-app-id': process.env.NEXT_PUBLIC_APP_ID },
+        headers: await authHeaders(),
       });
       markAsRead(id);
     } catch (error) {
@@ -44,7 +50,7 @@ const NotificationsPage = () => {
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`/api/notifications/${id}/read`, {
-        headers: { 'x-app-id': process.env.NEXT_PUBLIC_APP_ID },
+        headers: await authHeaders(),
       });
       removeNotification(id);
     } catch (error) {
@@ -60,14 +66,6 @@ const NotificationsPage = () => {
   };
 
   return (
-    <LayoutAdmin
-      title="การแจ้งเตือน"
-      subtitle="ดูและจัดการการแจ้งเตือนของคุณ"
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/admin/dashboard' },
-        { label: 'การแจ้งเตือน' },
-      ]}
-    >
       <div className="space-y-4">
         {/* Empty State */}
         {notifications.length === 0 ? (
@@ -138,7 +136,6 @@ const NotificationsPage = () => {
           </div>
         )}
       </div>
-    </LayoutAdmin>
   );
 };
 

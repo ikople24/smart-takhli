@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Big-picture architecture / ภาพรวมสถาปัตยกรรม
 
-โปรเจกต์นี้คือพอร์ทัล "smart city" ของ**เทศบาลตำบลตาคลี** ที่รวมโมดูลฟีเจอร์หลายตัว (semi-independent) ไว้หลัง shell แอดมินตัวเดียวกันที่ล็อกอินผ่าน Clerk
+โปรเจกต์นี้คือพอร์ทัล "smart city" ของ**เทศบาลเมืองตาคลี** ที่รวมโมดูลฟีเจอร์หลายตัว (semi-independent) ไว้หลัง shell แอดมินตัวเดียวกันที่ล็อกอินผ่าน Clerk
 
 ### Multi-tenant App ID gating / การควบคุมสิทธิ์ข้ามแอปด้วย App ID
 
@@ -73,3 +73,9 @@ Clerk org และ Mongo collection `users` ถูก**แชร์ข้าม
 ### Required env vars / ตัวแปรแวดล้อมที่ต้องมีใน `.env.local`
 
 `MONGO_URI`, `NEXT_PUBLIC_APP_ID`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CRON_SECRET`, `SUPERADMIN_SECRET` (สำหรับตั้ง superadmin ครั้งแรก), `NEXT_PUBLIC_CLOUDINARY_*`, `DUSTBOY_API_KEY` / `DUSTBOY_STATION_ID` / `DUSTBOY_API_BASE`, `GOOGLE_SHEETS_SPREADSHEET_ID` (+ `GOOGLE_SHEETS_SHEET_NAME` / service-account pair เมื่อ sheet ไม่ได้แชร์แบบ link-share), `ELDERLY_SCHOOL_SHEET_CSV_URL`, และเลือกใส่ `BACKEND_API_URL` / `NEXT_PUBLIC_BACKEND_API_URL` ถ้าจำเป็น
+
+**LINE OA Integration** (optional — ถ้าไม่ตั้งค่าระบบจะ skip gracefully):
+`LINE_CHANNEL_SECRET` — verify webhook signature, `LINE_CHANNEL_ACCESS_TOKEN` — ส่ง reply/push/multicast message, `LINE_CHANNEL_ID` — Channel ID จาก LINE Developers Console, `LINE_ADMIN_USER_IDS` — LINE userId ของเจ้าหน้าที่คั่นด้วย comma (เช่น `Uabc123,Udef456`) สำหรับ multicast แจ้งเรื่องใหม่ (ต้อง follow OA ก่อน), `NEXT_PUBLIC_LINE_OA_URL` — URL เพิ่มเพื่อน LINE OA (เช่น `https://line.me/R/ti/p/@takhli`) แสดงใน success dialog หลังส่งเรื่องร้องเรียน
+
+**n8n Integration** (optional):
+`N8N_WEBHOOK_URL` — URL ของ n8n Webhook node, `N8N_WEBHOOK_SECRET` — secret header สำหรับ authenticate request

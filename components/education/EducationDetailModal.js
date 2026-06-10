@@ -25,23 +25,13 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
     setImageLoading(prev => ({ ...prev, [`image-${index}`]: true }));
   };
   
-  console.log('EducationDetailModal render:', { isOpen, data });
-  console.log('Data details:', {
-    applicantId: data?.applicantId,
-    createdAt: data?.createdAt,
-    updatedAt: data?.updatedAt,
-    _id: data?._id,
-    imageUrl: data?.imageUrl
-  });
 
   // Reset loading state when modal opens
   React.useEffect(() => {
     if (isOpen && data?.imageUrl) {
-      console.log('Modal opened with images:', data.imageUrl);
       const newLoadingState = {};
       const newErrorState = {};
       data.imageUrl.forEach((image, index) => {
-        console.log(`Setting up image ${index}:`, image);
         newLoadingState[`image-${index}`] = true;
         newErrorState[`image-${index}`] = false;
       });
@@ -51,7 +41,6 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
   }, [isOpen, data?.imageUrl]);
   
   if (!isOpen || !data) {
-    console.log('Modal not rendering - isOpen:', isOpen, 'data:', !!data);
     return null;
   }
 
@@ -443,7 +432,6 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                                       <div className="grid grid-cols-2 gap-3">
                                                                   {data.imageUrl && data.imageUrl.length > 0 ? (
                         (() => {
-                          console.log('Rendering images:', data.imageUrl);
                           return data.imageUrl.map((image, index) => (
                             <div 
                               key={index} 
@@ -473,7 +461,6 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                                   zIndex: 1
                                 }}
                                 onLoad={() => {
-                                  console.log('Image loaded successfully:', image);
                                   setImageLoading(prev => ({ ...prev, [`image-${index}`]: false }));
                                 }}
                                 onError={() => {
@@ -636,7 +623,6 @@ export default function EducationDetailModal({ data, isOpen, onClose }) {
                 height={600}
                 className="max-w-full max-h-full object-contain"
                 onLoad={() => {
-                  console.log('Image viewer image loaded successfully');
                 }}
                 onError={() => {
                   console.error('Image viewer image failed to load');

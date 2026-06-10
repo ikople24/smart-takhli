@@ -9,12 +9,7 @@ const SatisfactionChart = ({ complaintId }) => {
   useEffect(() => {
     const fetchSatisfaction = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/satisfaction/${complaintId}`, {
-          method: "GET",
-          headers: {
-            "x-app-id": process.env.NEXT_PUBLIC_APP_ID || "app_b",
-          },
-        });
+        const res = await fetch(`/api/satisfaction/${complaintId}`);
         const result = await res.json();
         if (Array.isArray(result) && result.length > 0) {
           const ratings = result.map((r) => r.rating);

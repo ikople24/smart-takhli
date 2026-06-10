@@ -53,55 +53,27 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log("=== คืนอุปกรณ์ ===");
-    console.log("รหัสการยืม:", borrowId);
-    console.log("รหัสอุปกรณ์:", borrowRecord.index_id_tk);
-    console.log("วันที่คืน:", returnDate);
-    console.log("==================");
-
     // Update borrow record with return date
-    const borrowUpdateResult = await borrowCollection.updateOne(
+    await borrowCollection.updateOne(
       { id_use_object: borrowId },
-      { 
-        $set: { 
+      {
+        $set: {
           date_return: returnDate,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตรายการยืม:", borrowUpdateResult);
 
     // Update device status back to available
-    const deviceUpdateResult = await deviceCollection.updateOne(
+    await deviceCollection.updateOne(
       { index_id_tk: borrowRecord.index_id_tk },
-      { 
-        $set: { 
+      {
+        $set: {
           ob_status: true,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตสถานะอุปกรณ์:", deviceUpdateResult);
-
-    // Verify the update
-    const updatedBorrow = await borrowCollection.findOne({ id_use_object: borrowId });
-    const updatedDevice = await deviceCollection.findOne({ index_id_tk: borrowRecord.index_id_tk });
-    
-    console.log("ข้อมูลรายการยืมหลังอัปเดต:", {
-      id_use_object: updatedBorrow?.id_use_object,
-      date_return: updatedBorrow?.date_return
-    });
-    
-    console.log("ข้อมูลอุปกรณ์หลังอัปเดต:", {
-      index_id_tk: updatedDevice?.index_id_tk,
-      ob_status: updatedDevice?.ob_status
-    });
-
-    console.log("=== คืนอุปกรณ์สำเร็จ ===");
-    console.log("รหัสการยืม:", borrowId);
-    console.log("รหัสอุปกรณ์:", borrowRecord.index_id_tk);
-    console.log("วันที่คืน:", returnDate);
-    console.log("========================");
 
     return res.status(200).json({
       message: "คืนอุปกรณ์สำเร็จ",

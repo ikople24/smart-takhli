@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import SubmittedReport from "@/models/SubmittedReport";
 import { n8n } from "@/lib/n8nWebhook";
 import { logAuditEvent } from "@/lib/auditLogger";
+import { linePush, formatStatusMessage, buildMessages } from "@/lib/lineMessaging";
 import { getAuth } from "@clerk/nextjs/server";
 
 export default async function handler(req, res) {
@@ -47,6 +48,28 @@ export default async function handler(req, res) {
         newStatus: status,
         changedBy: userId || "admin",
       });
+
+      // LINE push notification — ถ้า user เคยติดต่อผ่าน LINE Bot มาก่อน
+      if (existing?.lineUserId) {
+        // ใช้ภาพแรกใน array ของ DB (images[0])
+        const firstImage = Array.isArray(existing.images)
+          ? (existing.images.find((u) => u?.startsWith("https://")) ?? null)
+          : null;
+
+        linePush(
+          existing.lineUserId,
+          buildMessages(
+            formatStatusMessage({
+              complaintId: updated.complaintId || String(complaintId),
+              fullName: existing.isConfidential ? "ไม่เปิดเผย" : (existing.fullName || ""),
+              category: existing.category,
+              status,
+              updatedAt: updated.updatedAt,
+            }),
+            firstImage
+          )
+        ).catch((err) => console.error("[LINE] Push failed:", err));
+      }
 
       res.status(200).json(updated);
     } catch (err) {

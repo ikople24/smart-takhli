@@ -1,6 +1,5 @@
 //admin/index.js
 import { useEffect, useState } from "react";
-import LayoutAdmin from "@/components/LayoutAdmin";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import { useMenuStore } from "@/stores/useMenuStore";
@@ -208,7 +207,6 @@ export default function AdminPage() {
   };
 
   return (
-    <LayoutAdmin title="ตั้งค่าหน้าจอ">
     <div className="p-4">
       <div className="flex flex-col lg:flex-row justify-center mb-6">
         <button
@@ -603,6 +601,5 @@ export default function AdminPage() {
         </>
       )}
     </div>
-    </LayoutAdmin>
   );
 }

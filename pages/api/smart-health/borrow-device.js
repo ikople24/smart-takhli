@@ -108,25 +108,6 @@ export default async function handler(req, res) {
 
     const borrowingId = `RD-${String(nextCount).padStart(3, '0')}-${dateStr}`;
 
-    console.log("=== Debug การสร้างรหัสการยืม ===");
-    console.log("ปีปัจจุบัน:", currentYear);
-    console.log("วันที่:", dateStr);
-    console.log("จำนวนรายการในปีนี้:", yearBorrows.length);
-    
-    if (yearBorrows.length > 0) {
-      console.log("รายการล่าสุด 5 รายการ:");
-      yearBorrows
-        .sort((a, b) => parseInt(b.id_use_object.split('-')[1]) - parseInt(a.id_use_object.split('-')[1]))
-        .slice(0, 5)
-        .forEach(borrow => {
-          console.log(`  ${borrow.id_use_object}`);
-        });
-    }
-    
-    console.log("ลำดับถัดไป:", nextCount);
-    console.log("รหัสการยืม:", borrowingId);
-    console.log("================================");
-
     const lendDate = parseBorrowDateTimeInput(borrowDateTime);
     if (!lendDate) {
       return res.status(400).json({
@@ -163,11 +144,6 @@ export default async function handler(req, res) {
         } 
       }
     );
-
-    console.log("=== บันทึกการยืมอุปกรณ์สำเร็จ ===");
-    console.log("รหัสการยืม:", borrowingId);
-    console.log("ข้อมูลการยืม:", borrowRecord);
-    console.log("==================================");
 
     return res.status(200).json({
       message: "บันทึกการยืมอุปกรณ์สำเร็จ",

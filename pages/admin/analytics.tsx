@@ -9,7 +9,6 @@ import {
   PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import LayoutAdmin from '@/components/LayoutAdmin';
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -143,14 +142,7 @@ export default function AnalyticsPage() {
   }));
 
   return (
-    <LayoutAdmin
-      title="วิเคราะห์สถิติ"
-      subtitle="ภาพรวมประสิทธิภาพและแนวโน้มของระบบ"
-      breadcrumbs={[
-        { label: 'Admin', href: '/admin' },
-        { label: 'วิเคราะห์สถิติ' },
-      ]}
-    >
+    <>
       {/* Date range selector */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -433,6 +425,6 @@ export default function AnalyticsPage() {
           )}
         </div>
       )}
-    </LayoutAdmin>
+    </>
   );
 }

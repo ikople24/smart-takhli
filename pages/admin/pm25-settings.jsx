@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import LayoutAdmin from "@/components/LayoutAdmin";
 import Head from "next/head";
 import { useAuth } from "@clerk/nextjs";
 import Swal from "sweetalert2";
@@ -134,7 +133,6 @@ export default function Pm25SettingsPage() {
     );
 
   return (
-    <LayoutAdmin title="จัดการ PM2.5">
     <>
       <Head>
         <title>จัดการ PM2.5 • SMART-TAKHLI</title>
@@ -396,6 +394,5 @@ export default function Pm25SettingsPage() {
         </div>
       </div>
     </>
-    </LayoutAdmin>
   );
 }
