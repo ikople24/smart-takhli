@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ElderlyPersonalHealthSummary, {
   type EnrichedVisit,
-} from "@/components/elderly/ElderlyPersonalHealthSummary";
+} from "@/components/elderly-school/ElderlyPersonalHealthSummary";
 
 function getCurrentYearBE() {
   const parts = new Intl.DateTimeFormat("en-US", {

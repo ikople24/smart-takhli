@@ -7,7 +7,7 @@ import WorkflowPipeline from "@/components/sm-health/WorkflowPipeline";
 import EquipmentStats from "@/components/sm-health/EquipmentStats";
 import QuickActions from "@/components/sm-health/QuickActions";
 import DashboardTabs from "@/components/sm-health/DashboardTabs";
-import ElderlySchoolDashboard from "@/components/sm-health/ElderlySchoolDashboard";
+import ElderlySchoolDashboard from "@/components/elderly-school/ElderlySchoolDashboard";
 import EmployeeHealthDashboard from "@/components/sm-health/EmployeeHealthDashboard";
 
 // Existing Components
