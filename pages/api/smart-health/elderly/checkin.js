@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlyPerson from "@/models/ElderlyPerson";
-import ElderlyVisit from "@/models/ElderlyVisit";
-import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
+import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
+import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
+import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 import { ObjectId } from "mongodb";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
 

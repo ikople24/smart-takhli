@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlyVisit from "@/models/ElderlyVisit";
+import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/health/metrics";
-import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
+import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { ObjectId } from "mongodb";
 
 function maskCitizenId(id) {

@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlyPerson from "@/models/ElderlyPerson";
-import ElderlyVisit from "@/models/ElderlyVisit";
+import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
+import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { fetchAndParseSheetCSV } from "@/lib/elderly-school/dashboard";
 import { parseSheetRowToPersonAndVisits } from "@/lib/elderly-school/import";
 

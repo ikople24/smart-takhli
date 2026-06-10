@@ -1,5 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlySchoolSchedule from "@/models/ElderlySchoolSchedule";
+import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 
 function normalizeSessions(sessions) {
   const arr = Array.isArray(sessions) ? sessions : [];

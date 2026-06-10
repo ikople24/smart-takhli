@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlyPerson from "@/models/ElderlyPerson";
-import ElderlyVisit from "@/models/ElderlyVisit";
+import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
+import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ success: false, message: "Method not allowed" });

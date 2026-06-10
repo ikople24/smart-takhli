@@ -1,5 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
-import ElderlyPerson from "@/models/ElderlyPerson";
+import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
