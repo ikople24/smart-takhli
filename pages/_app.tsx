@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import Layout from "@/components/Layout";
 import { useEffect, useState } from "react";
 import { usePermissionsStore } from "@/stores/usePermissionsStore";
+import { hasPermission } from "@/lib/permissions";
 import type { Role } from "@/lib/permissions";
 
 // ประเภทของการปฏิเสธการเข้าถึง
@@ -105,22 +106,12 @@ function AppContent({ Component, pageProps }: AppProps) {
           return;
         }
 
-        // ขั้นตอนที่ 2: ตรวจสอบ allowedPages
+        // ขั้นตอนที่ 2: ตรวจสอบ allowedPages ผ่าน hasPermission (logic กลางที่เดียว)
+        // - allowedPages ว่าง = ใช้ชุดพื้นฐาน DEFAULT_PERMISSIONS ตาม role (ไม่ใช่ทุกหน้า)
+        // - '/admin' เป็น exact match เท่านั้น ไม่ใช่ wildcard ครอบ /admin/*
         const allowedPages = verifyData.user?.allowedPages || [];
-
-        // ถ้ายังไม่ได้ตั้งค่า allowedPages = เข้าได้ทุกหน้า (default)
-        if (!allowedPages || allowedPages.length === 0) {
-          setPermissions(userRole as Role, [], true);
-          setHasAccess(true);
-          setChecking(false);
-          return;
-        }
-
-        // ตรวจสอบว่าหน้าปัจจุบันอยู่ใน allowedPages หรือไม่
         const currentPath = router.pathname;
-        const isAllowed = allowedPages.some((allowedPath: string) => 
-          currentPath === allowedPath || currentPath.startsWith(allowedPath + '/')
-        );
+        const isAllowed = hasPermission(userRole as Role, allowedPages, currentPath);
 
         if (!isAllowed) {
           setDeniedReason('no_access');

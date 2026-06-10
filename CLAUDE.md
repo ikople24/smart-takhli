@@ -55,8 +55,9 @@ Clerk org และ Mongo collection `users` ถูก**แชร์ข้าม
 ชั้นนอกคือ App access (ด้านบน) ชั้นในคือ **page access** ใน `lib/permissions.ts`:
 
 - `ALL_PAGES` — registry หลักของหน้า admin/user (path, label, icon, category)
-- `DEFAULT_PERMISSIONS[role]` — ถูกใช้เมื่อ user ไม่มี `allowedPages` ของตัวเองใน Mongo
+- `DEFAULT_PERMISSIONS[role]` — **ชุดพื้นฐานจำกัด** ใช้เมื่อ user ไม่มี `allowedPages` ใน Mongo (ว่าง ≠ เห็นทุกหน้า — superadmin ต้องติ๊กสิทธิ์เพิ่มรายคน)
 - ถ้า `allowedPages` ใน Mongo doc ของ user **ไม่ว่าง** จะ override ค่า default — superadmin ยังคงข้ามได้
+- การ match path ใช้ `pathMatchesPermission()` **ที่เดียวทั้งระบบ** (exact หรือ prefix+`/`; ยกเว้น `/admin` = exact เท่านั้น ไม่งั้นกลายเป็น wildcard เปิดทุกหน้า) — ห้ามเขียน startsWith เช็คสิทธิ์เองที่อื่น
 - `SUPERADMIN_ONLY_PAGES` — รายการ path ที่เฉพาะ superadmin เท่านั้น (เช่น `/admin/superadmin/*`)
 
 > **สำคัญ:** เวลาเพิ่มหน้า `/admin/...` ใหม่ ต้องทำ**ครบ 4 จุด**: (1) ลงทะเบียนใน `ALL_PAGES` (2) เพิ่มใน `DEFAULT_PERMISSIONS` ของ role ที่ควรเห็น (3) เพิ่มเมนูใน `components/LayoutAdmin.tsx` — `navigationItems` เป็น **hardcode แยกจาก ALL_PAGES** (4) user เดิมที่มี custom `allowedPages` ใน Mongo จะ**ไม่เห็นหน้าใหม่** จนกว่าจะรัน migration script เพิ่มสิทธิ์ (ดูตัวอย่าง `scripts/grant-elderly-school-permission.js`) — checklist เต็มอยู่ที่ `.claude/skills/adding-admin-page/SKILL.md`

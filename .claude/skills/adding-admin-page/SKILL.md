@@ -20,8 +20,10 @@ superadmin UI เลย (bug แฝงอยู่นานจนเจอตอ
    description, category: `settings|management|reports|user`)
    - หน้าที่เข้าผ่าน internal link เท่านั้น → ใส่ `hideFromMenu: true`
      (ยังต้องลงทะเบียน! ไม่งั้นกำหนดสิทธิ์ให้ไม่ได้)
-3. **`lib/permissions.ts` → `DEFAULT_PERMISSIONS`**: เพิ่ม path ใน role ที่ควรเห็น
-   (ปกติคือ `admin`; `superadmin` derive จาก ALL_PAGES อัตโนมัติ)
+3. **`lib/permissions.ts` → `DEFAULT_PERMISSIONS`**: เพิ่ม**เฉพาะ**ถ้าหน้านี้ควรเป็น
+   "ชุดพื้นฐาน" ที่ admin ทุกคน (ที่ยังไม่ถูกตั้งสิทธิ์) เห็นโดย default —
+   นโยบายปัจจุบัน: allowedPages ว่าง = เห็นแค่ชุดพื้นฐาน หน้าอื่นให้ superadmin ติ๊กรายคน
+   (`superadmin` derive จาก ALL_PAGES อัตโนมัติ)
 4. **`components/LayoutAdmin.tsx` → `navigationItems`**: เพิ่มรายการเมนู
    (label, href, icon, group: `ภาพรวม|จัดการ|รายงาน|ตั้งค่า`)
    — ⚠️ เมนูนี้ **hardcode แยกจาก ALL_PAGES** ลืมแล้วเมนูไม่ขึ้นแม้สิทธิ์ถูก
@@ -44,4 +46,5 @@ superadmin UI เลย (bug แฝงอยู่นานจนเจอตอ
 | เพิ่ม navigationItems แต่ลืม ALL_PAGES | เมนูขึ้นแต่ superadmin กำหนดสิทธิ์หน้านี้ไม่ได้ |
 | ลืม migration script | user ที่มี custom allowedPages โดน access-denied ทั้งที่เคยใช้ได้ |
 | หน้า hideFromMenu เลยไม่ลงทะเบียนเลย | ให้สิทธิ์ผ่าน UI ไม่ได้ (เคสจริง: elderly-schedule) |
-| ตั้งชื่อ path เป็น prefix ของหน้าอื่น | `hasPermission` ใช้ startsWith — สิทธิ์รั่วข้ามหน้า |
+| ตั้งชื่อ path เป็น prefix ของหน้าอื่น | match แบบ prefix+`/` — สิทธิ์รั่วข้ามหน้า (เคสจริง: `/admin` เคยเปิดทุกหน้า จนต้อง exact-match พิเศษ) |
+| เขียน startsWith เช็คสิทธิ์เองในไฟล์ใหม่ | ตรรกะแตกแถว — ใช้ `pathMatchesPermission()` จาก lib/permissions.ts เท่านั้น |

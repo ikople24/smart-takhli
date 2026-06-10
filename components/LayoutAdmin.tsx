@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { usePermissionsStore } from '@/stores/usePermissionsStore';
-import { DEFAULT_PERMISSIONS } from '@/lib/permissions';
+import { DEFAULT_PERMISSIONS, pathMatchesPermission } from '@/lib/permissions';
 import type { Role } from '@/lib/permissions';
 import { useUser, UserButton } from '@clerk/nextjs';
 import TopNavbar from '@/components/TopNavbar';
@@ -73,9 +73,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         isLoaded && allowedPages.length > 0
           ? allowedPages
           : DEFAULT_PERMISSIONS[role as Role] ?? DEFAULT_PERMISSIONS['admin'];
-      return effectivePaths.some(
-        (p) => item.href === p || item.href.startsWith(p + '/')
-      );
+      return effectivePaths.some((p) => pathMatchesPermission(item.href, p));
     });
   }, [role, allowedPages, isLoaded]);
 
