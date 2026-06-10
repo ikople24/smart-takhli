@@ -1,8 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
 import ElderlyPerson from "@/models/ElderlyPerson";
 import ElderlyVisit from "@/models/ElderlyVisit";
-import { fetchAndParseSheetCSV } from "@/lib/elderlySchoolDashboard";
-import { parseSheetRowToPersonAndVisits } from "@/lib/elderlySchoolImport";
+import { fetchAndParseSheetCSV } from "@/lib/elderly-school/dashboard";
+import { parseSheetRowToPersonAndVisits } from "@/lib/elderly-school/import";
 
 function hasSheetString(v) {
   if (v === null || v === undefined) return false;

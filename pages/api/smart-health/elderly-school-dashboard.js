@@ -1,7 +1,7 @@
 import {
   fetchAndParseSheetCSV,
   summarizeElderlySchoolRows,
-} from "@/lib/elderlySchoolDashboard";
+} from "@/lib/elderly-school/dashboard";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

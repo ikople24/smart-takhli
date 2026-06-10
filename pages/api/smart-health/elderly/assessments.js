@@ -1,6 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import ElderlyMentalHealthAssessment from "@/models/ElderlyMentalHealthAssessment";
-import { is2QPositive, score9Q } from "@/lib/elderlyMentalHealth";
+import { is2QPositive, score9Q } from "@/lib/elderly-school/mentalHealth";
 import { ObjectId } from "mongodb";
 
 function getBangkokISODate() {
