@@ -280,7 +280,7 @@ export default function ElderlySchoolDashboard() {
       qs.set("yearBE", String(yearBE));
       qs.set("visit", visitParam);
       qs.set("includePeople", "1");
-      const res = await fetch(`/api/smart-health/elderly/dashboard?${qs.toString()}`);
+      const res = await fetch(`/api/elderly-school/dashboard?${qs.toString()}`);
       const json = await res.json();
       if (!res.ok || !json?.success) {
         throw new Error(json?.message || "โหลดข้อมูลไม่สำเร็จ");
@@ -405,9 +405,9 @@ export default function ElderlySchoolDashboard() {
     setEditScheduleSessions([]);
     try {
       const [pRes, vRes, sRes] = await Promise.all([
-        fetch(`/api/smart-health/elderly/people?id=${encodeURIComponent(personId)}`),
-        fetch(`/api/smart-health/elderly/visits?personId=${encodeURIComponent(personId)}&yearBE=${encodeURIComponent(String(yearBE))}`),
-        fetch(`/api/smart-health/elderly/schedule?yearBE=${encodeURIComponent(String(yearBE))}`),
+        fetch(`/api/elderly-school/people?id=${encodeURIComponent(personId)}`),
+        fetch(`/api/elderly-school/visits?personId=${encodeURIComponent(personId)}&yearBE=${encodeURIComponent(String(yearBE))}`),
+        fetch(`/api/elderly-school/schedule?yearBE=${encodeURIComponent(String(yearBE))}`),
       ]);
       const pJson = await pRes.json();
       const vJson = await vRes.json();
@@ -468,7 +468,7 @@ export default function ElderlySchoolDashboard() {
       qs.set("personId", String(editPerson._id));
       qs.set("yearBE", String(yearBE));
       qs.set("limit", "10");
-      const res = await fetch(`/api/smart-health/elderly/assessments?${qs.toString()}`);
+      const res = await fetch(`/api/elderly-school/assessments?${qs.toString()}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.success === false) throw new Error(json?.message || "โหลดแบบประเมินไม่สำเร็จ");
       setMhHistory(Array.isArray(json.items) ? json.items : []);
@@ -491,7 +491,7 @@ export default function ElderlySchoolDashboard() {
         q2: { q1: mh2q.q1, q2: mh2q.q2 },
         q9: null,
       };
-      const res = await fetch("/api/smart-health/elderly/assessments", {
+      const res = await fetch("/api/elderly-school/assessments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -505,7 +505,7 @@ export default function ElderlySchoolDashboard() {
       qs.set("personId", String(editPerson._id));
       qs.set("yearBE", String(yearBE));
       qs.set("limit", "10");
-      const hRes = await fetch(`/api/smart-health/elderly/assessments?${qs.toString()}`);
+      const hRes = await fetch(`/api/elderly-school/assessments?${qs.toString()}`);
       const hJson = await hRes.json().catch(() => ({}));
       if (hRes.ok && hJson?.success) setMhHistory(Array.isArray(hJson.items) ? hJson.items : []);
     } catch (e) {
@@ -519,7 +519,7 @@ export default function ElderlySchoolDashboard() {
     if (!editPerson?._id) return;
     setEditLoading(true);
     try {
-      const res = await fetch(`/api/smart-health/elderly/people?id=${encodeURIComponent(editPerson._id)}`, {
+      const res = await fetch(`/api/elderly-school/people?id=${encodeURIComponent(editPerson._id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -547,8 +547,8 @@ export default function ElderlySchoolDashboard() {
     try {
       const existing = editVisits.find((v) => v.visitNo === visitNo);
       const endpoint = existing?._id
-        ? `/api/smart-health/elderly/visits?id=${encodeURIComponent(existing._id)}`
-        : `/api/smart-health/elderly/visits`;
+        ? `/api/elderly-school/visits?id=${encodeURIComponent(existing._id)}`
+        : `/api/elderly-school/visits`;
       const method = existing?._id ? "PUT" : "POST";
       const body =
         method === "PUT"
@@ -563,7 +563,7 @@ export default function ElderlySchoolDashboard() {
       if (!res.ok || json?.success === false) throw new Error(json?.message || "บันทึกข้อมูลครั้งไม่สำเร็จ");
 
       // refresh visits list
-      const vRes = await fetch(`/api/smart-health/elderly/visits?personId=${encodeURIComponent(editPerson._id)}&yearBE=${encodeURIComponent(String(yearBE))}`);
+      const vRes = await fetch(`/api/elderly-school/visits?personId=${encodeURIComponent(editPerson._id)}&yearBE=${encodeURIComponent(String(yearBE))}`);
       const vJson = await vRes.json();
       if (vRes.ok && vJson?.success) setEditVisits(Array.isArray(vJson.visits) ? vJson.visits : []);
       await fetchSummary();
@@ -702,7 +702,7 @@ export default function ElderlySchoolDashboard() {
                   setImporting(true);
                   setError("");
                   try {
-                    const res = await fetch("/api/smart-health/elderly/import", {
+                    const res = await fetch("/api/elderly-school/import", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ yearBE, csvUrl: importUrl, dryRun: true }),
@@ -727,7 +727,7 @@ export default function ElderlySchoolDashboard() {
                   setImporting(true);
                   setError("");
                   try {
-                    const res = await fetch("/api/smart-health/elderly/import", {
+                    const res = await fetch("/api/elderly-school/import", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ yearBE, csvUrl: importUrl, dryRun: false }),

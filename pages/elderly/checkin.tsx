@@ -60,7 +60,7 @@ export default function ElderlyCheckinPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/smart-health/elderly/checkin", {
+      const res = await fetch("/api/elderly-school/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -99,7 +99,7 @@ export default function ElderlyCheckinPage() {
     setInfoBanner("");
     setSuccessBanner("");
     try {
-      const res = await fetch("/api/smart-health/elderly/checkin", {
+      const res = await fetch("/api/elderly-school/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +143,7 @@ export default function ElderlyCheckinPage() {
     setError("");
     setSuccessBanner("");
     try {
-      const res = await fetch("/api/smart-health/elderly/checkin", {
+      const res = await fetch("/api/elderly-school/checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

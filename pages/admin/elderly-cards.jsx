@@ -38,7 +38,7 @@ export default function ElderlyCardsPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/smart-health/elderly/cards?yearBE=${encodeURIComponent(String(yearBE))}`);
+      const res = await fetch(`/api/elderly-school/cards?yearBE=${encodeURIComponent(String(yearBE))}`);
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "โหลดรายชื่อไม่สำเร็จ");
       setPeople(Array.isArray(json.people) ? json.people : []);
