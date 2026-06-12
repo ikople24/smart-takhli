@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
-import ActivityFeedbackForm from '@/components/ActivityFeedbackForm';
+import ActivityFeedbackPanel from '@/components/activities/ActivityFeedbackPanel';
 import {
   promptFont,
   anuphanFont,
@@ -37,15 +37,33 @@ const ActivitiesPage = () => {
   }, [router.isReady]);
 
   // นับผู้เข้าชมเมื่อเปิดดูรายละเอียด — 1 ครั้ง/กิจกรรม/session
+  // (ผูกกับ _id ไม่ใช่ object เพื่อไม่ให้ refreshStats รีเซ็ต hero/นับซ้ำ)
   useEffect(() => {
-    if (!selectedActivity) return;
+    if (!selectedActivity?._id) return;
     setHeroIdx(0);
     const key = `activity-viewed-${selectedActivity._id}`;
     if (typeof window !== 'undefined' && !sessionStorage.getItem(key)) {
       sessionStorage.setItem(key, '1');
       fetch(`/api/activities/${selectedActivity._id}/view`, { method: 'POST' }).catch(() => {});
     }
-  }, [selectedActivity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedActivity?._id]);
+
+  // อัปเดตคะแนน/จำนวนความเห็นในหน้า หลังผู้ใช้ส่งความคิดเห็นใหม่ (คงตัวที่เลือกไว้)
+  const refreshStats = async () => {
+    try {
+      const response = await fetch('/api/activities/feed?limit=50');
+      const data = await response.json();
+      if (data.success) {
+        setActivities(data.data);
+        setSelectedActivity((prev) =>
+          prev ? data.data.find((a: Activity) => a._id === prev._id) || prev : prev
+        );
+      }
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+    }
+  };
 
   const fetchActivities = async () => {
     try {
@@ -323,14 +341,8 @@ const ActivitiesPage = () => {
                   </p>
                 )}
 
-                {/* กล่องความคิดเห็น */}
-                <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/60 p-5 sm:p-6">
-                  <h3 className={`${promptFont.className} mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900`}>
-                    <span className="inline-block h-4 w-1.5 rounded-sm bg-amber-400" />
-                    ร่วมแสดงความคิดเห็น
-                  </h3>
-                  <ActivityFeedbackForm selectedActivity={selectedActivity} />
-                </div>
+                {/* กล่องความคิดเห็น — ไม่แสดงข้อมูลกิจกรรมซ้ำกับบทความด้านบน */}
+                <ActivityFeedbackPanel selectedActivity={selectedActivity} onSubmitted={refreshStats} />
               </div>
             </article>
           )}

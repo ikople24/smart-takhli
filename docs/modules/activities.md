@@ -27,8 +27,8 @@
 | API นับวิว | `pages/api/activities/[id]/view.js` — POST public, `$inc views` |
 | ความเห็น | `pages/api/student-feedback/*` |
 | Models | `models/Activity.js` (collection `Activity`; มี `images[]≤6`, `views`), `models/StudentFeedback.js` (ผูก `activityId` — required) |
-| Components ฟีด | `components/activities/ActivityFeed.jsx`, `ActivityFeedCard.jsx` (export `formatThaiDate`) |
-| Components เดิม (ยังอยู่ root — รอเฟสจัดระเบียบ) | `ActivitySelector.js`, `ActivityFeedbackForm.tsx`, `ActivityFeedbackModal.tsx`, `StudentFeedbackForm.js`, `StudentFeedbackModal.js` |
+| Components ฟีด | `components/activities/ActivityFeed.jsx`, `ActivityFeedCard.jsx` (export `formatThaiDate`, `DateBlock`, ฟอนต์ Prompt/Anuphan), `ActivityFeedbackPanel.tsx` (ฟอร์ม+รายการความเห็น inline — แทน ActivityFeedbackForm/Modal เดิมที่ลบไปแล้ว 2026-06-12) |
+| Components เดิม (ยังอยู่ root — รอเฟสจัดระเบียบ) | `ActivitySelector.js` (ใช้โดย StudentFeedback*), `StudentFeedbackForm.js`, `StudentFeedbackModal.js` |
 | Upload รูป | `components/ImageUploads.js` (รับ `maxImages`, `initialImages` — default 3/[] สำหรับ complaint flow เดิม) |
 
 เอกสารเดิม: `ACTIVITY_SYSTEM.md` ที่ root
