@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
-import Layout from '@/components/Layout';
 import ActivityFeedbackForm from '@/components/ActivityFeedbackForm';
 import {
   promptFont,
@@ -122,15 +121,14 @@ const ActivitiesPage = () => {
     </div>
   );
 
+  // หมายเหตุ: _app.tsx ครอบทุกหน้าด้วย <Layout> อยู่แล้ว — ห้ามครอบซ้ำที่นี่ (เคยทำให้ navbar ซ้อนสองชั้น)
   if (loading) {
     return (
-      <Layout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center py-12">
-            <div className="loading loading-spinner loading-lg"></div>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center py-12">
+          <div className="loading loading-spinner loading-lg"></div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
@@ -138,7 +136,6 @@ const ActivitiesPage = () => {
   const rest = activities.slice(1);
 
   return (
-    <Layout>
       <div
         className={`${anuphanFont.className} min-h-screen bg-[radial-gradient(circle,rgba(15,23,42,0.04)_1px,transparent_1px)] [background-size:22px_22px]`}
       >
@@ -352,7 +349,6 @@ const ActivitiesPage = () => {
           )}
         </div>
       </div>
-    </Layout>
   );
 };
 
