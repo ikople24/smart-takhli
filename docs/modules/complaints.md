@@ -33,7 +33,13 @@
   `ComplaintDetailModal`
 - `lib/pdpaTextMask.js#maskSensitiveWords` ยังอยู่แต่**ไม่ใช้กับ flow สาธารณะแล้ว**
 
-## Integration
+## Integration (LINE)
 
-ส่งแจ้งเตือน LINE OA (multicast หาเจ้าหน้าที่) + n8n webhook ตอนยื่นเรื่องใหม่ —
-ดู `lib/lineMessaging.ts`, `pages/api/integrations/line-webhook.ts`
+- **ฝั่ง server (ใช้งานอยู่)**: ยื่นเรื่องใหม่ → multicast แจ้งเจ้าหน้าที่ที่ follow OA
+  (`lib/lineMessaging.ts`, gate ด้วย env `LINE_ADMIN_USER_IDS` — ไม่ตั้ง = skip) + n8n webhook;
+  webhook ขาเข้า `pages/api/integrations/line-webhook.ts`
+- **ฝั่งประชาชน (ลดรูปแล้ว 2026-06-12)**: กรอกฟอร์มปกติ ไม่มี LIFF login/choice screen —
+  dialog หลังส่งสำเร็จมี**ปุ่มเดียว** "เพิ่มเพื่อน LINE OA" (`NEXT_PUBLIC_LINE_OA_URL`)
+  สำหรับติดต่อสอบถามเพิ่มเติม
+- `lib/liff.ts` + env `NEXT_PUBLIC_LIFF_ID` **เก็บไว้แต่ไม่มีใคร import** — รอพัฒนาการ
+  เรียก user ผ่าน LINE รอบใหม่; ฟิลด์ `lineUserId` ใน Complaint model ยังอยู่ (ไม่ถูกเขียนแล้ว)

@@ -46,7 +46,6 @@ const ActivitiesPage = () => {
       sessionStorage.setItem(key, '1');
       fetch(`/api/activities/${selectedActivity._id}/view`, { method: 'POST' }).catch(() => {});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedActivity?._id]);
 
   // อัปเดตคะแนน/จำนวนความเห็นในหน้า หลังผู้ใช้ส่งความคิดเห็นใหม่ (คงตัวที่เลือกไว้)
