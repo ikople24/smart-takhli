@@ -52,6 +52,23 @@ export default async function handler(req, res) {
           });
         }
 
+        // อัปเดตรูปเฉพาะเมื่อ client ส่ง images มา (กันลบรูปทิ้งโดยไม่ตั้งใจ)
+        const updateDoc = {
+          name: name.trim(),
+          description: description?.trim() || '',
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          isActive: isActive !== undefined ? isActive : true,
+          isDefault: isDefault || false
+        };
+        if (Array.isArray(req.body.images)) {
+          const images = req.body.images.filter((u) => typeof u === "string");
+          if (images.length > 6) {
+            return res.status(400).json({ success: false, message: "อัปโหลดรูปได้สูงสุด 6 รูป" });
+          }
+          updateDoc.images = images;
+        }
+
         // ถ้าเป็น default activity ให้ยกเลิก default ของกิจกรรมอื่นๆ ก่อน
         if (isDefault) {
           await Activity.updateMany(
@@ -62,14 +79,7 @@ export default async function handler(req, res) {
 
         const activity = await Activity.findByIdAndUpdate(
           id,
-          {
-            name: name.trim(),
-            description: description?.trim() || '',
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            isActive: isActive !== undefined ? isActive : true,
-            isDefault: isDefault || false
-          },
+          updateDoc,
           { new: true, runValidators: true }
         );
 
