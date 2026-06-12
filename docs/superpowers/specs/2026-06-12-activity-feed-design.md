@@ -18,11 +18,14 @@
 | หน้าหลัก | ฟีด 3 การ์ดล่าสุด **แทนที่** section ฟอร์มความคิดเห็นเดิม + ปุ่ม "ดูทั้งหมด" → `/activities` |
 | ฟอร์มความคิดเห็น | อยู่ที่หน้า `/activities` ที่เดียว (ของเดิมมีอยู่แล้ว) |
 | ใครโพสต์ | ผู้มีสิทธิ์หน้า `/admin/manage-activities` (ไม่มี workflow อนุมัติ) |
+| สไตล์การนำเสนอ | **"ข่าวกิจกรรม" แบบเว็บข่าว/เว็บหน่วยงานทั่วไป** — การ์ดข่าว: รูปปกด้านบน, ป้ายวันที่, พาดหัว, เนื้อหาย่อ (ตัดจาก description), ลิงก์ "อ่านต่อ →" |
+| สถิติผู้เข้าชม | นับ view ต่อกิจกรรม (ฟิลด์ `views`) แสดง 👁 บนการ์ด/หน้ารายละเอียด |
 
 ## ขอบเขตงาน
 
 ### 1. Model — `models/Activity.js` (ไฟล์เดิม ไม่ย้าย)
 - เพิ่ม `images: { type: [String], default: [] }` + validate ≤ 6
+- เพิ่ม `views: { type: Number, default: 0 }` — ยอดผู้เข้าชม
 - คง field/collection เดิมทั้งหมด
 
 ### 2. API — `pages/api/activities/`
@@ -30,6 +33,10 @@
   กิจกรรม `isActive: true` เรียง `startDate` desc, แนบ `stats: { avgRating, count }`
   ต่อกิจกรรมจาก aggregation `StudentFeedback` ($group by activityId, เฉพาะ `isApproved`)
 - `POST /api/activities`, `PUT /api/activities/[id]`: รับ `images[]` + validate ≤ 6
+- **ใหม่** `POST /api/activities/[id]/view` (public, ไม่มี auth):
+  `$inc { views: 1 }` — เรียกแบบ fire-and-forget ตอนเปิดดูรายละเอียดกิจกรรม
+  ฝั่ง client กันนับซ้ำด้วย `sessionStorage` (1 view/กิจกรรม/session — กันนับเฟ้อแบบง่าย
+  พอเหมาะกับเว็บเทศบาล ไม่ทำ IP dedup)
 - **เพิ่ม auth** ให้ `POST/PUT/DELETE` (ตอนนี้เปิดโล่ง — ใครก็ลบกิจกรรมได้):
   สร้าง `pages/api/activities/_auth.js` ตาม pattern `pages/api/pm25/_auth.js#requirePm25Admin`
   เช็คสิทธิ์ `/admin/manage-activities` ด้วย `pathMatchesPermission` + superadmin ลัด
@@ -41,20 +48,32 @@
 - ตารางกิจกรรม: แสดง thumbnail รูปปก
 
 ### 4. Components ใหม่ — `components/activities/` (ตาม convention โมดูล)
-- `ActivityFeed.jsx` — fetch `/api/activities/feed?limit=N` → render การ์ด; prop `showViewAll`
-  สำหรับแสดงปุ่ม "ดูกิจกรรมทั้งหมด" (เปิดเฉพาะตอนใช้บนหน้าหลัก)
-- `ActivityFeedCard.jsx` — รูปปก (ไม่มีรูป = พื้น gradient + icon 📅),
-  ชื่อ, วันที่ไทย (`startDate`–`endDate`), ⭐ `avgRating` (ทศนิยม 1 ตำแหน่ง) + "(N ความเห็น)"
-  หรือ "ยังไม่มีความเห็น", คลิก → `/activities?activity=<id>`
+
+สไตล์ = **section ข่าวกิจกรรม** แบบเว็บหน่วยงาน: หัว section "ข่าวกิจกรรม" + กริดการ์ดข่าว
+
+- `ActivityFeed.jsx` — fetch `/api/activities/feed?limit=N` → กริดการ์ดข่าว
+  (มือถือ 1 คอลัมน์ / desktop 3 คอลัมน์); prop `showViewAll` แสดงปุ่ม
+  "ดูกิจกรรมทั้งหมด" (เปิดเฉพาะตอนใช้บนหน้าหลัก)
+- `ActivityFeedCard.jsx` — การ์ดข่าวแนวตั้ง:
+  - รูปปกด้านบน อัตราส่วน 16:9 (ไม่มีรูป = พื้น gradient + icon 📅)
+  - ป้ายวันที่ไทยมุมรูป (`startDate` รูปแบบ "12 มิ.ย. 2569")
+  - พาดหัว (ชื่อกิจกรรม, 2 บรรทัดตัดด้วย line-clamp)
+  - เนื้อหาย่อจาก `description` (2-3 บรรทัด line-clamp)
+  - แถวล่าง: ⭐ `avgRating` (ทศนิยม 1 ตำแหน่ง, "ยังไม่มีความเห็น" ถ้า 0) ·
+    👁 `views` ผู้เข้าชม · ลิงก์ "อ่านต่อ →"
+  - คลิกการ์ด → `/activities?activity=<id>`
 
 ### 5. หน้าหลัก — `pages/index.tsx`
 - แทนที่ section `ActivityFeedbackForm` ด้วย `<ActivityFeed limit={3} />`
 
 ### 6. หน้า `/activities` — `pages/activities.tsx`
-- การ์ดในกริดแสดงรูปปก
+- การ์ดในกริดใช้สไตล์ข่าวเดียวกับฟีด (รูปปก + วันที่ + พาดหัว + 👁 views)
 - รองรับ query `?activity=<id>` → preselect กิจกรรมนั้น
-- รายละเอียดกิจกรรมที่เลือก: gallery รูปทั้งหมด (≤6), คำอธิบาย, วันที่, สถิติ
+- รายละเอียดกิจกรรมที่เลือก (สไตล์หน้าอ่านข่าว): พาดหัว + วันที่ + 👁 views,
+  gallery รูปทั้งหมด (≤6), คำอธิบายเต็ม, สถิติความพึงพอใจ
   + `ActivityFeedbackForm` (ของเดิมในหน้านี้)
+- ตอนเปิดรายละเอียด: ยิง `POST /api/activities/[id]/view` (fire-and-forget,
+  กันซ้ำด้วย sessionStorage key `activity-viewed-<id>`)
 
 ### 7. เอกสาร
 - อัปเดต `docs/modules/activities.md` (เปลี่ยน design intent → สถานะ implemented)
@@ -77,7 +96,9 @@
 
 1. `npm run build` + `npm run lint` ผ่าน
 2. Admin: สร้างกิจกรรม 6 รูป, แก้ไขลบรูป, พยายามใส่รูปที่ 7 → ถูกปฏิเสธ
-3. หน้าหลัก: ฟีดแสดง 3 การ์ดล่าสุด, คะแนนเฉลี่ยตรงกับ feedback ใน DB
+3. หน้าหลัก: ฟีดแสดง 3 การ์ดข่าวล่าสุด, คะแนนเฉลี่ยตรงกับ feedback ใน DB
 4. `/activities?activity=<id>` preselect ถูกตัว, gallery แสดงครบ, ส่ง feedback ได้
+5. Views: เปิดรายละเอียดแล้ว `views` +1, refresh ใน session เดิมไม่นับซ้ำ,
+   เปิด session ใหม่นับเพิ่ม
 5. Security: `POST /api/activities` โดยไม่ login → 401; login ด้วย user ไม่มีสิทธิ์
    manage-activities → 403; GET ทั้งหมดยังเปิด public
