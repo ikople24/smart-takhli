@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Activity from '@/models/Activity';
+import { requireActivitiesAdmin } from './_auth';
 
 export default async function handler(req, res) {
   try {
@@ -36,6 +37,11 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
+        const auth = await requireActivitiesAdmin(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ success: false, message: auth.message });
+        }
+
         const { name, description, startDate, endDate, isActive, isDefault } = req.body;
 
         // Validation
@@ -84,6 +90,11 @@ export default async function handler(req, res) {
 
     case 'DELETE':
       try {
+        const auth = await requireActivitiesAdmin(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ success: false, message: auth.message });
+        }
+
         const activity = await Activity.findByIdAndDelete(id);
         
         if (!activity) {
