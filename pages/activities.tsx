@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Image from 'next/image';
 import Layout from '@/components/Layout';
 import ActivityFeedbackForm from '@/components/ActivityFeedbackForm';
 
@@ -10,26 +12,48 @@ interface Activity {
   endDate: string;
   isActive: boolean;
   isDefault: boolean;
+  images?: string[];
+  views?: number;
+  stats?: { avgRating: number | null; count: number };
 }
 
 const ActivitiesPage = () => {
+  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
   useEffect(() => {
+    if (!router.isReady) return;
     fetchActivities();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+
+  // นับผู้เข้าชมเมื่อเปิดดูรายละเอียด — 1 ครั้ง/กิจกรรม/session
+  useEffect(() => {
+    if (!selectedActivity) return;
+    const key = `activity-viewed-${selectedActivity._id}`;
+    if (typeof window !== 'undefined' && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      fetch(`/api/activities/${selectedActivity._id}/view`, { method: 'POST' }).catch(() => {});
+    }
+  }, [selectedActivity]);
 
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/activities?active=true');
+      // ใช้ feed endpoint เพื่อให้ได้ stats (คะแนนเฉลี่ย) และ views มาด้วย
+      const response = await fetch('/api/activities/feed?limit=50');
       const data = await response.json();
       if (data.success) {
         setActivities(data.data);
-        // เลือกกิจกรรมเริ่มต้น
-        const defaultActivity = data.data.find((activity: Activity) => activity.isDefault) || data.data[0];
+        // เลือกจาก ?activity= ก่อน แล้วค่อย fallback เป็นกิจกรรมเริ่มต้น
+        const fromQuery =
+          typeof router.query.activity === 'string'
+            ? data.data.find((a: Activity) => a._id === router.query.activity)
+            : null;
+        const defaultActivity =
+          fromQuery || data.data.find((a: Activity) => a.isDefault) || data.data[0];
         if (defaultActivity) {
           setSelectedActivity(defaultActivity);
         }
@@ -106,6 +130,19 @@ const ActivitiesPage = () => {
                 }`}
                 onClick={() => setSelectedActivity(activity)}
               >
+                <div className="relative aspect-video bg-gradient-to-br from-indigo-100 to-blue-200">
+                  {activity.images?.[0] ? (
+                    <Image
+                      src={activity.images[0]}
+                      alt={activity.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-5xl">📅</div>
+                  )}
+                </div>
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
@@ -128,6 +165,15 @@ const ActivitiesPage = () => {
                     <div className="flex items-center">
                       <span className="mr-2">🏁</span>
                       <span>สิ้นสุด: {formatDate(activity.endDate)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="mr-2">👁</span>
+                      <span>
+                        {activity.views || 0} ผู้เข้าชม ·{' '}
+                        {activity.stats?.count
+                          ? `⭐ ${activity.stats.avgRating?.toFixed(1)} (${activity.stats.count})`
+                          : 'ยังไม่มีความเห็น'}
+                      </span>
                     </div>
                   </div>
                   
@@ -156,12 +202,29 @@ const ActivitiesPage = () => {
               </p>
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>📅 {formatDate(selectedActivity.startDate)} - {formatDate(selectedActivity.endDate)}</span>
+                <span>👁 {selectedActivity.views || 0} ผู้เข้าชม</span>
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getActivityStatus(selectedActivity).color}`}>
                   {getActivityStatus(selectedActivity).text}
                 </span>
               </div>
             </div>
-            
+
+            {selectedActivity.images && selectedActivity.images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                {selectedActivity.images.map((img, i) => (
+                  <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-gray-200">
+                    <Image
+                      src={img}
+                      alt={`${selectedActivity.name} ${i + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
             <ActivityFeedbackForm selectedActivity={selectedActivity} />
           </div>
         )}
