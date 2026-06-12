@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
+import Image from 'next/image';
+import ImageUploads from '@/components/ImageUploads';
 
 const ManageActivities = () => {
   const [activities, setActivities] = useState([]);
@@ -11,7 +13,8 @@ const ManageActivities = () => {
     description: '',
     startDate: '',
     endDate: '',
-    isDefault: false
+    isDefault: false,
+    images: []
   });
 
   useEffect(() => {
@@ -89,7 +92,8 @@ const ManageActivities = () => {
       description: activity.description,
       startDate: new Date(activity.startDate).toISOString().split('T')[0],
       endDate: new Date(activity.endDate).toISOString().split('T')[0],
-      isDefault: activity.isDefault
+      isDefault: activity.isDefault,
+      images: activity.images || []
     });
     setIsModalOpen(true);
   };
@@ -146,7 +150,8 @@ const ManageActivities = () => {
       description: '',
       startDate: '',
       endDate: '',
-      isDefault: false
+      isDefault: false,
+      images: []
     });
     setEditingActivity(null);
     setIsModalOpen(false);
@@ -238,12 +243,25 @@ const ManageActivities = () => {
                   {activities.map((activity) => (
                     <tr key={activity._id}>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {activity.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {activity.description}
+                        <div className="flex items-center gap-3">
+                          {activity.images?.[0] ? (
+                            <Image
+                              src={activity.images[0]}
+                              alt={activity.name}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-xl">📅</div>
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {activity.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              👁 {activity.views || 0} ผู้เข้าชม
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -368,6 +386,18 @@ const ManageActivities = () => {
                       required
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    รูปภาพกิจกรรม (สูงสุด 6 รูป)
+                  </label>
+                  <ImageUploads
+                    key={editingActivity?._id || 'new'}
+                    maxImages={6}
+                    initialImages={formData.images}
+                    onChange={(urls) => setFormData(prev => ({ ...prev, images: urls }))}
+                  />
                 </div>
 
                 <div className="flex items-center">
