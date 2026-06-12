@@ -1,32 +1,35 @@
-# กิจกรรม (activities)
+# กิจกรรม / ข่าวกิจกรรม (activities)
 
 ระบบกิจกรรมของเทศบาล — เดิมเริ่มจาก "กิจกรรมนักเรียน" จึงมีชื่อ
 `StudentFeedback` ติดมา แต่ขอบเขตจริงคือกิจกรรมทุกประเภท
 
-## เป้าหมายที่เจ้าของระบบต้องการ (Design intent — เฟส 2 ของ roadmap)
+> **สถานะ: ฟีดข่าวกิจกรรม implemented แล้ว (2026-06-12)** —
+> spec: `docs/superpowers/specs/2026-06-12-activity-feed-design.md`
 
-> บันทึกไว้ 2026-06-10 เพื่อ brainstorm รายละเอียดก่อนลงมือ
+## ภาพรวมฟีดข่าวกิจกรรม
 
-ยกระดับเป็น **ฟีดกิจกรรมแบบแอป**:
+- 1 กิจกรรม = 1 โพสต์ข่าว: รูป ≤ 6 (`Activity.images`, Cloudinary), วันที่ดำเนินการ,
+  คะแนนความพึงพอใจเฉลี่ยจาก `StudentFeedback.emotionLevel` (คำนวณสด ไม่ denormalize),
+  ยอดผู้เข้าชม (`Activity.views`)
+- หน้าหลัก (`pages/index.tsx`) แสดงการ์ดข่าว 3 ใบล่าสุด (แทน section ฟอร์มเดิม)
+- หน้า `/activities` = ฟีดเต็ม + gallery + ฟอร์มความคิดเห็น (`ActivityFeedbackForm`)
+  รองรับ `?activity=<id>` preselect; เปิดรายละเอียด = นับ view
+  (กันซ้ำด้วย sessionStorage ฝั่ง client)
 
-1. แอดมิน**ลงโพสต์กิจกรรม**พร้อม**รูปภาพ** (Cloudinary) ว่าดำเนินการอะไร
-2. ระบุ**วันที่ดำเนินการ**ชัดเจน
-3. แสดง**ผลประเมินความพึงพอใจ**ของแต่ละกิจกรรมประกอบโพสต์
-4. แสดงฟีดที่**หน้าหลัก** (`pages/index.tsx`) ให้ประชาชนเห็น
-
-คำถามที่ต้องเคลียร์ตอน brainstorm: ใครโพสต์/ต้องอนุมัติไหม, จำนวนรูปต่อโพสต์,
-คะแนนประเมินดึงจาก `StudentFeedback` (ผูก activityId อยู่แล้ว) หรือรวม
-`Satisfaction` ด้วย, layout หน้าแรกวางฟีดตรงไหน
-
-## สถานะปัจจุบัน
+## โครงสร้าง
 
 | ส่วน | ที่อยู่ |
 |---|---|
-| หน้า public เลือกกิจกรรม+ให้ความเห็น | `pages/activities.tsx` |
-| หน้า admin จัดการกิจกรรม | `pages/admin/manage-activities.jsx` |
-| API | `pages/api/activities/*`, `pages/api/student-feedback/*` |
-| Models | `models/Activity.js` (collection `Activity`), `models/StudentFeedback.js` (ผูก `activityId` — required) |
-| Components (ยังอยู่ root — รอเฟสจัดระเบียบ) | `ActivitySelector.js`, `ActivityFeedbackForm.tsx`, `ActivityFeedbackModal.tsx`, `StudentFeedbackForm.js`, `StudentFeedbackModal.js` |
+| หน้า public ฟีด+ความเห็น | `pages/activities.tsx` |
+| หน้า admin จัดการ+อัปโหลดรูป | `pages/admin/manage-activities.jsx` |
+| API CRUD | `pages/api/activities/index.js`, `[id].js` — **POST/PUT/DELETE มี auth แล้ว** (`_auth.js#requireActivitiesAdmin` เช็คสิทธิ์ `/admin/manage-activities`), GET public |
+| API ฟีด | `pages/api/activities/feed.js` — active + stats จาก aggregation |
+| API นับวิว | `pages/api/activities/[id]/view.js` — POST public, `$inc views` |
+| ความเห็น | `pages/api/student-feedback/*` |
+| Models | `models/Activity.js` (collection `Activity`; มี `images[]≤6`, `views`), `models/StudentFeedback.js` (ผูก `activityId` — required) |
+| Components ฟีด | `components/activities/ActivityFeed.jsx`, `ActivityFeedCard.jsx` (export `formatThaiDate`) |
+| Components เดิม (ยังอยู่ root — รอเฟสจัดระเบียบ) | `ActivitySelector.js`, `ActivityFeedbackForm.tsx`, `ActivityFeedbackModal.tsx`, `StudentFeedbackForm.js`, `StudentFeedbackModal.js` |
+| Upload รูป | `components/ImageUploads.js` (รับ `maxImages`, `initialImages` — default 3/[] สำหรับ complaint flow เดิม) |
 
 เอกสารเดิม: `ACTIVITY_SYSTEM.md` ที่ root
 
@@ -34,4 +37,7 @@
 
 - ความเห็นถูก scope ตามกิจกรรม (`StudentFeedback.activityId` required) —
   อย่าสร้าง feedback ลอยโดยไม่ผูกกิจกรรม ไม่งั้นข้อมูลกิจกรรมเก่า/ใหม่ปนกัน
+- `Satisfaction` (คะแนนปิดเรื่องร้องเรียน) **ไม่เกี่ยว**กับคะแนนกิจกรรม
+- PUT `/api/activities/[id]` แตะ `images` เฉพาะเมื่อ client ส่งฟิลด์มา
+  (กัน client เก่าลบรูปทิ้ง)
 - หน้า `/admin/feedback-analysis` ยังพัง (ถูก hideFromMenu ไว้)
