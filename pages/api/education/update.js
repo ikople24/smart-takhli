@@ -11,9 +11,6 @@ export default async function handler(req, res) {
 
     const { _id, prefix, name, educationLevel, phone, address, actualAddress, note, annualIncome, incomeSource, householdMembers, housingStatus, familyStatus, receivedScholarship, takhliScholarshipHistory, schoolName, gradeLevel, gpa } = req.body;
 
-    console.log('📝 Received update data:', { _id, prefix, name, educationLevel, phone, address, actualAddress, note, annualIncome, householdMembers, housingStatus, familyStatus, takhliScholarshipHistory, schoolName, gradeLevel, gpa });
-    console.log('📝 Full request body:', req.body);
-
     if (!_id || !name) {
       return res.status(400).json({ message: 'Missing required fields: _id and name' });
     }
@@ -38,8 +35,6 @@ export default async function handler(req, res) {
       gpa: gpa !== undefined ? parseFloat(gpa) || null : null
     };
 
-    console.log('🔄 Updating record with data:', updatedData);
-    
     const result = await EducationRegister.findByIdAndUpdate(
       _id,
       updatedData,
@@ -50,13 +45,6 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Record not found' });
     }
 
-    console.log('✅ Updated result:', result);
-    console.log('✅ Family status in result:', result.familyStatus);
-    console.log('✅ Takhli scholarship history in result:', result.takhliScholarshipHistory);
-    console.log('✅ School name in result:', result.schoolName);
-    console.log('✅ Grade level in result:', result.gradeLevel);
-    console.log('✅ GPA in result:', result.gpa);
-    
     return res.status(200).json({ 
       message: 'Updated successfully', 
       data: result 

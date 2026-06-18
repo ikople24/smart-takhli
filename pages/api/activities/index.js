@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Activity from '@/models/Activity';
+import { requireActivitiesAdmin } from './_auth';
 
 export default async function handler(req, res) {
   try {
@@ -39,14 +40,26 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
+        const auth = await requireActivitiesAdmin(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ success: false, message: auth.message });
+        }
+
         const { name, description, startDate, endDate, isDefault } = req.body;
 
         // Validation
         if (!name || !startDate || !endDate) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+          return res.status(400).json({
+            success: false,
+            message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
           });
+        }
+
+        const images = Array.isArray(req.body.images)
+          ? req.body.images.filter((u) => typeof u === "string")
+          : [];
+        if (images.length > 6) {
+          return res.status(400).json({ success: false, message: "อัปโหลดรูปได้สูงสุด 6 รูป" });
         }
 
         // ถ้าเป็น default activity ให้ยกเลิก default ของกิจกรรมอื่นๆ ก่อน
@@ -62,7 +75,8 @@ export default async function handler(req, res) {
           description: description?.trim() || '',
           startDate: new Date(startDate),
           endDate: new Date(endDate),
-          isDefault: isDefault || false
+          isDefault: isDefault || false,
+          images
         });
 
         await activity.save();

@@ -25,7 +25,7 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import { createProblemAreaPolygons, createRectanglePolygon, createCommunityPolygon } from '@/utils/polygonUtils';
-import { loadGeoJSONFromFile, createCommunityPolygonsFromGeoJSON, createProblemAreaPolygonsFromGeoJSON } from '@/utils/geojsonUtils';
+import { loadGeoJSONFromDB, loadGeoJSONFromFile, createCommunityPolygonsFromGeoJSON, createProblemAreaPolygonsFromGeoJSON } from '@/utils/geojsonUtils';
 
 // Dynamic import for map component to avoid SSR issues
 const MapWithNoSSR = dynamic(() => import('@/components/AdminDashboardMap'), {
@@ -460,8 +460,15 @@ export default function AdminDashboard() {
   const loadGeoJSONData = async () => {
     try {
       setGeojsonLoading(true);
-      const data = await loadGeoJSONFromFile('/takhli.geojson');
-      setGeojsonData(data);
+      // โหลดจาก DB ก่อน — ถ้ามีข้อมูลใช้นั้น, ถ้าไม่มีค่อย fallback ไฟล์ static
+      const dbData = await loadGeoJSONFromDB();
+      if (dbData) {
+        setGeojsonData(dbData);
+        return;
+      }
+      // Fallback: ไฟล์ GeoJSON ใน /public
+      const fileData = await loadGeoJSONFromFile('/takhli.geojson');
+      setGeojsonData(fileData);
     } catch (error) {
       console.error('Error loading GeoJSON data:', error);
     } finally {

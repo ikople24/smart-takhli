@@ -5,7 +5,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  console.log("🌐 req.body:", req.body);
 
   const { clerkId, role } = req.body;
 
@@ -14,16 +13,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log("📦 clerkId:", clerkId);
-    console.log("📦 role:", role);
 
-    const updatedUser = await users.updateUser(clerkId, {
-      publicMetadata: {
-        role,
-      },
+    await users.updateUser(clerkId, {
+      publicMetadata: { role },
     });
 
-    console.log("✅ Clerk update response:", updatedUser);
     res.status(200).json({ message: "Clerk role updated" });
   } catch (error) {
     console.error("❌ Clerk error:", JSON.stringify(error, null, 2));

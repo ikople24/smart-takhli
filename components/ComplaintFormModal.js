@@ -10,6 +10,8 @@ import { z } from 'zod';
 import Image from 'next/image';
 const LocationConfirm = dynamic(() => import('./LocationConfirm'), { ssr: false });
 
+// LINE LIFF login ถูกถอดออกแล้ว (2026-06-12) — กรอกฟอร์มปกติ เหลือเฉพาะปุ่ม
+// เพิ่มเพื่อน LINE OA ใน dialog หลังส่งสำเร็จ; จะพัฒนาการเรียก user ผ่าน LINE ใหม่ภายหลัง
 const complaintFormSchema = z.object({
   community: z.string().min(1, 'กรุณาระบุ 1 ชุมชน'),
   prefix: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
@@ -25,6 +27,8 @@ const complaintFormSchema = z.object({
 });
 
 const ComplaintFormModal = ({ selectedLabel, onClose }) => {
+  const lineOaUrl = process.env.NEXT_PUBLIC_LINE_OA_URL || '';
+
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [prefix, setPrefix] = useState('นาย');
   const [fullName, setFullName] = useState('');
@@ -130,7 +134,6 @@ useEffect(() => {
       updatedAt: new Date(),
     };
 
-    console.log("📤 Payload ส่งไป backend:", payload);
 
     try {
       const res = await fetch('/api/submittedreports/submit-report', {
@@ -146,11 +149,24 @@ useEffect(() => {
       const data = await res.json();
       const complaintId = data.complaintId;
 
+      // ปุ่มเดียว: เพิ่มเพื่อน LINE OA สำหรับติดต่อสอบถามเพิ่มเติม
+      let lineHtml = '';
+      if (lineOaUrl) {
+        lineHtml = `
+          <p style="margin:12px 0 4px;font-size:14px;color:#555">ติดต่อสอบถามเพิ่มเติมได้ทาง LINE OA</p>
+          <a href="${lineOaUrl}" target="_blank" rel="noopener noreferrer"
+             style="display:inline-flex;align-items:center;gap:8px;background:#06C755;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;margin-top:4px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+            เพิ่มเพื่อน LINE OA
+          </a>`;
+      }
+
       await Swal.fire({
         icon: 'success',
         title: 'ส่งเรื่องสำเร็จ',
-        html: `เลขที่เรื่องของคุณคือ <strong>${complaintId}</strong>`,
+        html: `<p>เลขที่เรื่องของคุณคือ <strong>${complaintId}</strong></p>${lineHtml}`,
         confirmButtonText: 'ตกลง',
+        width: lineHtml ? 420 : undefined,
       });
       handleClearForm();
       onClose?.(); // Close the modal
@@ -202,18 +218,20 @@ useEffect(() => {
   return (
     <div className="fixed inset-0 z-50 bg-black/30 overflow-y-auto flex items-center justify-center transition-all">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all duration-300 opacity-0 scale-95 animate-fade-in">
+
+        {/* ─── Header ─────────────────────────────────── */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-base font-semibold text-gray-800">
             ฟอร์มสำหรับ: {selectedLabel}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 text-sm"
-          >
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-sm">
             ✕
           </button>
         </div>
+
+
         <form onSubmit={handleSubmit} className="space-y-3">
+
           <CommunitySelector
             selected={selectedCommunity}
             onSelect={handleCommunitySelect}
@@ -293,6 +311,7 @@ useEffect(() => {
           </button>
         </div>
         </form>
+
       </div>
     </div>
   );

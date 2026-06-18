@@ -25,13 +25,6 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: "ไม่พบคำขอนี้" });
     }
 
-    console.log("=== อัปเดตสถานะคำขอ ===");
-    console.log("รหัสคำขอ:", id);
-    console.log("สถานะเดิม:", request.status);
-    console.log("สถานะใหม่:", status);
-    console.log("การดำเนินการ:", action);
-    console.log("==========================");
-
     let updateData = {
       status: status,
       updated_at: new Date()
@@ -95,7 +88,6 @@ export default async function handler(req, res) {
           updateData.borrow_id = borrowingId;
           updateData.borrowed_at = new Date();
 
-          console.log("สร้างรายการยืม:", borrowingId);
         }
         break;
 
@@ -104,12 +96,10 @@ export default async function handler(req, res) {
     }
 
     // Update request status
-    const result = await requestCollection.updateOne(
+    await requestCollection.updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     );
-
-    console.log("ผลการอัปเดต:", result);
 
     return res.status(200).json({
       message: "อัปเดตสถานะสำเร็จ",

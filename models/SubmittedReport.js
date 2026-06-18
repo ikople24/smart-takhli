@@ -46,6 +46,11 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // LINE OA Integration — เก็บ LINE userId เมื่อ user ติดต่อผ่าน LINE Bot
+  lineUserId: {
+    type: String,
+    default: null,
+  },
 });
 
 export default mongoose.models.SubmittedReport || mongoose.model('SubmittedReport', SubmittedReportSchema);

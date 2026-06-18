@@ -9,6 +9,12 @@ export interface PagePermission {
   icon: string;
   description: string;
   category: 'settings' | 'management' | 'reports' | 'user';
+  /**
+   * ถ้า true → ซ่อนจาก TopNavbar dropdown และ LayoutAdmin sidebar
+   * แต่ยังคงปรากฏใน superadmin permission UI (เพื่อให้กำหนดสิทธิ์ได้)
+   * และยังเข้าถึงได้ผ่าน internal link ภายในระบบ
+   */
+  hideFromMenu?: boolean;
 }
 
 // รายการหน้าทั้งหมดในระบบ
@@ -41,8 +47,23 @@ export const ALL_PAGES: PagePermission[] = [
     path: '/admin/smart-health',
     label: 'smart-health',
     icon: '🟣',
-    description: 'ระบบสุขภาพอัจฉริยะ',
+    description: 'ระบบสุขภาพอัจฉริยะ (ยืม-คืนอุปกรณ์, สุขภาพพนักงาน)',
     category: 'management'
+  },
+  {
+    path: '/admin/elderly-school',
+    label: 'โรงเรียนผู้สูงอายุ',
+    icon: '🎓',
+    description: 'แดชบอร์ดสุขภาพและกิจกรรมโรงเรียนผู้สูงอายุ',
+    category: 'management'
+  },
+  {
+    path: '/admin/elderly-schedule',
+    label: 'ตั้งค่าวันเรียน (โรงเรียนผู้สูงอายุ)',
+    icon: '🗓️',
+    description: 'กำหนดวันเรียนครั้งที่ 1-16 ของแต่ละปีการศึกษา',
+    category: 'management',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   {
     path: '/admin/education-map',
@@ -72,6 +93,14 @@ export const ALL_PAGES: PagePermission[] = [
     description: 'จัดการกิจกรรมต่างๆ',
     category: 'management'
   },
+  {
+    path: '/admin/elderly-cards',
+    label: 'พิมพ์บัตร QR (โรงเรียนผู้สูงอายุ)',
+    icon: '👴',
+    description: 'พิมพ์บัตร QR สำหรับเช็คอินโรงเรียนผู้สูงอายุ',
+    category: 'management',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
+  },
   
   // Reports
   {
@@ -86,39 +115,84 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'วิเคราะห์ความคิดเห็น',
     icon: '📈',
     description: 'วิเคราะห์ความคิดเห็นผู้ใช้',
+    category: 'reports',
+    hideFromMenu: true, // พักไว้ก่อน — หน้ายังพัง
+  },
+  {
+    path: '/admin/analytics',
+    label: 'สถิติและรายงาน',
+    icon: '📉',
+    description: 'ภาพรวมสถิติเรื่องร้องเรียน ประสิทธิภาพเจ้าหน้าที่ และความพึงพอใจ',
     category: 'reports'
   },
+  {
+    path: '/admin/my-tasks',
+    label: 'งานของฉัน',
+    icon: '✓',
+    description: 'ดูและจัดการงานที่รอการดำเนินการ',
+    category: 'management'
+  },
+  {
+    path: '/admin/notifications',
+    label: 'การแจ้งเตือน',
+    icon: '🔔',
+    description: 'ดูและจัดการการแจ้งเตือน',
+    category: 'user'
+  },
   
+  // Settings — Configuration
+  {
+    path: '/admin/settings/organizations',
+    label: 'ข้อมูลองค์กร',
+    icon: '🏛️',
+    description: 'จัดการข้อมูลองค์กรและสำนักงาน',
+    category: 'settings'
+  },
+  {
+    path: '/admin/settings/communities',
+    label: 'ข้อมูลชุมชน',
+    icon: '🏘️',
+    description: 'จัดการข้อมูลชุมชนในพื้นที่',
+    category: 'settings'
+  },
+  {
+    path: '/admin/settings/geojson-map',
+    label: 'แผนที่ GeoJSON',
+    icon: '🗺️',
+    description: 'จัดการและแสดงผล GeoJSON พื้นที่บริการบนแผนที่',
+    category: 'settings'
+  },
+
   // User
   {
     path: '/user/satisfaction',
     label: 'ประเมินความพึงพอใจ',
     icon: '⭐',
     description: 'ประเมินความพึงพอใจการใช้บริการ',
-    category: 'user'
+    category: 'user',
+    hideFromMenu: true, // เข้าถึงผ่าน internal link ในระบบร้องเรียน
   },
 ];
 
 // หน้าที่ superadmin เท่านั้นที่เข้าถึงได้
+// ต้องตรงกับไฟล์จริงใน pages/admin/superadmin/
+// ✓ index.jsx  → /admin/superadmin
+// ✓ setup.jsx  → /admin/superadmin/setup
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
-  '/admin/superadmin/users',
-  '/admin/superadmin/permissions',
+  '/admin/superadmin/setup',
+  '/admin/superadmin/audit-log',
 ];
 
-// สิทธิ์เริ่มต้นตาม role
+// สิทธิ์เริ่มต้นตาม role — ใช้เมื่อ user ยังไม่มี allowedPages ใน Mongo (= ยังไม่ถูกตั้งค่า)
+// นโยบาย: ว่าง = เห็นเฉพาะ "ชุดพื้นฐาน" จนกว่า superadmin จะติ๊กสิทธิ์เพิ่มรายคน
+// (อย่าเพิ่มหน้าใหม่ลงชุด admin โดยอัตโนมัติ เว้นแต่ตั้งใจให้ทุกคนเห็นโดย default)
 export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   superadmin: ALL_PAGES.map(p => p.path), // superadmin เข้าถึงได้ทุกหน้า
   admin: [
-    '/admin',
-    '/admin/register-user',
-    '/admin/manage-complaints',
     '/admin/dashboard',
-    '/admin/smart-health',
-    '/admin/education-map',
-    '/admin/smart-papar/water-quality',
-    '/admin/pm25-settings',
-    '/admin/feedback-analysis',
+    '/admin/my-tasks',
+    '/admin/notifications',
     '/user/satisfaction',
   ],
   user: [
@@ -126,6 +200,19 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   ],
   guest: [],
 };
+
+// path ที่ต้อง match แบบ exact เท่านั้น — ห้ามทำตัวเป็น prefix ครอบหน้าอื่น
+// ('/admin' คือหน้า "ตั้งค่าหน้าจอ" — ถ้าปล่อยให้ prefix match จะกลายเป็น wildcard
+// เปิดทุกหน้า /admin/* ซึ่งเป็น bug ที่เคยทำให้ admin ธรรมดาเห็นทุกหน้า)
+const EXACT_MATCH_ONLY_PATHS = ['/admin'];
+
+// ตรวจว่า pagePath อยู่ภายใต้สิทธิ์ allowedPath หรือไม่
+// ใช้ตัวนี้เป็นที่เดียวทั้งระบบ (_app.tsx, LayoutAdmin, hasPermission, getAccessiblePages)
+export function pathMatchesPermission(pagePath: string, allowedPath: string): boolean {
+  if (pagePath === allowedPath) return true;
+  if (EXACT_MATCH_ONLY_PATHS.includes(allowedPath)) return false;
+  return pagePath.startsWith(allowedPath + '/');
+}
 
 // ฟังก์ชันตรวจสอบว่า user มีสิทธิ์เข้าถึงหน้านั้นหรือไม่
 export function hasPermission(
@@ -137,15 +224,15 @@ export function hasPermission(
   if (userRole === 'superadmin') {
     return true;
   }
-  
+
   // ถ้า user มี custom permissions ให้ใช้
   if (userPermissions && userPermissions.length > 0) {
-    return userPermissions.some(p => pagePath.startsWith(p));
+    return userPermissions.some(p => pathMatchesPermission(pagePath, p));
   }
-  
-  // ถ้าไม่มี custom permissions ให้ใช้ default ตาม role
+
+  // ถ้าไม่มี custom permissions ให้ใช้ default ตาม role (ชุดพื้นฐาน)
   const defaultPerms = DEFAULT_PERMISSIONS[userRole] || [];
-  return defaultPerms.some(p => pagePath.startsWith(p));
+  return defaultPerms.some(p => pathMatchesPermission(pagePath, p));
 }
 
 // ฟังก์ชันดึงหน้าที่ user เข้าถึงได้
@@ -161,9 +248,9 @@ export function getAccessiblePages(
   const allowedPaths = userPermissions && userPermissions.length > 0
     ? userPermissions
     : DEFAULT_PERMISSIONS[userRole] || [];
-  
-  return ALL_PAGES.filter(page => 
-    allowedPaths.some(p => page.path.startsWith(p) || page.path === p)
+
+  return ALL_PAGES.filter(page =>
+    allowedPaths.some(p => pathMatchesPermission(page.path, p))
   );
 }
 

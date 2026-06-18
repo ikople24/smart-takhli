@@ -1576,4 +1576,4 @@ export default function EducationMapPage() {
       />
     </div>
   );
-} 
+}

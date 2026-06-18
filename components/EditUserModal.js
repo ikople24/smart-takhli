@@ -15,7 +15,6 @@ export default function EditUserModal({ isOpen, onClose, complaint }) {
       axios
         .get(`/api/submittedreports/personal-info/${complaint._id}`)
         .then((res) => {
-          console.log("Reporter Info Fetched:", res.data);
           setReporterInfo(res.data);
           setEditedData({ location: res.data.location || { lat: 15.0, lng: 100.0 } });
         })

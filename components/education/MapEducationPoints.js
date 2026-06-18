@@ -82,8 +82,6 @@ export default function MapEducationPoints({ data }) {
     });
     
     // Debug: แสดงข้อมูลที่จัดกลุ่มแล้ว
-    console.log('Grouped data:', groups);
-    console.log('Available levels:', Object.keys(groups));
     
     return groups;
   }, [data]);
@@ -157,7 +155,6 @@ export default function MapEducationPoints({ data }) {
           </button>
           {Object.entries(groupedData).map(([level, items]) => {
             const icon = levelIcons[level] || <FaMapMarkerAlt />;
-            console.log(`Level: ${level}, Icon:`, icon);
             
             return (
               <button

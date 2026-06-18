@@ -16,6 +16,7 @@ const SmartHealthMap = dynamic(
   }
 );
 import {
+  loadGeoJSONFromDB,
   loadGeoJSONFromFile,
   convertGeoJSONToPolygons,
   findPolygonContainingPoint,
@@ -42,22 +43,30 @@ export default function CommunityPlanningSummary() {
 
   useEffect(() => {
     let cancelled = false;
-    loadGeoJSONFromFile("/takhli.geojson")
-      .then((data) => {
+    // โหลดจาก DB ก่อน — fallback ไฟล์ static ถ้าไม่มีข้อมูล
+    (async () => {
+      try {
+        const dbData = await loadGeoJSONFromDB();
+        if (dbData) {
+          if (!cancelled) {
+            setPolygons(convertGeoJSONToPolygons(dbData));
+            setGeoError(false);
+          }
+          return;
+        }
+        const fileData = await loadGeoJSONFromFile("/takhli.geojson");
         if (!cancelled) {
-          setPolygons(convertGeoJSONToPolygons(data));
+          setPolygons(convertGeoJSONToPolygons(fileData));
           setGeoError(false);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setPolygons([]);
           setGeoError(true);
         }
-      });
-    return () => {
-      cancelled = true;
-    };
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const loadTables = async () => {

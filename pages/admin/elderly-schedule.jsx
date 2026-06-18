@@ -33,7 +33,7 @@ export default function ElderlySchedulePage() {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch(`/api/smart-health/elderly/schedule?yearBE=${encodeURIComponent(String(yearBE))}`);
+      const res = await fetch(`/api/elderly-school/schedule?yearBE=${encodeURIComponent(String(yearBE))}`);
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "โหลดตารางไม่สำเร็จ");
       const fromApi = Array.isArray(json.schedule?.sessions) ? json.schedule.sessions : [];
@@ -72,7 +72,7 @@ export default function ElderlySchedulePage() {
         .filter((s) => s.dateISO && /^\d{4}-\d{2}-\d{2}$/.test(s.dateISO))
         .map((s) => ({ visitNo: s.visitNo, dateISO: s.dateISO, note: s.note || null }));
 
-      const res = await fetch(`/api/smart-health/elderly/schedule?yearBE=${encodeURIComponent(String(yearBE))}`, {
+      const res = await fetch(`/api/elderly-school/schedule?yearBE=${encodeURIComponent(String(yearBE))}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ yearBE, sessions: payload }),
@@ -114,7 +114,7 @@ export default function ElderlySchedulePage() {
   };
 
   return (
-    <PermissionGuard requiredPath="/admin/smart-health">
+    <PermissionGuard requiredPath="/admin/elderly-school">
       <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -227,5 +227,4 @@ export default function ElderlySchedulePage() {
     </PermissionGuard>
   );
 }
-
 

@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import Satisfaction from "@/models/Satisfaction";
+import { n8n } from "@/lib/n8nWebhook";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -20,6 +21,9 @@ export default async function handler(req, res) {
       rating,
       comment,
     });
+
+    // แจ้งเตือน n8n (fire-and-forget)
+    n8n.satisfactionSubmitted({ complaintId: String(complaintId), rating, comment });
 
     return res.status(201).json({ success: true, data: newSatisfaction });
   } catch (error) {

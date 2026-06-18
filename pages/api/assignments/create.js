@@ -1,6 +1,9 @@
 import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
 import mongoose from 'mongoose';
+import { n8n } from '@/lib/n8nWebhook';
+import { logAuditEvent } from '@/lib/auditLogger';
+import { getAuth } from '@clerk/nextjs/server';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -9,7 +12,8 @@ export default async function handler(req, res) {
 
   try {
     await dbConnect();
-    const { complaintId, userId, solutionDetails, solutionImages, completedAt, remarks } = req.body;
+    const { complaintId, userId, solutionDetails, solutionImages, completedAt, remarks, officerName } = req.body;
+    const { userId: actorClerkId } = getAuth(req);
 
     if (!complaintId || !userId) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -22,6 +26,29 @@ export default async function handler(req, res) {
       solutionImages,
       completedAt,
       remarks,
+    });
+
+    const assignedAt = newAssignment.assignedAt instanceof Date
+      ? newAssignment.assignedAt.toISOString()
+      : new Date().toISOString();
+
+    // Audit log + n8n (fire-and-forget)
+    if (actorClerkId) {
+      logAuditEvent({
+        actorClerkId,
+        actorName: officerName || 'admin',
+        action: 'assignment_created',
+        resourceType: 'assignment',
+        resourceId: String(newAssignment._id),
+        description: `มอบหมายงานเรื่องร้องเรียน ${String(complaintId).slice(-8)} ให้ ${officerName || userId}`,
+      });
+    }
+
+    n8n.complaintAssigned({
+      complaintId: String(complaintId),
+      officerName: officerName || 'เจ้าหน้าที่',
+      officerId: String(userId),
+      assignedAt,
     });
 
     res.status(201).json({ message: 'Assignment created successfully', assignment: newAssignment });

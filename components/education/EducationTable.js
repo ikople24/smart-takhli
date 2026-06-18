@@ -170,10 +170,8 @@ export default function EducationTable({ data, onEdit }) {
                 key={item._id} 
                 className="hover:bg-gray-50 transition cursor-pointer"
                 onClick={() => {
-                  console.log('Row clicked:', item);
                   setSelectedItem(item);
                   setIsDetailModalOpen(true);
-                  console.log('Modal state set to true');
                 }}
               >
                 <td className="px-6 py-4">
@@ -271,7 +269,6 @@ export default function EducationTable({ data, onEdit }) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('Row clicked:', item);
                         setSelectedItem(item);
                         setIsDetailModalOpen(true);
                       }}
@@ -325,12 +322,10 @@ export default function EducationTable({ data, onEdit }) {
       </div>
 
       {/* Detail Modal */}
-      {console.log('Modal render state:', { isOpen: isDetailModalOpen, data: selectedItem })}
       <EducationDetailModal
         data={selectedItem}
         isOpen={isDetailModalOpen}
         onClose={() => {
-          console.log('Modal closing');
           setIsDetailModalOpen(false);
           setSelectedItem(null);
         }}

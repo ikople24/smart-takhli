@@ -28,6 +28,18 @@ const ActivitySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  images: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: (arr) => arr.length <= 6,
+      message: 'อัปโหลดรูปได้สูงสุด 6 รูป'
+    }
+  },
+  views: {
+    type: Number,
+    default: 0
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -37,10 +37,6 @@ export default async function handler(req, res) {
       };
     });
 
-    console.log("=== Debug Borrowed Devices ===");
-    console.log("Total borrowed devices:", enrichedBorrowedDevices.length);
-    console.log("==============================");
-
     return res.status(200).json(enrichedBorrowedDevices);
 
   } catch (error) {

@@ -17,7 +17,7 @@ import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { BookOpen, Download } from "lucide-react";
 
 import EducationFormModal from "@/components/education/EducationFormModal";
-import ActivityFeedbackForm from "@/components/ActivityFeedbackForm";
+import ActivityFeed from "@/components/activities/ActivityFeed";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -162,17 +162,16 @@ export default function Home() {
               <AvailableListOnly menu={healthMenu} loading={healthLoading} />
             </div>
 
-            {/* ส่วนแสดงความคิดเห็นของนักเรียนนักศึกษา */}
+            {/* ข่าวกิจกรรม */}
             <div className="flex flex-col items-center mt-4 mb-2 p-2">
               <div className="flex items-center gap-2 mb-2">
                 <div className="inline-grid *:[grid-area:1/1]">
                   <div className="status status-info status-lg animate-ping"></div>
                   <div className="status status-info status-lg"></div>
                 </div>
-                <span className="font-bold text-indigo-400">ACTIVITY FEEDBACK</span>
+                <span className="font-bold text-indigo-400">ACTIVITY NEWS</span>
               </div>
-              <span className="font-semibold text-indigo-400">💭 แสดงความคิดเห็นและดูกิจกรรมย้อนหลัง</span>
-              <ActivityFeedbackForm selectedActivity={null} />
+              <ActivityFeed limit={3} showViewAll />
             </div>
           </>
         )}
