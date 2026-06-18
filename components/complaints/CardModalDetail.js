@@ -19,7 +19,7 @@ import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import Image from "next/image";
 import CardOfficail from "./CardOfficail";
 import CardAssignment from "./CardAssignment";
-import SatisfactionChart from "./SatisfactionChart";
+import SatisfactionChart from "@/components/SatisfactionChart";
 
 // Modern Step Timeline Component
 const StepTimeline = ({ status, assignment }) => {

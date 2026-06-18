@@ -1,7 +1,7 @@
 import Image from "next/image";
-import ImageUploads from "./ImageUploads";
+import ImageUploads from "@/components/ImageUploads";
 import { useState, useEffect } from "react";
-import { useAdminOptionsStore } from "../stores/useAdminOptionsStore";
+import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 import { z } from "zod";
 
 export default function UpdateAssignmentModal({ assignment, onClose }) {

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import ComplaintDetailModal from "@/components/ComplaintDetailModal";
-import ExportComplaints from "@/components/ExportComplaints";
+import ComplaintDetailModal from "@/components/complaints/ComplaintDetailModal";
+import ExportComplaints from "@/components/complaints/ExportComplaints";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";

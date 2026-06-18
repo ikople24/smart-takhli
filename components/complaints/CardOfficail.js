@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Timer
 } from "lucide-react";
-import SatisfactionForm from "./SatisfactionForm";
+import SatisfactionForm from "@/components/SatisfactionForm";
 
 export default function CardOfficail(props) {
   const [assignedDate, setAssignedDate] = useState(null);

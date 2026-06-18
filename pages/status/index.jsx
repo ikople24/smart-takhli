@@ -1,6 +1,6 @@
 //page/status/index.jsx
 import Head from "next/head";
-import CardModalDetail from "@/components/CardModalDetail";
+import CardModalDetail from "@/components/complaints/CardModalDetail";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";

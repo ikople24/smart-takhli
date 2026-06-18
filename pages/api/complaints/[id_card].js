@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CardModalDetail from "@/components/CardModalDetail";
+import CardModalDetail from "@/components/complaints/CardModalDetail";
 
 export default function ComplaintList({ complaints }) {
   const [modalData, setModalData] = useState(null);

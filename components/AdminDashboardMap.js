@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
 
 // Import menu store to get category icons
 import { useMenuStore } from '@/stores/useMenuStore';
-import CardModalDetail from './CardModalDetail';
+import CardModalDetail from '@/components/complaints/CardModalDetail';
 
 const { BaseLayer } = LayersControl;
 
