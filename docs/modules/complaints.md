@@ -18,12 +18,15 @@
 
 `Complaint`, `Assignment`, `AdminOption`
 
-## Components (⚠️ ยังกองที่ root ของ `components/` — รอเฟส 3)
+## Components (`components/complaints/`)
 
-`ComplaintFormModal`, `ComplaintDetailModal`, `ComplaintStats` + `ComplaintStatsNew`
-(ซ้ำ — ต้องเลือกตัวเดียว), `ExportComplaints`, `CardAssignment`, `CardCompleted`,
-`CardModalDetail`, `CardOfficail`, `OverdueComplaintsAlert` + `OverdueComplaintsAlertNew`
-(ซ้ำ), `Reporter*`, `CommunitySelector`
+`ComplaintFormModal`, `ComplaintDetailModal`, `ComplaintStats`, `OverdueComplaintsAlert`,
+`ExportComplaints`, `CardAssignment`, `CardModalDetail`, `CardOfficail`,
+`ReporterInfoMap`, `ReporterInput`, `CommunitySelector`, `UpdateAssignmentModal`
+
+> ย้ายเข้าโฟลเดอร์โมดูลแล้ว (เฟส 3, 2026-06-18). คู่ซ้ำ `*New` รวมเป็นชื่อหลักแล้ว;
+> dead code (`CardCompleted`, `ReporterInfoCard`, `*เก่า`) ถูกลบ
+> `TaskCard.tsx` ยังอยู่ root (cross-cutting: complaint|feedback)
 
 ## PDPA / เรื่องลับ
 
