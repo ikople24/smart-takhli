@@ -17,8 +17,10 @@ export function useSiteTracking(enabled: boolean) {
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
 
-    // visit: 1 ครั้ง/วัน/แท็บ (sessionStorage)
-    const today = new Date().toISOString().slice(0, 10);
+    // visit: 1 ครั้ง/วัน/แท็บ (sessionStorage) — ใช้วันเขต Asia/Bangkok ให้ตรงกับ bucket ฝั่ง server
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+    }).format(new Date());
     const visitKey = `site-visit-${today}`;
     if (!sessionStorage.getItem(visitKey)) {
       sessionStorage.setItem(visitKey, "1");
