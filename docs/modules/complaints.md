@@ -11,7 +11,7 @@
 ## API
 
 - `pages/api/complaints/*`, `pages/api/problems.js` (⚠️ อยู่ root ของ api/)
-- `pages/api/assignments/*` — การมอบหมายงาน (⚠️ ควรย้ายใต้ complaints — เฟส 3)
+- `pages/api/complaints/assignments/*` — การมอบหมายงาน (ย้ายเข้าใต้ complaints แล้ว เฟส 3, 2026-06-19)
 - `pages/api/problem-options.js` + `pages/api/problemoptions/` (⚠️ ซ้ำซ้อน — เฟส 7)
 
 ## Models

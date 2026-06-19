@@ -40,9 +40,9 @@ models/<module>/                          ← Mongoose models
   แอดมินโพสต์กิจกรรมพร้อมรูป (Cloudinary) + วันที่ดำเนินการ + แสดงผลประเมิน
   ความพึงพอใจรายกิจกรรม และแสดงฟีดที่หน้าหลัก (`pages/index.tsx`)
   — รายละเอียดใน [activities.md](activities.md)
-- **เฟส 3 (บางส่วน)**: complaints — ✅ ย้าย root components → `components/complaints/`
-  + dedup `*New` + ลบ dead code (2026-06-18); ⏳ ค้าง: ย้าย
-  `/api/assignments` → `/api/complaints/assignments` (เลื่อนไปทำทีหลัง)
+- ✅ **เฟส 3 (เสร็จ)**: complaints — ย้าย root components → `components/complaints/`
+  + dedup `*New` + ลบ dead code (2026-06-18); ย้าย `/api/assignments` →
+  `/api/complaints/assignments` + อัปเดต caller (2026-06-19)
 - **เฟส 4**: education — `StudentFeedback*` components → `components/education/`,
   จัดความสัมพันธ์ education ↔ activities หลังออกแบบฟีด
 - **เฟส 5**: satisfaction / pm25 components เข้าโฟลเดอร์, models ที่เหลือเข้า
