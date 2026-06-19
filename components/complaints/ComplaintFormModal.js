@@ -4,11 +4,11 @@ import CommunitySelector from './CommunitySelector';
 import ReporterInput from './ReporterInput';
 
 import { useProblemOptionStore } from '@/stores/useProblemOptionStore';
-import ImageUploads from './ImageUploads';
+import ImageUploads from '@/components/ImageUploads';
 import Swal from 'sweetalert2';
 import { z } from 'zod';
 import Image from 'next/image';
-const LocationConfirm = dynamic(() => import('./LocationConfirm'), { ssr: false });
+const LocationConfirm = dynamic(() => import('@/components/LocationConfirm'), { ssr: false });
 
 // LINE LIFF login ถูกถอดออกแล้ว (2026-06-12) — กรอกฟอร์มปกติ เหลือเฉพาะปุ่ม
 // เพิ่มเพื่อน LINE OA ใน dialog หลังส่งสำเร็จ; จะพัฒนาการเรียก user ผ่าน LINE ใหม่ภายหลัง

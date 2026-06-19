@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog } from "@headlessui/react";
 import axios from "axios";
-import CardModalDetail from "@/components/CardModalDetail";
+import CardModalDetail from "@/components/complaints/CardModalDetail";
 
 const ComplaintListPage = () => {
   const [complaints, setComplaints] = useState([]);

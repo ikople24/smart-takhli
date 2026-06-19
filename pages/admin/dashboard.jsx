@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import ComplaintDetailModal from "@/components/ComplaintDetailModal";
-import ExportComplaints from "@/components/ExportComplaints";
+import ComplaintDetailModal from "@/components/complaints/ComplaintDetailModal";
+import ExportComplaints from "@/components/complaints/ExportComplaints";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -486,7 +486,7 @@ export default function AdminDashboard() {
       const satisfactionRes = await fetch('/api/satisfaction/stats');
       const satisfactionData = await satisfactionRes.json();
       
-      const assignmentsUrl = `/api/assignments/with-users?dateRange=${dateRange}&fiscalYear=${fiscalYearFilter || ''}`;
+      const assignmentsUrl = `/api/complaints/assignments/with-users?dateRange=${dateRange}&fiscalYear=${fiscalYearFilter || ''}`;
       const assignmentsRes = await fetch(assignmentsUrl);
       const assignmentsData = await assignmentsRes.json();
       

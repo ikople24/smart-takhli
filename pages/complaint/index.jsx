@@ -9,7 +9,7 @@ import "swiper/css";
 import "swiper/css/autoplay";
 import "swiper/css/pagination";
 import { Autoplay, Pagination } from "swiper/modules";
-import CardModalDetail from "@/components/CardModalDetail";
+import CardModalDetail from "@/components/complaints/CardModalDetail";
 import { Clock, CheckCircle2, FileText, UserCheck, MapPin, Calendar } from "lucide-react";
 
 // Step indicator component
@@ -90,7 +90,7 @@ export default function ComplaintListPage() {
   useEffect(() => {
     const fetchAllAssignments = async () => {
       try {
-        const res = await fetch("/api/assignments");
+        const res = await fetch("/api/complaints/assignments");
         const data = await res.json();
         const assignmentMap = {};
         data.forEach((a) => {

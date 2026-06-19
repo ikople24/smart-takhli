@@ -1,7 +1,7 @@
 import Image from "next/image";
-import ImageUploads from "./ImageUploads";
+import ImageUploads from "@/components/ImageUploads";
 import { useState, useEffect } from "react";
-import { useAdminOptionsStore } from "../stores/useAdminOptionsStore";
+import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 import { z } from "zod";
 
 export default function UpdateAssignmentModal({ assignment, onClose }) {
@@ -104,7 +104,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         solutionImages,
         completedAt,
       });
-      const res = await fetch("/api/assignments/update", {
+      const res = await fetch("/api/complaints/assignments/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

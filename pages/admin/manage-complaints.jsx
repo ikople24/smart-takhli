@@ -5,12 +5,12 @@ import { useAuth } from "@clerk/nextjs";
 import Head from "next/head";
 import useComplaintStore from "@/stores/useComplaintStore";
 import { useMenuStore } from "@/stores/useMenuStore";
-import UpdateAssignmentModal from "@/components/UpdateAssignmentModal";
+import UpdateAssignmentModal from "@/components/complaints/UpdateAssignmentModal";
 import EditUserModal from "@/components/EditUserModal";
-import ComplaintStatsNew from "@/components/ComplaintStatsNew";
-import OverdueComplaintsAlertNew from "@/components/OverdueComplaintsAlertNew";
-import ComplaintDetailModal from "@/components/ComplaintDetailModal";
-import ExportComplaints from "@/components/ExportComplaints";
+import ComplaintStats from "@/components/complaints/ComplaintStats";
+import OverdueComplaintsAlert from "@/components/complaints/OverdueComplaintsAlert";
+import ComplaintDetailModal from "@/components/complaints/ComplaintDetailModal";
+import ExportComplaints from "@/components/complaints/ExportComplaints";
 import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
 import Swal from "sweetalert2";
 
@@ -76,7 +76,7 @@ export default function ManageComplaintsPage() {
   // Fetch assignments with user data
   const fetchAssignments = useCallback(async () => {
     try {
-      const response = await fetch("/api/assignments");
+      const response = await fetch("/api/complaints/assignments");
       const data = await response.json();
       setAssignments(data);
       
@@ -211,7 +211,7 @@ export default function ManageComplaintsPage() {
   // Handlers
   const handleAssign = async (complaintId) => {
     try {
-      const res = await fetch("/api/assignments/create", {
+      const res = await fetch("/api/complaints/assignments/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintId, userId: existingUser?._id }),
@@ -559,7 +559,7 @@ export default function ManageComplaintsPage() {
           </div>
 
           {/* Stats Cards */}
-          <ComplaintStatsNew 
+          <ComplaintStats
             stats={stats} 
             isLoading={loading} 
             onStatClick={handleStatClick}
@@ -568,7 +568,7 @@ export default function ManageComplaintsPage() {
           {/* Overdue alerts + satisfaction comments */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 items-start">
             <div className="lg:col-span-2">
-              <OverdueComplaintsAlertNew 
+              <OverdueComplaintsAlert
                 complaints={complaints} 
                 assignments={assignments}
                 isExpanded={overdueExpanded}

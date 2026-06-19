@@ -19,7 +19,7 @@ import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import Image from "next/image";
 import CardOfficail from "./CardOfficail";
 import CardAssignment from "./CardAssignment";
-import SatisfactionChart from "./SatisfactionChart";
+import SatisfactionChart from "@/components/SatisfactionChart";
 
 // Modern Step Timeline Component
 const StepTimeline = ({ status, assignment }) => {
@@ -182,7 +182,7 @@ export default function CardModalDetail({ modalData, onClose }) {
     async function fetchAssignment() {
       if (modalData?._id) {
         try {
-          const res = await fetch(`/api/assignments/by-complaint?complaintId=${modalData._id}`);
+          const res = await fetch(`/api/complaints/assignments/by-complaint?complaintId=${modalData._id}`);
           const data = await res.json();
           setAssignment(data.data?.[0] || null);
         } catch (error) {

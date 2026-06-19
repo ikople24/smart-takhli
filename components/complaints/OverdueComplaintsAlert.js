@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function OverdueComplaintsAlertNew({
+export default function OverdueComplaintsAlert({
   complaints,
   assignments,
   onComplaintClick,

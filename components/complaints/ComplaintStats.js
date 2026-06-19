@@ -55,7 +55,7 @@ function ProgressBar({ value, max, color }) {
   );
 }
 
-export default function ComplaintStatsNew({ stats, isLoading, onStatClick }) {
+export default function ComplaintStats({ stats, isLoading, onStatClick }) {
   const statCards = [
     {
       key: 'total',

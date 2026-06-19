@@ -33,16 +33,16 @@ models/<module>/                          ← Mongoose models
 ขั้นตอนเพิ่มหน้า/โมดูลใหม่: ดู `.claude/skills/adding-admin-page/SKILL.md`
 และ `.claude/skills/adding-feature-module/SKILL.md`
 
-## Roadmap การจัดระเบียบ (อัปเดต 2026-06-10)
+## Roadmap การจัดระเบียบ (อัปเดต 2026-06-18)
 
 - ✅ **เฟส 1 (เสร็จ)**: แยกโรงเรียนผู้สูงอายุออกจาก smart-health
-- **เฟส 2 (ถัดไป): ฟีดกิจกรรม** — ยกระดับโมดูล activities:
+- ✅ **เฟส 2 (เสร็จ): ฟีดกิจกรรม** — ยกระดับโมดูล activities:
   แอดมินโพสต์กิจกรรมพร้อมรูป (Cloudinary) + วันที่ดำเนินการ + แสดงผลประเมิน
   ความพึงพอใจรายกิจกรรม และแสดงฟีดที่หน้าหลัก (`pages/index.tsx`)
   — รายละเอียดใน [activities.md](activities.md)
-- **เฟส 3**: complaints — ย้าย root components → `components/complaints/`,
-  ตัดสินชะตา `ComplaintStats` vs `ComplaintStatsNew` / `OverdueComplaintsAlert*`,
-  ย้าย `/api/assignments` → `/api/complaints/assignments`
+- ✅ **เฟส 3 (เสร็จ)**: complaints — ย้าย root components → `components/complaints/`
+  + dedup `*New` + ลบ dead code (2026-06-18); ย้าย `/api/assignments` →
+  `/api/complaints/assignments` + อัปเดต caller (2026-06-19)
 - **เฟส 4**: education — `StudentFeedback*` components → `components/education/`,
   จัดความสัมพันธ์ education ↔ activities หลังออกแบบฟีด
 - **เฟส 5**: satisfaction / pm25 components เข้าโฟลเดอร์, models ที่เหลือเข้า

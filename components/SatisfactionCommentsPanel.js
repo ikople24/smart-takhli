@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MessageSquare, Star } from 'lucide-react';
-import CardModalDetail from '@/components/CardModalDetail';
+import CardModalDetail from '@/components/complaints/CardModalDetail';
 
 export default function SatisfactionCommentsPanel({
   complaints = [],

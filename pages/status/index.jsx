@@ -1,6 +1,6 @@
 //page/status/index.jsx
 import Head from "next/head";
-import CardModalDetail from "@/components/CardModalDetail";
+import CardModalDetail from "@/components/complaints/CardModalDetail";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
@@ -81,7 +81,7 @@ const StatusPage = () => {
   // Fetch assignments แบบ batch
   const fetchAssignmentsForComplaints = async (complaintIds) => {
     try {
-      const res = await fetch("/api/assignments/by-complaints", {
+      const res = await fetch("/api/complaints/assignments/by-complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintIds }),

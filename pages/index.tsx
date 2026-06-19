@@ -6,7 +6,7 @@ type BeforeInstallPromptEvent = Event & {
 import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
-import ComplaintFormModal from "@/components/ComplaintFormModal";
+import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
 import WaterQualityCard from "@/components/smart-papar/WaterQualityCard";
 import Footer from "@/components/Footer";

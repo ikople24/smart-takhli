@@ -1,4 +1,4 @@
-// /pages/api/assignments/update.js
+// /pages/api/complaints/assignments/update.js
 
 import dbConnect from "@/lib/dbConnect"; // ถ้าใช้ MongoDB
 import Assignment from "@/models/Assignment"; // ตรวจสอบ path ให้ตรงกับโครงสร้างของคุณ
