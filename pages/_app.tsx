@@ -7,6 +7,7 @@ import Layout from "@/components/Layout";
 import { useEffect, useState } from "react";
 import { usePermissionsStore } from "@/stores/usePermissionsStore";
 import { hasPermission } from "@/lib/permissions";
+import { useSiteTracking } from "@/components/site-stats/useSiteTracking";
 import type { Role } from "@/lib/permissions";
 
 // ประเภทของการปฏิเสธการเข้าถึง
@@ -28,6 +29,9 @@ function AppContent({ Component, pageProps }: AppProps) {
   const isProtected = ["/admin", "/user"].some((path) =>
     router.pathname.startsWith(path)
   );
+
+  // ติดตามสถิติการเข้าชม เฉพาะหน้าสาธารณะ (ไม่นับ /admin, /user)
+  useSiteTracking(!isProtected);
 
   const isSuperAdminPage = router.pathname.startsWith("/admin/superadmin");
 
