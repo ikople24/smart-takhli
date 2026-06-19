@@ -41,7 +41,7 @@ export default function CardAssignment({ probId }) {
     async function fetchAssignment() {
       try {
         const res = await fetch(
-          `/api/assignments/by-complaint?complaintId=${probId}`
+          `/api/complaints/assignments/by-complaint?complaintId=${probId}`
         );
         const data = await res.json();
         setAssignment(data.data?.[0]);

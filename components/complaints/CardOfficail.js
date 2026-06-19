@@ -120,7 +120,7 @@ export default function CardOfficail(props) {
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
-        const res = await fetch("/api/assignments");
+        const res = await fetch("/api/complaints/assignments");
         const data = await res.json();
         if (props.probId) {
           const responsibleAssignments = data.filter(

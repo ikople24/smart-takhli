@@ -81,7 +81,7 @@ const StatusPage = () => {
   // Fetch assignments แบบ batch
   const fetchAssignmentsForComplaints = async (complaintIds) => {
     try {
-      const res = await fetch("/api/assignments/by-complaints", {
+      const res = await fetch("/api/complaints/assignments/by-complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintIds }),

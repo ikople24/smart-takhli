@@ -90,7 +90,7 @@ export default function ComplaintListPage() {
   useEffect(() => {
     const fetchAllAssignments = async () => {
       try {
-        const res = await fetch("/api/assignments");
+        const res = await fetch("/api/complaints/assignments");
         const data = await res.json();
         const assignmentMap = {};
         data.forEach((a) => {

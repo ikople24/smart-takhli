@@ -76,7 +76,7 @@ export default function ManageComplaintsPage() {
   // Fetch assignments with user data
   const fetchAssignments = useCallback(async () => {
     try {
-      const response = await fetch("/api/assignments");
+      const response = await fetch("/api/complaints/assignments");
       const data = await response.json();
       setAssignments(data);
       
@@ -211,7 +211,7 @@ export default function ManageComplaintsPage() {
   // Handlers
   const handleAssign = async (complaintId) => {
     try {
-      const res = await fetch("/api/assignments/create", {
+      const res = await fetch("/api/complaints/assignments/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintId, userId: existingUser?._id }),

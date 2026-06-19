@@ -104,7 +104,7 @@ export default function UpdateAssignmentModal({ assignment, onClose }) {
         solutionImages,
         completedAt,
       });
-      const res = await fetch("/api/assignments/update", {
+      const res = await fetch("/api/complaints/assignments/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
