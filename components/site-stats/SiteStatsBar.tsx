@@ -59,7 +59,7 @@ function StatCard({
 }) {
   const display = useCountUp(value, 1200, visible);
   return (
-    <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/60 bg-white/70 px-4 py-6 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+    <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-xl border border-white/60 bg-white/70 px-2.5 py-3.5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:rounded-2xl sm:px-4 sm:py-6">
       {/* แถบไล่สีด้านบน = ลายเซ็นของการ์ด (instrument readout) */}
       <span
         className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent.bar}`}
@@ -70,16 +70,16 @@ function StatCard({
       />
 
       <div
-        className={`relative mb-3 grid h-11 w-11 place-items-center rounded-xl bg-white/80 shadow-inner ring-1 ring-black/5 ${accent.icon}`}
+        className={`relative mb-2 grid h-8 w-8 place-items-center rounded-lg bg-white/80 shadow-inner ring-1 ring-black/5 sm:mb-3 sm:h-11 sm:w-11 sm:rounded-xl ${accent.icon}`}
       >
         {icon}
       </div>
 
-      <div className="relative text-3xl font-extrabold tracking-tight text-gray-800 tabular-nums">
+      <div className="relative text-xl font-extrabold tracking-tight text-gray-800 tabular-nums sm:text-3xl">
         {display.toLocaleString("th-TH")}
       </div>
 
-      <div className="relative mt-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+      <div className="relative mt-1 flex items-center gap-1.5 text-[11px] font-medium leading-tight text-gray-500 sm:mt-1.5 sm:text-xs">
         {live && (
           <span className="relative inline-flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75 motion-reduce:hidden" />
@@ -130,12 +130,12 @@ export default function SiteStatsBar() {
 
   return (
     <section ref={ref} className="mx-auto mb-8 w-full max-w-5xl px-4">
-      <div className="relative overflow-hidden rounded-3xl border border-blue-100/70 bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/60 p-5 shadow-sm sm:p-7">
+      <div className="relative overflow-hidden rounded-2xl border border-blue-100/70 bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/60 p-3 shadow-sm sm:rounded-3xl sm:p-7">
         {/* ลายเซ็นพื้นหลัง: เส้นแสงนุ่ม ๆ ให้แบนด์ดูเป็นแผงข้อมูล ไม่ใช่กล่องเปล่า */}
         <span className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-sky-300/20 blur-3xl" />
         <span className="pointer-events-none absolute -bottom-16 -right-16 h-40 w-40 rounded-full bg-emerald-300/20 blur-3xl" />
 
-        <div className="relative mb-5 flex items-center justify-center gap-2">
+        <div className="relative mb-3 flex items-center justify-center gap-2 sm:mb-5">
           <span className="h-px w-8 bg-gradient-to-r from-transparent to-blue-300" />
           <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-blue-500/90">
             สถิติการเข้าชมเว็บไซต์
@@ -143,30 +143,30 @@ export default function SiteStatsBar() {
           <span className="h-px w-8 bg-gradient-to-l from-transparent to-emerald-300" />
         </div>
 
-        <div className="relative grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <div className="relative grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 md:gap-4">
           <StatCard
-            icon={<Eye size={22} />}
+            icon={<Eye className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
             label="เข้าชมทั้งหมด"
             value={stats.total}
             visible={visible}
             accent={ACCENTS.sky}
           />
           <StatCard
-            icon={<CalendarDays size={22} />}
+            icon={<CalendarDays className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
             label="วันนี้"
             value={stats.today}
             visible={visible}
             accent={ACCENTS.cyan}
           />
           <StatCard
-            icon={<TrendingUp size={22} />}
+            icon={<TrendingUp className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
             label="เดือนนี้"
             value={stats.month}
             visible={visible}
             accent={ACCENTS.emerald}
           />
           <StatCard
-            icon={<Radio size={22} />}
+            icon={<Radio className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
             label="กำลังออนไลน์"
             value={stats.online}
             visible={visible}
