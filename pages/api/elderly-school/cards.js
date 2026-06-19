@@ -1,8 +1,11 @@
+import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 
 export default async function handler(req, res) {
+  const auth = await requireElderlySchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ success: false, message: auth.message });
   if (req.method !== "GET") return res.status(405).json({ success: false, message: "Method not allowed" });
   try {
     const yearBE = Number(req.query?.yearBE);

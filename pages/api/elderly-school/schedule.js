@@ -1,3 +1,4 @@
+import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 
@@ -28,6 +29,8 @@ function normalizeSessions(sessions) {
 }
 
 export default async function handler(req, res) {
+  const auth = await requireElderlySchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ success: false, message: auth.message });
   const yearBE = Number(req.query?.yearBE || (req.body?.yearBE ?? null));
   if (!Number.isFinite(yearBE)) return res.status(400).json({ success: false, message: "Missing yearBE" });
 

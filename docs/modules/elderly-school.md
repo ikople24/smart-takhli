@@ -24,8 +24,10 @@
 `import` (นำเข้าชีต CSV แบบ upsert), `assessments` (2Q/9Q),
 `people`, `visits`, `sheet-dashboard` (สรุปจาก Google Sheet CSV โดยตรง)
 
-- ⚠️ ตอนนี้ **ไม่มี auth ฝั่งเซิร์ฟเวอร์** (ย้ายมาตามสภาพเดิม) — checkin ตั้งใจให้
-  public แต่ตัวอื่นควรเพิ่ม auth ใน roadmap เฟส 7
+- ✅ **Auth (2026-06-19):** endpoint admin ทั้ง 8 (`cards`, `dashboard`, `import`,
+  `people`, `schedule`, `visits`, `assessments`, `sheet-dashboard`) กั้นด้วย
+  `requireElderlySchoolAdmin` (`pages/api/elderly-school/_auth.js`) — ต้องมีสิทธิ์หน้า
+  `/admin/elderly-school` (superadmin ลัดผ่าน). `checkin` ยังเป็น **public** ตามตั้งใจ
 - shim ชั่วคราว: `/api/smart-health/elderly/checkin` re-export ไป endpoint ใหม่
   (กัน tab ค้างช่วง deploy — ลบได้ใน release ถัดไป)
 
