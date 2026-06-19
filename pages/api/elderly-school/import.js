@@ -1,3 +1,4 @@
+import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
@@ -52,6 +53,8 @@ function buildVisitSetNonDestructive(v, yearBE) {
 }
 
 export default async function handler(req, res) {
+  const auth = await requireElderlySchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ success: false, message: auth.message });
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }

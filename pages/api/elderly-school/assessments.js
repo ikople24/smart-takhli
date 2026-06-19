@@ -1,3 +1,4 @@
+import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { is2QPositive, score9Q } from "@/lib/elderly-school/mentalHealth";
@@ -13,6 +14,8 @@ function getBangkokISODate() {
 }
 
 export default async function handler(req, res) {
+  const auth = await requireElderlySchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ success: false, message: auth.message });
   await dbConnect();
 
   if (req.method === "GET") {

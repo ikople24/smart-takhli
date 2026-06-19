@@ -1,8 +1,11 @@
+import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import { ObjectId } from "mongodb";
 
 export default async function handler(req, res) {
+  const auth = await requireElderlySchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ success: false, message: auth.message });
   await dbConnect();
 
   if (req.method === "GET") {
