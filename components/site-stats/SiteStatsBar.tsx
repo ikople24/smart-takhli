@@ -11,82 +11,45 @@ interface Stats {
 
 const POLL_MS = 60_000;
 
-// แต่ละเมตริกมีโทนสีของตัวเอง อิงจากธีมหลักของเว็บ (ฟ้า → เขียว)
-// สื่อว่าเป็น "มุมมอง" คนละด้านของสถิติ ไม่ใช่การ์ดซ้ำ ๆ สีเดียว
-type Accent = {
-  bar: string; // gradient ของแถบบน + glow
-  ring: string; // วงแสงหลังไอคอน
-  icon: string; // สีไอคอน
-};
+// โทนไอคอนต่อ metric อิงธีมเว็บ (ฟ้า → เขียว) — ใช้เป็น "สีไอคอน" เท่านั้น
+// ไม่มีแถบ/ขอบสี เพื่อให้ดูเรียบ ไม่เหมือนการ์ดสำเร็จรูป
+const ICON_COLOR = {
+  sky: "text-sky-500",
+  cyan: "text-cyan-500",
+  emerald: "text-emerald-500",
+  live: "text-green-500",
+} as const;
 
-const ACCENTS = {
-  sky: {
-    bar: "from-sky-400 to-blue-500",
-    ring: "bg-sky-400/25",
-    icon: "text-sky-600",
-  },
-  cyan: {
-    bar: "from-cyan-400 to-teal-500",
-    ring: "bg-cyan-400/25",
-    icon: "text-cyan-600",
-  },
-  emerald: {
-    bar: "from-emerald-400 to-green-500",
-    ring: "bg-emerald-400/25",
-    icon: "text-emerald-600",
-  },
-  live: {
-    bar: "from-green-400 to-emerald-500",
-    ring: "bg-green-400/30",
-    icon: "text-green-600",
-  },
-} satisfies Record<string, Accent>;
-
-function StatCard({
+function StatItem({
   icon,
   label,
   value,
   visible,
-  accent,
   live = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   visible: boolean;
-  accent: Accent;
   live?: boolean;
 }) {
   const display = useCountUp(value, 1200, visible);
   return (
-    <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-xl border border-white/60 bg-white/70 px-2.5 py-3.5 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:rounded-2xl sm:px-4 sm:py-6">
-      {/* แถบไล่สีด้านบน = ลายเซ็นของการ์ด (instrument readout) */}
-      <span
-        className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent.bar}`}
-      />
-      {/* glow นุ่ม ๆ มุมบน ให้แต่ละการ์ดมีโทนของตัวเอง */}
-      <span
-        className={`pointer-events-none absolute -top-8 right-1/2 h-20 w-20 translate-x-1/2 rounded-full blur-2xl ${accent.ring}`}
-      />
-
-      <div
-        className={`relative mb-2 grid h-8 w-8 place-items-center rounded-lg bg-white/80 shadow-inner ring-1 ring-black/5 sm:mb-3 sm:h-11 sm:w-11 sm:rounded-xl ${accent.icon}`}
-      >
-        {icon}
-      </div>
-
-      <div className="relative text-xl font-extrabold tracking-tight text-gray-800 tabular-nums sm:text-3xl">
-        {display.toLocaleString("th-TH")}
-      </div>
-
-      <div className="relative mt-1 flex items-center gap-1.5 text-[11px] font-medium leading-tight text-gray-500 sm:mt-1.5 sm:text-xs">
-        {live && (
-          <span className="relative inline-flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75 motion-reduce:hidden" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-          </span>
-        )}
-        {label}
+    <div className="flex items-center gap-2.5 px-1.5 py-1 md:justify-center md:border-l md:border-gray-100 md:px-2 md:first:border-l-0">
+      <span className="shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <div className="text-lg font-bold leading-none text-gray-800 tabular-nums sm:text-2xl">
+          {display.toLocaleString("th-TH")}
+        </div>
+        <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-500 sm:text-xs">
+          {live && (
+            <span className="relative inline-flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75 motion-reduce:hidden" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
+            </span>
+          )}
+          {label}
+        </div>
       </div>
     </div>
   );
@@ -129,51 +92,41 @@ export default function SiteStatsBar() {
   if (!stats) return null;
 
   return (
-    <section ref={ref} className="mx-auto mb-8 w-full max-w-5xl px-4">
-      <div className="relative overflow-hidden rounded-2xl border border-blue-100/70 bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/60 p-3 shadow-sm sm:rounded-3xl sm:p-7">
-        {/* ลายเซ็นพื้นหลัง: เส้นแสงนุ่ม ๆ ให้แบนด์ดูเป็นแผงข้อมูล ไม่ใช่กล่องเปล่า */}
-        <span className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-sky-300/20 blur-3xl" />
-        <span className="pointer-events-none absolute -bottom-16 -right-16 h-40 w-40 rounded-full bg-emerald-300/20 blur-3xl" />
+    <section ref={ref} className="mx-auto mb-8 w-full max-w-3xl px-4">
+      <div className="mb-3 flex items-center justify-center gap-2">
+        <span className="h-px w-6 bg-gray-200" />
+        <h2 className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+          สถิติการเข้าชมเว็บไซต์
+        </h2>
+        <span className="h-px w-6 bg-gray-200" />
+      </div>
 
-        <div className="relative mb-3 flex items-center justify-center gap-2 sm:mb-5">
-          <span className="h-px w-8 bg-gradient-to-r from-transparent to-blue-300" />
-          <h2 className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-blue-500/90">
-            สถิติการเข้าชมเว็บไซต์
-          </h2>
-          <span className="h-px w-8 bg-gradient-to-l from-transparent to-emerald-300" />
-        </div>
-
-        <div className="relative grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4 md:gap-4">
-          <StatCard
-            icon={<Eye className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
-            label="เข้าชมทั้งหมด"
-            value={stats.total}
-            visible={visible}
-            accent={ACCENTS.sky}
-          />
-          <StatCard
-            icon={<CalendarDays className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
-            label="วันนี้"
-            value={stats.today}
-            visible={visible}
-            accent={ACCENTS.cyan}
-          />
-          <StatCard
-            icon={<TrendingUp className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
-            label="เดือนนี้"
-            value={stats.month}
-            visible={visible}
-            accent={ACCENTS.emerald}
-          />
-          <StatCard
-            icon={<Radio className="h-[18px] w-[18px] sm:h-[22px] sm:w-[22px]" />}
-            label="กำลังออนไลน์"
-            value={stats.online}
-            visible={visible}
-            accent={ACCENTS.live}
-            live
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-3 rounded-2xl border border-gray-100 bg-white/70 px-3 py-4 md:grid-cols-4 md:gap-0">
+        <StatItem
+          icon={<Eye className={`h-5 w-5 ${ICON_COLOR.sky}`} />}
+          label="เข้าชมทั้งหมด"
+          value={stats.total}
+          visible={visible}
+        />
+        <StatItem
+          icon={<CalendarDays className={`h-5 w-5 ${ICON_COLOR.cyan}`} />}
+          label="วันนี้"
+          value={stats.today}
+          visible={visible}
+        />
+        <StatItem
+          icon={<TrendingUp className={`h-5 w-5 ${ICON_COLOR.emerald}`} />}
+          label="เดือนนี้"
+          value={stats.month}
+          visible={visible}
+        />
+        <StatItem
+          icon={<Radio className={`h-5 w-5 ${ICON_COLOR.live}`} />}
+          label="กำลังออนไลน์"
+          value={stats.online}
+          visible={visible}
+          live
+        />
       </div>
     </section>
   );
