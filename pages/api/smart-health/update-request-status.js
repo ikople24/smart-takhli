@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
+import { formatDateLendThai } from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "PATCH") {
@@ -23,13 +24,6 @@ export default async function handler(req, res) {
     if (!request) {
       return res.status(404).json({ message: "ไม่พบคำขอนี้" });
     }
-
-    console.log("=== อัปเดตสถานะคำขอ ===");
-    console.log("รหัสคำขอ:", id);
-    console.log("สถานะเดิม:", request.status);
-    console.log("สถานะใหม่:", status);
-    console.log("การดำเนินการ:", action);
-    console.log("==========================");
 
     let updateData = {
       status: status,
@@ -83,7 +77,7 @@ export default async function handler(req, res) {
             id_use_object: borrowingId,
             index_id_tk: request.equipment || "ไม่ระบุ",
             id_personal_use: request.phone, // ใช้เบอร์โทรเป็น id_personal_use
-            date_lend: today.toLocaleString('th-TH'),
+            date_lend: formatDateLendThai(today),
             date_return: "", // Empty for borrowed status
             request_id: id, // Link to original request
             created_at: new Date(),
@@ -94,7 +88,6 @@ export default async function handler(req, res) {
           updateData.borrow_id = borrowingId;
           updateData.borrowed_at = new Date();
 
-          console.log("สร้างรายการยืม:", borrowingId);
         }
         break;
 
@@ -103,12 +96,10 @@ export default async function handler(req, res) {
     }
 
     // Update request status
-    const result = await requestCollection.updateOne(
+    await requestCollection.updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     );
-
-    console.log("ผลการอัปเดต:", result);
 
     return res.status(200).json({
       message: "อัปเดตสถานะสำเร็จ",

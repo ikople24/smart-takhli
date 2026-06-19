@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 
-const ImageUploads = ({ onChange, onUploadingChange }) => {
+const ImageUploads = ({ onChange, onUploadingChange, maxImages = 3, initialImages = [] }) => {
   const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const [previews, setPreviews] = useState(initialImages);
   const [isUploading, setIsUploading] = useState(false);
 
   // แจ้ง parent component เมื่อสถานะการอัปโหลดเปลี่ยน
@@ -20,8 +20,8 @@ const ImageUploads = ({ onChange, onUploadingChange }) => {
     setIsUploading(true);
 
     try {
-      if (previews.length >= 3) {
-        const confirmReplace = window.confirm("คุณอัปโหลดครบ 3 ภาพแล้ว ต้องการแทนที่ภาพแรกหรือไม่?");
+      if (previews.length >= maxImages) {
+        const confirmReplace = window.confirm(`คุณอัปโหลดครบ ${maxImages} ภาพแล้ว ต้องการแทนที่ภาพแรกหรือไม่?`);
         if (confirmReplace) {
           const file = selectedFiles[0];
           try {
@@ -37,7 +37,7 @@ const ImageUploads = ({ onChange, onUploadingChange }) => {
         return;
       }
 
-      const remainingSlots = 3 - previews.length;
+      const remainingSlots = maxImages - previews.length;
       const filesToAdd = selectedFiles.slice(0, remainingSlots);
       const newPreviews = [...previews];
       const newFiles = [...files];

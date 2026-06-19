@@ -1,29 +1,37 @@
+// GET /api/satisfaction/:complaintId
+// คืนค่า satisfaction records สำหรับ complaint นั้น (เหมือน Express route เดิม)
 
-import React, { useEffect } from "react";
+import dbConnect from '@/lib/dbConnect';
+import Satisfaction from '@/models/Satisfaction';
+import mongoose from 'mongoose';
 
-const SatisfactionChart = ({ complaintId }) => {
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-  useEffect(() => {
-    async function fetchSatisfaction() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/satisfaction/${complaintId}`, {
-        method: "GET",
-        headers: {
-          "x-app-id": process.env.NEXT_PUBLIC_APP_ID || "app_b",
-        },
-      });
-      await res.json();
-    }
+  const { id } = req.query;
 
-    if (complaintId) {
-      fetchSatisfaction();
-    }
-  }, [complaintId]);
+  if (!id) {
+    return res.status(400).json({ error: 'Missing complaint ID' });
+  }
 
-  return (
-    <div>
-      {/* Render chart or feedbacks */}
-    </div>
-  );
-};
+  try {
+    await dbConnect();
 
-export default SatisfactionChart;
+    const objectId = mongoose.Types.ObjectId.isValid(id)
+      ? new mongoose.Types.ObjectId(id)
+      : id;
+
+    const data = await Satisfaction.find({ complaintId: objectId })
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .lean();
+
+    // ส่งเป็น array ตรงๆ เพื่อให้ SatisfactionChart ใช้ได้
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error('Error fetching satisfaction by complaintId:', err);
+    return res.status(500).json({ error: 'Failed to fetch satisfaction data' });
+  }
+}

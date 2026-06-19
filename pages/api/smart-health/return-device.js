@@ -1,4 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
+import {
+  formatDateLendThai,
+  parseBorrowDateTimeInput,
+} from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const db = (await dbConnect()).connection.db;
-    const { borrowId, returnDateTime } = req.body;
+    const { borrowId, returnDateTime } = req.body || {};
 
     if (!borrowId) {
       return res.status(400).json({ 
@@ -35,65 +39,41 @@ export default async function handler(req, res) {
       });
     }
 
-    // Set return date
-    const returnDate = returnDateTime || new Date().toLocaleString('th-TH', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-
-    console.log("=== คืนอุปกรณ์ ===");
-    console.log("รหัสการยืม:", borrowId);
-    console.log("รหัสอุปกรณ์:", borrowRecord.index_id_tk);
-    console.log("วันที่คืน:", returnDate);
-    console.log("==================");
+    let returnDate;
+    if (returnDateTime != null && String(returnDateTime).trim()) {
+      const parsed = parseBorrowDateTimeInput(returnDateTime);
+      returnDate = parsed ? formatDateLendThai(parsed) : null;
+      if (!returnDate) {
+        return res.status(400).json({ message: "รูปแบบวันที่คืนไม่ถูกต้อง" });
+      }
+    } else {
+      returnDate = formatDateLendThai(new Date());
+      if (!returnDate) {
+        return res.status(500).json({ message: "ไม่สามารถสร้างวันที่คืนได้" });
+      }
+    }
 
     // Update borrow record with return date
-    const borrowUpdateResult = await borrowCollection.updateOne(
+    await borrowCollection.updateOne(
       { id_use_object: borrowId },
-      { 
-        $set: { 
+      {
+        $set: {
           date_return: returnDate,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตรายการยืม:", borrowUpdateResult);
 
     // Update device status back to available
-    const deviceUpdateResult = await deviceCollection.updateOne(
+    await deviceCollection.updateOne(
       { index_id_tk: borrowRecord.index_id_tk },
-      { 
-        $set: { 
+      {
+        $set: {
           ob_status: true,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตสถานะอุปกรณ์:", deviceUpdateResult);
-
-    // Verify the update
-    const updatedBorrow = await borrowCollection.findOne({ id_use_object: borrowId });
-    const updatedDevice = await deviceCollection.findOne({ index_id_tk: borrowRecord.index_id_tk });
-    
-    console.log("ข้อมูลรายการยืมหลังอัปเดต:", {
-      id_use_object: updatedBorrow?.id_use_object,
-      date_return: updatedBorrow?.date_return
-    });
-    
-    console.log("ข้อมูลอุปกรณ์หลังอัปเดต:", {
-      index_id_tk: updatedDevice?.index_id_tk,
-      ob_status: updatedDevice?.ob_status
-    });
-
-    console.log("=== คืนอุปกรณ์สำเร็จ ===");
-    console.log("รหัสการยืม:", borrowId);
-    console.log("รหัสอุปกรณ์:", borrowRecord.index_id_tk);
-    console.log("วันที่คืน:", returnDate);
-    console.log("========================");
 
     return res.status(200).json({
       message: "คืนอุปกรณ์สำเร็จ",

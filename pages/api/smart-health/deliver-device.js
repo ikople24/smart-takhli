@@ -1,4 +1,5 @@
 import dbConnect from "@/lib/dbConnect";
+import { formatDateLendThai } from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -35,60 +36,30 @@ export default async function handler(req, res) {
       });
     }
 
-    // Update borrow record with delivery date
-    const today = new Date();
-    const deliveryDate = today.toLocaleString('th-TH', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    const deliveryDate = formatDateLendThai(new Date());
+    if (!deliveryDate) {
+      return res.status(500).json({ message: "ไม่สามารถสร้างวันที่ส่งมอบได้" });
+    }
 
-    console.log("กำลังอัปเดตรายการยืม:", borrowId);
-    const borrowUpdateResult = await borrowCollection.updateOne(
+    await borrowCollection.updateOne(
       { id_use_object: borrowId },
-      { 
-        $set: { 
+      {
+        $set: {
           date_return: deliveryDate,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตรายการยืม:", borrowUpdateResult);
 
-    console.log("กำลังอัปเดตสถานะอุปกรณ์:", borrowRecord.index_id_tk);
-    const deviceUpdateResult = await deviceCollection.updateOne(
+    await deviceCollection.updateOne(
       { index_id_tk: borrowRecord.index_id_tk },
-      { 
-        $set: { 
+      {
+        $set: {
           ob_status: true,
           updated_at: new Date()
-        } 
+        }
       }
     );
-    console.log("ผลการอัปเดตสถานะอุปกรณ์:", deviceUpdateResult);
-
-    // Verify the update
-    const updatedBorrow = await borrowCollection.findOne({ id_use_object: borrowId });
-    const updatedDevice = await deviceCollection.findOne({ index_id_tk: borrowRecord.index_id_tk });
-    
-    console.log("ข้อมูลรายการยืมหลังอัปเดต:", {
-      id_use_object: updatedBorrow?.id_use_object,
-      date_return: updatedBorrow?.date_return
-    });
-    
-    console.log("ข้อมูลอุปกรณ์หลังอัปเดต:", {
-      index_id_tk: updatedDevice?.index_id_tk,
-      ob_status: updatedDevice?.ob_status
-    });
-
-    console.log("=== ส่งมอบอุปกรณ์สำเร็จ ===");
-    console.log("รหัสการยืม:", borrowId);
-    console.log("รหัสอุปกรณ์:", borrowRecord.index_id_tk);
-    console.log("วันที่ส่งมอบ:", deliveryDate);
-    console.log("==========================");
 
     return res.status(200).json({
       message: "ส่งมอบอุปกรณ์สำเร็จ",

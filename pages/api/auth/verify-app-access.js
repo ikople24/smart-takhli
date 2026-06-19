@@ -35,7 +35,6 @@ export default async function handler(req, res) {
 
     // Super Admin เข้าได้ทุก app
     if (clerkRole === "superadmin") {
-      console.log(`✅ SuperAdmin ${clerkUser.firstName} has access to all apps`);
       return res.status(200).json({
         success: true,
         hasAccess: true,
@@ -54,8 +53,6 @@ export default async function handler(req, res) {
       const hasClerkAccess = clerkAllowedApps.includes(currentAppId) || clerkAllowedApps.includes("*");
       
       if (hasClerkAccess) {
-        console.log(`✅ User ${clerkUser.firstName} has Clerk access to ${currentAppId}`);
-        
         // ดึง allowedPages จาก MongoDB (ถ้ามี)
         await dbConnect();
         const UserSchema = new mongoose.Schema(
@@ -81,7 +78,6 @@ export default async function handler(req, res) {
           }
         });
       } else {
-        console.log(`❌ User ${clerkUser.firstName} not in allowedApps for ${currentAppId}`);
         return res.status(200).json({
           success: true,
           hasAccess: false,
@@ -120,7 +116,6 @@ export default async function handler(req, res) {
 
     // ถ้าไม่พบ user ใน MongoDB = ไม่มีสิทธิ์
     if (!user) {
-      console.log(`❌ User ${userId} not found in MongoDB and no Clerk allowedApps`);
       return res.status(200).json({
         success: true,
         hasAccess: false,
@@ -133,7 +128,6 @@ export default async function handler(req, res) {
 
     // ถ้า user ยังไม่มี appId = ไม่อนุญาต
     if (!userAppId) {
-      console.log(`❌ User ${user.name} has no appId assigned (MongoDB)`);
       return res.status(200).json({
         success: true,
         hasAccess: false,
@@ -145,7 +139,6 @@ export default async function handler(req, res) {
 
     // ถ้า appId ตรงกัน = อนุญาต
     if (userAppId === currentAppId) {
-      console.log(`✅ User ${user.name} has MongoDB access to ${currentAppId}`);
       return res.status(200).json({
         success: true,
         hasAccess: true,
@@ -162,7 +155,6 @@ export default async function handler(req, res) {
     }
 
     // appId ไม่ตรง = ไม่มีสิทธิ์
-    console.log(`❌ User ${user.name} appId (${userAppId}) doesn't match ${currentAppId}`);
     return res.status(200).json({
       success: true,
       hasAccess: false,

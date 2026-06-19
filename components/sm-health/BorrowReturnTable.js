@@ -1,9 +1,27 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
+import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 import Image from 'next/image';
-import { Search, Calendar, User, Package, Eye, Star, Clock, CheckCircle, X } from 'lucide-react';
+import { Search, Calendar, User, Package, Eye, Star, Clock, CheckCircle, X, MapPin, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { COMMUNITIES } from '@/lib/takhliCommunities';
+import {
+  parseThaiDateLendString,
+  toDatetimeLocalValue,
+} from '@/lib/smartHealthBorrowDates';
+
+const LocationPickerMap = dynamic(
+  () => import('@/components/sm-health/LocationPickerMap'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 text-sm">
+        กำลังโหลดแผนที่…
+      </div>
+    ),
+  }
+);
 
 const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   const [data, setData] = useState([]);
@@ -16,6 +34,27 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [submittedFeedbacks, setSubmittedFeedbacks] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
+  const [geoEditOpen, setGeoEditOpen] = useState(false);
+  const [geoCommunity, setGeoCommunity] = useState('');
+  const [geoLocation, setGeoLocation] = useState(null);
+  /** ใช้เปรียบเทียบว่าผู้ใช้ขยับแผนที่หรือไม่ — ไม่ส่ง location ใน PATCH ถ้ายังไม่เคยมี sm_location และไม่ได้ขยับแผนที่ */
+  const [geoLocationSnapshot, setGeoLocationSnapshot] = useState(null);
+  const [geoSaving, setGeoSaving] = useState(false);
+  const [lendDateEditOpen, setLendDateEditOpen] = useState(false);
+  const [lendDateLocal, setLendDateLocal] = useState('');
+  const [lendDateSaving, setLendDateSaving] = useState(false);
+
+  const refreshBorrowData = useCallback(async () => {
+    const response = await axios.get('/api/smart-health/borrow-return');
+    setData(response.data);
+    setSelectedItem((prev) => {
+      if (!prev) return null;
+      const updated = response.data.find(
+        (x) => String(x._id) === String(prev._id) || x.id_use_object === prev.id_use_object
+      );
+      return updated || prev;
+    });
+  }, []);
 
   useEffect(() => {
     const fetchSubmittedFeedbacks = async () => {
@@ -93,8 +132,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('/api/smart-health/borrow-return');
-        setData(response.data);
+        await refreshBorrowData();
       } catch (error) {
         console.error('Error fetching borrow-return data:', error);
       } finally {
@@ -102,7 +140,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
       }
     };
     fetchData();
-  }, []);
+  }, [refreshBorrowData]);
 
   useEffect(() => {
     const fetchMenuIcons = async () => {
@@ -115,6 +153,110 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
     };
     fetchMenuIcons();
   }, []);
+
+  useEffect(() => {
+    setGeoEditOpen(false);
+    setLendDateEditOpen(false);
+  }, [selectedItem?._id]);
+
+  const openLendDateEdit = () => {
+    if (!selectedItem) return;
+    const parsed = parseThaiDateLendString(selectedItem.date_lend);
+    setLendDateLocal(toDatetimeLocalValue(parsed || new Date()));
+    setLendDateEditOpen(true);
+  };
+
+  const handleSaveLendDate = async () => {
+    if (!selectedItem?._id || !lendDateLocal?.trim()) return;
+    setLendDateSaving(true);
+    try {
+      await axios.patch(
+        `/api/smart-health/borrow-return?id=${encodeURIComponent(String(selectedItem._id))}`,
+        { date_lend_iso: lendDateLocal.trim() }
+      );
+      await refreshBorrowData();
+      setLendDateEditOpen(false);
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกวันที่ยืมแล้ว',
+        showConfirmButton: false,
+        timer: 1200,
+      });
+    } catch (e) {
+      console.error(e);
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        text: e.response?.data?.error || '',
+      });
+    } finally {
+      setLendDateSaving(false);
+    }
+  };
+
+  const openGeoEdit = () => {
+    if (!selectedItem) return;
+    const fromPerson = selectedItem.personCommunity || '';
+    const override = selectedItem.sm_community || '';
+    setGeoCommunity(String(override || fromPerson || selectedItem.resolvedCommunity || '').trim());
+    const loc =
+      selectedItem.sm_location?.lat != null && selectedItem.sm_location?.lng != null
+        ? selectedItem.sm_location
+        : selectedItem.personLocation?.lat != null && selectedItem.personLocation?.lng != null
+          ? selectedItem.personLocation
+          : null;
+    const initialLoc = loc
+      ? { lat: Number(loc.lat), lng: Number(loc.lng) }
+      : { lat: 15.253914, lng: 100.351077 };
+    setGeoLocation(initialLoc);
+    setGeoLocationSnapshot({ ...initialLoc });
+    setGeoEditOpen(true);
+  };
+
+  const handleSaveBorrowGeo = async () => {
+    if (!selectedItem?._id) return;
+    setGeoSaving(true);
+    try {
+      const hadSmLocation =
+        selectedItem.sm_location?.lat != null && selectedItem.sm_location?.lng != null;
+      const mapMoved =
+        geoLocation &&
+        geoLocationSnapshot &&
+        (Math.abs(geoLocation.lat - geoLocationSnapshot.lat) > 1e-7 ||
+          Math.abs(geoLocation.lng - geoLocationSnapshot.lng) > 1e-7);
+      const payload = { community: geoCommunity.trim() || null };
+      if (hadSmLocation || mapMoved) {
+        payload.location = geoLocation;
+      }
+      await axios.patch(`/api/smart-health/borrow-return?id=${encodeURIComponent(String(selectedItem._id))}`, payload);
+      await refreshBorrowData();
+      setGeoEditOpen(false);
+      Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', showConfirmButton: false, timer: 1200 });
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: e.response?.data?.error || '' });
+    } finally {
+      setGeoSaving(false);
+    }
+  };
+
+  const handleClearBorrowSmLocation = async () => {
+    if (!selectedItem?._id) return;
+    setGeoSaving(true);
+    try {
+      await axios.patch(`/api/smart-health/borrow-return?id=${encodeURIComponent(String(selectedItem._id))}`, {
+        location: null,
+      });
+      await refreshBorrowData();
+      setGeoLocation({ lat: 15.253914, lng: 100.351077 });
+      Swal.fire({ icon: 'success', title: 'ลบพิกัดรายการยืมแล้ว', showConfirmButton: false, timer: 1200 });
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: 'error', title: 'ลบไม่สำเร็จ' });
+    } finally {
+      setGeoSaving(false);
+    }
+  };
 
   const getIconUrl = (index_id_tk) => {
     const code = index_id_tk?.substring(0, 8);
@@ -139,9 +281,9 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
 
     // Sort by date_lend descending (newest first)
     result.sort((a, b) => {
-      const dateA = a.date_lend ? new Date(a.date_lend.split('/').reverse().join('-')) : new Date(0);
-      const dateB = b.date_lend ? new Date(b.date_lend.split('/').reverse().join('-')) : new Date(0);
-      return dateB - dateA;
+      const ta = parseThaiDateLendString(a.date_lend)?.getTime() ?? 0;
+      const tb = parseThaiDateLendString(b.date_lend)?.getTime() ?? 0;
+      return tb - ta;
     });
 
     // Filter by type
@@ -158,10 +300,13 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
 
     // Filter by search
     if (searchTerm) {
+      const q = searchTerm.toLowerCase();
       result = result.filter(item =>
-        item.index_id_tk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id_use_object?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id_personal_use?.includes(searchTerm)
+        item.index_id_tk?.toLowerCase().includes(q) ||
+        item.id_use_object?.toLowerCase().includes(q) ||
+        item.id_personal_use?.includes(searchTerm) ||
+        item.resolvedCommunity?.toLowerCase().includes(q) ||
+        item.personFullName?.toLowerCase().includes(q)
       );
     }
 
@@ -212,6 +357,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
           <h2 className="text-xl font-bold text-gray-900">ประวัติการยืม-คืนอุปกรณ์</h2>
           <p className="text-sm text-gray-500">
             ทั้งหมด {stats.total} รายการ | กำลังยืม {stats.borrowing} | คืนแล้ว {stats.returned}
+            <span className="hidden sm:inline"> — วันเวลาในตารางเป็นปฏิทินไทย (พ.ศ.) เวลาไทย</span>
           </p>
         </div>
       </div>
@@ -331,6 +477,9 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   ผู้ยืม
                 </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider max-w-[140px]">
+                  ชุมชน (สรุป)
+                </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
@@ -394,12 +543,34 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
                           <User className="w-4 h-4 text-gray-500" />
                         </div>
-                        <span className="text-sm text-gray-600 font-mono">
-                          {item.id_personal_use
-                            ? `${item.id_personal_use.slice(0, 3)}****${item.id_personal_use.slice(-4)}`
-                            : '-'}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-sm text-gray-600 font-mono block">
+                            {item.id_personal_use
+                              ? `${item.id_personal_use.slice(0, 3)}****${item.id_personal_use.slice(-4)}`
+                              : '-'}
+                          </span>
+                          {item.personFullName && (
+                            <span className="text-xs text-gray-500 truncate block max-w-[140px]" title={item.personFullName}>
+                              {item.personFullName}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 max-w-[140px]">
+                      {item.resolvedCommunity ? (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-100 truncate max-w-full"
+                          title={item.resolvedCommunity}
+                        >
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{item.resolvedCommunity}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                          ยังไม่ระบุ
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-sm text-gray-900">{item.date_lend || '-'}</div>
@@ -464,7 +635,11 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
       {/* Detail Modal */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div
+            className={`bg-white rounded-2xl shadow-2xl w-full overflow-hidden ${
+              geoEditOpen ? 'max-w-2xl max-h-[92vh] flex flex-col' : 'max-w-lg'
+            }`}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gradient-to-r from-primary/10 to-transparent">
               <div className="flex items-center gap-3">
@@ -492,7 +667,10 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedItem(null)}
+                onClick={() => {
+                  setGeoEditOpen(false);
+                  setSelectedItem(null);
+                }}
                 className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -500,7 +678,7 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
             </div>
 
             {/* Modal Content */}
-            <div className="p-4">
+            <div className={`p-4 ${geoEditOpen ? 'overflow-y-auto flex-1 min-h-0' : ''}`}>
               {!showFeedbackForm ? (
                 <>
                   {/* Info Grid */}
@@ -517,9 +695,52 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                           : '-'}
                       </div>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-xl">
-                      <div className="text-xs text-gray-500 mb-1">วันที่ยืม</div>
-                      <div className="text-sm font-medium">{selectedItem.date_lend || '-'}</div>
+                    <div className="p-3 bg-gray-50 rounded-xl sm:col-span-2">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="text-xs text-gray-500">วันที่ยืม</div>
+                        {!lendDateEditOpen && (
+                          <button
+                            type="button"
+                            onClick={openLendDateEdit}
+                            className="text-xs font-medium text-primary hover:underline shrink-0"
+                          >
+                            แก้ไข
+                          </button>
+                        )}
+                      </div>
+                      {!lendDateEditOpen ? (
+                        <div className="text-sm font-medium">
+                          {selectedItem.date_lend || '-'}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 pt-1">
+                          <input
+                            type="datetime-local"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                            value={lendDateLocal}
+                            onChange={(e) => setLendDateLocal(e.target.value)}
+                            disabled={lendDateSaving}
+                          />
+                          <div className="flex flex-wrap gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setLendDateEditOpen(false)}
+                              disabled={lendDateSaving}
+                              className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50"
+                            >
+                              ยกเลิก
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveLendDate}
+                              disabled={lendDateSaving || !lendDateLocal?.trim()}
+                              className="px-3 py-1.5 text-xs rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+                            >
+                              {lendDateSaving ? 'กำลังบันทึก…' : 'บันทึก'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="p-3 bg-gray-50 rounded-xl">
                       <div className="text-xs text-gray-500 mb-1">วันที่คืน</div>
@@ -543,6 +764,115 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
                         <CheckCircle className="w-4 h-4" />
                         คืนแล้ว
                       </span>
+                    )}
+                  </div>
+
+                  {/* ชุมชน / พิกัด สำหรับสรุปงบ (ไม่บังคับมีพิกัด — เลือกชุมชนได้ทันที) */}
+                  <div className="rounded-xl border border-gray-200 bg-slate-50/80 p-3 mb-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        เขตชุมชน (สรุป / วางแผน)
+                      </p>
+                      {!geoEditOpen && (
+                        <button
+                          type="button"
+                          onClick={openGeoEdit}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          แก้ไข
+                        </button>
+                      )}
+                    </div>
+                    {!geoEditOpen ? (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="text-gray-500">ชุมชน:</span>
+                          {selectedItem.resolvedCommunity ? (
+                            <span className="font-medium text-gray-900">{selectedItem.resolvedCommunity}</span>
+                          ) : (
+                            <span className="text-amber-700">ยังไม่ระบุ — กดแก้ไขเพื่อเลือกจากรายชื่อชุมชน</span>
+                          )}
+                          {selectedItem.sm_community && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white border text-gray-500">
+                              ระบุในรายการยืม
+                            </span>
+                          )}
+                          {!selectedItem.sm_community && selectedItem.personCommunity && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white border text-gray-500">
+                              จากทะเบียนบุคคล
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-gray-500">พิกัด:</span>
+                          {selectedItem.resolvedLocation ? (
+                            <>
+                              <span className="font-mono text-xs text-gray-800">
+                                {Number(selectedItem.resolvedLocation.lat).toFixed(5)},{' '}
+                                {Number(selectedItem.resolvedLocation.lng).toFixed(5)}
+                              </span>
+                              <a
+                                href={`https://www.google.com/maps?q=${selectedItem.resolvedLocation.lat},${selectedItem.resolvedLocation.lng}&z=16`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-blue-600 hover:underline"
+                              >
+                                เปิดแผนที่
+                              </a>
+                            </>
+                          ) : (
+                            <span className="text-gray-500 text-xs">ไม่มีพิกัด — ยังสรุปตามชุมชนได้</span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">เลือกชุมชน (รายการที่มีในระบบ)</label>
+                          <select
+                            className="select select-bordered select-sm w-full max-w-md"
+                            value={geoCommunity}
+                            onChange={(e) => setGeoCommunity(e.target.value)}
+                          >
+                            <option value="">— ยังไม่ระบุ —</option>
+                            {COMMUNITIES.map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <p className="text-[11px] text-gray-500">
+                          ระบุพิกัดได้ภายหลังเพื่อแสดงบนแผนที่ หรือเว้นว่างได้ — การสรุปตามชุมชนใช้รายการที่เลือกด้านบน
+                        </p>
+                        {geoLocation && (
+                          <LocationPickerMap initialLocation={geoLocation} onLocationChange={setGeoLocation} />
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={geoSaving}
+                            onClick={handleSaveBorrowGeo}
+                            className="btn btn-sm btn-primary"
+                          >
+                            {geoSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            บันทึกชุมชนและพิกัด
+                          </button>
+                          <button type="button" disabled={geoSaving} onClick={() => setGeoEditOpen(false)} className="btn btn-sm btn-ghost">
+                            ยกเลิก
+                          </button>
+                          {selectedItem.sm_location?.lat != null && (
+                            <button
+                              type="button"
+                              disabled={geoSaving}
+                              onClick={handleClearBorrowSmLocation}
+                              className="btn btn-sm btn-outline btn-warning"
+                            >
+                              ลบพิกัดเฉพาะรายการนี้
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -663,7 +993,10 @@ const BorrowReturnTable = ({ showOnlyUnevaluated = false }) => {
             {!showFeedbackForm && (
               <div className="flex gap-3 p-4 border-t border-gray-100 bg-gray-50">
                 <button
-                  onClick={() => setSelectedItem(null)}
+                  onClick={() => {
+                    setGeoEditOpen(false);
+                    setSelectedItem(null);
+                  }}
                   className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-700 hover:bg-white transition-colors font-medium"
                 >
                   ปิด

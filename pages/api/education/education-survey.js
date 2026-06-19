@@ -43,24 +43,6 @@ export default async function handler(req, res) {
       familyStatus
     } = req.body;
 
-    console.log('📝 Received data:', { 
-      prefix, 
-      educationLevel, 
-      fullName, 
-      address, 
-      actualAddress,
-      phone, 
-      note, 
-      schoolName,
-      gradeLevel,
-      gpa,
-      image, 
-      location,
-      housingStatus,
-      householdMembers,
-      annualIncome,
-      familyStatus
-    });
 
     if (!fullName || !image || !location?.lat) {
       return res.status(400).json({ 
@@ -98,7 +80,6 @@ export default async function handler(req, res) {
       receivedScholarship: []
     });
 
-    console.log('✅ Data saved successfully:', doc._id);
 
     // ✅ แจ้งเตือนไปยัง n8n webhook
     try {

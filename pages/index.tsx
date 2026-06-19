@@ -6,8 +6,9 @@ type BeforeInstallPromptEvent = Event & {
 import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
-import ComplaintFormModal from "@/components/ComplaintFormModal";
+import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
 import Pm25Dashboard from "@/components/Pmdata";
+import WaterQualityCard from "@/components/smart-papar/WaterQualityCard";
 import Footer from "@/components/Footer";
 
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
@@ -16,7 +17,7 @@ import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { BookOpen, Download } from "lucide-react";
 
 import EducationFormModal from "@/components/education/EducationFormModal";
-import ActivityFeedbackForm from "@/components/ActivityFeedbackForm";
+import ActivityFeed from "@/components/activities/ActivityFeed";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -113,7 +114,12 @@ export default function Home() {
         </span>
         <span className="animate-pulse text-indigo-500">|</span>
       </div>
-      <Pm25Dashboard />
+      <div className="mt-4 px-4 w-full max-w-screen-sm mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-stretch gap-3">
+          <Pm25Dashboard className="sm:w-[60%] h-full" />
+          <WaterQualityCard className="sm:w-[40%] h-full" />
+        </div>
+      </div>
       <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
         {menuLoading ? (
           <div className="flex justify-center items-center h-60">
@@ -156,17 +162,16 @@ export default function Home() {
               <AvailableListOnly menu={healthMenu} loading={healthLoading} />
             </div>
 
-            {/* ส่วนแสดงความคิดเห็นของนักเรียนนักศึกษา */}
+            {/* ข่าวกิจกรรม */}
             <div className="flex flex-col items-center mt-4 mb-2 p-2">
               <div className="flex items-center gap-2 mb-2">
                 <div className="inline-grid *:[grid-area:1/1]">
                   <div className="status status-info status-lg animate-ping"></div>
                   <div className="status status-info status-lg"></div>
                 </div>
-                <span className="font-bold text-indigo-400">ACTIVITY FEEDBACK</span>
+                <span className="font-bold text-indigo-400">ACTIVITY NEWS</span>
               </div>
-              <span className="font-semibold text-indigo-400">💭 แสดงความคิดเห็นและดูกิจกรรมย้อนหลัง</span>
-              <ActivityFeedbackForm selectedActivity={null} />
+              <ActivityFeed limit={3} showViewAll />
             </div>
           </>
         )}

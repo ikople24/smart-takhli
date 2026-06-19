@@ -7,12 +7,14 @@ import WorkflowPipeline from "@/components/sm-health/WorkflowPipeline";
 import EquipmentStats from "@/components/sm-health/EquipmentStats";
 import QuickActions from "@/components/sm-health/QuickActions";
 import DashboardTabs from "@/components/sm-health/DashboardTabs";
+import EmployeeHealthDashboard from "@/components/sm-health/EmployeeHealthDashboard";
 
 // Existing Components
 import RequestTable from "@/components/sm-health/RequestTable";
 import RegisterDeviceTable from "@/components/sm-health/RegisterDeviceTable";
 import BorrowReturnTable from "@/components/sm-health/BorrowReturnTable";
-import ElderlyDataTable from "@/components/sm-health/ElderlyDataTable";
+import PersonDataTable from "@/components/sm-health/PersonDataTable";
+import CommunityPlanningSummary from "@/components/sm-health/CommunityPlanningSummary";
 import BorrowModal from "@/components/sm-health/BorrowModal";
 import ReturnModal from "@/components/sm-health/ReturnModal";
 
@@ -128,6 +130,8 @@ export default function SmartHealthPage() {
   const tabCounts = useMemo(
     () => ({
       request: requests.length,
+      "community-summary": 0,
+      "employee-health": 0,
       "register-device": devices.length,
       "borrow-return": borrows.length,
     }),
@@ -219,14 +223,16 @@ export default function SmartHealthPage() {
                   onUpdateStatus={updateStatus}
                 />
               )}
+              {selectedTab === "community-summary" && <CommunityPlanningSummary />}
+              {selectedTab === "employee-health" && <EmployeeHealthDashboard />}
               {selectedTab === "register-device" && (
                 <RegisterDeviceTable devices={devices} loading={loadingDevices} />
               )}
               {selectedTab === "borrow-return" && (
                 <BorrowReturnTable borrows={borrows} />
               )}
-              {selectedTab === "elderly" && (
-                <ElderlyDataTable />
+              {selectedTab === "people" && (
+                <PersonDataTable />
               )}
             </>
           )}

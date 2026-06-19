@@ -33,6 +33,82 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Google Sheet sync (Smart Papar • Water Quality)
+
+This project includes a server endpoint that can **sync Google Form responses (Google Sheets)** into MongoDB (collection: `smart_papar_water_quality_daily`) by **upserting per-day** using `recordDate` (Bangkok date).
+
+### Setup
+
+- Create a Google Cloud project
+- Enable **Google Sheets API**
+- Create a **Service Account**
+- Share your Google Sheet with the service account email (Editor or Viewer)
+- Copy `.env.example` → `.env.local` and fill:
+  - `GOOGLE_SHEETS_SPREADSHEET_ID`
+  - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+  - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`
+
+> If your Google Sheet is shared as **"anyone with the link"**, you can set only:
+> - `GOOGLE_SHEETS_SPREADSHEET_ID`
+> - (optional) `GOOGLE_SHEETS_SHEET_NAME` (default: `Form_Responses 1`)
+
+### Run sync
+
+- Endpoint: `POST /api/smart-papar/water-quality/sync-sheet`
+- Auth: uses the same Smart Papar admin permission as the Water Quality page (Clerk session)
+- Optional query: `maxRows` (process only the last N rows)
+
+Example:
+
+```bash
+curl -X POST "http://localhost:3000/api/smart-papar/water-quality/sync-sheet?maxRows=200" \
+  -H "Content-Type: application/json"
+```
+
+### Auto sync (Railway Cron)
+
+Use a cron-only endpoint protected by a secret:
+
+- Endpoint: `POST /api/cron/smart-papar/water-quality-sync`
+- Auth: query `?secret=<CRON_SECRET>` or header `x-cron-secret`
+- Optional query: `maxRows` (default 200)
+
+Example:
+
+```bash
+curl -X POST "https://<your-domain>/api/cron/smart-papar/water-quality-sync?secret=<CRON_SECRET>&maxRows=200"
+```
+
+### PM2.5 DustBoy sync (Railway Cron)
+
+หน้าแรกอ่าน PM2.5 จาก **MongoDB cache** เท่านั้น — DustBoy API ถูกเรียกเฉพาะตอน cron sync
+
+Env ที่ต้องมีบน Railway:
+
+- `DUSTBOY_API_KEY`
+- `DUSTBOY_STATION_ID` (default `3550`)
+- `CRON_SECRET`
+- `MONGODB_URI` (หรือ connection string ที่โปรเจกต์ใช้อยู่)
+
+| งาน | Cron (Asia/Bangkok) | Endpoint |
+|-----|---------------------|----------|
+| ค่าล่าสุดทุกชม. | `5 * * * *` | `POST /api/cron/pm25/sync-hourly?secret=<CRON_SECRET>` |
+| 7 วันย้อนหลัง | `15 0 * * *` | `POST /api/cron/pm25/sync-daily?secret=<CRON_SECRET>` |
+| กราฟรายเดือน (เดือนใหม่) | `0 3 * * *` | `POST /api/cron/pm25/sync-monthly?secret=<CRON_SECRET>` |
+
+ครั้งแรกของ `sync-monthly` จะ bootstrap 12 เดือนจาก `data1year` — หลังจากนั้น sync เฉพาะเดือนปัจจุบันที่ยังไม่มีใน DB
+
+จัดการโหมดแหล่งข้อมูล: `/admin/pm25-settings`
+
+## ร้องเรียน: เรื่องลับ / PDPA
+
+- ในหน้า **จัดการเรื่องร้องเรียน** (`/admin/manage-complaints`) สามารถตั้ง **เรื่องลับ** (ซ่อนการ์ดจาก `/complaint` และ `/status` สำหรับผู้ที่ไม่ใช่แอดมิน) และ **PDPA** (ภาพเบลอสำหรับผู้ที่ไม่ใช่แอดมิน) ได้
+- **ข้อความเมื่อเปิด PDPA:** เจ้าหน้าที่เปิดรายละเอียดเรื่องใน **`ComplaintDetailModal`** แล้ว **ลากเลือกช่วงข้อความ** ในกรอบต้นฉบับ → กด **ซ่อนคำที่เลือก** ได้หลายครั้ง → **บันทึกการซ่อนคำ** — ระบบเก็บเป็นช่วง `start`/`end` ใน `pdpaDetailRedactions` (ไม่มีการเซ็นเซอร์อัตโนมัติจากรายการคำ)  
+- หากยังไม่บันทึกช่วงใด ประชาชนจะเห็นข้อความ `detail` เต็ม (ภาพยังเบลอตาม PDPA)
+- แอดมินที่ล็อกอิน (Clerk `publicMetadata.role` เป็น `admin` หรือ `superadmin`) จะเห็นข้อมูลเต็มในระบบหลังบ้านและ API ที่ส่งผ่าน session นั้น
+- ภาพ PDPA ใช้การแปลง URL ของ **Cloudinary** (`e_blur`) — รูปที่ไม่ใช่ Cloudinary อาจไม่แสดงในหน้าสาธารณะเมื่อเปิด PDPA
+- ฟังก์ชัน `maskSensitiveWords` ใน `lib/pdpaTextMask.js` ยังมีอยู่เผื่อใช้ที่อื่น แต่ **ไม่ได้ใช้กับร้องเรียนสาธารณะ** แล้ว
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

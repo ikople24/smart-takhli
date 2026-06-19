@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { User, X, Package, Calendar, CreditCard } from "lucide-react";
+import Swal from "sweetalert2";
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export default function BorrowModal({ onClose, onSuccess }) {
   const [availableDevices, setAvailableDevices] = useState([]);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
+  const [people, setPeople] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -14,6 +23,9 @@ export default function BorrowModal({ onClose, onSuccess }) {
   );
   const [citizenId, setCitizenId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddPerson, setShowAddPerson] = useState(false);
+  const [newPerson, setNewPerson] = useState({ fullName: "", citizenId: "", phone: "" });
+  const [isSavingPerson, setIsSavingPerson] = useState(false);
 
   useEffect(() => {
     fetch("/api/smart-health/available-devices")
@@ -21,10 +33,10 @@ export default function BorrowModal({ onClose, onSuccess }) {
       .then((data) => setAvailableDevices(data))
       .catch((err) => console.error("Error loading devices", err));
 
-    fetch("/api/smart-health/registered-users")
+    fetch("/api/smart-health/people")
       .then((res) => res.json())
-      .then((data) => setRegisteredUsers(data))
-      .catch((err) => console.error("Error loading registered users", err));
+      .then((data) => setPeople(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error loading people", err));
   }, []);
 
   // Close dropdown when clicking outside
@@ -78,6 +90,7 @@ export default function BorrowModal({ onClose, onSuccess }) {
     const formData = {
       user: {
         ...selectedUser,
+        fullName: selectedUser?.fullName || selectedUser?.name,
         citizenId: citizenId,
       },
       deviceType: selectedDeviceType,
@@ -98,7 +111,19 @@ export default function BorrowModal({ onClose, onSuccess }) {
         throw new Error(result.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
 
-      alert(`บันทึกข้อมูลสำเร็จ!\nรหัสการยืม: ${result.borrowingId}`);
+      const borrowerName =
+        selectedUser?.fullName || selectedUser?.name || "-";
+      await Swal.fire({
+        icon: "success",
+        title: "ยืมอุปกรณ์สำเร็จ",
+        html: `<div class="text-left text-sm space-y-2 mt-2">
+          <p><strong>ผู้ยืม:</strong> ${escapeHtml(borrowerName)}</p>
+          <p><strong>ประเภทอุปกรณ์:</strong> ${escapeHtml(selectedDeviceType)}</p>
+          <p><strong>รหัสอุปกรณ์:</strong> ${escapeHtml(selectedDevice)}</p>
+          <p class="text-gray-600"><strong>รหัสการยืม:</strong> ${escapeHtml(result.borrowingId)}</p>
+        </div>`,
+        confirmButtonText: "ตกลง",
+      });
       onSuccess?.();
     } catch (error) {
       console.error("Failed to submit borrow request:", error);
@@ -108,14 +133,66 @@ export default function BorrowModal({ onClose, onSuccess }) {
     }
   };
 
-  const filteredUsers = registeredUsers.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone?.includes(searchTerm)
-  );
+  const q = searchTerm.toLowerCase();
+  const filteredPeople = people.filter((p) => {
+    const name = String(p.fullName || p.name || "").toLowerCase();
+    const phone = String(p.phone || "");
+    const cid = String(p.citizenId || "");
+    return name.includes(q) || phone.includes(searchTerm) || cid.includes(searchTerm);
+  });
 
   const isFormValid =
     selectedUser && selectedDevice && citizenId.length === 13;
+
+  const handleCreatePersonBasic = async () => {
+    const cid = String(newPerson.citizenId || "").replace(/\D/g, "");
+    if (cid.length !== 13) {
+      alert("กรุณากรอกเลขบัตรประชาชน 13 หลัก");
+      return;
+    }
+    if (!String(newPerson.fullName || "").trim()) {
+      alert("กรุณากรอกชื่อ-นามสกุล");
+      return;
+    }
+
+    setIsSavingPerson(true);
+    try {
+      const res = await fetch("/api/smart-health/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          basic: true,
+          citizenId: cid,
+          fullName: String(newPerson.fullName || "").trim(),
+          phone: String(newPerson.phone || "").trim() || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "บันทึกข้อมูลบุคคลไม่สำเร็จ");
+
+      const peopleRes = await fetch("/api/smart-health/people");
+      const peopleData = await peopleRes.json();
+      const nextPeople = Array.isArray(peopleData) ? peopleData : [];
+      setPeople(nextPeople);
+
+      const created = nextPeople.find((p) => String(p.citizenId || "") === cid);
+      if (created) {
+        setSelectedUser(created);
+        setSearchTerm(created.fullName || created.name || "");
+        setCitizenId(cid);
+        setShowUserDropdown(false);
+      } else {
+        setCitizenId(cid);
+      }
+
+      setShowAddPerson(false);
+      setNewPerson({ fullName: "", citizenId: "", phone: "" });
+    } catch (e) {
+      alert(`เกิดข้อผิดพลาด: ${e.message}`);
+    } finally {
+      setIsSavingPerson(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -151,7 +228,7 @@ export default function BorrowModal({ onClose, onSuccess }) {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="ค้นหาชื่อหรือเบอร์โทร"
+                  placeholder="ค้นหาชื่อ / เบอร์โทร / เลขบัตร"
                   className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -169,27 +246,31 @@ export default function BorrowModal({ onClose, onSuccess }) {
               {showUserDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
                   <div className="p-2 bg-gray-50 border-b border-gray-100 text-xs text-gray-500 sticky top-0">
-                    ผู้ขอที่ผ่านการลงทะเบียน ({filteredUsers.length} รายการ)
+                    บุคคลในระบบ ({filteredPeople.length} รายการ)
                   </div>
-                  {filteredUsers.map((user, index) => (
+                  {filteredPeople.map((p, index) => (
                     <div
                       key={index}
                       className="p-3 hover:bg-primary/5 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                       onClick={() => {
-                        setSelectedUser(user);
-                        setSearchTerm(user.name || "");
+                        setSelectedUser(p);
+                        setSearchTerm(p.fullName || p.name || "");
+                        if (p.citizenId) setCitizenId(String(p.citizenId).replace(/\D/g, "").slice(0, 13));
                         setShowUserDropdown(false);
                       }}
                     >
                       <div className="font-medium text-gray-900">
-                        {user.name}
+                        {p.fullName || p.name}
                       </div>
-                      <div className="text-sm text-gray-500">{user.phone}</div>
+                      <div className="text-sm text-gray-500">
+                        {p.phone || "-"}
+                        {p.citizenId ? ` • ${p.citizenId}` : ""}
+                      </div>
                     </div>
                   ))}
-                  {filteredUsers.length === 0 && (
+                  {filteredPeople.length === 0 && (
                     <div className="p-4 text-center text-gray-500">
-                      ไม่พบผู้ขอที่ตรงกับคำค้นหา
+                      ไม่พบบุคคลที่ตรงกับคำค้นหา
                     </div>
                   )}
                 </div>
@@ -201,21 +282,85 @@ export default function BorrowModal({ onClose, onSuccess }) {
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="text-gray-600">ชื่อ:</span>
-                    <span className="font-medium">{selectedUser.name}</span>
+                    <span className="font-medium">
+                      {selectedUser.fullName || selectedUser.name}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">เบอร์โทร:</span>
                     <span className="font-medium">{selectedUser.phone}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">สถานะ:</span>
-                    <span className="text-green-600 font-medium">
-                      {selectedUser.status}
+                    <span className="text-gray-600">เลขบัตร:</span>
+                    <span className="font-medium">
+                      {selectedUser.citizenId || "-"}
                     </span>
                   </div>
                 </div>
               </div>
             )}
+
+            <div className="mt-2">
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline"
+                onClick={() => setShowAddPerson((s) => !s)}
+              >
+                + เพิ่มบุคคลใหม่เข้าระบบ (กรณีค้นหาไม่พบ)
+              </button>
+
+              {showAddPerson && (
+                <div className="mt-2 p-3 rounded-xl border border-gray-200 bg-gray-50 space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="ชื่อ-นามสกุล"
+                      className="px-3 py-2 border border-gray-300 rounded-xl"
+                      value={newPerson.fullName}
+                      onChange={(e) => setNewPerson((p) => ({ ...p, fullName: e.target.value }))}
+                    />
+                    <input
+                      type="text"
+                      placeholder="เลขบัตร 13 หลัก"
+                      className="px-3 py-2 border border-gray-300 rounded-xl"
+                      value={newPerson.citizenId}
+                      onChange={(e) =>
+                        setNewPerson((p) => ({
+                          ...p,
+                          citizenId: e.target.value.replace(/\D/g, "").slice(0, 13),
+                        }))
+                      }
+                      maxLength={13}
+                    />
+                    <input
+                      type="text"
+                      placeholder="เบอร์โทร (ถ้ามี)"
+                      className="px-3 py-2 border border-gray-300 rounded-xl"
+                      value={newPerson.phone}
+                      onChange={(e) => setNewPerson((p) => ({ ...p, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      className="px-3 py-2 rounded-xl border border-gray-300 hover:bg-white"
+                      onClick={() => setShowAddPerson(false)}
+                      disabled={isSavingPerson}
+                    >
+                      ปิด
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-2 rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-60"
+                      onClick={handleCreatePersonBasic}
+                      disabled={isSavingPerson}
+                    >
+                      {isSavingPerson ? "กำลังบันทึก..." : "บันทึกบุคคล"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Citizen ID */}
@@ -304,7 +449,7 @@ export default function BorrowModal({ onClose, onSuccess }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="w-4 h-4 inline mr-1" />
-              วันที่และเวลา
+              วันที่และเวลายืม
             </label>
             <input
               type="datetime-local"
@@ -312,6 +457,9 @@ export default function BorrowModal({ onClose, onSuccess }) {
               value={borrowDateTime}
               onChange={(e) => setBorrowDateTime(e.target.value)}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              บันทึกและแสดงผลตามเวลาไทย (GMT+7) และปฏิทินไทย (พ.ศ.)
+            </p>
           </div>
         </div>
 

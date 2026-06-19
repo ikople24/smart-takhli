@@ -31,9 +31,25 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: String,
     default: 'on',
   },
+  isConfidential: { type: Boolean, default: false },
+  pdpaSensitive: { type: Boolean, default: false },
+  pdpaDetailRedactions: {
+    type: [
+      {
+        start: { type: Number, required: true },
+        end: { type: Number, required: true },
+      },
+    ],
+    default: [],
+  },
   updatedAt: {
     type: Date,
     default: Date.now,
+  },
+  // LINE OA Integration — เก็บ LINE userId เมื่อ user ติดต่อผ่าน LINE Bot
+  lineUserId: {
+    type: String,
+    default: null,
   },
 });
 

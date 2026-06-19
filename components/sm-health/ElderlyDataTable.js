@@ -19,6 +19,7 @@ import {
   Map,
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { COMMUNITIES } from "@/lib/takhliCommunities";
 
 // Dynamic import for map component (ssr: false for leaflet)
 const LocationPickerMap = dynamic(
@@ -44,32 +45,6 @@ const calculateAge = (birthYear) => {
   const currentYear = new Date().getFullYear() + 543; // ปี พ.ศ.
   return currentYear - parseInt(birthYear);
 };
-
-// รายชื่อชุมชนจาก CommunitySelector
-const COMMUNITIES = [
-  "สามล",
-  "รจนา",
-  "หัวเขาตาคลี",
-  "สว่างวงษ์",
-  "ตาคลีพัฒนา",
-  "ตีคลี",
-  "ทิพย์พิมาน",
-  "ตาคลีใหญ่",
-  "บ้านใหม่โพนทอง",
-  "วิลาวัลย์",
-  "โพธิ์งาม",
-  "พุทธนิมิต",
-  "ยศวิมล",
-  "ศรีเทพ",
-  "สังข์ทอง",
-  "ศรีสวัสดิ์",
-  "เขาใบไม้",
-  "จันทร์เทวี",
-  "รวมใจ",
-  "ตลาดโพนทอง",
-  "มาลัย",
-  "สารภี",
-];
 
 export default function ElderlyDataTable() {
   const [data, setData] = useState([]);
@@ -103,11 +78,11 @@ export default function ElderlyDataTable() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/smart-health/elderly");
+      const res = await fetch("/api/smart-health/people");
       const result = await res.json();
       setData(Array.isArray(result) ? result : []);
     } catch (error) {
-      console.error("Failed to fetch elderly data:", error);
+      console.error("Failed to fetch people data:", error);
     } finally {
       setLoading(false);
     }
@@ -172,7 +147,7 @@ export default function ElderlyDataTable() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("/api/smart-health/elderly", {
+      const res = await fetch("/api/smart-health/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -239,7 +214,7 @@ export default function ElderlyDataTable() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/smart-health/elderly?id=${item._id}`, {
+      const res = await fetch(`/api/smart-health/people?id=${item._id}`, {
         method: "DELETE",
       });
 
@@ -316,7 +291,7 @@ export default function ElderlyDataTable() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            ข้อมูลผู้สูงอายุ
+            ข้อมูลบุคคล
           </h2>
           <p className="text-xs sm:text-sm text-gray-500">
             ทั้งหมด {data.length} คน | แสดง {filtered.length} คน
@@ -328,7 +303,7 @@ export default function ElderlyDataTable() {
           className="flex items-center justify-center gap-2 px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">เพิ่มข้อมูลผู้สูงอายุ</span>
+          <span className="hidden sm:inline">เพิ่มข้อมูลบุคคล</span>
           <span className="sm:hidden">เพิ่ม</span>
         </button>
       </div>
@@ -387,7 +362,7 @@ export default function ElderlyDataTable() {
             ไม่พบข้อมูล
           </h3>
           <p className="text-gray-500 text-sm">
-            {searchTerm || filterCommunity ? "ลองค้นหาด้วยคำค้นอื่น" : "ยังไม่มีข้อมูลผู้สูงอายุ"}
+            {searchTerm || filterCommunity ? "ลองค้นหาด้วยคำค้นอื่น" : "ยังไม่มีข้อมูลบุคคล"}
           </p>
         </div>
       ) : (
@@ -645,7 +620,7 @@ export default function ElderlyDataTable() {
                   <Users className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">เพิ่มข้อมูลผู้สูงอายุ</h3>
+                  <h3 className="font-semibold text-gray-900">เพิ่มข้อมูลบุคคล</h3>
                   <p className="text-xs text-gray-500">กรอกข้อมูลให้ครบถ้วน</p>
                 </div>
               </div>
@@ -922,7 +897,7 @@ export default function ElderlyDataTable() {
                     <h3 className="font-semibold text-gray-900">
                       {showDetailModal.fullName}
                     </h3>
-                    <p className="text-xs text-gray-500">ข้อมูลผู้สูงอายุ</p>
+                    <p className="text-xs text-gray-500">ข้อมูลบุคคล</p>
                   </div>
                 </div>
                 <button

@@ -1,4 +1,8 @@
 import dbConnect from "@/lib/dbConnect";
+import {
+  formatDateLendThai,
+  parseBorrowDateTimeInput,
+} from "@/lib/smartHealthBorrowDates";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -6,7 +10,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const db = (await dbConnect()).connection.db;
+    const mongoose = await dbConnect();
+    const db = mongoose.connection.useDb("db_takhli");
     const { user, deviceType, deviceId, borrowDateTime } = req.body;
 
     // Validate required fields
@@ -22,6 +27,33 @@ export default async function handler(req, res) {
         message: "ไม่พบเลขบัตรประชาชนของผู้ขอ กรุณาเลือกผู้ขอที่มีเลขบัตรประชาชน" 
       });
     }
+
+    // Ensure person exists in person_data (required for borrow-return mapping)
+    const personCollection = db.collection("person_data");
+    const cid = String(user.citizenId || "").replace(/\D/g, "");
+    if (!cid || cid.length !== 13) {
+      return res.status(400).json({ message: "เลขบัตรประชาชนไม่ถูกต้อง" });
+    }
+    const fullName = String(user.fullName || user.name || "").trim();
+    const phone = user.phone ? String(user.phone).trim() : null;
+    if (!fullName) {
+      return res.status(400).json({ message: "กรุณาระบุชื่อ-นามสกุลผู้ขอ" });
+    }
+
+    const now = new Date();
+    await personCollection.updateOne(
+      { citizenId: cid },
+      {
+        $set: {
+          citizenId: cid,
+          fullName,
+          phone,
+          updatedAt: now,
+        },
+        $setOnInsert: { createdAt: now },
+      },
+      { upsert: true }
+    );
 
     // Check if device is available
     const deviceCollection = db.collection("register_object_health");
@@ -39,7 +71,7 @@ export default async function handler(req, res) {
     // Check if user already has an active borrow
     const borrowCollection = db.collection("resoles_sm_health");
     const activeBorrow = await borrowCollection.findOne({
-      id_personal_use: user.citizenId,
+      id_personal_use: cid,
       date_return: ""
     });
 
@@ -76,38 +108,25 @@ export default async function handler(req, res) {
 
     const borrowingId = `RD-${String(nextCount).padStart(3, '0')}-${dateStr}`;
 
-    console.log("=== Debug การสร้างรหัสการยืม ===");
-    console.log("ปีปัจจุบัน:", currentYear);
-    console.log("วันที่:", dateStr);
-    console.log("จำนวนรายการในปีนี้:", yearBorrows.length);
-    
-    if (yearBorrows.length > 0) {
-      console.log("รายการล่าสุด 5 รายการ:");
-      yearBorrows
-        .sort((a, b) => parseInt(b.id_use_object.split('-')[1]) - parseInt(a.id_use_object.split('-')[1]))
-        .slice(0, 5)
-        .forEach(borrow => {
-          console.log(`  ${borrow.id_use_object}`);
-        });
+    const lendDate = parseBorrowDateTimeInput(borrowDateTime);
+    if (!lendDate) {
+      return res.status(400).json({
+        message: "รูปแบบวันที่และเวลาที่ยืมไม่ถูกต้อง",
+      });
     }
-    
-    console.log("ลำดับถัดไป:", nextCount);
-    console.log("รหัสการยืม:", borrowingId);
-    console.log("================================");
+    const dateLendFormatted = formatDateLendThai(lendDate);
+    if (!dateLendFormatted) {
+      return res.status(400).json({
+        message: "ไม่สามารถจัดรูปแบบวันที่ยืมได้",
+      });
+    }
 
     // Create borrow record
     const borrowRecord = {
       id_use_object: borrowingId,
       index_id_tk: deviceId,
-      id_personal_use: user.citizenId,
-      date_lend: today.toLocaleString('th-TH', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }),
+      id_personal_use: cid,
+      date_lend: dateLendFormatted,
       date_return: "",
       created_at: new Date(),
       updated_at: new Date()
@@ -125,11 +144,6 @@ export default async function handler(req, res) {
         } 
       }
     );
-
-    console.log("=== บันทึกการยืมอุปกรณ์สำเร็จ ===");
-    console.log("รหัสการยืม:", borrowingId);
-    console.log("ข้อมูลการยืม:", borrowRecord);
-    console.log("==================================");
 
     return res.status(200).json({
       message: "บันทึกการยืมอุปกรณ์สำเร็จ",

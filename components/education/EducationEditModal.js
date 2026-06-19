@@ -22,8 +22,6 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
 
   useEffect(() => {
     if (data) {
-      console.log('EducationEditModal - Received data:', data);
-      console.log('EducationEditModal - actualAddress from data:', data.actualAddress);
       setFormData({
         prefix: data.prefix || '',
         name: data.name || '',
@@ -44,9 +42,7 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    console.log('EducationEditModal - Input change:', { name, value });
     if (name === 'actualAddress') {
-      console.log('EducationEditModal - actualAddress changed to:', value);
     }
     setFormData(prev => ({
       ...prev,
@@ -117,8 +113,6 @@ export default function EducationEditModal({ isOpen, onClose, data, onSave }) {
     e.preventDefault();
     setIsLoading(true);
     
-    console.log('EducationEditModal - Submitting formData:', formData);
-    console.log('EducationEditModal - actualAddress in formData:', formData.actualAddress);
     
     try {
       await onSave(formData);

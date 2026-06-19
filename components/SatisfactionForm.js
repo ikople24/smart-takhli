@@ -1,11 +1,21 @@
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { z } from "zod";
+import { Star, Send } from "lucide-react";
 
 const SatisfactionForm = ({ onSubmit, complaintId, status }) => {
   const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const ratingLabels = {
+    1: "ต้องปรับปรุง",
+    2: "พอใช้",
+    3: "ปานกลาง",
+    4: "ดี",
+    5: "ดีมาก"
+  };
 
   // Zod schema สำหรับ validation
   const satisfactionFormSchema = z.object({
@@ -94,44 +104,88 @@ const SatisfactionForm = ({ onSubmit, complaintId, status }) => {
   }
 
   return (
-    <form>
-      <div className="flex flex-col items-end">
-        <div className="rating gap-1 animate-bounce ">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <input
-              key={star}
-              type="radio"
-              name="rating"
-              value={star}
-              onChange={() => setRating(star)}
-              className="mask mask-star-2 bg-yellow-400 border-yellow-500 w-6 h-6 transition-all duration-300 ease-in-out hover:scale-110"
-              aria-label={`${star} star`}
-              title={`${star} ดาว`}
-            />
-          ))}
+    <form className="bg-gradient-to-br from-pink-50 via-rose-50 to-orange-50 rounded-2xl p-4 border border-pink-100 shadow-sm">
+      <div className="flex flex-col">
+        {/* Star Rating Section */}
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-gray-700 mb-3 text-center">ให้คะแนนความพึงพอใจ</p>
+          
+          {/* Star Buttons */}
+          <div className="flex justify-center gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                className={`
+                  w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200
+                  ${(hoverRating || rating) >= star 
+                    ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-lg shadow-yellow-500/30 scale-110" 
+                    : "bg-white text-gray-300 border border-gray-200 hover:border-yellow-300"
+                  }
+                `}
+              >
+                <Star 
+                  size={24} 
+                  className={(hoverRating || rating) >= star ? "fill-current" : ""} 
+                />
+              </button>
+            ))}
+          </div>
+
+          {/* Rating Label */}
+          <div className="text-center mt-3 h-6">
+            {(hoverRating || rating) > 0 && (
+              <span className={`
+                inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                ${(hoverRating || rating) >= 4 ? "bg-green-100 text-green-700" :
+                  (hoverRating || rating) >= 3 ? "bg-yellow-100 text-yellow-700" :
+                  "bg-red-100 text-red-700"}
+              `}>
+                {rating > 0 && <span className="mr-1">{rating} ดาว -</span>}
+                {ratingLabels[hoverRating || rating]}
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-right mt-1 text-sm">ให้คะแนน: {rating}</p>
 
-        <textarea
-          className="textarea textarea-bordered w-full max-w-md mt-4"
-          placeholder="แสดงความคิดเห็นเพิ่มเติม..."
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
+        {/* Comment Section */}
+        <div className="mb-4">
+          <label className="text-sm font-medium text-gray-700 mb-2 block">ความคิดเห็นเพิ่มเติม</label>
+          <textarea
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 outline-none transition-all resize-none text-sm"
+            placeholder="บอกเล่าประสบการณ์ของคุณ..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+          />
+        </div>
 
+        {/* Submit Button */}
         <button
           type="button"
           onClick={handleSubmit}
-          className="btn btn-primary btn-sm mt-4"
-          disabled={isSubmitting}
+          disabled={isSubmitting || rating === 0}
+          className={`
+            w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200
+            ${isSubmitting || rating === 0
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 hover:shadow-xl hover:shadow-pink-500/40 hover:scale-[1.02]"
+            }
+          `}
         >
           {isSubmitting ? (
             <>
-              <span className="loading loading-spinner loading-xs"></span>
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               กำลังส่ง...
             </>
           ) : (
-            'ส่งความคิดเห็น'
+            <>
+              <Send size={16} />
+              ส่งความคิดเห็น
+            </>
           )}
         </button>
       </div>

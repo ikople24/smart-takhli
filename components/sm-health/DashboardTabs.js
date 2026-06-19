@@ -1,11 +1,16 @@
 import React from "react";
-import { FileText, Clipboard, ArrowRightLeft, Users } from "lucide-react";
+import { FileText, Clipboard, ArrowRightLeft, Users, BriefcaseMedical, MapPinned } from "lucide-react";
 
 const tabs = [
   {
     key: "request",
     label: "คำขออุปกรณ์",
     icon: FileText,
+  },
+  {
+    key: "employee-health",
+    label: "สุขภาพพนักงาน",
+    icon: BriefcaseMedical,
   },
   {
     key: "register-device",
@@ -18,8 +23,13 @@ const tabs = [
     icon: ArrowRightLeft,
   },
   {
-    key: "elderly",
-    label: "ข้อมูลผู้สูงอายุ",
+    key: "community-summary",
+    label: "สรุปตามชุมชน",
+    icon: MapPinned,
+  },
+  {
+    key: "people",
+    label: "ข้อมูลบุคคล",
     icon: Users,
   },
 ];

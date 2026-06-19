@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import Swal from "sweetalert2";
-import { 
-  Shield, 
-  Users, 
-  Search, 
+import {
+  Shield,
+  Users,
+  Search,
   Crown,
   RefreshCw,
   ChevronDown,
@@ -16,24 +16,10 @@ import {
   AlertTriangle,
   Building2
 } from "lucide-react";
+import { ALL_PAGES } from "@/lib/permissions";
 
 // App ID ปัจจุบัน (ดึงจาก env)
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
-
-// รายการหน้าทั้งหมดที่สามารถจำกัดได้
-const ALL_PAGES = [
-  { path: '/admin', label: 'ตั้งค่าหน้าจอ', icon: '🛠' },
-  { path: '/admin/register-user', label: 'จัดการผู้ใช้งาน', icon: '👥' },
-  { path: '/admin/manage-complaints', label: 'จัดการเรื่องร้องเรียน', icon: '📋' },
-  { path: '/admin/dashboard', label: 'แดชบอร์ด', icon: '📊' },
-  { path: '/admin/smart-health', label: 'smart-health', icon: '🟣' },
-  { path: '/admin/smart-health-delivery', label: 'smart-health ส่งของ', icon: '📦' },
-  { path: '/admin/smart-health-return', label: 'smart-health รับคืน', icon: '↩️' },
-  { path: '/admin/education-map', label: 'smart-school', icon: '🏫' },
-  { path: '/admin/manage-activities', label: 'จัดการกิจกรรม', icon: '📅' },
-  { path: '/admin/feedback-analysis', label: 'วิเคราะห์ความคิดเห็น', icon: '📈' },
-  { path: '/user/satisfaction', label: 'ประเมินความพึงพอใจ', icon: '⭐' },
-];
 
 export default function SuperAdminPage() {
   const { user } = useUser();

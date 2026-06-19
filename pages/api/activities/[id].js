@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Activity from '@/models/Activity';
+import { requireActivitiesAdmin } from './_auth';
 
 export default async function handler(req, res) {
   try {
@@ -36,6 +37,11 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
+        const auth = await requireActivitiesAdmin(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ success: false, message: auth.message });
+        }
+
         const { name, description, startDate, endDate, isActive, isDefault } = req.body;
 
         // Validation
@@ -44,6 +50,23 @@ export default async function handler(req, res) {
             success: false, 
             message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
           });
+        }
+
+        // อัปเดตรูปเฉพาะเมื่อ client ส่ง images มา (กันลบรูปทิ้งโดยไม่ตั้งใจ)
+        const updateDoc = {
+          name: name.trim(),
+          description: description?.trim() || '',
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          isActive: isActive !== undefined ? isActive : true,
+          isDefault: isDefault || false
+        };
+        if (Array.isArray(req.body.images)) {
+          const images = req.body.images.filter((u) => typeof u === "string");
+          if (images.length > 6) {
+            return res.status(400).json({ success: false, message: "อัปโหลดรูปได้สูงสุด 6 รูป" });
+          }
+          updateDoc.images = images;
         }
 
         // ถ้าเป็น default activity ให้ยกเลิก default ของกิจกรรมอื่นๆ ก่อน
@@ -56,14 +79,7 @@ export default async function handler(req, res) {
 
         const activity = await Activity.findByIdAndUpdate(
           id,
-          {
-            name: name.trim(),
-            description: description?.trim() || '',
-            startDate: new Date(startDate),
-            endDate: new Date(endDate),
-            isActive: isActive !== undefined ? isActive : true,
-            isDefault: isDefault || false
-          },
+          updateDoc,
           { new: true, runValidators: true }
         );
 
@@ -84,6 +100,11 @@ export default async function handler(req, res) {
 
     case 'DELETE':
       try {
+        const auth = await requireActivitiesAdmin(req);
+        if (!auth.ok) {
+          return res.status(auth.status).json({ success: false, message: auth.message });
+        }
+
         const activity = await Activity.findByIdAndDelete(id);
         
         if (!activity) {
