@@ -18,6 +18,7 @@ import { BookOpen, Download } from "lucide-react";
 
 import EducationFormModal from "@/components/education/EducationFormModal";
 import ActivityFeed from "@/components/activities/ActivityFeed";
+import SiteStatsBar from "@/components/site-stats/SiteStatsBar";
 
 export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -215,6 +216,8 @@ export default function Home() {
           </button>
         )}
       </div>
+
+      <SiteStatsBar />
 
       <Footer />
     </div>
