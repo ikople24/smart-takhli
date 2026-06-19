@@ -52,5 +52,5 @@ models/<module>/                          ← Mongoose models
 - **เฟส 7**: เก็บกวาด — API กำพร้า (`/api/menu.js`, `/api/upload.js`,
   `/api/problems.js`, `problem-options` vs `problemoptions`, `geojson-features` ซ้ำ),
   ลบ `components/sm-health/ElderlyDataTable.js` (dead code),
-  ลบ shim `/api/smart-health/elderly/checkin`, เพิ่ม auth ให้ API elderly-school
-  ฝั่ง admin (ตอนนี้ไม่มี auth — ย้ายมาแบบ verbatim)
+  ลบ shim `/api/smart-health/elderly/checkin`
+  (✅ เพิ่ม auth ให้ API elderly-school ฝั่ง admin แล้ว 2026-06-19)
