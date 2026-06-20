@@ -29,6 +29,19 @@ export default async function handler(req, res) {
       const existing = await SubmittedReport.findById(complaintId).lean();
       const oldStatus = existing?.status || "";
 
+      // Guard: ปิดเรื่องไม่ได้ถ้ายังไม่ได้รับมอบหมาย (ตรงกับ UI ที่ซ่อนปุ่ม "ปิดเรื่อง"
+      // จนกว่าจะรับเรื่อง) — ปิดช่องโหว่กรณียิง API ตรงโดยข้าม UI. query ครั้งเดียว
+      // แล้ว reuse ตอนดึงชื่อ officer ในบล็อกแจ้งเตือนด้านล่าง
+      let closingAssignment = null;
+      if (status === CLOSED_STATUS) {
+        closingAssignment = await Assignment.findOne({ complaintId })
+          .sort({ assignedAt: -1 })
+          .lean();
+        if (!closingAssignment) {
+          return res.status(400).json({ message: "ปิดเรื่องไม่ได้: เรื่องนี้ยังไม่ได้รับมอบหมาย" });
+        }
+      }
+
       const updated = await SubmittedReport.findOneAndUpdate(
         { _id: complaintId },
         // Ensure close time is recorded when status changes.
@@ -87,11 +100,9 @@ export default async function handler(req, res) {
         (async () => {
           try {
             let officerName = "เจ้าหน้าที่";
-            const assignment = await Assignment.findOne({ complaintId })
-              .sort({ assignedAt: -1 })
-              .lean();
-            if (assignment?.userId) {
-              const officer = await User.findById(assignment.userId).select("name").lean();
+            // reuse assignment ที่ guard ดึงไว้แล้ว (status นี้การันตีว่ามี assignment)
+            if (closingAssignment?.userId) {
+              const officer = await User.findById(closingAssignment.userId).select("name").lean();
               if (officer?.name) officerName = officer.name;
             }
 
