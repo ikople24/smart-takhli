@@ -10,7 +10,8 @@ export type PreparedGeometry =
 export function prepareGeometry(raw: RawGeometry): PreparedGeometry {
   try {
     const reprojected = reprojectGeometry(raw.geometry);
-    const wound = rewind(feature(reprojected), { reverse: false }).geometry as Geom;
+    const rewound = rewind(feature(reprojected), { reverse: false });
+    const wound = (rewound as unknown as { geometry: Geom }).geometry;
     if (!booleanValid(wound)) return { ok: false, recordKey: raw.recordKey };
     return { ok: true, recordKey: raw.recordKey, geometry: wound };
   } catch {
