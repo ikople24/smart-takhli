@@ -27,9 +27,12 @@ const MAP: Record<DocType, {
 function buildRecordKey(docType: DocType, raw: Record<string, string>): string | null {
   const g = (k: string) => raw[k] ?? "";
   if (docType === "PARCEL") {
-    return parcelRecordKey(
-      { utm1: g("UTM_MAP1"), utm2: g("UTM_MAP2"), utm3: g("UTM_MAP3"), utm4: g("UTM_MAP4"), scale: g("UTM_SCALE") },
-      g("ที่ดิน"));
+    const utm1 = g("UTM_MAP1"), utm2 = g("UTM_MAP2"), utm3 = g("UTM_MAP3"),
+          utm4 = g("UTM_MAP4"), scale = g("UTM_SCALE"), land = g("ที่ดิน");
+    if (!utm1 || !utm2 || !utm3 || !utm4 || !scale || !land) {
+      throw new NormalizeError("missing_key", `PARCEL key incomplete: UTM_MAP1="${utm1}" UTM_MAP2="${utm2}" UTM_MAP3="${utm3}" UTM_MAP4="${utm4}" UTM_SCALE="${scale}" ที่ดิน="${land}"`);
+    }
+    return parcelRecordKey({ utm1, utm2, utm3, utm4, scale }, land);
   }
   if (docType === "NS3A") {
     return ns3aRecordKey({ a1: g("UTM_AIRMAP1"), a2: g("UTM_AIRMAP2"), a3: g("UTM_AIRMAP3"), scale: g("UTM_SCALE") }, g("ล.ที่ดิน"));

@@ -30,7 +30,13 @@ export interface RawGeometry {
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; // EPSG:24047
 }
 
-export interface Area { rai: number; ngan: number; wa: number; sqm: number; }
+export interface Area {
+  rai: number;
+  ngan: number;
+  /** วา รวมเศษ (วา + เศษ/10) */
+  wa: number;
+  sqm: number;
+}
 export interface Owner { title: string; name: string; surname: string; fullName: string; idHash: string | null; }
 
 export interface NormalizedTxn {
