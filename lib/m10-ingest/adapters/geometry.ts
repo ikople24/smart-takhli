@@ -9,11 +9,14 @@ export function parseGeometryGeoJSON(content: string): RawGeometry[] {
   const fc = parsed?.LocationGeospatial ?? parsed;
   if (!fc || fc.type !== "FeatureCollection" || !Array.isArray(fc.features))
     throw new NormalizeError("geometry_invalid", "expected a FeatureCollection");
-  return fc.features.map((f: any) => {
-    const p = f.properties ?? {};
-    const recordKey = parcelRecordKey(
-      { utm1: p.LandUTM1, utm2: p.LandUTM2, utm3: p.LandUTM3, utm4: p.LandUTM4, scale: p.LandUTMScale },
-      String(p.LandNumber ?? ""));
-    return { recordKey, geometry: f.geometry };
-  });
+  // ข้าม feature ที่ไม่มี geometry (valid GeoJSON ได้ แต่ผิด contract ของ RawGeometry)
+  return fc.features
+    .filter((f: any) => f && f.geometry)
+    .map((f: any) => {
+      const p = f.properties ?? {};
+      const recordKey = parcelRecordKey(
+        { utm1: p.LandUTM1, utm2: p.LandUTM2, utm3: p.LandUTM3, utm4: p.LandUTM4, scale: p.LandUTMScale },
+        String(p.LandNumber ?? ""));
+      return { recordKey, geometry: f.geometry };
+    });
 }

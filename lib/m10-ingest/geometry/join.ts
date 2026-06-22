@@ -1,4 +1,5 @@
 import { rewind, booleanValid, feature } from "@turf/turf";
+import type { Feature } from "geojson";
 import type { RawGeometry } from "../types";
 import { reprojectGeometry } from "./reproject";
 
@@ -10,8 +11,9 @@ export type PreparedGeometry =
 export function prepareGeometry(raw: RawGeometry): PreparedGeometry {
   try {
     const reprojected = reprojectGeometry(raw.geometry);
-    const rewound = rewind(feature(reprojected), { reverse: false });
-    const wound = (rewound as unknown as { geometry: Geom }).geometry;
+    // rewind คืน Feature ชนิดเดียวกับที่รับเข้า → narrow เป็น Feature<Geom> ตรง ๆ
+    const rewound = rewind(feature(reprojected), { reverse: false }) as Feature<Geom>;
+    const wound = rewound.geometry;
     if (!booleanValid(wound)) return { ok: false, recordKey: raw.recordKey };
     return { ok: true, recordKey: raw.recordKey, geometry: wound };
   } catch {
