@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import formidable from "formidable";
 import dbConnect from "@/lib/dbConnect";
 import { requireM10Admin } from "./_auth";
@@ -18,7 +18,9 @@ export default async function handler(req, res) {
   const file = Array.isArray(files.file) ? files.file[0] : files.file;
   if (!file) return res.status(400).json({ error: "ไม่พบไฟล์ (field name ต้องเป็น 'file')" });
   const period = Array.isArray(fields.period) ? fields.period[0] : fields.period;
-  if (!period) return res.status(400).json({ error: "ต้องระบุ period เช่น 2569-01" });
+  if (!period || !/^\d{4}-\d{2}$/.test(period)) {
+    return res.status(400).json({ error: "period ต้องเป็นรูปแบบ พ.ศ.-เดือน เช่น 2569-01" });
+  }
 
   try {
     const buffer = await readFile(file.filepath);
@@ -29,5 +31,8 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error("m10 ingest error", e);
     return res.status(500).json({ error: e?.message || "ingest ล้มเหลว" });
+  } finally {
+    // ลบไฟล์ tmp ที่ formidable เขียนไว้ (มี PII) — ไม่ค้างบนดิสก์
+    await unlink(file.filepath).catch(() => {});
   }
 }

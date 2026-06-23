@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import { getAuth, clerkClient } from "@clerk/nextjs/server";
+import { hasPermission } from "@/lib/permissions";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
 
@@ -26,9 +27,13 @@ export async function requireM10Admin(req, requiredPage) {
   if (!mongoUser) return { ok: false, status: 403, message: "User not registered" };
   if (!mongoUser.appId || mongoUser.appId !== CURRENT_APP_ID) return { ok: false, status: 403, message: "No app access" };
 
+  // ใช้ canonical hasPermission() — allowedPages ว่าง → fallback DEFAULT_PERMISSIONS[role]
+  // (ห้ามใช้ allowed.length===0 ⇒ ผ่าน: ขัด CLAUDE.md "ว่าง ≠ เห็นทุกหน้า")
+  const effectiveRole = mongoUser.role || role;
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
-  const hasPageAccess = allowed.length === 0 || allowed.includes(requiredPage);
-  if (!hasPageAccess) return { ok: false, status: 403, message: "No page access" };
+  if (!hasPermission(effectiveRole, allowed, requiredPage)) {
+    return { ok: false, status: 403, message: "No page access" };
+  }
 
-  return { ok: true, userId, role: mongoUser.role || role, isSuperAdmin: false, name: mongoUser.name || "" };
+  return { ok: true, userId, role: effectiveRole, isSuperAdmin: false, name: mongoUser.name || "" };
 }

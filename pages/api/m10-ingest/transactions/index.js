@@ -6,9 +6,11 @@ export default async function handler(req, res) {
   const auth = await requireM10Admin(req, "/admin/m10-review");
   if (!auth.ok) return res.status(auth.status).json({ error: auth.message });
 
+  const VALID = ["pending", "confirmed", "rejected", "auto"];
+  const reviewStatus = VALID.includes(req.query.reviewStatus) ? req.query.reviewStatus : "pending";
+
   await dbConnect();
   const { M10Transaction } = await import("@/models/m10-ingest");
-  const reviewStatus = req.query.reviewStatus || "pending";
   const rows = await M10Transaction.find({ reviewStatus })
     .sort({ txnDate: 1, createdAt: 1 })
     .select("docType recordKey deedNo rawStatus changeType taxRelevant txnDate regAmount owner reviewStatus")
