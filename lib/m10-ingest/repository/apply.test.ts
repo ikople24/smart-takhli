@@ -41,6 +41,17 @@ describe("confirmTransaction -> applyTxnToRecord", () => {
     const rec = await col("m10_records").findOne({ recordKey: "K1" });
     expect(rec?.status).toBe("retired");
     expect(rec?.version).toBe(2);
+    expect(rec?.history).toHaveLength(2);
+  });
+
+  it("confirmTransaction is idempotent: double confirm does not re-apply", async () => {
+    const b = await createBatch({ fileHash: "h", period: "2569-01", files: [], counts: {} });
+    const t = await insertTransactionDedup(b._id, txn());
+    await confirmTransaction(t.doc._id, "o");
+    await confirmTransaction(t.doc._id, "o"); // ซ้ำ → ต้องไม่ bump version / ไม่ throw
+    const rec = await col("m10_records").findOne({ recordKey: "K1" });
+    expect(rec?.version).toBe(1);
+    expect(rec?.history).toHaveLength(1);
   });
 
   it("rejectTransaction sets rejected, no record", async () => {

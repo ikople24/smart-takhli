@@ -72,6 +72,7 @@ export async function applyTxnToRecord(txnDoc: any) {
 export async function confirmTransaction(txnId: Types.ObjectId, reviewedBy: string) {
   const doc = await M10Transaction.findById(txnId);
   if (!doc) throw new Error("transaction not found");
+  if (doc.reviewStatus === "confirmed") return doc; // idempotent: กด confirm ซ้ำ = no-op (กัน apply ซ้ำ → version เด้ง/E11000)
   doc.reviewStatus = "confirmed"; doc.reviewedBy = reviewedBy; doc.reviewedAt = new Date();
   await doc.save();
   await applyTxnToRecord(doc);
