@@ -87,6 +87,27 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/m10-ingest',
+    label: 'ม.10 นำเข้าข้อมูล',
+    icon: '🗂️',
+    description: 'นำเข้าชุดไฟล์มาตรา 10 รายเดือน (ZIP) จากกรมที่ดิน',
+    category: 'management'
+  },
+  {
+    path: '/admin/m10-review',
+    label: 'ม.10 คิวยืนยัน',
+    icon: '✅',
+    description: 'ยืนยัน/ปฏิเสธรายการเปลี่ยนแปลงกรรมสิทธิ์ก่อนเข้าทะเบียน',
+    category: 'management'
+  },
+  {
+    path: '/admin/m10-records',
+    label: 'ม.10 ทะเบียน (as-of)',
+    icon: '🗺️',
+    description: 'ดูสถานะกรรมสิทธิ์ ณ วันที่กำหนด (ปัจจุบัน / 1 ม.ค.)',
+    category: 'management'
+  },
+  {
     path: '/admin/manage-activities',
     label: 'จัดการกิจกรรม',
     icon: '📅',
@@ -194,6 +215,9 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/my-tasks',
     '/admin/notifications',
     '/user/satisfaction',
+    '/admin/m10-ingest',
+    '/admin/m10-review',
+    '/admin/m10-records',
   ],
   user: [
     '/user/satisfaction',
