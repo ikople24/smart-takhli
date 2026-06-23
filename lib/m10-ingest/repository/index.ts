@@ -19,9 +19,13 @@ export async function finishBatch(batchId: Types.ObjectId, status: "done" | "fai
 }
 
 export async function insertTransactionDedup(batchId: Types.ObjectId, txn: NormalizedTxn, geometry: Geom | null = null) {
-  const filter = { batchId, recordKey: txn.recordKey, rawStatus: txn.rawStatus, txnDate: new Date(txn.txnDate) };
-  const existing = await M10Transaction.findOne(filter);
-  if (existing) return { inserted: false as const, doc: existing };
+  // dedup ด้วย recordKey+rawStatus+txnDate เฉพาะแถวที่มี recordKey (parcel/ns3a)
+  // construction ไม่มี recordKey → insert ตรง ๆ เพราะต่างแปลง แต่ key ซ้ำกันได้
+  if (txn.recordKey !== null) {
+    const filter = { batchId, recordKey: txn.recordKey, rawStatus: txn.rawStatus, txnDate: new Date(txn.txnDate) };
+    const existing = await M10Transaction.findOne(filter);
+    if (existing) return { inserted: false as const, doc: existing };
+  }
   const doc = await M10Transaction.create({
     batchId, docType: txn.docType, recordKey: txn.recordKey, deedNo: txn.deedNo,
     rawStatus: txn.rawStatus, changeType: txn.changeType, taxRelevant: txn.taxRelevant,

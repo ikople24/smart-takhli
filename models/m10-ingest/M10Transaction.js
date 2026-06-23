@@ -14,5 +14,6 @@ const TransactionSchema = new mongoose.Schema({
   payloadRaw: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },
 }, { collection: "m10_transactions" });
-TransactionSchema.index({ batchId: 1, recordKey: 1, rawStatus: 1, txnDate: 1 }, { unique: true });
+// dedup index เฉพาะแถวที่มี recordKey (parcel/ns3a) — construction ไม่มี key แปลง
+TransactionSchema.index({ batchId: 1, recordKey: 1, rawStatus: 1, txnDate: 1 }, { unique: true, partialFilterExpression: { recordKey: { $type: "string" } } });
 module.exports = mongoose.models.M10Transaction || mongoose.model("M10Transaction", TransactionSchema);
