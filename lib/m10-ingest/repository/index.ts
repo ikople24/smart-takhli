@@ -1,10 +1,26 @@
 import type { Types } from "mongoose";
-import type { NormalizedTxn, RejectReason, DocType, ChangeType } from "../types";
+import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
+// เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { M10ImportBatch, M10Transaction, M10Record, M10Reject } = require("../../../models/m10-ingest");
 
 type Geom = GeoJSON.Polygon | GeoJSON.MultiPolygon;
+
+// รูปร่างขั้นต่ำของ transaction doc ที่ apply ใช้ (mongoose hydrated/lean)
+interface TxnDocLike {
+  _id: Types.ObjectId;
+  docType: DocType;
+  recordKey: string | null;
+  deedNo: string | null;
+  taxRelevant: boolean;
+  changeType: ChangeType;
+  txnDate: Date;
+  owner: Owner;
+  area: Area | null;
+  geometry: Geom | null;
+}
 
 export interface CreateBatchInput {
   fileHash: string; period: string; optId?: string; optName?: string;
@@ -41,9 +57,9 @@ export async function insertReject(batchId: Types.ObjectId, input: RejectInput) 
 }
 
 // apply 1 txn (doc จาก mongoose) เข้า records — เรียกตอน confirm
-export async function applyTxnToRecord(txnDoc: any) {
+export async function applyTxnToRecord(txnDoc: TxnDocLike) {
   if (!txnDoc.taxRelevant || !txnDoc.recordKey) return; // construction/encumbrance ไม่ materialize
-  const status = (txnDoc.changeType as ChangeType) === "RETIRED" ? "retired" : "active";
+  const status = txnDoc.changeType === "RETIRED" ? "retired" : "active";
   const historyEntry = { txnId: txnDoc._id, changeType: txnDoc.changeType, txnDate: txnDoc.txnDate, at: new Date() };
   const existing = await M10Record.findOne({ recordKey: txnDoc.recordKey });
 
@@ -84,7 +100,7 @@ export async function rejectTransaction(txnId: Types.ObjectId, reviewedBy: strin
 
 export interface AsOfRecord {
   recordKey: string; docType: string; status: "active" | "retired";
-  owners: any[]; area: any; deedNo: string | null; lastChangeType: string; lastTxnDate: Date; hasGeometry: boolean;
+  owners: Owner[]; area: Area | null; deedNo: string | null; lastChangeType: string; lastTxnDate: Date; hasGeometry: boolean;
 }
 
 // replay confirmed txn ที่ txnDate <= cutoff เรียงตามเวลา → สถานะ ณ cutoff (ไม่เขียน DB)

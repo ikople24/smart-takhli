@@ -27,9 +27,9 @@ describe("batch idempotency", () => {
 describe("insertTransactionDedup", () => {
   it("inserts once, second identical = no-op, stores geometry+reviewStatus", async () => {
     const b = await createBatch({ fileHash: "h", period: "2569-01", files: [], counts: {} });
-    const geo = { type: "Polygon", coordinates: [[[100, 15], [100.1, 15], [100.1, 15.1], [100, 15]]] };
-    const first = await insertTransactionDedup(b._id, txn(), geo as any);
-    const second = await insertTransactionDedup(b._id, txn(), geo as any);
+    const geo: GeoJSON.Polygon = { type: "Polygon", coordinates: [[[100, 15], [100.1, 15], [100.1, 15.1], [100, 15]]] };
+    const first = await insertTransactionDedup(b._id, txn(), geo);
+    const second = await insertTransactionDedup(b._id, txn(), geo);
     expect(first.inserted).toBe(true);
     expect(second.inserted).toBe(false);
     expect(first.doc.reviewStatus).toBe("pending");

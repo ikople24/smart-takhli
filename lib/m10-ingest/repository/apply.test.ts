@@ -20,8 +20,8 @@ const col = (n: string) => mongoose.connection.db!.collection(n);
 describe("confirmTransaction -> applyTxnToRecord", () => {
   it("creates record on confirm; reject does not", async () => {
     const b = await createBatch({ fileHash: "h", period: "2569-01", files: [], counts: {} });
-    const geo = { type: "Polygon", coordinates: [[[100, 15], [100.1, 15], [100.1, 15.1], [100, 15]]] };
-    const t = await insertTransactionDedup(b._id, txn(), geo as any);
+    const geo: GeoJSON.Polygon = { type: "Polygon", coordinates: [[[100, 15], [100.1, 15], [100.1, 15.1], [100, 15]]] };
+    const t = await insertTransactionDedup(b._id, txn(), geo);
     expect(await col("m10_records").countDocuments()).toBe(0); // ยังไม่มีจน confirm
 
     await confirmTransaction(t.doc._id, "officer1");
