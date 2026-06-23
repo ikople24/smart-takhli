@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
-import LayoutAdmin from "@/components/LayoutAdmin";
 
 export default function M10RecordsPage() {
   const [asOf, setAsOf] = useState(""); // "" = ปัจจุบัน
@@ -22,7 +21,7 @@ export default function M10RecordsPage() {
   useEffect(() => { load(""); }, [load]);
 
   return (
-    <LayoutAdmin>
+    <>
       <Head><title>ม.10 ทะเบียน (as-of)</title></Head>
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-4">ทะเบียนกรรมสิทธิ์ (as-of)</h1>
@@ -60,6 +59,6 @@ export default function M10RecordsPage() {
           </>
         )}
       </div>
-    </LayoutAdmin>
+    </>
   );
 }

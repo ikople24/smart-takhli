@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
-import LayoutAdmin from "@/components/LayoutAdmin";
 
 export default function M10ReviewPage() {
   const [items, setItems] = useState([]);
@@ -26,7 +25,7 @@ export default function M10ReviewPage() {
   }
 
   return (
-    <LayoutAdmin>
+    <>
       <Head><title>ม.10 คิวยืนยัน</title></Head>
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-4">คิวยืนยันการเปลี่ยนแปลง (รอดำเนินการ {items.length})</h1>
@@ -57,6 +56,6 @@ export default function M10ReviewPage() {
           </div>
         )}
       </div>
-    </LayoutAdmin>
+    </>
   );
 }

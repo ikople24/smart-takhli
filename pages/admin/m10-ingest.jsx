@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Head from "next/head";
-import LayoutAdmin from "@/components/LayoutAdmin";
 
 export default function M10IngestPage() {
   const [file, setFile] = useState(null);
@@ -28,7 +27,7 @@ export default function M10IngestPage() {
   }
 
   return (
-    <LayoutAdmin>
+    <>
       <Head><title>ม.10 นำเข้าข้อมูล</title></Head>
       <div className="p-4 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">นำเข้าข้อมูลมาตรา 10 (รายเดือน)</h1>
@@ -60,6 +59,6 @@ export default function M10IngestPage() {
           </div>
         )}
       </div>
-    </LayoutAdmin>
+    </>
   );
 }
