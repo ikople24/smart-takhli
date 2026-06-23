@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   const { M10Transaction } = await import("@/models/m10-ingest");
   const rows = await M10Transaction.find({ reviewStatus })
     .sort({ txnDate: 1, createdAt: 1 })
-    .select("docType recordKey deedNo rawStatus changeType taxRelevant txnDate regAmount owner reviewStatus")
+    .select("docType recordKey deedNo rawStatus changeType taxRelevant txnDate regAmount area owner.title owner.name owner.surname owner.fullName reviewStatus")
     .limit(500).lean();
   return res.status(200).json({ items: rows });
 }

@@ -11,6 +11,11 @@ export default async function handler(req, res) {
   // asOf ว่าง = ปัจจุบัน (วันนี้)
   const cutoff = req.query.asOf ? new Date(String(req.query.asOf)) : new Date();
   if (isNaN(cutoff.getTime())) return res.status(400).json({ error: "asOf ไม่ใช่วันที่ที่ถูกต้อง (YYYY-MM-DD)" });
-  const records = await asOfMaterialize(cutoff);
+  const raw = await asOfMaterialize(cutoff);
+  // ตัด idHash ออกจาก response (UI ไม่ใช้ ลด PII surface)
+  const records = raw.map((r) => ({
+    ...r,
+    owners: (r.owners || []).map(({ idHash, ...rest }) => rest),
+  }));
   return res.status(200).json({ asOf: cutoff.toISOString().slice(0, 10), count: records.length, records });
 }

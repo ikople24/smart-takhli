@@ -53,6 +53,7 @@ export default function M10RecordsPage() {
                       <td><span className={`badge ${r.status === "retired" ? "badge-ghost" : "badge-success"}`}>{r.status}</span></td>
                     </tr>
                   ))}
+                  {data.records.length === 0 && <tr><td colSpan={7} className="text-center opacity-60">ไม่มีทะเบียน ณ วันที่นี้</td></tr>}
                 </tbody>
               </table>
             </div>
