@@ -43,6 +43,3 @@ next-env.d.ts
 # claude code local config
 .claude/settings.local.json
 .claude/launch.json
-
-# ม.10 sample batch — มี PII (เลข13หลัก/ชื่อ-ที่อยู่) ห้าม commit; วางไว้ local เพื่อ integration test
-public/60070001_60010000.zip

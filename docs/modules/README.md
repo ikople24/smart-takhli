@@ -12,7 +12,6 @@
 | ประเมินความพึงพอใจ | [satisfaction.md](satisfaction.md) | `/user/satisfaction` |
 | PM2.5 (DustBoy) | [pm25.md](pm25.md) | `/admin/pm25-settings` |
 | Smart Papar (คุณภาพน้ำประปา) | [smart-papar.md](smart-papar.md) | `/admin/smart-papar/water-quality` |
-| มาตรา 10 (นำเข้า/normalize ข้อมูลกรมที่ดิน) | [m10-ingest.md](m10-ingest.md) | `/admin/m10-ingest`, `/admin/m10-review`, `/admin/m10-records` |
 | Superadmin / สิทธิ์ | [superadmin-permissions.md](superadmin-permissions.md) | `/admin/superadmin` |
 | แจ้งเตือน / Audit log | [notifications-audit.md](notifications-audit.md) | `/admin/notifications` |
 | สถิติการเข้าชมเว็บไซต์ | [site-stats.md](site-stats.md) | `/` (การ์ดบนหน้าหลัก) |
