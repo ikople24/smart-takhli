@@ -29,9 +29,6 @@ const navigationItems = [
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/education-map',            icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
-  { label: 'ม.10 นำเข้า',        href: '/admin/m10-ingest',                icon: '🗂️', group: 'จัดการ' },
-  { label: 'ม.10 คิวยืนยัน',     href: '/admin/m10-review',                icon: '✅', group: 'จัดการ' },
-  { label: 'ม.10 ทะเบียน',       href: '/admin/m10-records',               icon: '🗺️', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
 
   // รายงาน
