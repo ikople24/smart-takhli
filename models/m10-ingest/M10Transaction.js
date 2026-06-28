@@ -7,6 +7,10 @@ const TransactionSchema = new mongoose.Schema({
   rawStatus: String, changeType: String, taxRelevant: Boolean,
   reviewStatus: { type: String, enum: ["pending", "confirmed", "rejected", "auto"], default: "pending", index: true },
   reviewedBy: String, reviewedAt: Date,
+  ltaxStatus: { type: String, enum: ["pending", "keyed", "skipped"], default: "pending", index: true },
+  ltaxKeyedBy: String,
+  ltaxKeyedAt: Date,
+  ltaxNote: String,
   txnDate: Date, regAmount: { type: Number, default: null },
   owner: { title: String, name: String, surname: String, fullName: String, idHash: { type: String, default: null } },
   area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
@@ -16,4 +20,5 @@ const TransactionSchema = new mongoose.Schema({
 }, { collection: "m10_transactions" });
 // dedup index เฉพาะแถวที่มี recordKey (parcel/ns3a) — construction ไม่มี key แปลง
 TransactionSchema.index({ batchId: 1, recordKey: 1, rawStatus: 1, txnDate: 1 }, { unique: true, partialFilterExpression: { recordKey: { $type: "string" } } });
+TransactionSchema.index({ ltaxStatus: 1, changeType: 1 });
 module.exports = mongoose.models.M10Transaction || mongoose.model("M10Transaction", TransactionSchema);
