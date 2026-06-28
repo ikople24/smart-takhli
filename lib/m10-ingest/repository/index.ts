@@ -162,6 +162,7 @@ export async function getWorklistItem(txnId: Types.ObjectId | string): Promise<W
   if (!doc) throw new Error("transaction not found");
   const batch = await M10ImportBatch.findById(doc.batchId).select("period").lean();
   // เจ้าของก่อนหน้า: replay confirmed txn ถึงก่อนวันที่ของ txn นี้ แล้วหา recordKey เดียวกัน
+  // หมายเหตุ: txnDate เป็น date-only → กรณีโอนซ้ำวันเดียวกันบนแปลงเดิม oldOwnerName = null (best-effort ตาม spec §5)
   const before = new Date(new Date(doc.txnDate).getTime() - 1);
   const asOf = await asOfMaterialize(before);
   const prior = asOf.find((r) => r.recordKey === doc.recordKey);

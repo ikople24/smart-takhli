@@ -30,8 +30,9 @@ describe("buildWorklistItem", () => {
     expect(val(item.steps, "นามสกุล")).toBe("ชาลีรัตน์");
     expect(val(item.steps, "เลขบัตรประชาชน (13 หลัก)")).toBe("1 6097 00018 24 8");
     expect(val(item.steps, "ตำบล")).toBe("ตาคลี");
-    // มี step ลบเจ้าของเดิม
+    // มี step ลบเจ้าของเดิม และเป็น instruction (copy ไม่ได้)
     expect(item.steps.some((s) => s.label.includes("ลบเจ้าของเดิม"))).toBe(true);
+    expect(item.steps.find((s) => s.label.includes("ลบเจ้าของเดิม"))?.copyable).toBe(false);
     // copy ได้เฉพาะช่องค่า ไม่ใช่ instruction
     expect(item.steps.find((s) => s.label === "ชื่อ")?.copyable).toBe(true);
   });
@@ -46,6 +47,9 @@ describe("buildWorklistItem", () => {
     expect(item.action).toBe("CORRECT_OWNER");
     expect(val(item.steps, "ชื่อ")).toBe("วรารีย์");
     expect(item.steps.some((s) => s.label.includes("ลบเจ้าของเดิม"))).toBe(false);
+    // งานแก้ชื่อ ไม่มีช่องที่อยู่
+    expect(val(item.steps, "ตำบล")).toBeUndefined();
+    expect(val(item.steps, "บ้านเลขที่")).toBeUndefined();
   });
 
   it("BOUNDARY_CHANGE -> UPDATE_AREA with rai/ngan/wa", () => {
