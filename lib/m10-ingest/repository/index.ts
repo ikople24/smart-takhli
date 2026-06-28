@@ -1,5 +1,6 @@
 import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
+import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
 // เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
@@ -119,6 +120,72 @@ export async function asOfMaterialize(cutoff: Date): Promise<AsOfRecord[]> {
     });
   }
   return [...byKey.values()];
+}
+
+const WORKLIST_CHANGE_TYPES = ["TRANSFER", "OWNER_CORRECTION", "BOUNDARY_CHANGE"];
+
+export interface WorklistListRow {
+  _id: string; recordKey: string; deedNo: string | null;
+  changeType: string; txnDate: Date; ownerFullName: string;
+}
+
+// รายการ txn ที่ confirmed + เข้าเกณฑ์ + ยังไม่คีย์ (list ไม่ส่งเลขบัตรดิบ)
+export async function listWorklistPending(filter: { period?: string; changeType?: string }): Promise<WorklistListRow[]> {
+  const q: Record<string, unknown> = {
+    reviewStatus: "confirmed",
+    ltaxStatus: "pending",
+    changeType: filter.changeType && WORKLIST_CHANGE_TYPES.includes(filter.changeType)
+      ? filter.changeType
+      : { $in: WORKLIST_CHANGE_TYPES },
+  };
+  if (filter.period) {
+    const batches = await M10ImportBatch.find({ period: filter.period }).select("_id").lean();
+    q.batchId = { $in: batches.map((b: { _id: unknown }) => b._id) };
+  }
+  const rows = await M10Transaction.find(q)
+    .sort({ txnDate: 1, createdAt: 1 })
+    .select("recordKey deedNo changeType txnDate owner.fullName")
+    .limit(1000).lean();
+  return rows.map((r: Record<string, unknown>) => ({
+    _id: String((r as { _id: unknown })._id),
+    recordKey: r.recordKey as string,
+    deedNo: (r.deedNo as string) ?? null,
+    changeType: r.changeType as string,
+    txnDate: r.txnDate as Date,
+    ownerFullName: (r as { owner?: { fullName?: string } }).owner?.fullName ?? "",
+  }));
+}
+
+// สร้างสคริปต์คีย์ของ txn เดียว (focus mode) — ส่งเลขบัตร/ที่อยู่ดิบ
+export async function getWorklistItem(txnId: Types.ObjectId | string): Promise<WorklistItem> {
+  const doc = await M10Transaction.findById(txnId).lean();
+  if (!doc) throw new Error("transaction not found");
+  const batch = await M10ImportBatch.findById(doc.batchId).select("period").lean();
+  // เจ้าของก่อนหน้า: replay confirmed txn ถึงก่อนวันที่ของ txn นี้ แล้วหา recordKey เดียวกัน
+  const before = new Date(new Date(doc.txnDate).getTime() - 1);
+  const asOf = await asOfMaterialize(before);
+  const prior = asOf.find((r) => r.recordKey === doc.recordKey);
+  const oldOwnerName = prior?.owners?.[0]?.fullName ?? null;
+  return buildWorklistItem(
+    {
+      _id: String(doc._id),
+      recordKey: doc.recordKey,
+      deedNo: doc.deedNo ?? null,
+      changeType: doc.changeType,
+      txnDate: doc.txnDate,
+      area: doc.area ?? null,
+      payloadRaw: doc.payloadRaw ?? {},
+    },
+    oldOwnerName,
+    batch?.period ?? ""
+  );
+}
+
+export async function markKeyed(txnId: Types.ObjectId | string, by: string) {
+  await M10Transaction.updateOne({ _id: txnId }, { $set: { ltaxStatus: "keyed", ltaxKeyedBy: by, ltaxKeyedAt: new Date() } });
+}
+export async function markSkip(txnId: Types.ObjectId | string, by: string, note: string) {
+  await M10Transaction.updateOne({ _id: txnId }, { $set: { ltaxStatus: "skipped", ltaxKeyedBy: by, ltaxKeyedAt: new Date(), ltaxNote: note } });
 }
 
 export { M10ImportBatch, M10Transaction, M10Record, M10Reject };
