@@ -113,6 +113,11 @@ interface WorklistItem {
 - `oldOwnerName` = best-effort จาก `record.history` รายการก่อนหน้า txn นี้ (ถ้ามี); ไม่มี → `null` (ค้นด้วยโฉนดอย่างเดียว)
 - ฟังก์ชันนี้ **pure** (รับ txn doc + prevOwner, คืน object) → unit-test ด้วย fixture `payloadRaw` จริง
 
+> ⚠ **ASSUMPTION — ลำดับ field:** ยังไม่ได้ยืนยันกับหน้ากรอก LTAX จริงว่าลำดับ step ตรงเป๊ะ. สิ่งที่ **แน่นอน** = *ชุด field* ที่ต้องใช้ (เจ้าของใหม่ + เลขบัตร + ที่อยู่ / ชื่อใหม่ / เนื้อที่) และการมี **copy รายช่อง + label ชัด**. *ลำดับ* ให้ถือเป็นค่าเริ่มต้นที่ปรับได้:
+> - เก็บลำดับเป็น **data-driven** — แต่ละ changeType มี template `steps[]` (array of `{label,value,copyable}`) ใน config เดียว → จูนลำดับ/เพิ่ม-ลบช่องได้โดยไม่แตะ logic
+> - unit test ยืนยัน "field set ครบ + label ถูก + ค่าดึงจาก payloadRaw ถูก" (ไม่ผูกกับลำดับตายตัว) เพื่อให้ปรับลำดับภายหลังไม่พังเทส
+> - หลัง demo กับเจ้าหน้าที่/เห็นหน้าจอ LTAX จริง 1 รอบ → แก้ template ให้ตรง
+
 ---
 
 ## 6. Guided UI — tab "Worklist → LTAX"
