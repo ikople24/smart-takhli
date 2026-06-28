@@ -56,11 +56,16 @@ export default function WorklistPanel() {
   }
   async function advance(action) {
     const id = queue[pos];
-    await fetch(`/api/m10-ingest/worklist/${id}/${action}`, {
+    const res = await fetch(`/api/m10-ingest/worklist/${id}/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ note }),
     });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "บันทึกไม่สำเร็จ — ลองใหม่อีกครั้ง");
+      return; // ไม่เลื่อนคิว: รายการนี้ยัง pending อยู่
+    }
     const next = pos + 1;
     if (next >= queue.length) { setQueue(null); setItem(null); await load(); return; }
     setPos(next); loadItem(queue[next]);
