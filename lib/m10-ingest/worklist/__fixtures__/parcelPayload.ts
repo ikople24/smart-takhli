@@ -1,0 +1,17 @@
+// payloadRaw (คอลัมน์จริงของ parcel CSV, หลัง trim) ของเจ้าของ 1 ราย — ใช้ทดสอบ buildWorklistItem
+export const PARCEL_PAYLOAD: Record<string, string> = {
+  "โฉนด": "31635",
+  "ที่ดิน": "84",
+  "คำนำหน้า": "นางสาว",
+  "ชื่อ": "วรารีย์",
+  "นามสกุล": "ชาลีรัตน์",
+  "13 หลัก": "1 6097 00018 24 8",
+  "OWN_HSE_NO": "29/5",
+  "OWN_MOO": "",
+  "OWN_SOI": "ทวีชัย 12",
+  "OWN_VILLAGE": "",
+  "OWN_ROAD": "",
+  "OWN_TAMBOL": "ตาคลี",
+  "OWN_AMPHUR": "ตาคลี",
+  "OWN_PROVINCE": "นครสวรรค์",
+};
