@@ -1,11 +1,12 @@
 import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
+import { matchParcel, type BasemapCandidate } from "../basemap/match";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
 // เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { M10ImportBatch, M10Transaction, M10Record, M10Reject } = require("../../../models/m10-ingest");
+const { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap } = require("../../../models/m10-ingest");
 
 type Geom = GeoJSON.Polygon | GeoJSON.MultiPolygon;
 
@@ -21,6 +22,7 @@ interface TxnDocLike {
   owner: Owner;
   area: Area | null;
   geometry: Geom | null;
+  payloadRaw?: Record<string, string>;
 }
 
 export interface CreateBatchInput {
@@ -62,28 +64,59 @@ export async function applyTxnToRecord(txnDoc: TxnDocLike) {
   if (!txnDoc.taxRelevant || !txnDoc.recordKey) return; // construction/encumbrance ไม่ materialize
   const status = txnDoc.changeType === "RETIRED" ? "retired" : "active";
   const historyEntry = { txnId: txnDoc._id, changeType: txnDoc.changeType, txnDate: txnDoc.txnDate, at: new Date() };
+  // landNo/survey จาก payloadRaw — matcher ชั้น 2 ต้องใช้ (เก็บลง record ตอน materialize)
+  const landNo = txnDoc.payloadRaw?.["ที่ดิน"] ?? null;
+  const survey = txnDoc.payloadRaw?.["ห.สำรวจ"] ?? null;
   const existing = await M10Record.findOne({ recordKey: txnDoc.recordKey });
 
   const hasGeo = !!txnDoc.geometry;
   if (!existing) {
     await M10Record.create({
-      docType: txnDoc.docType, recordKey: txnDoc.recordKey, deedNo: txnDoc.deedNo,
+      docType: txnDoc.docType, recordKey: txnDoc.recordKey, deedNo: txnDoc.deedNo, landNo, survey,
       area: txnDoc.area, owners: [txnDoc.owner],
       geometry: txnDoc.geometry ?? null, hasGeometry: hasGeo,
       status, lastTxnId: txnDoc._id, lastChangeType: txnDoc.changeType, lastTxnDate: txnDoc.txnDate,
       version: 1, history: [historyEntry], updatedAt: new Date(),
     });
-    return;
+  } else {
+    await M10Record.updateOne({ _id: existing._id }, {
+      $set: {
+        area: txnDoc.area ?? existing.area, owners: [txnDoc.owner], deedNo: txnDoc.deedNo ?? existing.deedNo,
+        landNo: landNo ?? existing.landNo, survey: survey ?? existing.survey,
+        ...(hasGeo ? { geometry: txnDoc.geometry, hasGeometry: true } : {}),
+        status, lastTxnId: txnDoc._id, lastChangeType: txnDoc.changeType, lastTxnDate: txnDoc.txnDate, updatedAt: new Date(),
+      },
+      $inc: { version: 1 },
+      $push: { history: historyEntry },
+    });
   }
-  await M10Record.updateOne({ _id: existing._id }, {
-    $set: {
-      area: txnDoc.area ?? existing.area, owners: [txnDoc.owner], deedNo: txnDoc.deedNo ?? existing.deedNo,
-      ...(hasGeo ? { geometry: txnDoc.geometry, hasGeometry: true } : {}),
-      status, lastTxnId: txnDoc._id, lastChangeType: txnDoc.changeType, lastTxnDate: txnDoc.txnDate, updatedAt: new Date(),
-    },
-    $inc: { version: 1 },
-    $push: { history: historyEntry },
-  });
+  // จับคู่ basemap (ไม่ bump version) — record เพิ่งเขียนเสร็จ
+  const saved = await M10Record.findOne({ recordKey: txnDoc.recordKey }).select("_id recordKey deedNo landNo survey geometry").lean();
+  if (saved) await reconcileRecord(saved as Parameters<typeof reconcileRecord>[0]);
+}
+
+function toCand(d: Record<string, unknown>): BasemapCandidate {
+  return { basemapId: String(d._id), parcelCode: d.parcelCode as string,
+    deedNo: (d.deedNo as string) ?? null, geometry: (d.geometry as Geom) ?? null };
+}
+
+// reconcile 1 record: รัน matcher (resolver ต่อ DB) แล้วเก็บผล (ไม่ bump version)
+export async function reconcileRecord(rec: {
+  _id: unknown; recordKey: string; deedNo: string | null; landNo?: string | null; survey?: string | null; geometry: Geom | null;
+}): Promise<void> {
+  const result = await matchParcel(
+    { deedNo: rec.deedNo, landNo: rec.landNo ?? null, survey: rec.survey ?? null, geometry: rec.geometry },
+    {
+      byDeed: async (deedNo) => (await M10Basemap.find({ deedNo }).lean()).map(toCand),
+      byLandSurvey: async (landNo, survey) => (await M10Basemap.find({ landNo, survey }).lean()).map(toCand),
+      byGeom: async (geometry) => (await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: geometry } } }).limit(20).lean()).map(toCand),
+    }
+  );
+  await M10Record.updateOne({ _id: rec._id }, { $set: {
+    parcelCode: result.parcelCode,
+    parcelMatch: { status: result.status, method: result.method, confidence: result.confidence,
+      basemapId: result.basemapId, candidates: result.candidates, matchedAt: new Date() },
+  } });
 }
 
 export async function confirmTransaction(txnId: Types.ObjectId, reviewedBy: string) {
