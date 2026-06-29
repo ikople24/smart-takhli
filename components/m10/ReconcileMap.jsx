@@ -1,12 +1,17 @@
-import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Polygon, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
-import { useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
-// import แบบ top-level (component นี้ ssr:false อยู่แล้ว) → patch L.pm ก่อนสร้าง layer เสมอ กัน race
-import "@geoman-io/leaflet-geoman-free";
+import { useMemo, useState, useEffect } from "react";
 
-// center จาก geometry (เฉลี่ยพิกัด) — รองรับ 2D/3D โดยอ่านคู่ lng,lat
+// จุด vertex แบบลากได้ (divIcon เลี่ยงปัญหารูป marker เริ่มต้นของ leaflet)
+const vertexIcon = L.divIcon({
+  className: "",
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  html: '<div style="width:12px;height:12px;background:#fff;border:2px solid #dc2626;border-radius:50%;box-shadow:0 0 2px rgba(0,0,0,.5)"></div>',
+});
+
+// center จาก geometry (เฉลี่ยพิกัด) — อ่านคู่ lng,lat
 function centerOf(geom) {
   try {
     const nums = JSON.stringify(geom.coordinates).match(/-?\d+(\.\d+)?/g).map(Number);
@@ -16,45 +21,23 @@ function centerOf(geom) {
   } catch { return [15.26, 100.34]; }
 }
 
-// แก้/วาด vertex ด้วย geoman (ผูกกับ L.map ตรง ๆ ผ่าน useMap)
-function GeomanEditor({ editing, m10Geometry, onGeometryChange }) {
-  const map = useMap();
-  const layerRef = useRef(null);
+// GeoJSON Polygon/MultiPolygon → วงนอก [lng,lat][] (ตัดจุดปิดท้ายที่ซ้ำจุดแรก)
+function ringFromGeometry(geom) {
+  if (!geom) return [];
+  const coords = geom.type === "MultiPolygon" ? geom.coordinates?.[0]?.[0] : geom.coordinates?.[0];
+  if (!Array.isArray(coords)) return [];
+  const r = coords.map((c) => [c[0], c[1]]);
+  if (r.length > 1 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1]) r.pop();
+  return r;
+}
+// [lng,lat][] → GeoJSON Polygon (ปิดวง) ; < 3 จุด = ยังไม่สมบูรณ์
+function geometryFromRing(ring) {
+  if (ring.length < 3) return null;
+  return { type: "Polygon", coordinates: [[...ring, ring[0]].map(([lng, lat]) => [lng, lat])] };
+}
 
-  useEffect(() => {
-    if (!map.pm) return undefined; // geoman ยังไม่ patch (ไม่ควรเกิดเพราะ import top-level)
-    // เคลียร์ layer/โหมดเดิม
-    if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-    map.pm.disableGlobalEditMode?.();
-    map.pm.disableDraw?.();
-    map.off("pm:create");
-    if (!editing) return undefined;
-
-    const emit = (layer) => { if (layer?.toGeoJSON) onGeometryChange(layer.toGeoJSON().geometry); };
-    if (m10Geometry) {
-      // สร้าง polygon layer ที่แก้ได้ (สีแดง) แล้วเปิด edit → โชว์ marker ทุก vertex
-      const latlngs = m10Geometry.type === "MultiPolygon"
-        ? L.GeoJSON.coordsToLatLngs(m10Geometry.coordinates, 2)
-        : L.GeoJSON.coordsToLatLngs(m10Geometry.coordinates, 1);
-      const layer = L.polygon(latlngs, { color: "#dc2626", weight: 3 }).addTo(map);
-      layerRef.current = layer;
-      try { map.fitBounds(layer.getBounds(), { maxZoom: 18 }); } catch { /* noop */ }
-      layer.pm?.enable({ allowSelfIntersection: false, draggable: true });
-      layer.on("pm:edit", () => emit(layer));
-      layer.on("pm:markerdragend", () => emit(layer));
-      layer.on("pm:vertexremoved", () => emit(layer));
-      layer.on("pm:vertexadded", () => emit(layer));
-    } else {
-      map.pm.enableDraw("Polygon", { allowSelfIntersection: false });
-      map.on("pm:create", (e) => { layerRef.current = e.layer; emit(e.layer); map.pm.disableDraw(); });
-    }
-    return () => {
-      if (map.pm) { map.pm.disableGlobalEditMode?.(); map.pm.disableDraw?.(); }
-      map.off("pm:create");
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-    };
-  }, [editing, m10Geometry, map, onGeometryChange]);
-
+function ClickToAdd({ editing, onAdd }) {
+  useMapEvents({ click(e) { if (editing) onAdd([e.latlng.lng, e.latlng.lat]); } });
   return null;
 }
 
@@ -64,6 +47,15 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
     const g = candidates?.find((c) => c.geometry)?.geometry;
     return g ? centerOf(g) : [15.26, 100.34];
   }, [m10Geometry, candidates]);
+
+  // ring ที่กำลังแก้ (state ภายใน) — init เมื่อเข้าโหมดแก้
+  const [ring, setRing] = useState([]);
+  useEffect(() => { if (editing) setRing(ringFromGeometry(m10Geometry)); }, [editing, m10Geometry]);
+
+  function commit(next) { setRing(next); onGeometryChange(geometryFromRing(next)); }
+  const moveVertex = (i, latlng) => commit(ring.map((p, j) => (j === i ? [latlng.lng, latlng.lat] : p)));
+  const addVertex = (lnglat) => commit([...ring, lnglat]);
+  const removeVertex = (i) => { if (ring.length > 3) commit(ring.filter((_, j) => j !== i)); };
 
   return (
     <MapContainer center={center} zoom={17} style={{ height: 420, width: "100%" }} scrollWheelZoom>
@@ -75,19 +67,32 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
         <GeoJSON
           key={`${c.basemapId}-${selectedId === c.basemapId ? "s" : "u"}`}
           data={c.geometry}
-          style={{
-            color: selectedId === c.basemapId ? "#16a34a" : "#2563eb",
-            weight: 2,
-            fillOpacity: selectedId === c.basemapId ? 0.35 : 0.1,
-          }}
+          style={{ color: selectedId === c.basemapId ? "#16a34a" : "#2563eb", weight: 2, fillOpacity: selectedId === c.basemapId ? 0.35 : 0.1 }}
           eventHandlers={{ click: () => onSelect(c.basemapId) }}
         />
       ))}
-      {/* ตอน editing ใช้ layer ของ geoman แทน กันซ้อน 2 รูป */}
+
+      {/* แสดงผล m10: ไม่แก้ = GeoJSON เส้นประ · แก้ = Polygon สด + จุดลากได้ */}
       {!editing && m10Geometry && (
         <GeoJSON data={m10Geometry} style={{ color: "#dc2626", weight: 3, dashArray: "6", fill: false }} />
       )}
-      <GeomanEditor editing={editing} m10Geometry={m10Geometry} onGeometryChange={onGeometryChange} />
+      {editing && ring.length >= 3 && (
+        <Polygon positions={ring.map(([lng, lat]) => [lat, lng])} pathOptions={{ color: "#dc2626", weight: 3 }} />
+      )}
+      {editing && ring.map(([lng, lat], i) => (
+        <Marker
+          key={i}
+          position={[lat, lng]}
+          draggable
+          icon={vertexIcon}
+          eventHandlers={{
+            drag: (e) => moveVertex(i, e.latlng),
+            dragend: (e) => moveVertex(i, e.latlng),
+            contextmenu: () => removeVertex(i),
+          }}
+        />
+      ))}
+      <ClickToAdd editing={editing} onAdd={addVertex} />
     </MapContainer>
   );
 }

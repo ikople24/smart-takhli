@@ -124,7 +124,7 @@ export default function ReconcilePanel() {
                   </button>
                 ) : (
                   <>
-                    <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุด / คลิกเส้นเพิ่มจุด / คลิกขวาลบจุด</span>
+                    <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุดเพื่อย้าย · คลิกบนแผนที่เพิ่มจุด · คลิกขวาที่จุดเพื่อลบ</span>
                     <button className="btn btn-sm btn-ghost" onClick={() => { setEditing(false); setEditedGeom(null); }}>ยกเลิกการแก้</button>
                     {editedGeom && <span className="badge badge-success">มีรูปใหม่รอบันทึก</span>}
                   </>
