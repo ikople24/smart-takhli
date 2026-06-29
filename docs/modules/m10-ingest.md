@@ -44,3 +44,16 @@ Spec: `docs/superpowers/specs/2026-06-21-m10-ingest-normalize-design.md` (rev.2)
 - **ยังไม่รองรับ:** SPLIT/MERGE/NEW (ต้อง Parcel Code + basemap), RETIRED, RPA
 
 Spec: `docs/superpowers/specs/2026-06-28-ltax-worklist-design.md`
+
+## Basemap registry + matcher (รอบ A — 2026-06-29)
+- **เป้าหมาย:** ทุก record รู้ `PARCEL_COD` (LTAX) ของตัวเอง โดยจับคู่กับ basemap (`parcel.shp.geojson` 13,436 แปลง)
+- model `M10Basemap` (collection `m10_basemap`): parcelCode/zoneId/blockId/lot/deedNo/landNo/survey/area/geometry; index `deedNo`,`parcelCode` (non-unique — basemap มีซ้ำ), `2dsphere`
+- `lib/m10-ingest/basemap/load.ts` (pure): geojson feature → doc; **ตัด Z** + rewind + turf booleanValid (basemap เป็น 4326 แล้ว — ไม่ reproject ต่างจาก `geometry/join.ts`)
+- `lib/m10-ingest/basemap/match.ts` (pure async): `matchParcel()` cascade **โฉนด → เลขที่ดิน+หน้าสำรวจ → geometry IoU≥0.5**; รับ resolver inject (เทสต์ด้วย fake), เรียก lazy ตามชั้น; output `{status: matched|ambiguous|unmatched, method, confidence, parcelCode, candidates}`
+- `reconcileRecord()` ใน repository: ต่อ resolver กับ DB (`$geoIntersects`) เก็บผลลง `M10Record.parcelCode/parcelMatch` (ไม่ bump version) — รันตอน `applyTxnToRecord` (confirm) + backfill
+- `M10Record` เพิ่ม `landNo/survey` (ดึงจาก payloadRaw ตอน materialize), `parcelCode`, `parcelMatch`
+- CLI: `npm run m10:load-basemap -- <geojson>` (drop+insert, สร้าง 2dsphere ก่อน insert ให้ MongoDB S2 validate รายตัว — เข้มกว่า turf) · `npm run m10:reconcile-backfill`
+- API `GET /api/m10-ingest/reconcile` (gate `/admin/m10`) + แท็บ **จับคู่ basemap** (read-only: matched/ambiguous/unmatched + candidates)
+- **นอก scope (รอบ B):** officer confirm/เลือก candidate, สร้างรหัส Parcel Code ใหม่ (SPLIT/MERGE/NEW), ดันเข้า worklist
+
+Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-matcher-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-basemap-matcher.md`
