@@ -273,4 +273,29 @@ export async function markSkip(txnId: Types.ObjectId | string, by: string, note:
   await M10Transaction.updateOne({ _id: txnId }, { $set: { ltaxStatus: "skipped", ltaxKeyedBy: by, ltaxKeyedAt: new Date(), ltaxNote: note } });
 }
 
-export { M10ImportBatch, M10Transaction, M10Record, M10Reject };
+export interface ReconcileRow {
+  recordKey: string; deedNo: string | null; changeType: string;
+  status: string | null; method: string | null; confidence: string | null;
+  parcelCode: string | null; candidates: { parcelCode: string; overlapPct: number }[];
+}
+
+// รายการผลจับคู่ basemap (read-only) — filter ตามสถานะ
+export async function listReconcile(filter: { status?: string } = {}): Promise<ReconcileRow[]> {
+  const q: Record<string, unknown> = {};
+  if (filter.status) q["parcelMatch.status"] = filter.status;
+  const rows = await M10Record.find(q)
+    .select("recordKey deedNo lastChangeType parcelCode parcelMatch").limit(2000).lean();
+  return rows.map((r: Record<string, unknown>) => {
+    const pm = (r.parcelMatch ?? {}) as Record<string, unknown>;
+    const cands = (pm.candidates as { parcelCode: string; overlapPct: number }[]) ?? [];
+    return {
+      recordKey: r.recordKey as string, deedNo: (r.deedNo as string) ?? null,
+      changeType: (r.lastChangeType as string) ?? "",
+      status: (pm.status as string) ?? null, method: (pm.method as string) ?? null,
+      confidence: (pm.confidence as string) ?? null, parcelCode: (r.parcelCode as string) ?? null,
+      candidates: cands.map((c) => ({ parcelCode: c.parcelCode, overlapPct: c.overlapPct })),
+    };
+  });
+}
+
+export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap };
