@@ -7,7 +7,7 @@ export const config = { api: { bodyParser: false } };
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const auth = await requireM10Admin(req, "/admin/m10-ingest");
+  const auth = await requireM10Admin(req, "/admin/m10");
   if (!auth.ok) return res.status(auth.status).json({ error: auth.message });
 
   const form = formidable({ maxFileSize: 100 * 1024 * 1024 });
