@@ -3,4 +3,5 @@ module.exports = {
   M10Transaction: require("./M10Transaction"),
   M10Record: require("./M10Record"),
   M10Reject: require("./M10Reject"),
+  M10Basemap: require("./M10Basemap"),
 };
