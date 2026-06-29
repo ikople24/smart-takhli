@@ -21,6 +21,7 @@ export default function ReconcilePanel() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);   // โหมดแก้รูปแปลง (geoman)
   const [editedGeom, setEditedGeom] = useState(null);
+  const [writeBasemap, setWriteBasemap] = useState(false); // อัปเดตกลับเข้า basemap
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -38,7 +39,7 @@ export default function ReconcilePanel() {
   const count = (s) => rows.filter((r) => r.status === s).length;
 
   async function openFocus(recordKey) {
-    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null); setEditing(false); setEditedGeom(null);
+    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null); setEditing(false); setEditedGeom(null); setWriteBasemap(false);
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(recordKey)}`);
       const d = await res.json();
@@ -82,6 +83,7 @@ export default function ReconcilePanel() {
       area: (form.rai !== "" || form.ngan !== "" || form.wa !== "")
         ? { rai, ngan, wa, sqm: (rai * 400 + ngan * 100 + wa) * 4 } : null,
       geometry: editedGeom || undefined, // รูปแปลงที่ จนท. แก้/วาด (เฟส 2)
+      writeBasemap, // อัปเดตกลับเข้า basemap (opt-in)
     };
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(focusKey)}/resolve`, {
@@ -173,6 +175,13 @@ export default function ReconcilePanel() {
                   <input className="input input-bordered input-sm w-16" placeholder="ว." value={form.wa} onChange={(e) => setForm({ ...form, wa: e.target.value })} />
                 </div>
               </div>
+              <label className="flex items-start gap-2 cursor-pointer bg-base-200 rounded p-3">
+                <input type="checkbox" className="checkbox checkbox-sm mt-0.5" checked={writeBasemap} onChange={(e) => setWriteBasemap(e.target.checked)} />
+                <span className="text-sm">
+                  อัปเดตข้อมูลนี้กลับเข้า basemap (parcel.shp)
+                  <span className="block text-xs opacity-60">ติ๊กเมื่อแก้รหัส/รูปแปลง/ข้อมูล ให้ matcher รอบถัดไปใช้ค่าที่แก้ (รอด import)</span>
+                </span>
+              </label>
               <button className="btn btn-primary w-full" disabled={saving} onClick={save}>
                 {saving ? "กำลังบันทึก..." : "บันทึก & เช็คใหม่"}
               </button>

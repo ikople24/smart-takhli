@@ -6,6 +6,7 @@ async function main() {
   const mongoose = require("mongoose");
   const { M10Basemap } = require("../models/m10-ingest");
   const { featureToBasemapDoc } = await import("../lib/m10-ingest/basemap/load.ts");
+  const { replayBasemapEdits } = await import("../lib/m10-ingest/repository/index.ts");
 
   const gj = JSON.parse(fs.readFileSync(file, "utf8"));
   await mongoose.connect(process.env.MONGO_URI);
@@ -35,6 +36,9 @@ async function main() {
   }
   await flush();
   console.log(`basemap loaded: ${inserted}, pre-skip(no-code/turf-invalid): ${preSkip}, geo-reject(S2): ${geoReject}`);
+  // replay การแก้ของ จนท. ทับ basemap นำเข้า → การแก้รอด import
+  const replayed = await replayBasemapEdits();
+  console.log(`basemap edits replayed: ${replayed}`);
   await mongoose.disconnect();
   process.exit(0);
 }
