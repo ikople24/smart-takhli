@@ -28,7 +28,7 @@ describe("buildWorklistItem", () => {
     expect(item.search).toEqual({ deedNo: "31635", oldOwnerName: "นาย ก ข" });
     expect(val(item.steps, "ชื่อ")).toBe("วรารีย์");
     expect(val(item.steps, "นามสกุล")).toBe("ชาลีรัตน์");
-    expect(val(item.steps, "เลขบัตรประชาชน (13 หลัก)")).toBe("1 6097 00018 24 8");
+    expect(val(item.steps, "เลขบัตรประชาชน (13 หลัก)")).toBe("1609700018248"); // เลขล้วน (ตรง LTAX)
     expect(val(item.steps, "ตำบล")).toBe("ตาคลี");
     // มี step ลบเจ้าของเดิม และเป็น instruction (copy ไม่ได้)
     expect(item.steps.some((s) => s.label.includes("ลบเจ้าของเดิม"))).toBe(true);
@@ -42,13 +42,18 @@ describe("buildWorklistItem", () => {
     expect(item.search.oldOwnerName).toBeNull();
   });
 
-  it("includes parcel identify block (เลขที่ดิน/ระวาง/หน้าสำรวจ/เนื้อที่) for verification", () => {
+  it("identify block matches LTAX land fields (ระวางแยกช่อง, UTM2→โรมัน, UTM4 pad2, เนื้อที่ 3 ช่อง)", () => {
     const item = buildWorklistItem(txn(), null, "2569-01");
-    expect(val(item.identify, "เลขที่ดิน")).toBe("84");
-    expect(val(item.identify, "ระวาง")).toBe("5039 2 4682 7");
+    expect(val(item.identify, "ระวาง")).toBe("5039");
+    expect(val(item.identify, "แผนที่ระวางภูมิประเทศ")).toBe("II"); // UTM2 "2" → โรมัน
+    expect(val(item.identify, "ระวางUTM")).toBe("4682");
+    expect(val(item.identify, "แผ่นที่ระวางUTM")).toBe("07"); // UTM4 "7" → pad2
     expect(val(item.identify, "มาตราส่วน")).toBe("1000");
+    expect(val(item.identify, "เลขที่ดิน")).toBe("84");
     expect(val(item.identify, "หน้าสำรวจ")).toBe("13725");
-    expect(val(item.identify, "เนื้อที่ (ไร่-งาน-วา)")).toBe("0-2-24");
+    expect(val(item.identify, "เนื้อที่: ไร่")).toBe("0");
+    expect(val(item.identify, "เนื้อที่: งาน")).toBe("2");
+    expect(val(item.identify, "เนื้อที่: ตร.ว.")).toBe("24.00");
   });
 
   it("OWNER_CORRECTION -> CORRECT_OWNER (no remove-old step)", () => {

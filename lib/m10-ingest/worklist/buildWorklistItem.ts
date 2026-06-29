@@ -46,21 +46,32 @@ const NAME_FIELD_COLS = OWNER_FIELD_COLS.slice(0, 4);
 const note = (label: string): WorklistField => ({ label, value: "", copyable: false });
 const field = (label: string, value: string): WorklistField => ({ label, value, copyable: true });
 
+const ROMAN: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "IV" };
+const pad2 = (v: string): string => { const t = (v ?? "").trim(); return t ? t.padStart(2, "0") : ""; };
+const digitsOnly = (v: string): string => (v ?? "").replace(/\D/g, "");
+
 function ownerFields(raw: Record<string, string>, cols: { label: string; col: string }[]): WorklistField[] {
-  return cols.map((c) => field(c.label, raw[c.col] ?? ""));
+  return cols.map((c) => {
+    const v = raw[c.col] ?? "";
+    // เลขบัตรใน LTAX เป็นเลขล้วน (ไม่มีเว้นวรรค/ขีด)
+    return field(c.label, c.col === "13 หลัก" ? digitsOnly(v) : v);
+  });
 }
 
-// ข้อมูลยืนยันแปลง — ดึงจาก payloadRaw + area; ช่วยค้น/เช็คให้ตรงแปลงใน LTAX
+// ข้อมูลยืนยันแปลง — ตรง label หน้า LTAX "แก้ไขข้อมูลที่ดิน" 1:1 (ระวางแยกช่อง, UTM2→โรมัน, UTM4 pad2, เนื้อที่ 3 ช่อง)
 function identifyFields(raw: Record<string, string>, area: WorklistTxnInput["area"]): WorklistField[] {
-  const ravang = [raw["UTM_MAP1"], raw["UTM_MAP2"], raw["UTM_MAP3"], raw["UTM_MAP4"]]
-    .map((v) => (v ?? "").trim()).filter(Boolean).join(" ");
-  const areaText = area ? `${area.rai}-${area.ngan}-${area.wa}` : "";
+  const u2 = (raw["UTM_MAP2"] ?? "").trim();
   return [
-    field("เลขที่ดิน", raw["ที่ดิน"] ?? ""),
-    field("ระวาง", ravang),
+    field("ระวาง", raw["UTM_MAP1"] ?? ""),
+    field("แผนที่ระวางภูมิประเทศ", ROMAN[u2] ?? u2),
+    field("ระวางUTM", raw["UTM_MAP3"] ?? ""),
+    field("แผ่นที่ระวางUTM", pad2(raw["UTM_MAP4"] ?? "")),
     field("มาตราส่วน", raw["UTM_SCALE"] ?? ""),
+    field("เลขที่ดิน", raw["ที่ดิน"] ?? ""),
     field("หน้าสำรวจ", raw["ห.สำรวจ"] ?? ""),
-    field("เนื้อที่ (ไร่-งาน-วา)", areaText),
+    field("เนื้อที่: ไร่", String(area?.rai ?? "")),
+    field("เนื้อที่: งาน", String(area?.ngan ?? "")),
+    field("เนื้อที่: ตร.ว.", area ? area.wa.toFixed(2) : ""),
   ];
 }
 
