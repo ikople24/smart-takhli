@@ -3,6 +3,8 @@ import "leaflet/dist/leaflet.css";
 import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 import { useMemo, useEffect, useRef } from "react";
 import L from "leaflet";
+// import แบบ top-level (component นี้ ssr:false อยู่แล้ว) → patch L.pm ก่อนสร้าง layer เสมอ กัน race
+import "@geoman-io/leaflet-geoman-free";
 
 // center จาก geometry (เฉลี่ยพิกัด) — รองรับ 2D/3D โดยอ่านคู่ lng,lat
 function centerOf(geom) {
@@ -20,32 +22,33 @@ function GeomanEditor({ editing, m10Geometry, onGeometryChange }) {
   const layerRef = useRef(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await import("@geoman-io/leaflet-geoman-free");
-      if (cancelled || !map.pm) return;
-      // เคลียร์ layer/โหมดเดิม
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-      map.pm.disableGlobalEditMode?.();
-      map.pm.disableDraw?.();
-      if (!editing) return;
+    if (!map.pm) return undefined; // geoman ยังไม่ patch (ไม่ควรเกิดเพราะ import top-level)
+    // เคลียร์ layer/โหมดเดิม
+    if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+    map.pm.disableGlobalEditMode?.();
+    map.pm.disableDraw?.();
+    map.off("pm:create");
+    if (!editing) return undefined;
 
-      const emit = (layer) => { if (layer?.toGeoJSON) onGeometryChange(layer.toGeoJSON().geometry); };
-      if (m10Geometry) {
-        const group = L.geoJSON(m10Geometry, { style: { color: "#dc2626", weight: 3 } }).addTo(map);
-        const layer = group.getLayers()[0];
-        layerRef.current = layer;
-        layer.pm.enable({ allowSelfIntersection: false });
-        layer.on("pm:edit", (e) => emit(e.layer || layer));
-        layer.on("pm:markerdragend", () => emit(layer));
-        try { map.fitBounds(layer.getBounds(), { maxZoom: 18 }); } catch { /* noop */ }
-      } else {
-        map.pm.enableDraw("Polygon", { allowSelfIntersection: false });
-        map.on("pm:create", (e) => { layerRef.current = e.layer; emit(e.layer); map.pm.disableDraw(); });
-      }
-    })();
+    const emit = (layer) => { if (layer?.toGeoJSON) onGeometryChange(layer.toGeoJSON().geometry); };
+    if (m10Geometry) {
+      // สร้าง polygon layer ที่แก้ได้ (สีแดง) แล้วเปิด edit → โชว์ marker ทุก vertex
+      const latlngs = m10Geometry.type === "MultiPolygon"
+        ? L.GeoJSON.coordsToLatLngs(m10Geometry.coordinates, 2)
+        : L.GeoJSON.coordsToLatLngs(m10Geometry.coordinates, 1);
+      const layer = L.polygon(latlngs, { color: "#dc2626", weight: 3 }).addTo(map);
+      layerRef.current = layer;
+      try { map.fitBounds(layer.getBounds(), { maxZoom: 18 }); } catch { /* noop */ }
+      layer.pm?.enable({ allowSelfIntersection: false, draggable: true });
+      layer.on("pm:edit", () => emit(layer));
+      layer.on("pm:markerdragend", () => emit(layer));
+      layer.on("pm:vertexremoved", () => emit(layer));
+      layer.on("pm:vertexadded", () => emit(layer));
+    } else {
+      map.pm.enableDraw("Polygon", { allowSelfIntersection: false });
+      map.on("pm:create", (e) => { layerRef.current = e.layer; emit(e.layer); map.pm.disableDraw(); });
+    }
     return () => {
-      cancelled = true;
       if (map.pm) { map.pm.disableGlobalEditMode?.(); map.pm.disableDraw?.(); }
       map.off("pm:create");
       if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }

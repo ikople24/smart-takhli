@@ -17,7 +17,7 @@ export default function ReconcilePanel() {
   const [focusKey, setFocusKey] = useState(null);
   const [detail, setDetail] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [form, setForm] = useState({ deedNo: "", landNo: "", survey: "", rai: "", ngan: "", wa: "" });
+  const [form, setForm] = useState({ parcelCode: "", deedNo: "", landNo: "", survey: "", rai: "", ngan: "", wa: "" });
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);   // โหมดแก้รูปแปลง (geoman)
   const [editedGeom, setEditedGeom] = useState(null);
@@ -47,6 +47,7 @@ export default function ReconcilePanel() {
       const ov = d.record.reconcileOverride || {};
       const a = ov.area || d.record.area || {};
       setForm({
+        parcelCode: ov.parcelCode ?? d.record.parcelCode ?? "",
         deedNo: ov.deedNo ?? d.record.deedNo ?? "",
         landNo: ov.landNo ?? d.record.landNo ?? "",
         survey: ov.survey ?? d.record.survey ?? "",
@@ -62,10 +63,9 @@ export default function ReconcilePanel() {
   async function save() {
     if (!detail) return;
     setSaving(true); setError("");
-    const sel = detail.candidates.find((c) => c.basemapId === selectedId);
     const rai = Number(form.rai) || 0, ngan = Number(form.ngan) || 0, wa = Number(form.wa) || 0;
     const body = {
-      parcelCode: sel ? sel.parcelCode : null,
+      parcelCode: form.parcelCode || null, // พิมพ์เอง/เลือก candidate ก็เซ็ตช่องนี้
       deedNo: form.deedNo || null, landNo: form.landNo || null, survey: form.survey || null,
       area: (form.rai !== "" || form.ngan !== "" || form.wa !== "")
         ? { rai, ngan, wa, sqm: (rai * 400 + ngan * 100 + wa) * 4 } : null,
@@ -129,7 +129,8 @@ export default function ReconcilePanel() {
                 {detail.candidates.length === 0 && <p className="text-sm opacity-60">ไม่มี candidate (unmatched) — แก้ attribute แล้วเช็คใหม่</p>}
                 {detail.candidates.map((c) => (
                   <label key={c.basemapId} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId} onChange={() => setSelectedId(c.basemapId)} />
+                    <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId}
+                      onChange={() => { setSelectedId(c.basemapId); setForm((f) => ({ ...f, parcelCode: c.parcelCode })); }} />
                     <span className="font-mono">{c.parcelCode}</span>
                     <span className="text-xs opacity-60">โฉนด {c.deedNo || "-"} · ทับ {pct(c.overlapPct)}</span>
                   </label>
@@ -137,6 +138,11 @@ export default function ReconcilePanel() {
               </div>
               <div className="bg-base-200 rounded p-3 space-y-2">
                 <p className="text-sm font-semibold">แก้ข้อมูล (ถ้าต้อง)</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-24 text-sm opacity-70">รหัสแปลง</span>
+                  <input className="input input-bordered input-sm flex-1 font-mono" placeholder="PARCEL_COD เช่น 07K002/004"
+                    value={form.parcelCode} onChange={(e) => setForm({ ...form, parcelCode: e.target.value })} />
+                </div>
                 {[["deedNo", "โฉนด"], ["landNo", "เลขที่ดิน"], ["survey", "หน้าสำรวจ"]].map(([k, label]) => (
                   <div key={k} className="flex items-center gap-2">
                     <span className="w-24 text-sm opacity-70">{label}</span>
