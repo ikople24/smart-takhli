@@ -50,6 +50,7 @@ Spec: `docs/superpowers/specs/2026-06-28-ltax-worklist-design.md`
 - model `M10Basemap` (collection `m10_basemap`): parcelCode/zoneId/blockId/lot/deedNo/landNo/survey/area/geometry; index `deedNo`,`parcelCode` (non-unique — basemap มีซ้ำ), `2dsphere`
 - `lib/m10-ingest/basemap/load.ts` (pure): geojson feature → doc; **ตัด Z** + rewind + turf booleanValid (basemap เป็น 4326 แล้ว — ไม่ reproject ต่างจาก `geometry/join.ts`)
 - `lib/m10-ingest/basemap/match.ts` (pure async): `matchParcel()` cascade **โฉนด → เลขที่ดิน+หน้าสำรวจ → geometry IoU≥0.5**; รับ resolver inject (เทสต์ด้วย fake), เรียก lazy ตามชั้น; output `{status: matched|ambiguous|unmatched, method, confidence, parcelCode, candidates}`
+  - **เจอหลาย candidate แต่ parcelCode เดียวกันหมด → matched** (basemap เก็บแปลงเดียวเป็นหลาย polygon fragment ไม่ใช่ ambiguous จริง); ambiguous เหลือเฉพาะกรณีรหัสต่างกันจริง → ดูที่แท็บ "จับคู่ basemap" filter ambiguous เพื่อแก้
 - `reconcileRecord()` ใน repository: ต่อ resolver กับ DB (`$geoIntersects`) เก็บผลลง `M10Record.parcelCode/parcelMatch` (ไม่ bump version) — รันตอน `applyTxnToRecord` (confirm) + backfill
 - `M10Record` เพิ่ม `landNo/survey` (ดึงจาก payloadRaw ตอน materialize), `parcelCode`, `parcelMatch`
 - CLI: `npm run m10:load-basemap -- <geojson>` (drop+insert, สร้าง 2dsphere ก่อน insert ให้ MongoDB S2 validate รายตัว — เข้มกว่า turf) · `npm run m10:reconcile-backfill`

@@ -26,6 +26,14 @@ describe("matchParcel", () => {
     expect(m.candidates.length).toBe(2);
   });
 
+  it("deed multi แต่ candidate รหัสเดียวกันหมด → matched (basemap fragment ไม่ใช่ ambiguous จริง)", async () => {
+    const r = { ...none, byDeed: async () => [cand("b1", "07K002/004", "111", SQ(0, 0)), cand("b2", "07K002/004", "111", SQ(50, 50))] };
+    const m = await matchParcel(input, r);
+    expect(m.status).toBe("matched"); expect(m.method).toBe("deed");
+    expect(m.parcelCode).toBe("07K002/004");
+    expect(m.candidates.length).toBe(2); // เก็บไว้ให้ดู transparency
+  });
+
   it("deed multi + ไม่ทับ → ambiguous", async () => {
     const r = { ...none, byDeed: async () => [cand("b1", "C1", "111", SQ(0, 0)), cand("b2", "C2", "111", SQ(50, 50))] };
     const m = await matchParcel(input, r);

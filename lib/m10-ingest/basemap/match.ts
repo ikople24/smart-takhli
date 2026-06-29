@@ -31,6 +31,13 @@ function iou(a: Geom, b: Geom): number {
   } catch { return 0; }
 }
 
+// ถ้า candidate ทุกตัวเป็น parcelCode เดียวกัน = แปลงเดียวที่ basemap เก็บเป็นหลาย fragment
+// → ไม่ใช่ ambiguous จริง (รหัสตรงกันหมด) คืน candidate ตัวแรกให้ตัดสินเป็น matched
+function singleCode(cands: BasemapCandidate[]): BasemapCandidate | null {
+  if (cands.length === 0) return null;
+  return cands.every((c) => c.parcelCode === cands[0].parcelCode) ? cands[0] : null;
+}
+
 function rank(geom: Geom | null, cands: BasemapCandidate[]): MatchCandidate[] {
   return cands
     .map((c) => ({ parcelCode: c.parcelCode, basemapId: c.basemapId, deedNo: c.deedNo,
@@ -49,6 +56,8 @@ export async function matchParcel(input: MatchInput, r: MatchResolvers): Promise
     const ds = await r.byDeed(input.deedNo);
     if (ds.length === 1) return matched("deed", "high", ds[0]);
     if (ds.length > 1) {
+      const same = singleCode(ds);
+      if (same) return matched("deed", "high", same, rank(input.geometry, ds));
       const ranked = rank(input.geometry, ds);
       if (input.geometry && ranked[0].overlapPct >= IOU_THRESHOLD) {
         const top = ds.find((c) => c.basemapId === ranked[0].basemapId)!;
@@ -62,6 +71,8 @@ export async function matchParcel(input: MatchInput, r: MatchResolvers): Promise
     const ls = await r.byLandSurvey(input.landNo, input.survey);
     if (ls.length === 1) return matched("land+survey", "medium", ls[0]);
     if (ls.length > 1) {
+      const same = singleCode(ls);
+      if (same) return matched("land+survey", "medium", same, rank(input.geometry, ls));
       const ranked = rank(input.geometry, ls);
       if (input.geometry && ranked[0].overlapPct >= IOU_THRESHOLD) {
         const top = ls.find((c) => c.basemapId === ranked[0].basemapId)!;
@@ -78,6 +89,11 @@ export async function matchParcel(input: MatchInput, r: MatchResolvers): Promise
       if (ranked[0].overlapPct >= IOU_THRESHOLD) {
         const top = gs.find((c) => c.basemapId === ranked[0].basemapId)!;
         return matched("geom", "medium", top, ranked);
+      }
+      // หลาย candidate ที่ทับ แต่เป็นรหัสเดียวกันหมด → matched (fragment) ไม่ใช่ ambiguous
+      if (ranked.length > 1 && ranked.every((c) => c.parcelCode === ranked[0].parcelCode)) {
+        const top = gs.find((c) => c.basemapId === ranked[0].basemapId)!;
+        return matched("geom", "low", top, ranked);
       }
       return ambiguous("geom", ranked);
     }
