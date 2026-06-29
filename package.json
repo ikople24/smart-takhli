@@ -21,6 +21,7 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@clerk/nextjs": "^6.20.0",
+    "@geoman-io/leaflet-geoman-free": "^2.20.0",
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "@line/liff": "^2.29.0",
