@@ -59,12 +59,15 @@ components/m10/ReconcilePanel.jsx         # แท็บใหม่ใน /admi
 
 - ไม่เก็บ raw ทั้งก้อน (ลดขนาด) — เก็บเฉพาะ field ข้างต้น
 - โหลดด้วย CLI `m10-load-basemap.js`: อ่าน geojson → **drop collection แล้ว bulk insert ใหม่** (idempotent รันซ้ำได้; เลี่ยง upsert เพราะ parcelCode/deedNo ซ้ำได้ ไม่มี natural key ที่ unique)
+- **geometry ก่อน insert ต้อง (a) ตัด Z → 2D (b) rewind + ตรวจ valid** ด้วย `prepareGeometry()` ที่มีอยู่ใน `lib/m10-ingest/geometry/join.ts` (reuse) — ไม่งั้น 2dsphere index สร้างไม่ผ่านถ้าเจอ polygon self-intersect; แปลงที่ invalid → log + ข้าม (รายงานจำนวนท้าย CLI)
 
 ## 5. `matchParcel()` — cascade (pure fn)
 
+**ความบริสุทธิ์/เทสต์:** `matchParcel` รับ **resolver ที่ inject เข้ามา** (`byDeed(deedNo)`, `byLandSurvey(landNo,survey)`, `byGeom(geometry)` — แต่ละตัวคืน candidate[]) แล้วเรียก **ตามลำดับชั้นแบบ lazy** (เรียก `byGeom` เฉพาะเมื่อชั้นบนไม่จบ — เลี่ยง geo-query ที่แพง) — deterministic ต่อ resolver ที่ให้ → เทสต์ด้วย fake resolver ได้. การ query DB จริงอยู่ใน `reconcileRecord()`
+
 ```
-input:  { deedNo, landNo, survey, geometry }  (จาก txn/record)
-        + candidate fetchers (query DB ส่งเข้ามา เพื่อให้ fn บริสุทธิ์/เทสต์ได้)
+input:  { deedNo, landNo, survey, geometry }  (จาก record)
+        + resolvers { byDeed, byLandSurvey, byGeom }  (inject — จริงคือ DB query, เทสต์คือ fake)
 output: {
   status: "matched" | "ambiguous" | "unmatched",
   method: "deed" | "deed+geom" | "land+survey" | "land+survey+geom" | "geom" | null,
@@ -97,6 +100,8 @@ output: {
 
 เพิ่ม field:
 ```
+landNo: String | null     # ← ใหม่: matcher ชั้น 2 ต้องใช้ (ปัจจุบัน record ไม่มี)
+survey: String | null     # ← ใหม่: เช่นกัน
 parcelCode: String | null
 parcelMatch: {
   status, method, confidence,
@@ -105,6 +110,10 @@ parcelMatch: {
   matchedAt: Date
 }
 ```
+
+> **สำคัญ:** ปัจจุบัน `M10Record` มีแค่ `deedNo/area/geometry` — **ไม่มี `landNo/survey`**
+> ต้องเพิ่มและให้ `applyTxnToRecord()` ดึงจาก `txn.payloadRaw["ที่ดิน"]` / `["ห.สำรวจ"]` มาเก็บตอน materialize
+> มิฉะนั้น `reconcileRecord` (ที่ทำงานจาก record) และ backfill จะไม่มี input ชั้น 2 โดยไม่ต้อง join กลับ txn
 
 **เมื่อไหร่ที่รัน:**
 - ตอน `applyTxnToRecord()` (confirm txn) → หลัง upsert record เรียก `reconcileRecord(record)`
@@ -127,6 +136,7 @@ SPLIT/MERGE/NEW เป็น taxRelevant → ได้ record → ถูก matc
   เลขที่ดิน+สำรวจ, geom-only ≥0.5, geom <0.5 → ambiguous, unmatched, record ไม่มี geometry
 - **unit** `load` (geojson feature → doc): ตัด Z ออกจาก coord, map field, area
 - **integration**: โหลด basemap subset จริง (ไม่กี่แปลงจากไฟล์จริง) → reconcileRecord → assert parcelCode/status
+- **integration**: confirm txn → assert record มี `landNo/survey` (ดึงจาก payloadRaw) + `parcelMatch` ถูกเซ็ต
 
 ## 9. นอกขอบเขต (รอบ B)
 
@@ -137,7 +147,8 @@ SPLIT/MERGE/NEW เป็น taxRelevant → ได้ record → ถูก matc
 
 ## 10. ความเสี่ยง / ข้อควรระวัง
 
-- **Z coordinate**: 2dsphere จะ error ถ้าส่ง 3D coord — ต้องตัดใน `load` ให้แน่ใจ (มีเทสต์)
+- **Z coordinate**: basemap coord เป็น 3D → 2dsphere error ถ้าไม่ตัด; ตัดใน `load` (มีเทสต์). m10 txn geometry เป็น 2D อยู่แล้ว (ตรวจจากข้อมูลจริง) ไม่ต้องแตะ
+- **basemap polygon invalid**: บางแปลงอาจ self-intersect → 2dsphere สร้างไม่ผ่าน; ใช้ `prepareGeometry()` (rewind+booleanValid) ใน load และข้ามตัวที่ invalid พร้อมนับรายงาน
 - **basemap เก่ากว่า m10**: TRANSFER 5 รายที่โฉนดไม่เจอ คือ symptom — geometry กู้ได้บางส่วน ที่เหลือเป็น `ambiguous/unmatched` ให้ จนท. ดู (ปกติของ as-of สองแหล่งที่ไม่ sync วัน)
 - **IoU 0.5 เป็น default** — ปรับได้ถ้าเจอ false match; เก็บ overlapPct ไว้ใน candidates เพื่อ tune ภายหลัง
 - **duplicate PARCEL_COD/deed** ใน basemap — matcher คืน candidates หลายตัวเป็น `ambiguous` ไม่เดามั่ว
