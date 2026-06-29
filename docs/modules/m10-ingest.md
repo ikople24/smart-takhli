@@ -78,3 +78,13 @@ Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-map-editor-design.md` · 
 - `POST .../resolve` รับ `geometry` เพิ่ม (optional); invalid → 400
 
 Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-vertex-edit-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-reconcile-vertex-edit.md`
+
+### Basemap corrections layer (2026-06-29)
+- ปัญหา: การแก้ของ จนท. อยู่บน record override เท่านั้น → matcher เทียบ basemap เก่า "ปนกันมั่ว"
+- **2 collection (replay เหมือน txn→record):** `m10_basemap` = effective (นำเข้า+แก้ทับ, matcher ใช้) · `m10_basemap_edit` = ชั้นแก้ของ จนท. (key=parcelCode, source of truth)
+- `applyBasemapEdit()`: upsert edit + apply ลง effective — มี geometry → ลบ fragment เดิม insert 1 doc (ยุบเป็นรูปเดียว); attr-only → updateMany; รหัสใหม่ → insert
+- `replayBasemapEdits()`: เรียกท้าย `m10:load-basemap` หลัง drop+reinsert → **การแก้รอด import**
+- `resolveReconcile(writeBasemap)`: opt-in (checkbox "อัปเดตกลับเข้า basemap" default ปิด) → applyBasemapEdit
+- **v1 จำกัด:** ยุบ fragment เป็นรูปเดียว (เทียบ fragment ทีหลัง), จนท. พิมพ์รหัสเอง (ยังไม่มีเอนจิน SPLIT/MERGE/NEW), ไม่ลบแปลง, ยังไม่ export กลับเป็นไฟล์ .geojson
+
+Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-corrections-layer-design.md`
