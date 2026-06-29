@@ -90,6 +90,12 @@ export default function WorklistPanel() {
             <CopyField label="เลขโฉนด" value={item.search.deedNo || ""} />
             <CopyField label="หรือชื่อเจ้าของเดิม" value={item.search.oldOwnerName || ""} />
           </div>
+          {item.identify?.length > 0 && (
+            <div className="bg-base-200 rounded p-3">
+              <p className="text-sm font-semibold mb-1">ข้อมูลแปลง (เช็คให้ตรงก่อนแก้):</p>
+              {item.identify.map((f, i) => <CopyField key={i} label={f.label} value={f.value} />)}
+            </div>
+          )}
           <div className="divider my-1" />
           {item.steps.map((s, i) => (
             s.copyable

@@ -42,6 +42,15 @@ describe("buildWorklistItem", () => {
     expect(item.search.oldOwnerName).toBeNull();
   });
 
+  it("includes parcel identify block (เลขที่ดิน/ระวาง/หน้าสำรวจ/เนื้อที่) for verification", () => {
+    const item = buildWorklistItem(txn(), null, "2569-01");
+    expect(val(item.identify, "เลขที่ดิน")).toBe("84");
+    expect(val(item.identify, "ระวาง")).toBe("5039 2 4682 7");
+    expect(val(item.identify, "มาตราส่วน")).toBe("1000");
+    expect(val(item.identify, "หน้าสำรวจ")).toBe("13725");
+    expect(val(item.identify, "เนื้อที่ (ไร่-งาน-วา)")).toBe("0-2-24");
+  });
+
   it("OWNER_CORRECTION -> CORRECT_OWNER (no remove-old step)", () => {
     const item = buildWorklistItem(txn({ changeType: "OWNER_CORRECTION" }), null, "2569-01");
     expect(item.action).toBe("CORRECT_OWNER");

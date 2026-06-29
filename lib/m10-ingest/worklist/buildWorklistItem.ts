@@ -20,6 +20,7 @@ export interface WorklistItem {
   changeType: WorklistChangeType;
   action: "REPLACE_OWNER" | "CORRECT_OWNER" | "UPDATE_AREA";
   search: { deedNo: string | null; oldOwnerName: string | null };
+  identify: WorklistField[]; // ข้อมูลยืนยันแปลง: เลขที่ดิน/ระวาง/หน้าสำรวจ/เนื้อที่ (เช็คให้ตรงก่อนแก้)
   steps: WorklistField[];
 }
 
@@ -49,6 +50,20 @@ function ownerFields(raw: Record<string, string>, cols: { label: string; col: st
   return cols.map((c) => field(c.label, raw[c.col] ?? ""));
 }
 
+// ข้อมูลยืนยันแปลง — ดึงจาก payloadRaw + area; ช่วยค้น/เช็คให้ตรงแปลงใน LTAX
+function identifyFields(raw: Record<string, string>, area: WorklistTxnInput["area"]): WorklistField[] {
+  const ravang = [raw["UTM_MAP1"], raw["UTM_MAP2"], raw["UTM_MAP3"], raw["UTM_MAP4"]]
+    .map((v) => (v ?? "").trim()).filter(Boolean).join(" ");
+  const areaText = area ? `${area.rai}-${area.ngan}-${area.wa}` : "";
+  return [
+    field("เลขที่ดิน", raw["ที่ดิน"] ?? ""),
+    field("ระวาง", ravang),
+    field("มาตราส่วน", raw["UTM_SCALE"] ?? ""),
+    field("หน้าสำรวจ", raw["ห.สำรวจ"] ?? ""),
+    field("เนื้อที่ (ไร่-งาน-วา)", areaText),
+  ];
+}
+
 export function buildWorklistItem(
   txn: WorklistTxnInput,
   oldOwnerName: string | null,
@@ -62,6 +77,7 @@ export function buildWorklistItem(
     period,
     changeType: txn.changeType,
     search: { deedNo: txn.deedNo, oldOwnerName },
+    identify: identifyFields(raw, txn.area),
   };
 
   if (txn.changeType === "TRANSFER") {
