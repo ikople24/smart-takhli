@@ -20,6 +20,8 @@ export default function ReconcilePanel() {
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState({ deedNo: "", landNo: "", survey: "", rai: "", ngan: "", wa: "" });
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);   // โหมดแก้รูปแปลง (geoman)
+  const [editedGeom, setEditedGeom] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -37,7 +39,7 @@ export default function ReconcilePanel() {
   const count = (s) => rows.filter((r) => r.status === s).length;
 
   async function openFocus(recordKey) {
-    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null);
+    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null); setEditing(false); setEditedGeom(null);
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(recordKey)}`);
       const d = await res.json();
@@ -56,7 +58,7 @@ export default function ReconcilePanel() {
       if (pre) setSelectedId(pre.basemapId);
     } catch (e) { setError(e.message); }
   }
-  function closeFocus() { setFocusKey(null); setDetail(null); }
+  function closeFocus() { setFocusKey(null); setDetail(null); setEditing(false); setEditedGeom(null); }
 
   async function save() {
     if (!detail) return;
@@ -68,6 +70,7 @@ export default function ReconcilePanel() {
       deedNo: form.deedNo || null, landNo: form.landNo || null, survey: form.survey || null,
       area: (form.rai !== "" || form.ngan !== "" || form.wa !== "")
         ? { rai, ngan, wa, sqm: (rai * 400 + ngan * 100 + wa) * 4 } : null,
+      geometry: editedGeom || undefined, // รูปแปลงที่ จนท. แก้/วาด (เฟส 2)
     };
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(focusKey)}/resolve`, {
@@ -98,9 +101,24 @@ export default function ReconcilePanel() {
                 nearby={detail.nearby}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
+                editing={editing}
+                onGeometryChange={setEditedGeom}
               />
+              <div className="flex items-center gap-2 mt-2">
+                {!editing ? (
+                  <button className="btn btn-sm btn-outline" onClick={() => { setEditedGeom(null); setEditing(true); }}>
+                    {detail.record.geometry ? "✏️ แก้รูปแปลง" : "✏️ วาดแปลงใหม่"}
+                  </button>
+                ) : (
+                  <>
+                    <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุด / คลิกเส้นเพิ่มจุด / คลิกขวาลบจุด</span>
+                    <button className="btn btn-sm btn-ghost" onClick={() => { setEditing(false); setEditedGeom(null); }}>ยกเลิกการแก้</button>
+                    {editedGeom && <span className="badge badge-success">มีรูปใหม่รอบันทึก</span>}
+                  </>
+                )}
+              </div>
               <p className="text-xs opacity-60 mt-2">
-                <span className="text-red-600 font-bold">▬</span> รูปแปลง ม.10 (ข้อมูลดิบ) ·
+                <span className="text-red-600 font-bold">▬</span> รูปแปลง ม.10 ·
                 <span className="text-blue-600 font-bold"> ▬</span> basemap candidate (คลิกเลือก) ·
                 <span className="text-green-600 font-bold"> ▬</span> ที่เลือก ·
                 <span className="text-gray-400 font-bold"> ▬</span> แปลงข้างเคียง
