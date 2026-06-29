@@ -321,19 +321,15 @@ export async function getReconcileItem(recordKey: string) {
   for (const c of cands) if (c.parcelCode) overlapByCode.set(c.parcelCode, Math.max(overlapByCode.get(c.parcelCode) ?? 0, c.overlapPct ?? 0));
   const codeSet = new Set<string>(cands.map((c) => c.parcelCode).filter(Boolean));
   if (effCode) codeSet.add(effCode);
-  // ดึง basemap ตาม parcelCode (current id) → 1 entry ต่อรหัส (รวม fragment ที่ซ้ำ เอา fragment แรก)
-  const docs = codeSet.size ? await M10Basemap.find({ parcelCode: { $in: [...codeSet] } }).select("parcelCode deedNo geometry").lean() : [];
-  const byCode = new Map<string, Record<string, unknown>>();
-  for (const d of docs) if (!byCode.has(d.parcelCode as string)) byCode.set(d.parcelCode as string, d);
-  const candidates = [...codeSet].map((code) => {
-    const d = byCode.get(code) as { _id?: unknown; deedNo?: string; geometry?: unknown } | undefined;
-    return {
-      parcelCode: code, basemapId: d?._id ? String(d._id) : code,
-      deedNo: d?.deedNo ?? null,
-      overlapPct: overlapByCode.has(code) ? overlapByCode.get(code)! : null,
-      geometry: d?.geometry ?? null,
-    };
-  });
+  // ดึง basemap ตาม parcelCode (current id) — โชว์ "ทุก fragment" ของแต่ละรหัส
+  // (basemap เก็บแปลงเดียวเป็นหลาย polygon → ต้องเห็นครบเพื่อประกอบรูปแปลงเต็มบนแผนที่)
+  const docs = codeSet.size ? await M10Basemap.find({ parcelCode: { $in: [...codeSet] } }).select("parcelCode deedNo geometry").limit(100).lean() : [];
+  const candidates = docs.map((d: Record<string, unknown>) => ({
+    parcelCode: d.parcelCode as string, basemapId: String(d._id),
+    deedNo: (d.deedNo as string) ?? null,
+    overlapPct: overlapByCode.has(d.parcelCode as string) ? overlapByCode.get(d.parcelCode as string)! : null,
+    geometry: d.geometry ?? null,
+  }));
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
   if (effGeometry) {
     const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(effGeometry as Geom) } } })
