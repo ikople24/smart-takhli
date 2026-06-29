@@ -323,10 +323,13 @@ export async function getReconcileItem(recordKey: string) {
   if (effCode) codeSet.add(effCode);
   // ดึง basemap ตาม parcelCode (current id) — โชว์ "ทุก fragment" ของแต่ละรหัส
   // (basemap เก็บแปลงเดียวเป็นหลาย polygon → ต้องเห็นครบเพื่อประกอบรูปแปลงเต็มบนแผนที่)
-  const docs = codeSet.size ? await M10Basemap.find({ parcelCode: { $in: [...codeSet] } }).select("parcelCode deedNo geometry").limit(100).lean() : [];
+  const docs = codeSet.size ? await M10Basemap.find({ parcelCode: { $in: [...codeSet] } }).select("parcelCode deedNo landNo survey area geometry").limit(100).lean() : [];
   const candidates = docs.map((d: Record<string, unknown>) => ({
     parcelCode: d.parcelCode as string, basemapId: String(d._id),
     deedNo: (d.deedNo as string) ?? null,
+    landNo: (d.landNo as string) ?? null,
+    survey: (d.survey as string) ?? null,
+    area: (d.area as { rai: number; ngan: number; wa: number; sqm: number }) ?? null,
     overlapPct: overlapByCode.has(d.parcelCode as string) ? overlapByCode.get(d.parcelCode as string)! : null,
     geometry: d.geometry ?? null,
   }));

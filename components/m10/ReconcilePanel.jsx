@@ -60,6 +60,18 @@ export default function ReconcilePanel() {
   }
   function closeFocus() { setFocusKey(null); setDetail(null); setEditing(false); setEditedGeom(null); }
 
+  // เลือก candidate → ดึง attribute ของแปลงนั้นมาเติมฟอร์ม (เลือกคนละแปลง = บันทึกคนละค่า)
+  function pickCandidate(c) {
+    setForm((f) => ({
+      ...f,
+      parcelCode: c.parcelCode ?? "",
+      deedNo: c.deedNo ?? f.deedNo,
+      landNo: c.landNo ?? f.landNo,
+      survey: c.survey ?? f.survey,
+      rai: c.area?.rai ?? f.rai, ngan: c.area?.ngan ?? f.ngan, wa: c.area?.wa ?? f.wa,
+    }));
+  }
+
   async function save() {
     if (!detail) return;
     setSaving(true); setError("");
@@ -134,7 +146,7 @@ export default function ReconcilePanel() {
                   return (
                     <label key={c.basemapId} className="flex items-center gap-2 py-1 cursor-pointer">
                       <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId}
-                        onChange={() => { setSelectedId(c.basemapId); setForm((f) => ({ ...f, parcelCode: c.parcelCode })); }} />
+                        onChange={() => { setSelectedId(c.basemapId); pickCandidate(c); }} />
                       <span className="font-mono">{c.parcelCode}</span>
                       <span className="text-xs opacity-60">{frag} โฉนด {c.deedNo || "-"} · ทับ {pct(c.overlapPct)}</span>
                     </label>
