@@ -14,6 +14,17 @@ const RecordSchema = new mongoose.Schema({
     candidates: { type: Array, default: [] },
     matchedAt: { type: Date, default: null },
   },
+  reconcileOverride: {
+    parcelCode: { type: String, default: null },
+    deedNo: { type: String, default: null },
+    landNo: { type: String, default: null },
+    survey: { type: String, default: null },
+    area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
+    status: { type: String, default: null }, // "resolved" = จนท. ตัดสินแล้ว (auto reconcile ห้ามทับ)
+    note: { type: String, default: null },
+    by: { type: String, default: null },
+    at: { type: Date, default: null },
+  },
   area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
   owners: [{ title: String, name: String, surname: String, fullName: String, idHash: { type: String, default: null } }],
   geometry: { type: mongoose.Schema.Types.Mixed, default: null },
