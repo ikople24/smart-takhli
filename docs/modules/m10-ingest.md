@@ -58,3 +58,14 @@ Spec: `docs/superpowers/specs/2026-06-28-ltax-worklist-design.md`
 - **นอก scope (รอบ B):** officer confirm/เลือก candidate, สร้างรหัส Parcel Code ใหม่ (SPLIT/MERGE/NEW), ดันเข้า worklist
 
 Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-matcher-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-basemap-matcher.md`
+
+## Reconcile map editor (เฟส 1 — 2026-06-29)
+- งานหลักเจ้าหน้าที่แผนที่ภาษี = กลั่นกรอง 2 ทาง (ข้อมูลดิบ ม.10 ↔ รูปแปลง basemap) — แท็บ "จับคู่ basemap" เพิ่ม **focus mode** มีแผนที่
+- `components/m10/ReconcileMap.jsx` (react-leaflet, dynamic `ssr:false`): ทับ m10 polygon (แดงประ) · candidate basemap (น้ำเงิน คลิกเลือก=เขียว) · แปลงข้างเคียง bbox (เทา)
+- จนท. **เลือกแปลงที่ถูก + แก้ attribute** (โฉนด/เลขที่ดิน/หน้าสำรวจ/เนื้อที่) → [บันทึก & เช็คใหม่]
+- **Save model กัน replay:** เก็บลง `M10Record.reconcileOverride` (status `resolved`, by/at) ไม่แตะ field canonical; `reconcileRecord` (auto) **ข้าม** record ที่ resolved; effective = override ?? auto
+- `resolveReconcile()` re-run `matchParcel` ด้วยค่าใหม่ (ตรง ไม่ผ่าน guard) เก็บ parcelMatch ล่าสุด; parcelCode ที่ จนท. เลือกชนะเสมอ
+- API: `GET /api/m10-ingest/reconcile/[recordKey]` (detail+candidates+nearby) · `POST .../resolve`
+- **นอก scope (เฟส 2):** วาด/แก้ vertex (เพิ่ม geoman) · สร้างรหัส SPLIT/MERGE/NEW · ดันเข้า worklist
+
+Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-map-editor-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-reconcile-map-editor.md`
