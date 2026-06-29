@@ -2,6 +2,7 @@ import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
+import { normalizeEditedGeometry } from "../basemap/load";
 import { bbox as turfBbox, bboxPolygon as turfBboxPolygon } from "@turf/turf";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
@@ -309,6 +310,8 @@ export async function getReconcileItem(recordKey: string) {
   const rec = await M10Record.findOne({ recordKey })
     .select("recordKey deedNo landNo survey area geometry parcelCode parcelMatch reconcileOverride").lean();
   if (!rec) return null;
+  // effective geometry = รูปที่ จนท. แก้ (override) ถ้ามี ไม่งั้น canonical — UI แสดงรูปล่าสุด
+  const effGeometry = rec.reconcileOverride?.geometry ?? rec.geometry ?? null;
   const cands = (rec.parcelMatch?.candidates ?? []) as { basemapId: string; parcelCode: string; deedNo: string | null; overlapPct: number }[];
   const candIds = cands.map((c) => c.basemapId).filter(Boolean);
   const candDocs = candIds.length ? await M10Basemap.find({ _id: { $in: candIds } }).select("parcelCode deedNo geometry").lean() : [];
@@ -318,27 +321,35 @@ export async function getReconcileItem(recordKey: string) {
     geometry: (candMap.get(c.basemapId) as { geometry?: unknown })?.geometry ?? null,
   }));
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
-  if (rec.geometry) {
-    const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(rec.geometry as Geom) } } })
+  if (effGeometry) {
+    const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(effGeometry as Geom) } } })
       .select("parcelCode geometry").limit(50).lean();
     nearby = near.map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, geometry: d.geometry }));
   }
-  return { record: rec, candidates, nearby };
+  return { record: { ...rec, geometry: effGeometry }, candidates, nearby };
 }
 
 // บันทึกการตัดสินของ จนท. เป็น override (กัน replay ทับ) + re-match ด้วยค่าใหม่
 export async function resolveReconcile(recordKey: string, by: string, input: {
   parcelCode?: string | null; deedNo?: string | null; landNo?: string | null; survey?: string | null;
   area?: { rai: number; ngan: number; wa: number; sqm: number } | null; note?: string | null;
+  geometry?: unknown;
 }) {
   const rec = await M10Record.findOne({ recordKey }).lean();
   if (!rec) throw new Error("record not found");
   const deedNo = input.deedNo ?? rec.deedNo;
   const landNo = input.landNo ?? rec.landNo ?? null;
   const survey = input.survey ?? rec.survey ?? null;
+  // geometry ที่ จนท. แก้ (เฟส 2): validate ก่อนเก็บ; effective = override ?? canonical
+  let overrideGeom: Geom | null = null;
+  if (input.geometry != null) {
+    overrideGeom = normalizeEditedGeometry(input.geometry);
+    if (!overrideGeom) throw new Error("รูปแปลงไม่ถูกต้อง (เส้นตัดกัน/จุดน้อยเกินไป)");
+  }
+  const effGeom = overrideGeom ?? (rec.geometry as Geom) ?? null;
   // re-match ตรง ๆ (ไม่ผ่าน reconcileRecord จึงไม่ติด guard ข้าม resolved)
   const match = await matchParcel(
-    { deedNo, landNo, survey, geometry: (rec.geometry as Geom) ?? null },
+    { deedNo, landNo, survey, geometry: effGeom },
     {
       byDeed: async (d) => (await M10Basemap.find({ deedNo: d }).lean()).map(toCand),
       byLandSurvey: async (l, s) => (await M10Basemap.find({ landNo: l, survey: s }).lean()).map(toCand),
@@ -348,7 +359,7 @@ export async function resolveReconcile(recordKey: string, by: string, input: {
   const override = {
     parcelCode: input.parcelCode ?? match.parcelCode,
     deedNo: input.deedNo ?? null, landNo: input.landNo ?? null, survey: input.survey ?? null,
-    area: input.area ?? null, status: "resolved", note: input.note ?? null, by, at: new Date(),
+    area: input.area ?? null, geometry: overrideGeom, status: "resolved", note: input.note ?? null, by, at: new Date(),
   };
   await M10Record.updateOne({ recordKey }, { $set: {
     reconcileOverride: override,

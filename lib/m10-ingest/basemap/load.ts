@@ -25,6 +25,20 @@ function strip3D(coords: unknown): unknown {
   return coords;
 }
 
+// ตรวจ+normalize geometry ที่ จนท. วาด/แก้บนแผนที่ (เฟส 2): strip Z + rewind + valid
+// คืน null ถ้าไม่ใช่ polygon หรือไม่ valid (degenerate/เส้นตัดกัน)
+export function normalizeEditedGeometry(g: unknown): Geom | null {
+  if (!g || typeof g !== "object") return null;
+  const geom = g as Geom;
+  if (geom.type !== "Polygon" && geom.type !== "MultiPolygon") return null;
+  try {
+    const stripped = { type: geom.type, coordinates: strip3D(geom.coordinates) } as Geom;
+    const rewound = rewind(feature(stripped), { reverse: false }) as Feature<Geom>;
+    if (!booleanValid(rewound.geometry)) return null;
+    return rewound.geometry;
+  } catch { return null; }
+}
+
 export function featureToBasemapDoc(f: Feature): BasemapDoc | null {
   const p = f.properties ?? {};
   const parcelCode = str(p.PARCEL_COD);

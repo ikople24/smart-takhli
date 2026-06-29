@@ -32,4 +32,21 @@ describe("resolveReconcile", () => {
   it("getReconcileItem returns null for missing", async () => {
     expect(await getReconcileItem("NOPE")).toBeNull();
   });
+
+  it("saves override geometry (validated) + re-matches with it", async () => {
+    const poly = { type: "Polygon", coordinates: [[[100, 15], [100.01, 15], [100.01, 15.01], [100, 15.01], [100, 15]]] };
+    await col("m10_basemap").insertOne({ parcelCode: "07A001", deedNo: "9", geometry: poly });
+    await col("m10_records").insertOne({ recordKey: "K1", deedNo: null, geometry: null, parcelMatch: { status: "unmatched", candidates: [] } });
+    const r = await resolveReconcile("K1", "o", { geometry: poly });
+    expect(r.status).toBe("resolved");
+    const rec = await col("m10_records").findOne({ recordKey: "K1" });
+    expect(rec?.reconcileOverride?.geometry?.type).toBe("Polygon");
+  });
+
+  it("rejects invalid edited geometry", async () => {
+    await col("m10_records").insertOne({ recordKey: "K2", geometry: null });
+    await expect(
+      resolveReconcile("K2", "o", { geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [0, 0]]] } })
+    ).rejects.toThrow();
+  });
 });

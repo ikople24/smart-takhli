@@ -20,6 +20,7 @@ const RecordSchema = new mongoose.Schema({
     landNo: { type: String, default: null },
     survey: { type: String, default: null },
     area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
+    geometry: { type: mongoose.Schema.Types.Mixed, default: null }, // รูปแปลงที่ จนท. แก้ (เฟส 2) — canonical ไม่ถูกแตะ
     status: { type: String, default: null }, // "resolved" = จนท. ตัดสินแล้ว (auto reconcile ห้ามทับ)
     note: { type: String, default: null },
     by: { type: String, default: null },

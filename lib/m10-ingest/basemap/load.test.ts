@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { featureToBasemapDoc } from "./load";
+import { featureToBasemapDoc, normalizeEditedGeometry } from "./load";
 import type { Feature } from "geojson";
 
 function feat(props: Record<string, unknown>, coords: number[][][]): Feature {
@@ -30,5 +30,17 @@ describe("featureToBasemapDoc", () => {
     // ring 3 จุด (พื้นที่เป็นศูนย์) — turf booleanValid ปฏิเสธ → ข้ามไม่ให้ 2dsphere พัง
     const degenerate = [[[0, 0], [1, 0], [0, 0]]];
     expect(featureToBasemapDoc(feat({ PARCEL_COD: "X1" }, degenerate))).toBeNull();
+  });
+});
+
+describe("normalizeEditedGeometry", () => {
+  it("accepts valid polygon, returns rewound Polygon", () => {
+    const g = { type: "Polygon", coordinates: [[[100, 15], [100.001, 15], [100.001, 15.001], [100, 15.001], [100, 15]]] };
+    expect(normalizeEditedGeometry(g)?.type).toBe("Polygon");
+  });
+  it("rejects degenerate / non-polygon / null", () => {
+    expect(normalizeEditedGeometry({ type: "Polygon", coordinates: [[[0, 0], [1, 0], [0, 0]]] })).toBeNull();
+    expect(normalizeEditedGeometry({ type: "Point", coordinates: [0, 0] })).toBeNull();
+    expect(normalizeEditedGeometry(null)).toBeNull();
   });
 });
