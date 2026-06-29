@@ -28,7 +28,7 @@ describe("buildWorklistItem", () => {
     expect(item.search).toEqual({ deedNo: "31635", oldOwnerName: "นาย ก ข" });
     expect(val(item.steps, "ชื่อ")).toBe("วรารีย์");
     expect(val(item.steps, "นามสกุล")).toBe("ชาลีรัตน์");
-    expect(val(item.steps, "เลขบัตรประชาชน (13 หลัก)")).toBe("1609700018248"); // เลขล้วน (ตรง LTAX)
+    expect(val(item.steps, "เลขประจำตัวประชาชน")).toBe("1609700018248"); // เลขล้วน (ตรง LTAX)
     expect(val(item.steps, "ตำบล")).toBe("ตาคลี");
     // มี step ลบเจ้าของเดิม และเป็น instruction (copy ไม่ได้)
     expect(item.steps.some((s) => s.label.includes("ลบเจ้าของเดิม"))).toBe(true);
@@ -54,6 +54,15 @@ describe("buildWorklistItem", () => {
     expect(val(item.identify, "เนื้อที่: ไร่")).toBe("0");
     expect(val(item.identify, "เนื้อที่: งาน")).toBe("2");
     expect(val(item.identify, "เนื้อที่: ตร.ว.")).toBe("24.00");
+  });
+
+  it("TRANSFER_PARTIAL -> ADD_OWNER (เพิ่มเจ้าของร่วม, ไม่ลบเจ้าของเดิม)", () => {
+    const item = buildWorklistItem(txn({ changeType: "TRANSFER_PARTIAL" }), "นาย ก ข", "2569-01");
+    expect(item.action).toBe("ADD_OWNER");
+    expect(val(item.steps, "ชื่อ")).toBe("วรารีย์");
+    expect(val(item.steps, "เลขประจำตัวประชาชน")).toBe("1609700018248");
+    // ห้ามมี step ลบเจ้าของเดิม
+    expect(item.steps.some((s) => s.label.includes("ลบเจ้าของเดิม"))).toBe(false);
   });
 
   it("OWNER_CORRECTION -> CORRECT_OWNER (no remove-old step)", () => {

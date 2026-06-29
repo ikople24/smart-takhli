@@ -1,4 +1,4 @@
-type WorklistChangeType = "TRANSFER" | "OWNER_CORRECTION" | "BOUNDARY_CHANGE";
+type WorklistChangeType = "TRANSFER" | "TRANSFER_PARTIAL" | "OWNER_CORRECTION" | "BOUNDARY_CHANGE";
 
 export interface WorklistTxnInput {
   _id: string;
@@ -18,30 +18,36 @@ export interface WorklistItem {
   deedNo: string | null;
   period: string;
   changeType: WorklistChangeType;
-  action: "REPLACE_OWNER" | "CORRECT_OWNER" | "UPDATE_AREA";
+  action: "REPLACE_OWNER" | "ADD_OWNER" | "CORRECT_OWNER" | "UPDATE_AREA";
   search: { deedNo: string | null; oldOwnerName: string | null };
   identify: WorklistField[]; // ข้อมูลยืนยันแปลง: เลขที่ดิน/ระวาง/หน้าสำรวจ/เนื้อที่ (เช็คให้ตรงก่อนแก้)
   steps: WorklistField[];
 }
 
-// label -> คอลัมน์ payloadRaw (ลำดับเป็น default ที่ปรับได้ — ดู ASSUMPTION ใน spec §5)
+// label -> คอลัมน์ payloadRaw — เรียง + ตั้งชื่อตรงฟอร์ม LTAX "เพิ่มข้อมูลเจ้าของทรัพย์สิน"
+// (รหัสไปรษณีย์ไม่มีในข้อมูล ม.10 → เจ้าหน้าที่กรอกเอง)
 const OWNER_FIELD_COLS: { label: string; col: string }[] = [
-  { label: "คำนำหน้า", col: "คำนำหน้า" },
+  { label: "เลขประจำตัวประชาชน", col: "13 หลัก" },
+  { label: "คำนำหน้าชื่อ", col: "คำนำหน้า" },
   { label: "ชื่อ", col: "ชื่อ" },
   { label: "นามสกุล", col: "นามสกุล" },
-  { label: "เลขบัตรประชาชน (13 หลัก)", col: "13 หลัก" },
   { label: "บ้านเลขที่", col: "OWN_HSE_NO" },
-  { label: "หมู่", col: "OWN_MOO" },
+  { label: "หมู่ที่/ชุมชน", col: "OWN_MOO" },
   { label: "ซอย", col: "OWN_SOI" },
-  { label: "หมู่บ้าน", col: "OWN_VILLAGE" },
   { label: "ถนน", col: "OWN_ROAD" },
   { label: "ตำบล", col: "OWN_TAMBOL" },
   { label: "อำเภอ", col: "OWN_AMPHUR" },
   { label: "จังหวัด", col: "OWN_PROVINCE" },
+  { label: "โทรศัพท์", col: "OWN_TEL" },
 ];
 
-// ชื่อ-นามสกุลล้วน (สำหรับ OWNER_CORRECTION)
-const NAME_FIELD_COLS = OWNER_FIELD_COLS.slice(0, 4);
+// ชื่อ-นามสกุล-เลขบัตร (สำหรับ OWNER_CORRECTION)
+const NAME_FIELD_COLS: { label: string; col: string }[] = [
+  { label: "คำนำหน้าชื่อ", col: "คำนำหน้า" },
+  { label: "ชื่อ", col: "ชื่อ" },
+  { label: "นามสกุล", col: "นามสกุล" },
+  { label: "เลขประจำตัวประชาชน", col: "13 หลัก" },
+];
 
 const note = (label: string): WorklistField => ({ label, value: "", copyable: false });
 const field = (label: string, value: string): WorklistField => ({ label, value, copyable: true });
@@ -100,6 +106,20 @@ export function buildWorklistItem(
         note("กด [เพิ่มเจ้าของกรรมสิทธิ์] → ค้นบุคคลจากเลขบัตร/ชื่อ ถ้ามีให้เลือก ถ้าไม่มีบันทึกใหม่ด้วยข้อมูลนี้:"),
         ...ownerFields(raw, OWNER_FIELD_COLS),
         note(`ลบเจ้าของเดิม: ${oldOwnerName ?? "(ดูรายชื่อในจอ LTAX)"}`),
+        note("กด [บันทึก]"),
+      ],
+    };
+  }
+
+  if (txn.changeType === "TRANSFER_PARTIAL") {
+    // ให้เฉพาะส่วน = เพิ่มเจ้าของร่วม (ไม่ลบเจ้าของเดิม)
+    return {
+      ...base,
+      action: "ADD_OWNER",
+      steps: [
+        note(`ค้นหาเลขโฉนด ${txn.deedNo ?? "(ดูชื่อเจ้าของเดิม)"} แล้วเปิดเอกสาร`),
+        note("กด [เพิ่มเจ้าของกรรมสิทธิ์] เป็นเจ้าของร่วม (เจ้าของเดิมคงอยู่) → ค้นบุคคลจากเลขบัตร/ชื่อ ถ้าไม่มีบันทึกใหม่:"),
+        ...ownerFields(raw, OWNER_FIELD_COLS),
         note("กด [บันทึก]"),
       ],
     };

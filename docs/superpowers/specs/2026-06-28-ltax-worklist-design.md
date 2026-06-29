@@ -14,7 +14,7 @@
 
 **In scope**
 - รวมหน้า ม.10 เป็นหน้าเดียว `/admin/m10` แบบ **tabs** (นำเข้า · คิวยืนยัน · ทะเบียน · worklist) — IA ใหม่ใต้กลุ่ม "แผนที่ภาษี"
-- worklist สำหรับ changeType ที่ **แก้แปลงเดิม ไม่สร้าง Parcel Code ใหม่**: `TRANSFER` · `OWNER_CORRECTION` · `BOUNDARY_CHANGE`
+- worklist สำหรับ changeType ที่ **แก้แปลงเดิม ไม่สร้าง Parcel Code ใหม่**: `TRANSFER` · `TRANSFER_PARTIAL` · `OWNER_CORRECTION` · `BOUNDARY_CHANGE`
 - เลือกบางแปลง (checkbox) → guided keying ทีละแปลง + copy รายช่อง → mark keyed/skipped + ติดตาม progress
 - สถานะการคีย์เก็บบน `M10Transaction` (idempotent — คีย์แล้วไม่ขึ้นซ้ำ)
 
@@ -75,7 +75,7 @@ M10Transaction (เพิ่มฟิลด์)
   ltaxNote: String         // เหตุผลตอน skip หรือหมายเหตุ
 ```
 - ไม่เพิ่ม collection ใหม่
-- **worklist query:** `reviewStatus="confirmed"` && `changeType ∈ {TRANSFER, OWNER_CORRECTION, BOUNDARY_CHANGE}` && `ltaxStatus="pending"` → รายการที่ค้างคีย์
+- **worklist query:** `reviewStatus="confirmed"` && `changeType ∈ {TRANSFER, TRANSFER_PARTIAL, OWNER_CORRECTION, BOUNDARY_CHANGE}` && `ltaxStatus="pending"` → รายการที่ค้างคีย์
 - index เพิ่ม: `{ ltaxStatus: 1, changeType: 1 }` (กรองรายการค้างเร็ว)
 
 ---
@@ -107,6 +107,7 @@ interface WorklistItem {
 | changeType | action | steps (เรียงตามกรอก) |
 |---|---|---|
 | TRANSFER | REPLACE_OWNER | (1) ค้นเลขโฉนด → (2) เพิ่มเจ้าของใหม่: คำนำหน้า·ชื่อ·นามสกุล·เลขบัตร13·บ้านเลขที่·หมู่·ซอย·ถนน·ตำบล·อำเภอ·จังหวัด → (3) ลบเจ้าของเดิม (`oldOwnerName` ถ้ามี) → (4) บันทึก |
+| TRANSFER_PARTIAL | ADD_OWNER | (1) ค้นเลขโฉนด → (2) เพิ่มเจ้าของร่วม (เจ้าของเดิมคงอยู่) → (3) บันทึก |
 | OWNER_CORRECTION | CORRECT_OWNER | (1) ค้นเลขโฉนด → (2) แก้ชื่อ: คำนำหน้า·ชื่อ·นามสกุล (+เลขบัตร13 ถ้าเปลี่ยน) → (3) บันทึก |
 | BOUNDARY_CHANGE | UPDATE_AREA | (1) ค้นเลขโฉนด → (2) แก้เนื้อที่: ไร่·งาน·วา (จาก `txn.area`) → (3) บันทึก |
 

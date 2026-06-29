@@ -122,7 +122,7 @@ export async function asOfMaterialize(cutoff: Date): Promise<AsOfRecord[]> {
   return [...byKey.values()];
 }
 
-const WORKLIST_CHANGE_TYPES = ["TRANSFER", "OWNER_CORRECTION", "BOUNDARY_CHANGE"];
+const WORKLIST_CHANGE_TYPES = ["TRANSFER", "TRANSFER_PARTIAL", "OWNER_CORRECTION", "BOUNDARY_CHANGE"];
 
 export interface WorklistListRow {
   _id: string; recordKey: string; deedNo: string | null;

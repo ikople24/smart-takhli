@@ -35,7 +35,7 @@ Spec: `docs/superpowers/specs/2026-06-21-m10-ingest-normalize-design.md` (rev.2)
 
 ## Worklist → LTAX (rev. 2026-06-28)
 - หน้า admin รวมเป็น `/admin/m10` แบบ tabs: นำเข้า · คิวยืนยัน · ทะเบียน · **Worklist → LTAX** (panels ที่ `components/m10/`)
-- worklist = txn ที่ `reviewStatus=confirmed` && changeType ∈ {TRANSFER, OWNER_CORRECTION, BOUNDARY_CHANGE} && `ltaxStatus=pending`
+- worklist = txn ที่ `reviewStatus=confirmed` && changeType ∈ {TRANSFER, TRANSFER_PARTIAL, OWNER_CORRECTION, BOUNDARY_CHANGE} && `ltaxStatus=pending`
 - `lib/m10-ingest/worklist/buildWorklistItem.ts` (pure) → สคริปต์คีย์ตามลำดับ LTAX (ดึงเจ้าของดิบจาก payloadRaw); **ลำดับ field เป็น assumption ปรับได้** (ดู spec §5)
 - API `pages/api/m10-ingest/worklist/*` (gate `/admin/m10`); เลขบัตรดิบส่งเฉพาะ focus endpoint, ไม่ log
 - สถานะคีย์เก็บบน M10Transaction (`ltaxStatus/ltaxKeyedBy/ltaxKeyedAt/ltaxNote`)
