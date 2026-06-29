@@ -69,3 +69,12 @@ Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-matcher-design.md` · Plan:
 - **นอก scope (เฟส 2):** วาด/แก้ vertex (เพิ่ม geoman) · สร้างรหัส SPLIT/MERGE/NEW · ดันเข้า worklist
 
 Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-map-editor-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-reconcile-map-editor.md`
+
+### เฟส 2 — แก้/วาด vertex รูปแปลง (2026-06-29)
+- เพิ่ม `@geoman-io/leaflet-geoman-free` (peer leaflet ^1.2 → เข้ากับ 1.9.4); ผูกกับ L.map ผ่าน `useMap` ใน `ReconcileMap` (ssr:false)
+- ปุ่ม [แก้รูปแปลง]/[วาดแปลงใหม่] ใน focus → ลาก/เพิ่ม/ลบ vertex (`allowSelfIntersection:false`) → เก็บ geometry ใน state
+- `normalizeEditedGeometry()` (`basemap/load.ts`): strip Z + rewind + booleanValid — validate ก่อนเก็บ
+- เก็บ `reconcileOverride.geometry`; **effective geometry = override.geometry ?? record.geometry** (canonical ไม่ถูกแตะ); `getReconcileItem`/`resolveReconcile` ใช้ effective ในการ re-match
+- `POST .../resolve` รับ `geometry` เพิ่ม (optional); invalid → 400
+
+Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-vertex-edit-design.md` · Plan: `docs/superpowers/plans/2026-06-29-m10-reconcile-vertex-edit.md`
