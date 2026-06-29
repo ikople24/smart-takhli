@@ -5,8 +5,10 @@ import IngestPanel from "@/components/m10/IngestPanel";
 import ReviewPanel from "@/components/m10/ReviewPanel";
 import RecordsPanel from "@/components/m10/RecordsPanel";
 import WorklistPanel from "@/components/m10/WorklistPanel";
+import SummaryPanel from "@/components/m10/SummaryPanel";
 
 const TABS = [
+  { key: "summary", label: "สรุปรายเดือน", Panel: SummaryPanel },
   { key: "ingest", label: "นำเข้าข้อมูล", Panel: IngestPanel },
   { key: "review", label: "คิวยืนยัน", Panel: ReviewPanel },
   { key: "records", label: "ทะเบียน (as-of)", Panel: RecordsPanel },
@@ -15,9 +17,9 @@ const TABS = [
 
 export default function M10Page() {
   const router = useRouter();
-  const initial = TABS.some((t) => t.key === router.query.tab) ? String(router.query.tab) : "ingest";
+  const initial = TABS.some((t) => t.key === router.query.tab) ? String(router.query.tab) : "summary";
   const [tab, setTab] = useState(initial);
-  const Active = TABS.find((t) => t.key === tab)?.Panel ?? IngestPanel;
+  const Active = TABS.find((t) => t.key === tab)?.Panel ?? SummaryPanel;
 
   function go(key) {
     setTab(key);

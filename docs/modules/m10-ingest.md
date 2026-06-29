@@ -33,9 +33,11 @@ npm run m10:ingest -- public/60070001_60010000.zip --period 2569-01
 
 Spec: `docs/superpowers/specs/2026-06-21-m10-ingest-normalize-design.md` (rev.2)
 
-## Worklist → LTAX (rev. 2026-06-28)
-- หน้า admin รวมเป็น `/admin/m10` แบบ tabs: นำเข้า · คิวยืนยัน · ทะเบียน · **Worklist → LTAX** (panels ที่ `components/m10/`)
-- worklist = txn ที่ `reviewStatus=confirmed` && changeType ∈ {TRANSFER, TRANSFER_PARTIAL, OWNER_CORRECTION, BOUNDARY_CHANGE} && `ltaxStatus=pending`
+## Worklist → LTAX (rev. 2026-06-29)
+- หน้า admin รวมเป็น `/admin/m10` แบบ tabs: **สรุปรายเดือน** (default) · นำเข้า · คิวยืนยัน · ทะเบียน · **Worklist → LTAX** (panels ที่ `components/m10/`)
+- **สรุปรายเดือน** (`SummaryPanel` + `GET /api/m10-ingest/summary` → `summaryByPeriod()`): group by `batch.period` แสดง นำเข้า/รอยืนยัน/คืบหน้าคีย์ LTAX (keyed/eligible)/ค้างคีย์/ข้าม/รอรอบหน้า(SPLIT/MERGE/NEW)
+- หน้านำเข้าเลือกเดือน-ปีด้วย dropdown (เดือนไทย + พ.ศ.) → period `YYYY-MM`
+- worklist = txn ที่ `reviewStatus=confirmed` && changeType ∈ {TRANSFER, TRANSFER_PARTIAL, OWNER_CORRECTION, BOUNDARY_CHANGE} && `ltaxStatus ∉ {keyed,skipped}` (รวม doc เก่าที่ไม่มี field — default ไม่ backfill)
 - `lib/m10-ingest/worklist/buildWorklistItem.ts` (pure) → สคริปต์คีย์ตามลำดับ LTAX (ดึงเจ้าของดิบจาก payloadRaw); **ลำดับ field เป็น assumption ปรับได้** (ดู spec §5)
 - API `pages/api/m10-ingest/worklist/*` (gate `/admin/m10`); เลขบัตรดิบส่งเฉพาะ focus endpoint, ไม่ log
 - สถานะคีย์เก็บบน M10Transaction (`ltaxStatus/ltaxKeyedBy/ltaxKeyedAt/ltaxNote`)

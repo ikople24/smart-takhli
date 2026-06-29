@@ -1,17 +1,30 @@
 import { useState } from "react";
 
+const TH_MONTHS = [
+  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+];
+
+const now = new Date();
+const CUR_BE = now.getFullYear() + 543;
+const CUR_MONTH = now.getMonth() + 1; // 1-12
+// ปีย้อนหลัง 4 ปี ถึงปีปัจจุบัน (พ.ศ.)
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CUR_BE - i);
+
 export default function IngestPanel() {
   const [file, setFile] = useState(null);
-  const [period, setPeriod] = useState("");
+  const [year, setYear] = useState(CUR_BE);
+  const [month, setMonth] = useState(CUR_MONTH);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+
+  const period = `${year}-${String(month).padStart(2, "0")}`;
 
   async function handleUpload(e) {
     e.preventDefault();
     setError(""); setResult(null);
     if (!file) { setError("กรุณาเลือกไฟล์ ZIP"); return; }
-    if (!/^\d{4}-\d{2}$/.test(period)) { setError("period ต้องเป็นรูปแบบ พ.ศ.-เดือน เช่น 2569-01"); return; }
     setBusy(true);
     try {
       const fd = new FormData();
@@ -30,8 +43,16 @@ export default function IngestPanel() {
       <h2 className="text-xl font-bold mb-4">นำเข้าข้อมูลมาตรา 10 (รายเดือน)</h2>
       <form onSubmit={handleUpload} className="card bg-base-100 shadow p-4 space-y-4">
         <div>
-          <label className="label"><span className="label-text">เดือน (พ.ศ.-เดือน)</span></label>
-          <input className="input input-bordered w-40" placeholder="2569-01" value={period} onChange={(e) => setPeriod(e.target.value)} />
+          <label className="label"><span className="label-text">เดือนของข้อมูล</span></label>
+          <div className="flex gap-2 items-center">
+            <select className="select select-bordered" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+              {TH_MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="select select-bordered w-32" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+              {YEAR_OPTIONS.map((y) => <option key={y} value={y}>พ.ศ. {y}</option>)}
+            </select>
+            <span className="text-xs opacity-50 font-mono">({period})</span>
+          </div>
         </div>
         <div>
           <label className="label"><span className="label-text">ไฟล์ ZIP จากกรมที่ดิน</span></label>

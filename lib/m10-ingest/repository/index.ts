@@ -123,6 +123,56 @@ export async function asOfMaterialize(cutoff: Date): Promise<AsOfRecord[]> {
 }
 
 const WORKLIST_CHANGE_TYPES = ["TRANSFER", "TRANSFER_PARTIAL", "OWNER_CORRECTION", "BOUNDARY_CHANGE"];
+// แปลงใหม่ที่ยังคีย์ไม่ได้รอบนี้ (ต้องคำนวณ Parcel Code + basemap ก่อน)
+const DEFERRED_CHANGE_TYPES = ["SPLIT", "SPLIT_PUBLIC", "MERGE", "NEW"];
+
+export interface PeriodSummaryRow {
+  period: string;
+  total: number;          // transactions ทั้งหมดในเดือนนั้น
+  reviewPending: number;  // รอยืนยัน
+  confirmed: number;      // ยืนยันแล้ว
+  rejected: number;       // ปฏิเสธ
+  wlEligible: number;     // confirmed + เข้าเกณฑ์ worklist
+  wlKeyed: number;        // คีย์เข้า LTAX แล้ว
+  wlSkipped: number;      // ข้าม
+  wlPending: number;      // ค้างคีย์ (ยังไม่คีย์/ไม่มี ltaxStatus)
+  deferred: number;       // confirmed + SPLIT/MERGE/NEW (รอรอบ Parcel Code)
+}
+
+// สรุปสถานะการนำเข้า/คีย์ รายเดือน (group by batch.period) — สำหรับหน้า dashboard
+export async function summaryByPeriod(): Promise<PeriodSummaryRow[]> {
+  const wlEligible = { $and: [{ $eq: ["$reviewStatus", "confirmed"] }, { $in: ["$changeType", WORKLIST_CHANGE_TYPES] }] };
+  const rows = await M10Transaction.aggregate([
+    { $lookup: { from: "m10_import_batches", localField: "batchId", foreignField: "_id", as: "b" } },
+    { $unwind: "$b" },
+    { $group: {
+      _id: "$b.period",
+      total: { $sum: 1 },
+      reviewPending: { $sum: { $cond: [{ $eq: ["$reviewStatus", "pending"] }, 1, 0] } },
+      confirmed: { $sum: { $cond: [{ $eq: ["$reviewStatus", "confirmed"] }, 1, 0] } },
+      rejected: { $sum: { $cond: [{ $eq: ["$reviewStatus", "rejected"] }, 1, 0] } },
+      wlEligible: { $sum: { $cond: [wlEligible, 1, 0] } },
+      wlKeyed: { $sum: { $cond: [{ $and: [wlEligible, { $eq: ["$ltaxStatus", "keyed"] }] }, 1, 0] } },
+      wlSkipped: { $sum: { $cond: [{ $and: [wlEligible, { $eq: ["$ltaxStatus", "skipped"] }] }, 1, 0] } },
+      // ค้างคีย์ = เข้าเกณฑ์ แต่ ltaxStatus ไม่ใช่ keyed/skipped (รวม null/missing ใน doc เก่า)
+      wlPending: { $sum: { $cond: [{ $and: [wlEligible, { $not: [{ $in: ["$ltaxStatus", ["keyed", "skipped"]] }] }] }, 1, 0] } },
+      deferred: { $sum: { $cond: [{ $and: [{ $eq: ["$reviewStatus", "confirmed"] }, { $in: ["$changeType", DEFERRED_CHANGE_TYPES] }] }, 1, 0] } },
+    } },
+    { $sort: { _id: -1 } },
+  ]);
+  return rows.map((r: Record<string, number | string>) => ({
+    period: r._id as string,
+    total: (r.total as number) ?? 0,
+    reviewPending: (r.reviewPending as number) ?? 0,
+    confirmed: (r.confirmed as number) ?? 0,
+    rejected: (r.rejected as number) ?? 0,
+    wlEligible: (r.wlEligible as number) ?? 0,
+    wlKeyed: (r.wlKeyed as number) ?? 0,
+    wlSkipped: (r.wlSkipped as number) ?? 0,
+    wlPending: (r.wlPending as number) ?? 0,
+    deferred: (r.deferred as number) ?? 0,
+  }));
+}
 
 export interface WorklistListRow {
   _id: string; recordKey: string; deedNo: string | null;
