@@ -6,8 +6,7 @@ const ReconcileMap = dynamic(() => import("./ReconcileMap"), { ssr: false });
 const STATUS_BADGE = { matched: "badge-success", ambiguous: "badge-warning", unmatched: "badge-error", resolved: "badge-info" };
 const FILTERS = ["", "ambiguous", "unmatched", "resolved", "matched"];
 
-// record ที่ จนท. ต้องเปิดแผนที่จัดการ
-const NEEDS_REVIEW = new Set(["ambiguous", "unmatched", "resolved"]);
+const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
 export default function ReconcilePanel() {
   const [rows, setRows] = useState([]);
@@ -132,7 +131,7 @@ export default function ReconcilePanel() {
                   <label key={c.basemapId} className="flex items-center gap-2 py-1 cursor-pointer">
                     <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId} onChange={() => setSelectedId(c.basemapId)} />
                     <span className="font-mono">{c.parcelCode}</span>
-                    <span className="text-xs opacity-60">โฉนด {c.deedNo || "-"} · ทับ {Math.round(c.overlapPct * 100)}%</span>
+                    <span className="text-xs opacity-60">โฉนด {c.deedNo || "-"} · ทับ {pct(c.overlapPct)}</span>
                   </label>
                 ))}
               </div>
@@ -186,8 +185,8 @@ export default function ReconcilePanel() {
                   <td><span className={`badge badge-sm ${STATUS_BADGE[r.status] || ""}`}>{r.status || "-"}</span></td>
                   <td className="text-xs">{r.method || "-"}</td>
                   <td className="font-mono">{r.parcelCode || "-"}</td>
-                  <td className="text-xs">{r.candidates.map((c) => `${c.parcelCode}(${Math.round(c.overlapPct * 100)}%)`).join(", ") || "-"}</td>
-                  <td>{NEEDS_REVIEW.has(r.status) && <button className="btn btn-xs btn-outline" onClick={() => openFocus(r.recordKey)}>เปิดแผนที่</button>}</td>
+                  <td className="text-xs">{r.candidates.map((c) => `${c.parcelCode}(${pct(c.overlapPct)})`).join(", ") || "-"}</td>
+                  <td><button className="btn btn-xs btn-outline" onClick={() => openFocus(r.recordKey)}>เปิดแผนที่</button></td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={8} className="text-center opacity-60">ไม่มีข้อมูล</td></tr>}

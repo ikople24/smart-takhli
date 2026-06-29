@@ -312,14 +312,24 @@ export async function getReconcileItem(recordKey: string) {
   if (!rec) return null;
   // effective geometry = รูปที่ จนท. แก้ (override) ถ้ามี ไม่งั้น canonical — UI แสดงรูปล่าสุด
   const effGeometry = rec.reconcileOverride?.geometry ?? rec.geometry ?? null;
-  const cands = (rec.parcelMatch?.candidates ?? []) as { basemapId: string; parcelCode: string; deedNo: string | null; overlapPct: number }[];
-  const candIds = cands.map((c) => c.basemapId).filter(Boolean);
-  const candDocs = candIds.length ? await M10Basemap.find({ _id: { $in: candIds } }).select("parcelCode deedNo geometry").lean() : [];
+  const pm = (rec.parcelMatch ?? {}) as { candidates?: { basemapId: string; parcelCode: string; deedNo: string | null; overlapPct: number }[]; basemapId?: unknown };
+  const cands = pm.candidates ?? [];
+  const overlapById = new Map(cands.map((c) => [c.basemapId, c.overlapPct]));
+  const deedById = new Map(cands.map((c) => [c.basemapId, c.deedNo]));
+  // รวม id ของ candidate + แปลงที่ match สำเร็จ (deed-exact ไม่มี candidates แต่มี basemapId) → ให้เห็นบนแผนที่
+  const ids = new Set<string>(cands.map((c) => c.basemapId).filter(Boolean));
+  if (pm.basemapId) ids.add(String(pm.basemapId));
+  const candDocs = ids.size ? await M10Basemap.find({ _id: { $in: [...ids] } }).select("parcelCode deedNo geometry").lean() : [];
   const candMap = new Map(candDocs.map((d: Record<string, unknown>) => [String(d._id), d]));
-  const candidates = cands.map((c) => ({
-    parcelCode: c.parcelCode, basemapId: c.basemapId, deedNo: c.deedNo, overlapPct: c.overlapPct,
-    geometry: (candMap.get(c.basemapId) as { geometry?: unknown })?.geometry ?? null,
-  }));
+  const candidates = [...ids].map((id) => {
+    const d = candMap.get(id) as { parcelCode?: string; deedNo?: string; geometry?: unknown } | undefined;
+    return {
+      parcelCode: d?.parcelCode ?? null, basemapId: id,
+      deedNo: d?.deedNo ?? deedById.get(id) ?? null,
+      overlapPct: overlapById.get(id) ?? null,
+      geometry: d?.geometry ?? null,
+    };
+  }).filter((c) => c.parcelCode);
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
   if (effGeometry) {
     const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(effGeometry as Geom) } } })
