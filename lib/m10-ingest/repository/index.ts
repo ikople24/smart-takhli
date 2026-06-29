@@ -133,7 +133,8 @@ export interface WorklistListRow {
 export async function listWorklistPending(filter: { period?: string; changeType?: string }): Promise<WorklistListRow[]> {
   const q: Record<string, unknown> = {
     reviewStatus: "confirmed",
-    ltaxStatus: "pending",
+    // ยังไม่คีย์ = pending หรือไม่มี field (doc เก่าที่ confirm ก่อนเพิ่ม ltaxStatus → default ไม่ backfill)
+    ltaxStatus: { $nin: ["keyed", "skipped"] },
     changeType: filter.changeType && WORKLIST_CHANGE_TYPES.includes(filter.changeType)
       ? filter.changeType
       : { $in: WORKLIST_CHANGE_TYPES },
