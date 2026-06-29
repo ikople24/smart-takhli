@@ -2,6 +2,7 @@ import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
+import { bbox as turfBbox, bboxPolygon as turfBboxPolygon } from "@turf/turf";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
 // เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
@@ -104,6 +105,9 @@ function toCand(d: Record<string, unknown>): BasemapCandidate {
 export async function reconcileRecord(rec: {
   _id: unknown; recordKey: string; deedNo: string | null; landNo?: string | null; survey?: string | null; geometry: Geom | null;
 }): Promise<void> {
+  // ไม่ทับการตัดสินของคน — record ที่ จนท. resolve แล้ว ให้คง override ไว้
+  const cur = await M10Record.findById(rec._id).select("reconcileOverride").lean();
+  if (cur?.reconcileOverride?.status === "resolved") return;
   const result = await matchParcel(
     { deedNo: rec.deedNo, landNo: rec.landNo ?? null, survey: rec.survey ?? null, geometry: rec.geometry },
     {
@@ -296,6 +300,62 @@ export async function listReconcile(filter: { status?: string } = {}): Promise<R
       candidates: cands.map((c) => ({ parcelCode: c.parcelCode, overlapPct: c.overlapPct })),
     };
   });
+}
+
+function bboxPolygon(g: Geom): GeoJSON.Polygon { return turfBboxPolygon(turfBbox(g)).geometry; }
+
+// detail สำหรับหน้าแผนที่ reconcile: record + candidate(พร้อม geometry) + แปลงข้างเคียง(bbox)
+export async function getReconcileItem(recordKey: string) {
+  const rec = await M10Record.findOne({ recordKey })
+    .select("recordKey deedNo landNo survey area geometry parcelCode parcelMatch reconcileOverride").lean();
+  if (!rec) return null;
+  const cands = (rec.parcelMatch?.candidates ?? []) as { basemapId: string; parcelCode: string; deedNo: string | null; overlapPct: number }[];
+  const candIds = cands.map((c) => c.basemapId).filter(Boolean);
+  const candDocs = candIds.length ? await M10Basemap.find({ _id: { $in: candIds } }).select("parcelCode deedNo geometry").lean() : [];
+  const candMap = new Map(candDocs.map((d: Record<string, unknown>) => [String(d._id), d]));
+  const candidates = cands.map((c) => ({
+    parcelCode: c.parcelCode, basemapId: c.basemapId, deedNo: c.deedNo, overlapPct: c.overlapPct,
+    geometry: (candMap.get(c.basemapId) as { geometry?: unknown })?.geometry ?? null,
+  }));
+  let nearby: { parcelCode: string; geometry: unknown }[] = [];
+  if (rec.geometry) {
+    const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(rec.geometry as Geom) } } })
+      .select("parcelCode geometry").limit(50).lean();
+    nearby = near.map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, geometry: d.geometry }));
+  }
+  return { record: rec, candidates, nearby };
+}
+
+// บันทึกการตัดสินของ จนท. เป็น override (กัน replay ทับ) + re-match ด้วยค่าใหม่
+export async function resolveReconcile(recordKey: string, by: string, input: {
+  parcelCode?: string | null; deedNo?: string | null; landNo?: string | null; survey?: string | null;
+  area?: { rai: number; ngan: number; wa: number; sqm: number } | null; note?: string | null;
+}) {
+  const rec = await M10Record.findOne({ recordKey }).lean();
+  if (!rec) throw new Error("record not found");
+  const deedNo = input.deedNo ?? rec.deedNo;
+  const landNo = input.landNo ?? rec.landNo ?? null;
+  const survey = input.survey ?? rec.survey ?? null;
+  // re-match ตรง ๆ (ไม่ผ่าน reconcileRecord จึงไม่ติด guard ข้าม resolved)
+  const match = await matchParcel(
+    { deedNo, landNo, survey, geometry: (rec.geometry as Geom) ?? null },
+    {
+      byDeed: async (d) => (await M10Basemap.find({ deedNo: d }).lean()).map(toCand),
+      byLandSurvey: async (l, s) => (await M10Basemap.find({ landNo: l, survey: s }).lean()).map(toCand),
+      byGeom: async (g) => (await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: g } } }).limit(20).lean()).map(toCand),
+    }
+  );
+  const override = {
+    parcelCode: input.parcelCode ?? match.parcelCode,
+    deedNo: input.deedNo ?? null, landNo: input.landNo ?? null, survey: input.survey ?? null,
+    area: input.area ?? null, status: "resolved", note: input.note ?? null, by, at: new Date(),
+  };
+  await M10Record.updateOne({ recordKey }, { $set: {
+    reconcileOverride: override,
+    parcelMatch: { status: match.status, method: match.method, confidence: match.confidence,
+      basemapId: match.basemapId, candidates: match.candidates, matchedAt: new Date() },
+  } });
+  return { ok: true, status: "resolved", parcelCode: override.parcelCode };
 }
 
 export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap };
