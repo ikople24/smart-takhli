@@ -8,7 +8,7 @@ import { bbox as turfBbox, bboxPolygon as turfBboxPolygon } from "@turf/turf";
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
 // เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap } = require("../../../models/m10-ingest");
+const { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap, M10BasemapEdit } = require("../../../models/m10-ingest");
 
 type Geom = GeoJSON.Polygon | GeoJSON.MultiPolygon;
 
@@ -305,6 +305,55 @@ export async function listReconcile(filter: { status?: string } = {}): Promise<R
 
 function bboxPolygon(g: Geom): GeoJSON.Polygon { return turfBboxPolygon(turfBbox(g)).geometry; }
 
+export interface BasemapEditInput {
+  parcelCode: string;
+  deedNo?: string | null; landNo?: string | null; survey?: string | null;
+  area?: { rai: number; ngan: number; wa: number; sqm: number } | null;
+  geometry?: unknown; kind?: "edit" | "new"; by?: string | null; note?: string | null;
+}
+
+// เก็บ edit (source of truth) + apply ลง effective m10_basemap
+// มี geometry → ยุบ fragment เป็น 1 doc รูปใหม่ · ไม่มี geometry → อัปเดต attribute ของรหัสนั้น
+export async function applyBasemapEdit(edit: BasemapEditInput): Promise<void> {
+  const { parcelCode } = edit;
+  if (!parcelCode) throw new Error("parcelCode ว่างไม่ได้");
+  let geom: Geom | null = null;
+  if (edit.geometry != null) {
+    geom = normalizeEditedGeometry(edit.geometry);
+    if (!geom) throw new Error("รูปแปลงไม่ถูกต้อง (เส้นตัดกัน/จุดน้อยเกินไป)");
+  }
+  const attrs = {
+    deedNo: edit.deedNo ?? null, landNo: edit.landNo ?? null,
+    survey: edit.survey ?? null, area: edit.area ?? null,
+  };
+  // 1) source of truth (upsert by parcelCode)
+  await M10BasemapEdit.updateOne(
+    { parcelCode },
+    { $set: { ...attrs, geometry: geom, kind: edit.kind ?? "edit", by: edit.by ?? null, note: edit.note ?? null, at: new Date() } },
+    { upsert: true }
+  );
+  // 2) apply ลง effective basemap
+  if (geom) {
+    await M10Basemap.deleteMany({ parcelCode });               // ยุบ fragment เดิม
+    await M10Basemap.create({ parcelCode, ...attrs, geometry: geom });
+  } else {
+    const r = await M10Basemap.updateMany({ parcelCode }, { $set: attrs });
+    if (r.matchedCount === 0) await M10Basemap.create({ parcelCode, ...attrs, geometry: null });
+  }
+}
+
+// replay edit ทั้งหมดทับ effective basemap — เรียกหลัง import (drop+reinsert)
+export async function replayBasemapEdits(): Promise<number> {
+  const edits = await M10BasemapEdit.find({}).lean();
+  for (const e of edits) {
+    await applyBasemapEdit({
+      parcelCode: e.parcelCode, deedNo: e.deedNo, landNo: e.landNo, survey: e.survey,
+      area: e.area ?? null, geometry: e.geometry ?? undefined, kind: e.kind, by: e.by, note: e.note,
+    });
+  }
+  return edits.length;
+}
+
 // detail สำหรับหน้าแผนที่ reconcile: record + candidate(พร้อม geometry) + แปลงข้างเคียง(bbox)
 export async function getReconcileItem(recordKey: string) {
   const rec = await M10Record.findOne({ recordKey })
@@ -346,7 +395,7 @@ export async function getReconcileItem(recordKey: string) {
 export async function resolveReconcile(recordKey: string, by: string, input: {
   parcelCode?: string | null; deedNo?: string | null; landNo?: string | null; survey?: string | null;
   area?: { rai: number; ngan: number; wa: number; sqm: number } | null; note?: string | null;
-  geometry?: unknown;
+  geometry?: unknown; writeBasemap?: boolean;
 }) {
   const rec = await M10Record.findOne({ recordKey }).lean();
   if (!rec) throw new Error("record not found");
@@ -379,7 +428,17 @@ export async function resolveReconcile(recordKey: string, by: string, input: {
     parcelMatch: { status: match.status, method: match.method, confidence: match.confidence,
       basemapId: match.basemapId, candidates: match.candidates, matchedAt: new Date() },
   } });
+  // เขียนการแก้กลับเข้า basemap (opt-in) → matcher รอบถัดไปใช้ข้อมูลชุดเดียว
+  if (input.writeBasemap && override.parcelCode) {
+    const exists = await M10Basemap.exists({ parcelCode: override.parcelCode });
+    await applyBasemapEdit({
+      parcelCode: override.parcelCode,
+      deedNo, landNo, survey, area: input.area ?? null,
+      geometry: overrideGeom ?? undefined, // เฉพาะรูปที่ จนท. แก้ในรอบนี้
+      kind: exists ? "edit" : "new", by, note: input.note ?? null,
+    });
+  }
   return { ok: true, status: "resolved", parcelCode: override.parcelCode };
 }
 
-export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap };
+export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap, M10BasemapEdit };

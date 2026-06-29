@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { resolveReconcile, reconcileRecord, getReconcileItem } from "./index";
+import { resolveReconcile, reconcileRecord, getReconcileItem, applyBasemapEdit, replayBasemapEdits } from "./index";
+
+const POLY = (x: number, y: number, s = 0.001) => ({
+  type: "Polygon", coordinates: [[[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]]],
+});
 
 let mongod: MongoMemoryServer;
 beforeAll(async () => { mongod = await MongoMemoryServer.create(); await mongoose.connect(mongod.getUri()); });
@@ -48,5 +52,47 @@ describe("resolveReconcile", () => {
     await expect(
       resolveReconcile("K2", "o", { geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [0, 0]]] } })
     ).rejects.toThrow();
+  });
+});
+
+describe("applyBasemapEdit / replayBasemapEdits", () => {
+  it("geometry edit collapses fragments to one doc", async () => {
+    await col("m10_basemap").insertMany([
+      { parcelCode: "07A001", geometry: POLY(100, 15) },
+      { parcelCode: "07A001", geometry: POLY(100.002, 15) }, // 2 fragments
+    ]);
+    await applyBasemapEdit({ parcelCode: "07A001", deedNo: "9", geometry: POLY(100, 15, 0.002), by: "o" });
+    const docs = await col("m10_basemap").find({ parcelCode: "07A001" }).toArray();
+    expect(docs.length).toBe(1);
+    expect(docs[0].deedNo).toBe("9");
+    expect(await col("m10_basemap_edit").countDocuments({ parcelCode: "07A001" })).toBe(1);
+  });
+
+  it("new code inserts; attribute-only edit keeps geometry", async () => {
+    await applyBasemapEdit({ parcelCode: "07A002", geometry: POLY(100, 15), kind: "new", by: "o" });
+    expect(await col("m10_basemap").countDocuments({ parcelCode: "07A002" })).toBe(1);
+    // attr-only edit
+    await applyBasemapEdit({ parcelCode: "07A002", deedNo: "55", by: "o" });
+    const d = await col("m10_basemap").findOne({ parcelCode: "07A002" });
+    expect(d!.deedNo).toBe("55");
+    expect(d!.geometry).toBeTruthy(); // geometry เดิมคงอยู่
+  });
+
+  it("replay re-applies edits after a simulated reimport", async () => {
+    await applyBasemapEdit({ parcelCode: "07A003", deedNo: "1", geometry: POLY(100, 15), by: "o" });
+    await col("m10_basemap").deleteMany({}); // จำลอง import drop
+    expect(await col("m10_basemap").countDocuments({ parcelCode: "07A003" })).toBe(0);
+    const n = await replayBasemapEdits();
+    expect(n).toBeGreaterThanOrEqual(1);
+    expect(await col("m10_basemap").countDocuments({ parcelCode: "07A003" })).toBe(1);
+  });
+
+  it("resolveReconcile writeBasemap=true writes edit; false does not", async () => {
+    await col("m10_records").insertOne({ recordKey: "KB", deedNo: "1", geometry: null, parcelMatch: { status: "ambiguous", candidates: [] } });
+    await resolveReconcile("KB", "o", { parcelCode: "09Z001", writeBasemap: false });
+    expect(await col("m10_basemap_edit").countDocuments({ parcelCode: "09Z001" })).toBe(0);
+    await resolveReconcile("KB", "o", { parcelCode: "09Z001", geometry: POLY(100, 15), writeBasemap: true });
+    expect(await col("m10_basemap_edit").countDocuments({ parcelCode: "09Z001" })).toBe(1);
+    expect(await col("m10_basemap").countDocuments({ parcelCode: "09Z001" })).toBe(1);
   });
 });

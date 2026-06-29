@@ -4,4 +4,5 @@ module.exports = {
   M10Record: require("./M10Record"),
   M10Reject: require("./M10Reject"),
   M10Basemap: require("./M10Basemap"),
+  M10BasemapEdit: require("./M10BasemapEdit"),
 };
