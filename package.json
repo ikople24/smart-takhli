@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "m10:ingest": "node --env-file=.env.local --import tsx scripts/m10-ingest.js",
+    "m10:load-basemap": "node --env-file=.env.local --import tsx scripts/m10-load-basemap.js",
+    "m10:reconcile-backfill": "node --env-file=.env.local --import tsx scripts/m10-reconcile-backfill.js",
     "create-default-activity": "node scripts/create-default-activity.js",
     "migrate-feedback": "node scripts/migrate-existing-feedback.js"
   },
