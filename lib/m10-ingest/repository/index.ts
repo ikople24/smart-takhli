@@ -374,23 +374,19 @@ export async function getReconcileItem(recordKey: string) {
   // effective geometry = รูปที่ จนท. แก้ (override) ถ้ามี ไม่งั้น canonical
   const effGeometry = (rec.reconcileOverride?.geometry ?? rec.geometry ?? null) as Geom | null;
 
-  // candidate หลัก = basemap ที่ "Chanod_no (deedNo) ตรงกับโฉนดของ record" (authoritative)
-  // ถ้าไม่มี/ไม่เจอ → fallback เป็น geometry overlap (เคส unmatched ดูแปลงข้างเคียงให้เลือก)
-  let docs: Record<string, unknown>[] = [];
-  if (rec.deedNo) docs = await M10Basemap.find({ deedNo: rec.deedNo }).select("parcelCode deedNo landNo survey area geometry").limit(50).lean();
-  if (docs.length === 0 && effGeometry) {
-    docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: effGeometry } } })
-      .select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
-  }
-  // รวมรหัสที่ จนท. เลือก/สร้างไว้ (override) ถ้ายังไม่อยู่ในรายการ — เช่น SPLIT รหัสใหม่ /02
+  // dual-signal: รวมแปลงที่ "โฉนดตรง" + "รูปทับเยอะ" + รหัสที่ จนท. เลือกไว้ → จนท. ตัดสินเมื่อขัดกัน
+  const OVERLAP_MIN = 0.05; // กัน edge-touch จิ๋ว
+  const docById = new Map<string, Record<string, unknown>>();
+  const add = (arr: Record<string, unknown>[]) => arr.forEach((d) => docById.set(String(d._id), d));
+  const sel = "parcelCode deedNo landNo survey area geometry";
+  if (rec.deedNo) add(await M10Basemap.find({ deedNo: rec.deedNo }).select(sel).limit(50).lean());
+  if (effGeometry) add(await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: effGeometry } } }).select(sel).limit(30).lean());
   const ovCode = rec.reconcileOverride?.parcelCode as string | undefined;
-  if (ovCode && !docs.some((d) => d.parcelCode === ovCode)) {
-    const ovDocs = await M10Basemap.find({ parcelCode: ovCode }).select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
-    docs = [...docs, ...ovDocs];
-  }
-  // ยุบเป็น 1 แถวต่อ parcelCode (1 รหัส = 1 แปลง; fragment = polygon หลายชิ้นรวมเป็น MultiPolygon บนแผนที่)
+  if (ovCode) add(await M10Basemap.find({ parcelCode: ovCode }).select(sel).limit(20).lean());
+
+  // ยุบเป็น 1 แถวต่อ parcelCode (fragment → MultiPolygon บนแผนที่) + ติดธง deedMatch/overlap
   const byCode = new Map<string, Record<string, unknown>[]>();
-  for (const d of docs) {
+  for (const d of docById.values()) {
     const code = d.parcelCode as string;
     if (!byCode.has(code)) byCode.set(code, []);
     byCode.get(code)!.push(d);
@@ -400,9 +396,7 @@ export async function getReconcileItem(recordKey: string) {
     const polys = frags.map((f) => f.geometry).filter((g): g is Geom => !!g && ((g as Geom).type === "Polygon" || (g as Geom).type === "MultiPolygon"));
     let geometry: Geom | null = null;
     if (polys.length === 1) geometry = polys[0];
-    else if (polys.length > 1) {
-      geometry = { type: "MultiPolygon", coordinates: polys.flatMap((g) => (g.type === "MultiPolygon" ? g.coordinates : [g.coordinates])) } as Geom;
-    }
+    else if (polys.length > 1) geometry = { type: "MultiPolygon", coordinates: polys.flatMap((g) => (g.type === "MultiPolygon" ? g.coordinates : [g.coordinates])) } as Geom;
     const overlaps = frags.map((f) => overlapOf(effGeometry, f.geometry)).filter((v): v is number => v != null);
     return {
       parcelCode: code, basemapId: String(first._id),
@@ -412,9 +406,20 @@ export async function getReconcileItem(recordKey: string) {
       area: (first.area as { rai: number; ngan: number; wa: number; sqm: number }) ?? null,
       fragmentCount: frags.length,
       overlapPct: overlaps.length ? Math.max(...overlaps) : null,
+      deedMatch: !!rec.deedNo && frags.some((f) => f.deedNo === rec.deedNo),
       geometry,
     };
-  });
+  })
+    .filter((c) => c.deedMatch || c.parcelCode === ovCode || (c.overlapPct != null && c.overlapPct >= OVERLAP_MIN))
+    .sort((a, b) => (b.deedMatch ? 1 : 0) - (a.deedMatch ? 1 : 0) || (b.overlapPct ?? 0) - (a.overlapPct ?? 0));
+
+  // conflict: โฉนดชี้แปลงหนึ่ง แต่รูปทับอีกแปลงเยอะกว่า → เตือนให้ จนท. ตัดสิน
+  const deedCode = candidates.find((c) => c.deedMatch)?.parcelCode ?? null;
+  const geomTop = candidates.filter((c) => c.overlapPct != null && c.overlapPct >= OVERLAP_MIN)
+    .sort((a, b) => (b.overlapPct ?? 0) - (a.overlapPct ?? 0))[0];
+  const conflict = deedCode && geomTop && geomTop.parcelCode !== deedCode
+    ? { deedCode, geomCode: geomTop.parcelCode, geomOverlap: geomTop.overlapPct }
+    : null;
 
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
   if (effGeometry) {
@@ -422,7 +427,7 @@ export async function getReconcileItem(recordKey: string) {
       .select("parcelCode geometry").limit(50).lean();
     nearby = near.map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, geometry: d.geometry }));
   }
-  return { record: { ...rec, geometry: effGeometry }, candidates, nearby };
+  return { record: { ...rec, geometry: effGeometry }, candidates, nearby, conflict };
 }
 
 // บันทึกการตัดสินของ จนท. เป็น override (กัน replay ทับ) + re-match ด้วยค่าใหม่

@@ -143,6 +143,11 @@ export default function ReconcilePanel() {
               </p>
             </div>
             <div className="space-y-3">
+              {detail.conflict && (
+                <div className="alert alert-warning text-sm">
+                  ⚠ โฉนด {detail.record.deedNo} ชี้แปลง <b className="font-mono">{detail.conflict.deedCode}</b> แต่รูป m10 ทับ <b className="font-mono">{detail.conflict.geomCode}</b> ({Math.round(detail.conflict.geomOverlap * 100)}%) — เลือกแปลงที่ถูก ถ้า basemap ใส่โฉนดผิด ให้แก้โฉนด + ☑ อัปเดต basemap
+                </div>
+              )}
               <div className="bg-base-200 rounded p-3">
                 <p className="text-sm font-semibold mb-2">เลือกแปลง basemap ที่ถูกต้อง</p>
                 {detail.candidates.length === 0 && <p className="text-sm opacity-60">ไม่มี candidate (unmatched) — แก้ attribute แล้วเช็คใหม่</p>}
@@ -153,6 +158,9 @@ export default function ReconcilePanel() {
                       <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId}
                         onChange={() => { setSelectedId(c.basemapId); pickCandidate(c); }} />
                       <span className="font-mono">{c.parcelCode}</span>
+                      {c.deedMatch
+                        ? <span className="badge badge-xs badge-info">โฉนดตรง</span>
+                        : c.overlapPct != null && c.overlapPct >= 0.05 && <span className="badge badge-xs badge-success">รูปทับ {pct(c.overlapPct)}</span>}
                       <span className="text-xs opacity-60">{frag} โฉนด {c.deedNo || "-"} · ทับ {pct(c.overlapPct)}</span>
                     </label>
                   );
