@@ -2,6 +2,7 @@ import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
+import { suggestForRecord } from "../parcelcode/suggest";
 import { normalizeEditedGeometry } from "../basemap/load";
 import { bbox as turfBbox, bboxPolygon as turfBboxPolygon, area as turfArea, intersect as turfIntersect, feature as turfFeature, featureCollection as turfFC } from "@turf/turf";
 
@@ -179,7 +180,11 @@ export interface PeriodSummaryRow {
 
 // สรุปสถานะการนำเข้า/คีย์ รายเดือน (group by batch.period) — สำหรับหน้า dashboard
 export async function summaryByPeriod(): Promise<PeriodSummaryRow[]> {
-  const wlEligible = { $and: [{ $eq: ["$reviewStatus", "confirmed"] }, { $in: ["$changeType", WORKLIST_CHANGE_TYPES] }] };
+  // deferred ที่ จนท. ยืนยันรหัสแล้ว (record resolved) → นับเป็น worklist eligible
+  const resolvedKeys = (await M10Record.find({ "reconcileOverride.status": "resolved" }).distinct("recordKey")) as string[];
+  const confirmed = { $eq: ["$reviewStatus", "confirmed"] };
+  const deferredResolved = { $and: [confirmed, { $in: ["$changeType", DEFERRED_CHANGE_TYPES] }, { $in: ["$recordKey", resolvedKeys] }] };
+  const wlEligible = { $or: [{ $and: [confirmed, { $in: ["$changeType", WORKLIST_CHANGE_TYPES] }] }, deferredResolved] };
   const rows = await M10Transaction.aggregate([
     { $lookup: { from: "m10_import_batches", localField: "batchId", foreignField: "_id", as: "b" } },
     { $unwind: "$b" },
@@ -194,7 +199,7 @@ export async function summaryByPeriod(): Promise<PeriodSummaryRow[]> {
       wlSkipped: { $sum: { $cond: [{ $and: [wlEligible, { $eq: ["$ltaxStatus", "skipped"] }] }, 1, 0] } },
       // ค้างคีย์ = เข้าเกณฑ์ แต่ ltaxStatus ไม่ใช่ keyed/skipped (รวม null/missing ใน doc เก่า)
       wlPending: { $sum: { $cond: [{ $and: [wlEligible, { $not: [{ $in: ["$ltaxStatus", ["keyed", "skipped"]] }] }] }, 1, 0] } },
-      deferred: { $sum: { $cond: [{ $and: [{ $eq: ["$reviewStatus", "confirmed"] }, { $in: ["$changeType", DEFERRED_CHANGE_TYPES] }] }, 1, 0] } },
+      deferred: { $sum: { $cond: [{ $and: [confirmed, { $in: ["$changeType", DEFERRED_CHANGE_TYPES] }, { $not: [{ $in: ["$recordKey", resolvedKeys] }] }] }, 1, 0] } },
     } },
     { $sort: { _id: -1 } },
   ]);
@@ -219,14 +224,23 @@ export interface WorklistListRow {
 
 // รายการ txn ที่ confirmed + เข้าเกณฑ์ + ยังไม่คีย์ (list ไม่ส่งเลขบัตรดิบ)
 export async function listWorklistPending(filter: { period?: string; changeType?: string }): Promise<WorklistListRow[]> {
+  // deferred ที่ยืนยันรหัสแล้ว (record resolved) เข้าเกณฑ์เหมือน worklist ปกติ
+  const resolvedKeys = (await M10Record.find({ "reconcileOverride.status": "resolved" }).distinct("recordKey")) as string[];
   const q: Record<string, unknown> = {
     reviewStatus: "confirmed",
     // ยังไม่คีย์ = pending หรือไม่มี field (doc เก่าที่ confirm ก่อนเพิ่ม ltaxStatus → default ไม่ backfill)
     ltaxStatus: { $nin: ["keyed", "skipped"] },
-    changeType: filter.changeType && WORKLIST_CHANGE_TYPES.includes(filter.changeType)
-      ? filter.changeType
-      : { $in: WORKLIST_CHANGE_TYPES },
   };
+  if (filter.changeType && WORKLIST_CHANGE_TYPES.includes(filter.changeType)) {
+    q.changeType = filter.changeType;
+  } else if (filter.changeType && DEFERRED_CHANGE_TYPES.includes(filter.changeType)) {
+    q.changeType = filter.changeType; q.recordKey = { $in: resolvedKeys };
+  } else {
+    q.$or = [
+      { changeType: { $in: WORKLIST_CHANGE_TYPES } },
+      { changeType: { $in: DEFERRED_CHANGE_TYPES }, recordKey: { $in: resolvedKeys } },
+    ];
+  }
   if (filter.period) {
     const batches = await M10ImportBatch.find({ period: filter.period }).select("_id").lean();
     q.batchId = { $in: batches.map((b: { _id: unknown }) => b._id) };
@@ -531,6 +545,94 @@ export async function searchBasemap(
       : [0, 0, 0, 0]) as [number, number, number, number],
   }));
   return { results };
+}
+
+// ── ผู้ช่วยแนะรหัสแปลง (SPLIT/MERGE/NEW) ──
+// resolver ต่อ DB สำหรับ suggestForRecord
+function newCodeResolvers() {
+  return {
+    byDeed: async (deedNo: string) =>
+      (await M10Basemap.find({ deedNo }).select("parcelCode deedNo landNo survey geometry").limit(20).lean())
+        .map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, deedNo: (d.deedNo as string) ?? null, landNo: (d.landNo as string) ?? null, survey: (d.survey as string) ?? null, geometry: d.geometry })),
+    byGeomOverlap: async (geometry: Geom) => {
+      const docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: geometry } } }).select("parcelCode deedNo landNo survey geometry").limit(30).lean();
+      return docs
+        .map((d: Record<string, unknown>) => ({ doc: d, ov: overlapOf(geometry, d.geometry) ?? 0 }))
+        .sort((a, b) => b.ov - a.ov)
+        .map(({ doc: d }) => ({ parcelCode: d.parcelCode as string, deedNo: (d.deedNo as string) ?? null, landNo: (d.landNo as string) ?? null, survey: (d.survey as string) ?? null, geometry: d.geometry }));
+    },
+    childrenOfParent: async (parentCode: string) =>
+      (await M10Basemap.find({ parcelCode: new RegExp("^" + parentCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "/") }).distinct("parcelCode")) as string[],
+    codesInBlock: async (zoneBlock: string) =>
+      (await M10Basemap.find({ parcelCode: new RegExp("^" + zoneBlock) }).distinct("parcelCode")) as string[],
+  };
+}
+
+export interface NewCodeRow {
+  recordKey: string; deedNo: string | null; changeType: string;
+  suggestedCode: string | null; method: string; confidence: string; currentParcelCode: string | null; resolved: boolean;
+}
+
+// รายการ confirmed deferred (ยังไม่ resolved) พร้อมรหัสที่แนะ
+// หมายเหตุ: changeType เอาจาก transaction (authoritative); M10Record เก็บเป็น lastChangeType
+export async function listNewCode(): Promise<NewCodeRow[]> {
+  const txns = await M10Transaction.find({ reviewStatus: "confirmed", changeType: { $in: DEFERRED_CHANGE_TYPES } })
+    .select("recordKey changeType").lean();
+  const ctByKey = new Map<string, string>();
+  for (const t of txns as { recordKey: string; changeType: string }[]) if (t.recordKey) ctByKey.set(t.recordKey, t.changeType);
+  const keys = [...ctByKey.keys()];
+  const recs = await M10Record.find({ recordKey: { $in: keys } })
+    .select("recordKey deedNo landNo survey geometry parcelCode reconcileOverride").lean();
+  const res = newCodeResolvers();
+  const rows: NewCodeRow[] = [];
+  for (const r of recs) {
+    const changeType = ctByKey.get(r.recordKey) || "";
+    const resolved = r.reconcileOverride?.status === "resolved";
+    const s = await suggestForRecord(
+      { changeType, deedNo: r.deedNo ?? null, landNo: r.landNo ?? null, survey: r.survey ?? null, geometry: (r.geometry as Geom) ?? null },
+      res
+    );
+    const confirmedCode = r.reconcileOverride?.parcelCode ?? r.parcelCode ?? null;
+    rows.push({
+      recordKey: r.recordKey, deedNo: r.deedNo ?? null, changeType,
+      suggestedCode: resolved ? confirmedCode : s.suggestedCode,
+      method: s.method, confidence: s.confidence,
+      currentParcelCode: confirmedCode, resolved,
+    });
+  }
+  return rows;
+}
+
+// detail: m10 geometry + suggestion + candidates(geometry) สำหรับ map
+export async function getNewCodeItem(recordKey: string) {
+  const rec = await M10Record.findOne({ recordKey })
+    .select("recordKey deedNo landNo survey area geometry lastChangeType parcelCode reconcileOverride").lean();
+  if (!rec) return null;
+  const changeType = rec.lastChangeType as string;
+  const res = newCodeResolvers();
+  const suggestion = await suggestForRecord(
+    { changeType, deedNo: rec.deedNo ?? null, landNo: rec.landNo ?? null, survey: rec.survey ?? null, geometry: (rec.geometry as Geom) ?? null },
+    res
+  );
+  const candDocs = (rec.geometry)
+    ? await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: rec.geometry as Geom } } }).select("parcelCode deedNo geometry").limit(20).lean()
+    : [];
+  const candidates = candDocs.map(toCand);
+  return { record: { ...rec, changeType }, suggestion, candidates, nearby: [] };
+}
+
+// ยืนยันรหัส — inject geometry=record.geometry ให้ resolveReconcile เขียน basemap kind:new
+export async function confirmNewCode(recordKey: string, by: string, input: {
+  parcelCode: string; deedNo?: string | null; landNo?: string | null; survey?: string | null;
+  area?: { rai: number; ngan: number; wa: number; sqm: number } | null;
+}) {
+  const rec = await M10Record.findOne({ recordKey }).select("geometry").lean();
+  if (!rec) throw new Error("record not found");
+  return resolveReconcile(recordKey, by, {
+    parcelCode: input.parcelCode, deedNo: input.deedNo ?? null, landNo: input.landNo ?? null,
+    survey: input.survey ?? null, area: input.area ?? null,
+    geometry: rec.geometry ?? undefined, writeBasemap: true,
+  });
 }
 
 export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap, M10BasemapEdit };
