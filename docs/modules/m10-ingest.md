@@ -88,3 +88,15 @@ Spec: `docs/superpowers/specs/2026-06-29-m10-reconcile-vertex-edit-design.md` ·
 - **v1 จำกัด:** ยุบ fragment เป็นรูปเดียว (เทียบ fragment ทีหลัง), จนท. พิมพ์รหัสเอง (ยังไม่มีเอนจิน SPLIT/MERGE/NEW), ไม่ลบแปลง, ยังไม่ export กลับเป็นไฟล์ .geojson
 
 Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-corrections-layer-design.md`
+
+## Basemap editor (หน้าแยก — 2026-06-30)
+- หน้าเต็มจอ `/admin/m10/basemap` (อยู่ใต้ permission `/admin/m10` ผ่าน prefix-match — ไม่ต้อง migration) เปิดแผนที่มาแก้ basemap โดยตรง แยกจาก flow reconcile
+- ยืม pattern geoman จาก `smart-saard/components/TaxMapView.js`: native Leaflet layer (`L.geoJSON().addTo(map)` ใน `useMap()` child) แล้ว `pm.enable()` — handle ขึ้น (m10 เดิมใส่บน `<Polygon>` react-leaflet เลยไม่ขึ้น)
+- โหลดแปลงตาม viewport (`listBasemapInBbox`, `$geoIntersects`, MIN_ZOOM=16, cap 800 → `truncated`) + ค้นหา (`searchBasemap` รหัส/โฉนด → flyToBounds)
+- เลือกแปลง → แก้ vertex (`EditFeature`) + attribute (parcelCode/โฉนด/เลขที่ดิน/หน้าสำรวจ/landType/zone/block/lot) · วาดใหม่ (`DrawNew`) → `kind:"new"`
+- บันทึก = `POST /api/m10-ingest/basemap/save` → `applyBasemapEdit` (เขียน `m10_basemap_edit` → `m10_basemap`, รอด re-import). geometry S2 reject → 422
+- `applyBasemapEdit` เขียน effective ก่อน edit-row (กัน geometry เสียตกค้างใน source of truth) + รับ zone/block/lot/landType
+- ไฟล์: `components/m10/basemap/*` · `lib/m10-ingest/basemap/area.ts` · `pages/api/m10-ingest/basemap/*`
+- **นอก scope:** ลบแปลง (`kind:"delete"`), land-use, export `.geojson`, เอนจินรหัส SPLIT/MERGE/NEW
+
+Spec: `docs/superpowers/specs/2026-06-30-m10-basemap-editor-design.md` · Plan: `docs/superpowers/plans/2026-06-30-m10-basemap-editor.md`

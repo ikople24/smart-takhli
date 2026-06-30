@@ -30,6 +30,7 @@ const navigationItems = [
   { label: 'Smart School',       href: '/admin/education-map',            icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
   { label: 'แผนที่ภาษี (ม.10)', href: '/admin/m10',                     icon: '🗺️', group: 'จัดการ' },
+  { label: 'แก้รูปแปลง (basemap)', href: '/admin/m10/basemap',           icon: '✏️', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
 
   // รายงาน
