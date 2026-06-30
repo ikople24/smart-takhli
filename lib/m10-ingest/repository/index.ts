@@ -382,6 +382,12 @@ export async function getReconcileItem(recordKey: string) {
     docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: effGeometry } } })
       .select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
   }
+  // รวมรหัสที่ จนท. เลือก/สร้างไว้ (override) ถ้ายังไม่อยู่ในรายการ — เช่น SPLIT รหัสใหม่ /02
+  const ovCode = rec.reconcileOverride?.parcelCode as string | undefined;
+  if (ovCode && !docs.some((d) => d.parcelCode === ovCode)) {
+    const ovDocs = await M10Basemap.find({ parcelCode: ovCode }).select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
+    docs = [...docs, ...ovDocs];
+  }
   const candidates = docs.map((d) => ({
     parcelCode: d.parcelCode as string, basemapId: String(d._id),
     deedNo: (d.deedNo as string) ?? null,
