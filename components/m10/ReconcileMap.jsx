@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, GeoJSON, Polygon, Marker, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Polygon, Marker, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useMemo, useState, useEffect } from "react";
@@ -11,14 +11,30 @@ const vertexIcon = L.divIcon({
   html: '<div style="width:12px;height:12px;background:#fff;border:2px solid #dc2626;border-radius:50%;box-shadow:0 0 2px rgba(0,0,0,.5)"></div>',
 });
 
-// center จาก geometry (เฉลี่ยพิกัด) — อ่านคู่ lng,lat
+// ดึงพิกัดทั้งหมดจาก geometry → [lat,lng][] (อ่านเลขเป็นคู่ lng,lat)
+function latLngsOf(geom, out) {
+  if (!geom) return;
+  const nums = JSON.stringify(geom.coordinates).match(/-?\d+(\.\d+)?/g)?.map(Number) || [];
+  for (let i = 0; i + 1 < nums.length; i += 2) out.push([nums[i + 1], nums[i]]);
+}
 function centerOf(geom) {
-  try {
-    const nums = JSON.stringify(geom.coordinates).match(/-?\d+(\.\d+)?/g).map(Number);
-    const lng = [], lat = [];
-    for (let i = 0; i + 1 < nums.length; i += 2) { lng.push(nums[i]); lat.push(nums[i + 1]); }
-    return [lat.reduce((a, b) => a + b, 0) / lat.length, lng.reduce((a, b) => a + b, 0) / lng.length];
-  } catch { return [15.26, 100.34]; }
+  const pts = [];
+  latLngsOf(geom, pts);
+  if (!pts.length) return [15.26, 100.34];
+  return [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
+}
+
+// fit แผนที่เข้ากับแปลงที่เกี่ยว (zoom เข้าใกล้พอดี)
+function FitBounds({ geoms }) {
+  const map = useMap();
+  useEffect(() => {
+    const pts = [];
+    for (const g of geoms) latLngsOf(g, pts);
+    if (pts.length) {
+      try { map.fitBounds(L.latLngBounds(pts), { padding: [25, 25], maxZoom: 19 }); } catch { /* noop */ }
+    }
+  }, [geoms, map]);
+  return null;
 }
 
 // GeoJSON Polygon/MultiPolygon → วงนอก [lng,lat][] (ตัดจุดปิดท้ายที่ซ้ำจุดแรก)
@@ -30,7 +46,6 @@ function ringFromGeometry(geom) {
   if (r.length > 1 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1]) r.pop();
   return r;
 }
-// [lng,lat][] → GeoJSON Polygon (ปิดวง) ; < 3 จุด = ยังไม่สมบูรณ์
 function geometryFromRing(ring) {
   if (ring.length < 3) return null;
   return { type: "Polygon", coordinates: [[...ring, ring[0]].map(([lng, lat]) => [lng, lat])] };
@@ -48,7 +63,12 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
     return g ? centerOf(g) : [15.26, 100.34];
   }, [m10Geometry, candidates]);
 
-  // ring ที่กำลังแก้ (state ภายใน) — init เมื่อเข้าโหมดแก้
+  // geometry ที่ใช้ fit = m10 + candidate ทั้งหมด
+  const fitGeoms = useMemo(
+    () => [m10Geometry, ...(candidates || []).map((c) => c.geometry)].filter(Boolean),
+    [m10Geometry, candidates]
+  );
+
   const [ring, setRing] = useState([]);
   useEffect(() => { if (editing) setRing(ringFromGeometry(m10Geometry)); }, [editing, m10Geometry]);
 
@@ -58,8 +78,9 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
   const removeVertex = (i) => { if (ring.length > 3) commit(ring.filter((_, j) => j !== i)); };
 
   return (
-    <MapContainer center={center} zoom={17} style={{ height: 420, width: "100%" }} scrollWheelZoom>
+    <MapContainer center={center} zoom={18} style={{ height: 420, width: "100%" }} scrollWheelZoom>
       <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      {!editing && <FitBounds geoms={fitGeoms} />}
       {nearby?.map((n, i) => n.geometry && (
         <GeoJSON key={`n${i}`} data={n.geometry} style={{ color: "#9ca3af", weight: 1, fillOpacity: 0.05 }} />
       ))}
@@ -69,12 +90,14 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
           data={c.geometry}
           style={{ color: selectedId === c.basemapId ? "#16a34a" : "#2563eb", weight: 2, fillOpacity: selectedId === c.basemapId ? 0.35 : 0.1 }}
           eventHandlers={{ click: () => onSelect(c.basemapId) }}
-        />
+        >
+          <Tooltip permanent direction="center" className="parcel-label">{c.parcelCode}</Tooltip>
+        </GeoJSON>
       ))}
 
-      {/* แสดงผล m10: ไม่แก้ = GeoJSON เส้นประ · แก้ = Polygon สด + จุดลากได้ */}
+      {/* m10: ไม่แก้ = เส้นแดงทึบ · แก้ = Polygon สด + จุดลากได้ */}
       {!editing && m10Geometry && (
-        <GeoJSON data={m10Geometry} style={{ color: "#dc2626", weight: 3, dashArray: "6", fill: false }} />
+        <GeoJSON data={m10Geometry} style={{ color: "#dc2626", weight: 3, fill: false }} />
       )}
       {editing && ring.length >= 3 && (
         <Polygon positions={ring.map(([lng, lat]) => [lat, lng])} pathOptions={{ color: "#dc2626", weight: 3 }} />
