@@ -3,7 +3,7 @@ import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } fr
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
 import { normalizeEditedGeometry } from "../basemap/load";
-import { bbox as turfBbox, bboxPolygon as turfBboxPolygon } from "@turf/turf";
+import { bbox as turfBbox, bboxPolygon as turfBboxPolygon, area as turfArea, intersect as turfIntersect, feature as turfFeature, featureCollection as turfFC } from "@turf/turf";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
 // เลี่ยง mongoose lean()-typing ที่ทำให้ ._id error (ดู mongoose FlattenMaps union)
@@ -354,37 +354,47 @@ export async function replayBasemapEdits(): Promise<number> {
   return edits.length;
 }
 
+// IoU ระหว่าง m10 polygon กับ basemap (0..1) — คืน null ถ้าคำนวณไม่ได้
+function overlapOf(a: Geom | null, b: unknown): number | null {
+  if (!a || !b) return null;
+  try {
+    const inter = turfIntersect(turfFC([turfFeature(a), turfFeature(b as Geom)]));
+    if (!inter) return 0;
+    const ai = turfArea(inter);
+    const denom = turfArea(turfFeature(a)) + turfArea(turfFeature(b as Geom)) - ai;
+    return denom > 0 ? ai / denom : 0;
+  } catch { return null; }
+}
+
 // detail สำหรับหน้าแผนที่ reconcile: record + candidate(พร้อม geometry) + แปลงข้างเคียง(bbox)
 export async function getReconcileItem(recordKey: string) {
   const rec = await M10Record.findOne({ recordKey })
     .select("recordKey deedNo landNo survey area geometry parcelCode parcelMatch reconcileOverride").lean();
   if (!rec) return null;
-  // effective geometry = รูปที่ จนท. แก้ (override) ถ้ามี ไม่งั้น canonical — UI แสดงรูปล่าสุด
-  const effGeometry = rec.reconcileOverride?.geometry ?? rec.geometry ?? null;
-  const pm = (rec.parcelMatch ?? {}) as { candidates?: { basemapId: string; parcelCode: string; deedNo: string | null; overlapPct: number }[] };
-  const cands = pm.candidates ?? [];
-  // โชว์/เลือกด้วย "parcelCode" (authoritative — เสถียรกว่า basemapId ที่เปลี่ยนเมื่อ reload basemap)
-  // รวม code: จาก candidates (ambiguous) + รหัสที่ match/เลือกไว้ (override ?? auto)
-  const effCode = (rec.reconcileOverride?.parcelCode ?? rec.parcelCode ?? null) as string | null;
-  const overlapByCode = new Map<string, number>();
-  for (const c of cands) if (c.parcelCode) overlapByCode.set(c.parcelCode, Math.max(overlapByCode.get(c.parcelCode) ?? 0, c.overlapPct ?? 0));
-  const codeSet = new Set<string>(cands.map((c) => c.parcelCode).filter(Boolean));
-  if (effCode) codeSet.add(effCode);
-  // ดึง basemap ตาม parcelCode (current id) — โชว์ "ทุก fragment" ของแต่ละรหัส
-  // (basemap เก็บแปลงเดียวเป็นหลาย polygon → ต้องเห็นครบเพื่อประกอบรูปแปลงเต็มบนแผนที่)
-  const docs = codeSet.size ? await M10Basemap.find({ parcelCode: { $in: [...codeSet] } }).select("parcelCode deedNo landNo survey area geometry").limit(100).lean() : [];
-  const candidates = docs.map((d: Record<string, unknown>) => ({
+  // effective geometry = รูปที่ จนท. แก้ (override) ถ้ามี ไม่งั้น canonical
+  const effGeometry = (rec.reconcileOverride?.geometry ?? rec.geometry ?? null) as Geom | null;
+
+  // candidate หลัก = basemap ที่ "Chanod_no (deedNo) ตรงกับโฉนดของ record" (authoritative)
+  // ถ้าไม่มี/ไม่เจอ → fallback เป็น geometry overlap (เคส unmatched ดูแปลงข้างเคียงให้เลือก)
+  let docs: Record<string, unknown>[] = [];
+  if (rec.deedNo) docs = await M10Basemap.find({ deedNo: rec.deedNo }).select("parcelCode deedNo landNo survey area geometry").limit(50).lean();
+  if (docs.length === 0 && effGeometry) {
+    docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: effGeometry } } })
+      .select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
+  }
+  const candidates = docs.map((d) => ({
     parcelCode: d.parcelCode as string, basemapId: String(d._id),
     deedNo: (d.deedNo as string) ?? null,
     landNo: (d.landNo as string) ?? null,
     survey: (d.survey as string) ?? null,
     area: (d.area as { rai: number; ngan: number; wa: number; sqm: number }) ?? null,
-    overlapPct: overlapByCode.has(d.parcelCode as string) ? overlapByCode.get(d.parcelCode as string)! : null,
+    overlapPct: overlapOf(effGeometry, d.geometry),
     geometry: d.geometry ?? null,
   }));
+
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
   if (effGeometry) {
-    const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(effGeometry as Geom) } } })
+    const near = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: bboxPolygon(effGeometry) } } })
       .select("parcelCode geometry").limit(50).lean();
     nearby = near.map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, geometry: d.geometry }));
   }
