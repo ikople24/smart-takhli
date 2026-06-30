@@ -5,6 +5,10 @@ const BasemapEditSchema = new mongoose.Schema({
   deedNo: { type: String, default: null },
   landNo: { type: String, default: null },
   survey: { type: String, default: null },
+  zoneId: { type: String, default: null },
+  blockId: { type: String, default: null },
+  lot: { type: String, default: null },
+  landType: { type: String, default: null },
   area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
   geometry: { type: mongoose.Schema.Types.Mixed, default: null }, // null = แก้เฉพาะ attribute
   kind: { type: String, enum: ["edit", "new"], default: "edit" },

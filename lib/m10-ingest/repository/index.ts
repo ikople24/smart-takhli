@@ -308,6 +308,7 @@ function bboxPolygon(g: Geom): GeoJSON.Polygon { return turfBboxPolygon(turfBbox
 export interface BasemapEditInput {
   parcelCode: string;
   deedNo?: string | null; landNo?: string | null; survey?: string | null;
+  zoneId?: string | null; blockId?: string | null; lot?: string | null; landType?: string | null;
   area?: { rai: number; ngan: number; wa: number; sqm: number } | null;
   geometry?: unknown; kind?: "edit" | "new"; by?: string | null; note?: string | null;
 }
@@ -323,23 +324,24 @@ export async function applyBasemapEdit(edit: BasemapEditInput): Promise<void> {
     if (!geom) throw new Error("รูปแปลงไม่ถูกต้อง (เส้นตัดกัน/จุดน้อยเกินไป)");
   }
   const attrs = {
-    deedNo: edit.deedNo ?? null, landNo: edit.landNo ?? null,
-    survey: edit.survey ?? null, area: edit.area ?? null,
+    deedNo: edit.deedNo ?? null, landNo: edit.landNo ?? null, survey: edit.survey ?? null,
+    zoneId: edit.zoneId ?? null, blockId: edit.blockId ?? null, lot: edit.lot ?? null,
+    landType: edit.landType ?? null, area: edit.area ?? null,
   };
-  // 1) source of truth (upsert by parcelCode)
+  // 1) apply ลง effective ก่อน (MongoDB S2 ตรวจเข้มกว่า turf) — กัน geometry เสียตกค้างใน source of truth
+  if (geom) {
+    const created = await M10Basemap.create({ parcelCode, ...attrs, geometry: geom }); // S2 throw ที่นี่ถ้าเสีย
+    await M10Basemap.deleteMany({ parcelCode, _id: { $ne: created._id } });             // ยุบ fragment เดิม
+  } else {
+    const r = await M10Basemap.updateMany({ parcelCode }, { $set: attrs });
+    if (r.matchedCount === 0) await M10Basemap.create({ parcelCode, ...attrs, geometry: null });
+  }
+  // 2) upsert edit-row (source of truth) — เฉพาะเมื่อ effective สำเร็จ
   await M10BasemapEdit.updateOne(
     { parcelCode },
     { $set: { ...attrs, geometry: geom, kind: edit.kind ?? "edit", by: edit.by ?? null, note: edit.note ?? null, at: new Date() } },
     { upsert: true }
   );
-  // 2) apply ลง effective basemap
-  if (geom) {
-    await M10Basemap.deleteMany({ parcelCode });               // ยุบ fragment เดิม
-    await M10Basemap.create({ parcelCode, ...attrs, geometry: geom });
-  } else {
-    const r = await M10Basemap.updateMany({ parcelCode }, { $set: attrs });
-    if (r.matchedCount === 0) await M10Basemap.create({ parcelCode, ...attrs, geometry: null });
-  }
 }
 
 // replay edit ทั้งหมดทับ effective basemap — เรียกหลัง import (drop+reinsert)
