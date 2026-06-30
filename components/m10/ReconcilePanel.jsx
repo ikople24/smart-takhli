@@ -8,9 +8,6 @@ const FILTERS = ["", "ambiguous", "unmatched", "resolved", "matched"];
 
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
-// แก้ vertex รูปแปลงยังพักไว้ (โฟกัสแก้ข้อมูล/รหัสก่อน) — เปิดกลับด้วยการตั้งเป็น true
-const VERTEX_EDIT_ENABLED = false;
-
 export default function ReconcilePanel() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,9 +19,7 @@ export default function ReconcilePanel() {
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState({ parcelCode: "", deedNo: "", landNo: "", survey: "", rai: "", ngan: "", wa: "" });
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);   // โหมดแก้รูปแปลง (geoman)
-  const [editedGeom, setEditedGeom] = useState(null);
-  const [writeBasemap, setWriteBasemap] = useState(false); // อัปเดตกลับเข้า basemap
+  const [writeBasemap, setWriteBasemap] = useState(false); // อัปเดต attribute (โฉนด/รหัส) กลับเข้า basemap
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -42,7 +37,7 @@ export default function ReconcilePanel() {
   const count = (s) => rows.filter((r) => r.status === s).length;
 
   async function openFocus(recordKey) {
-    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null); setEditing(false); setEditedGeom(null); setWriteBasemap(false);
+    setError(""); setFocusKey(recordKey); setDetail(null); setSelectedId(null); setWriteBasemap(false);
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(recordKey)}`);
       const d = await res.json();
@@ -62,7 +57,7 @@ export default function ReconcilePanel() {
       if (pre) setSelectedId(pre.basemapId);
     } catch (e) { setError(e.message); }
   }
-  function closeFocus() { setFocusKey(null); setDetail(null); setEditing(false); setEditedGeom(null); }
+  function closeFocus() { setFocusKey(null); setDetail(null); }
 
   // เลือก candidate → ดึง attribute ของแปลงนั้นมาเติมฟอร์ม (เลือกคนละแปลง = บันทึกคนละค่า)
   function pickCandidate(c) {
@@ -85,8 +80,7 @@ export default function ReconcilePanel() {
       deedNo: form.deedNo || null, landNo: form.landNo || null, survey: form.survey || null,
       area: (form.rai !== "" || form.ngan !== "" || form.wa !== "")
         ? { rai, ngan, wa, sqm: (rai * 400 + ngan * 100 + wa) * 4 } : null,
-      geometry: editedGeom || undefined, // รูปแปลงที่ จนท. แก้/วาด (เฟส 2)
-      writeBasemap, // อัปเดตกลับเข้า basemap (opt-in)
+      writeBasemap, // อัปเดต attribute กลับเข้า basemap (opt-in) — แก้รูปแปลงทำที่หน้า basemap
     };
     try {
       const res = await fetch(`/api/m10-ingest/reconcile/${encodeURIComponent(focusKey)}/resolve`, {
@@ -117,24 +111,7 @@ export default function ReconcilePanel() {
                 nearby={detail.nearby}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
-                editing={editing}
-                onGeometryChange={setEditedGeom}
               />
-              {VERTEX_EDIT_ENABLED && (
-                <div className="flex items-center gap-2 mt-2">
-                  {!editing ? (
-                    <button className="btn btn-sm btn-outline" onClick={() => { setEditedGeom(null); setEditing(true); }}>
-                      {detail.record.geometry ? "✏️ แก้รูปแปลง" : "✏️ วาดแปลงใหม่"}
-                    </button>
-                  ) : (
-                    <>
-                      <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุดเพื่อย้าย · คลิกบนแผนที่เพิ่มจุด · คลิกขวาที่จุดเพื่อลบ</span>
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setEditing(false); setEditedGeom(null); }}>ยกเลิกการแก้</button>
-                      {editedGeom && <span className="badge badge-success">มีรูปใหม่รอบันทึก</span>}
-                    </>
-                  )}
-                </div>
-              )}
               <p className="text-xs opacity-60 mt-2">
                 <span className="text-red-600 font-bold">▬</span> รูปแปลง ม.10 ·
                 <span className="text-blue-600 font-bold"> ▬</span> basemap candidate (คลิกเลือก) ·
@@ -190,7 +167,7 @@ export default function ReconcilePanel() {
                 <input type="checkbox" className="checkbox checkbox-sm mt-0.5" checked={writeBasemap} onChange={(e) => setWriteBasemap(e.target.checked)} />
                 <span className="text-sm">
                   อัปเดตข้อมูลนี้กลับเข้า basemap (parcel.shp)
-                  <span className="block text-xs opacity-60">ติ๊กเมื่อแก้รหัส/รูปแปลง/ข้อมูล ให้ matcher รอบถัดไปใช้ค่าที่แก้ (รอด import)</span>
+                  <span className="block text-xs opacity-60">ติ๊กเมื่อแก้รหัส/โฉนด/ข้อมูล ให้ matcher รอบถัดไปใช้ค่าที่แก้ (รอด import) · แก้รูปแปลงทำที่หน้า “แก้รูปแปลง (basemap)”</span>
                 </span>
               </label>
               <button className="btn btn-primary w-full" disabled={saving} onClick={save}>
@@ -237,7 +214,7 @@ export default function ReconcilePanel() {
           </table>
         </div>
       )}
-      <p className="text-xs opacity-60 mt-3">เปิดแผนที่เพื่อเทียบรูปแปลง ม.10 ↔ basemap, เลือกแปลงที่ถูก + แก้ข้อมูล (วาด vertex = เฟสถัดไป)</p>
+      <p className="text-xs opacity-60 mt-3">เปิดแผนที่เพื่อเทียบรูปแปลง ม.10 ↔ basemap (อ่านอย่างเดียว), เลือกแปลงที่ถูก + แก้ข้อมูล · แก้รูปแปลงทำที่หน้า “แก้รูปแปลง (basemap)”</p>
     </div>
   );
 }
