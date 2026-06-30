@@ -7,6 +7,7 @@ import RecordsPanel from "@/components/m10/RecordsPanel";
 import WorklistPanel from "@/components/m10/WorklistPanel";
 import SummaryPanel from "@/components/m10/SummaryPanel";
 import ReconcilePanel from "@/components/m10/ReconcilePanel";
+import NewCodePanel from "@/components/m10/NewCodePanel";
 
 const TABS = [
   { key: "summary", label: "สรุปรายเดือน", Panel: SummaryPanel },
@@ -14,6 +15,7 @@ const TABS = [
   { key: "review", label: "คิวยืนยัน", Panel: ReviewPanel },
   { key: "records", label: "ทะเบียน (as-of)", Panel: RecordsPanel },
   { key: "reconcile", label: "จับคู่ basemap", Panel: ReconcilePanel },
+  { key: "newcode", label: "รหัสแปลงใหม่", Panel: NewCodePanel },
   { key: "worklist", label: "Worklist → LTAX", Panel: WorklistPanel },
 ];
 
