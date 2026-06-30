@@ -100,3 +100,14 @@ Spec: `docs/superpowers/specs/2026-06-29-m10-basemap-corrections-layer-design.md
 - **นอก scope:** ลบแปลง (`kind:"delete"`), land-use, export `.geojson`, เอนจินรหัส SPLIT/MERGE/NEW
 
 Spec: `docs/superpowers/specs/2026-06-30-m10-basemap-editor-design.md` · Plan: `docs/superpowers/plans/2026-06-30-m10-basemap-editor.md`
+
+## ผู้ช่วยแนะรหัสแปลง SPLIT/MERGE/NEW (2026-06-30)
+- แท็บ **"รหัสแปลงใหม่"** ใน `/admin/m10` — list confirmed deferred (SPLIT/SPLIT_PUBLIC/MERGE/NEW) + รหัสที่แนะ → จนท. ยืนยัน
+- **เอนจินแนะ (pure):** `lib/m10-ingest/parcelcode/suggest.ts` (resolver inject) — NEW: โฉนดตรง basemap→ใช้รหัสเดิม, ไม่ตรง→`nextBlockSeq` ของบล็อกแปลงที่ทับ · SPLIT: `nextSuffix` ใต้แปลงแม่ (รูปทับมากสุด) · MERGE: parcelCode น้อยสุด · `parcelCode.ts` = parse/seq/suffix (ชั้น /001→/01→/1)
+- **ข้อมูลไม่มี group key** (`MERGE_PARCEL` ว่าง, `PROCESS_ORDER` แค่ลำดับ step) → assistant แนะต่อ record ไม่ auto-group; default SPLIT = suffix ลูก
+- ยืนยัน = `confirmNewCode` → `resolveReconcile` (inject geometry=record.geometry, writeBasemap) → reconcileOverride.resolved + basemap `kind:new` (รูปจาก m10) → ปรับรูปละเอียดที่หน้า basemap ทีหลัง. รหัสที่ยืนยันเก็บใน `reconcileOverride.parcelCode` (canonical parcelCode ไม่ถูกแตะ)
+- **worklist eligibility ขยาย:** deferred ที่ `reconcileOverride.status==="resolved"` นับเป็น eligible (ผ่าน distinct resolvedKeys ใน `summaryByPeriod`/`listWorklistPending`) → ไหลเข้าคิวคีย์ LTAX; `deferred` count = ที่ยังไม่ resolved
+- API `pages/api/m10-ingest/newcode/*` (gate `/admin/m10`) · UI `components/m10/NewCodePanel.jsx` (focus ใช้ ReconcileMap read-only)
+- **นอก scope:** auto-group siblings, RETIRED, ตั้งแปลงเก่าที่ถูกรวม/แบ่งเป็น retired อัตโนมัติ, ปรับ buildWorklistItem script เฉพาะ SPLIT/MERGE (worklist item ใช้ builder เดิม)
+
+Spec: `docs/superpowers/specs/2026-06-30-m10-parcelcode-suggest-design.md` · Plan: `docs/superpowers/plans/2026-06-30-m10-parcelcode-suggest.md`

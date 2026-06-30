@@ -556,8 +556,9 @@ function newCodeResolvers() {
         .map((d: Record<string, unknown>) => ({ parcelCode: d.parcelCode as string, deedNo: (d.deedNo as string) ?? null, landNo: (d.landNo as string) ?? null, survey: (d.survey as string) ?? null, geometry: d.geometry })),
     byGeomOverlap: async (geometry: Geom) => {
       const docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: geometry } } }).select("parcelCode deedNo landNo survey geometry").limit(30).lean();
-      return docs
-        .map((d: Record<string, unknown>) => ({ doc: d, ov: overlapOf(geometry, d.geometry) ?? 0 }))
+      const scored: { doc: Record<string, unknown>; ov: number }[] = docs
+        .map((d: Record<string, unknown>) => ({ doc: d, ov: overlapOf(geometry, d.geometry) ?? 0 }));
+      return scored
         .sort((a, b) => b.ov - a.ov)
         .map(({ doc: d }) => ({ parcelCode: d.parcelCode as string, deedNo: (d.deedNo as string) ?? null, landNo: (d.landNo as string) ?? null, survey: (d.survey as string) ?? null, geometry: d.geometry }));
     },
