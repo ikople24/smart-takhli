@@ -34,24 +34,20 @@ export default function BasemapEditor() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [lastBbox, setLastBbox] = useState(null);
-  const [curZoom, setCurZoom] = useState(null);
-  const [httpStatus, setHttpStatus] = useState(null);
   const [loadErr, setLoadErr] = useState(null);
 
   const loadBbox = useCallback(async (bbox) => {
     try {
       const r = await fetch(`/api/m10-ingest/basemap?bbox=${bbox.join(",")}`);
-      setHttpStatus(r.status);
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setLoadErr(j.error || `HTTP ${r.status}`); setFeatures([]); return; }
       setLoadErr(null);
       setFeatures(j.features || []);
       setTruncated(!!j.truncated);
-    } catch (e) { setHttpStatus(-1); setLoadErr(String(e?.message || e)); }
+    } catch (e) { setLoadErr(String(e?.message || e)); }
   }, []);
 
-  const onViewport = useCallback((bbox, zoom) => {
-    setCurZoom(zoom);
+  const onViewport = useCallback((bbox) => {
     if (!bbox) { setLowZoom(true); setFeatures([]); return; }
     setLowZoom(false); setLastBbox(bbox); loadBbox(bbox);
   }, [loadBbox]);
@@ -139,11 +135,7 @@ export default function BasemapEditor() {
             <span style={{ background: OTHER_COLOR }} className="inline-block w-3 h-3 rounded-sm" />อื่น ๆ
           </div>
         </div>
-        {/* HUD วินิจฉัยชั่วคราว — ลบออกหลังแก้บั๊กเสร็จ */}
-        <div className="absolute z-[1000] bottom-2 left-2 bg-base-100/90 rounded px-2 py-1 text-[11px] shadow font-mono">
-          zoom {curZoom ?? "–"} · โหลด {features.length}{truncated ? "+" : ""} แปลง · HTTP {httpStatus ?? "–"}
-          {loadErr ? <span className="text-error"> · {loadErr}</span> : null}
-        </div>
+        {loadErr && <div className="absolute z-[1000] bottom-2 left-2 badge badge-error">โหลดแปลงไม่สำเร็จ: {loadErr}</div>}
         <MapContainer center={CENTER} zoom={15} maxZoom={21} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
           <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} maxZoom={21} />
           <MapRef mapRef={mapRef} />
