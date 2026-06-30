@@ -1,0 +1,148 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { EditFeature, DrawNew } from "./BasemapGeoman";
+import BasemapViewportLoader from "./BasemapViewportLoader";
+import BasemapAttrPanel from "./BasemapAttrPanel";
+import { geometryAreaSqm } from "@/lib/m10-ingest/basemap/area";
+
+const MIN_ZOOM = 16;
+const CENTER = [15.255, 100.342]; // เทศบาลเมืองตาคลี
+const EMPTY_FORM = { parcelCode: "", deedNo: "", landNo: "", survey: "", landType: "", zoneId: "", blockId: "", lot: "" };
+
+// เก็บ ref ของ map ไว้สั่ง flyToBounds จากผลค้นหา
+function MapRef({ mapRef }) {
+  const map = useMap();
+  useEffect(() => { mapRef.current = map; }, [map, mapRef]);
+  return null;
+}
+
+export default function BasemapEditor() {
+  const mapRef = useRef(null);
+  const collectRef = useRef(null);
+  const [features, setFeatures] = useState([]);
+  const [truncated, setTruncated] = useState(false);
+  const [lowZoom, setLowZoom] = useState(true);
+  const [selectedCode, setSelectedCode] = useState(null);
+  const [selectedFeature, setSelectedFeature] = useState(null);
+  const [mode, setMode] = useState("view"); // view | edit | draw
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [drawnGeom, setDrawnGeom] = useState(null);
+  const [areaSqm, setAreaSqm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [lastBbox, setLastBbox] = useState(null);
+
+  const loadBbox = useCallback(async (bbox) => {
+    try {
+      const r = await fetch(`/api/m10-ingest/basemap?bbox=${bbox.join(",")}`);
+      const j = await r.json();
+      setFeatures(j.features || []);
+      setTruncated(!!j.truncated);
+    } catch { /* noop */ }
+  }, []);
+
+  const onViewport = useCallback((bbox) => {
+    if (!bbox) { setLowZoom(true); setFeatures([]); return; }
+    setLowZoom(false); setLastBbox(bbox); loadBbox(bbox);
+  }, [loadBbox]);
+
+  const formFromProps = (p) => ({
+    parcelCode: p.parcelCode ?? "", deedNo: p.deedNo ?? "", landNo: p.landNo ?? "",
+    survey: p.survey ?? "", landType: p.landType ?? "", zoneId: p.zoneId ?? "",
+    blockId: p.blockId ?? "", lot: p.lot ?? "",
+  });
+
+  const selectFeature = (f) => {
+    if (mode !== "view") return;
+    setSelectedCode(f.properties.parcelCode);
+    setSelectedFeature(f);
+    setForm(formFromProps(f.properties));
+    setAreaSqm(geometryAreaSqm(f.geometry));
+  };
+
+  const onEdit = () => { if (selectedFeature) setMode("edit"); };
+  const onDraw = () => {
+    setSelectedCode(null); setSelectedFeature(null); setForm(EMPTY_FORM);
+    setDrawnGeom(null); setAreaSqm(null); setMode("draw");
+  };
+  const onCreated = (geom) => { setDrawnGeom(geom); setAreaSqm(geometryAreaSqm(geom)); };
+  const onCancel = () => { setMode("view"); setDrawnGeom(null); collectRef.current = null; };
+
+  const onSave = async () => {
+    if (!form.parcelCode?.trim()) { alert("ต้องระบุรหัสแปลง"); return; }
+    let geometry;
+    if (mode === "edit") geometry = collectRef.current ? collectRef.current() : null;
+    else if (mode === "draw") geometry = drawnGeom;
+    if (mode === "draw" && !geometry) { alert("ยังไม่ได้วาดรูปแปลง"); return; }
+    setSaving(true);
+    try {
+      const body = { ...form, geometry: geometry || undefined, kind: mode === "draw" ? "new" : "edit" };
+      const r = await fetch("/api/m10-ingest/basemap/save", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      if (!r.ok) { alert(j.error || "บันทึกไม่สำเร็จ"); return; }
+      setMode("view"); setDrawnGeom(null); collectRef.current = null;
+      setSelectedCode(null); setSelectedFeature(null);
+      if (lastBbox) loadBbox(lastBbox);
+    } finally { setSaving(false); }
+  };
+
+  const onSearch = async (q) => {
+    if (!q.trim()) return;
+    setSearching(true);
+    try {
+      const r = await fetch(`/api/m10-ingest/basemap/search?q=${encodeURIComponent(q.trim())}`);
+      const j = await r.json();
+      setSearchResults(j.results || []);
+    } finally { setSearching(false); }
+  };
+  const onPickResult = (r) => {
+    if (mapRef.current && r.bbox && r.bbox[0] !== r.bbox[2]) {
+      mapRef.current.flyToBounds([[r.bbox[1], r.bbox[0]], [r.bbox[3], r.bbox[2]]], { maxZoom: 19 });
+    }
+    setSearchResults([]);
+  };
+
+  const fc = useMemo(() => ({ type: "FeatureCollection", features }), [features]);
+
+  return (
+    <div className="flex h-[calc(100vh-4rem)] w-full">
+      <div className="relative flex-1">
+        {lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-warning">ซูมเข้าเพื่อโหลดแปลง</div>}
+        {truncated && !lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-error">แปลงเยอะเกิน — ซูมเข้าอีก</div>}
+        <MapContainer center={CENTER} zoom={15} maxZoom={21} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+          <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} maxZoom={21} />
+          <MapRef mapRef={mapRef} />
+          <BasemapViewportLoader onViewport={onViewport} minZoom={MIN_ZOOM} />
+          {mode !== "edit" && (
+            <GeoJSON
+              key={features.length + "|" + selectedCode + "|" + mode}
+              data={fc}
+              style={(f) => ({
+                color: f.properties.parcelCode === selectedCode ? "#16a34a" : "#6b7280",
+                weight: f.properties.parcelCode === selectedCode ? 3 : 1,
+                fillOpacity: f.properties.parcelCode === selectedCode ? 0.3 : 0.05,
+              })}
+              onEachFeature={(f, layer) => {
+                layer.on("click", () => selectFeature(f));
+                if (f.properties.parcelCode) {
+                  layer.bindTooltip(String(f.properties.parcelCode), { permanent: true, direction: "center", className: "parcel-label" });
+                }
+              }}
+            />
+          )}
+          {mode === "edit" && selectedFeature && <EditFeature feature={selectedFeature} onCollect={collectRef} />}
+          {mode === "draw" && <DrawNew onCreated={onCreated} />}
+        </MapContainer>
+      </div>
+      <BasemapAttrPanel
+        mode={mode} selected={selectedCode} form={form} setForm={setForm} areaSqm={areaSqm}
+        onEdit={onEdit} onDraw={onDraw} onSave={onSave} onCancel={onCancel} saving={saving}
+        onSearch={onSearch} searchResults={searchResults} onPickResult={onPickResult} searching={searching}
+      />
+    </div>
+  );
+}
