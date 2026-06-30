@@ -8,6 +8,9 @@ const FILTERS = ["", "ambiguous", "unmatched", "resolved", "matched"];
 
 const pct = (v) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
+// แก้ vertex รูปแปลงยังพักไว้ (โฟกัสแก้ข้อมูล/รหัสก่อน) — เปิดกลับด้วยการตั้งเป็น true
+const VERTEX_EDIT_ENABLED = false;
+
 export default function ReconcilePanel() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,19 +120,21 @@ export default function ReconcilePanel() {
                 editing={editing}
                 onGeometryChange={setEditedGeom}
               />
-              <div className="flex items-center gap-2 mt-2">
-                {!editing ? (
-                  <button className="btn btn-sm btn-outline" onClick={() => { setEditedGeom(null); setEditing(true); }}>
-                    {detail.record.geometry ? "✏️ แก้รูปแปลง" : "✏️ วาดแปลงใหม่"}
-                  </button>
-                ) : (
-                  <>
-                    <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุดเพื่อย้าย · คลิกบนแผนที่เพิ่มจุด · คลิกขวาที่จุดเพื่อลบ</span>
-                    <button className="btn btn-sm btn-ghost" onClick={() => { setEditing(false); setEditedGeom(null); }}>ยกเลิกการแก้</button>
-                    {editedGeom && <span className="badge badge-success">มีรูปใหม่รอบันทึก</span>}
-                  </>
-                )}
-              </div>
+              {VERTEX_EDIT_ENABLED && (
+                <div className="flex items-center gap-2 mt-2">
+                  {!editing ? (
+                    <button className="btn btn-sm btn-outline" onClick={() => { setEditedGeom(null); setEditing(true); }}>
+                      {detail.record.geometry ? "✏️ แก้รูปแปลง" : "✏️ วาดแปลงใหม่"}
+                    </button>
+                  ) : (
+                    <>
+                      <span className="badge badge-warning">กำลังแก้รูปแปลง — ลากจุดเพื่อย้าย · คลิกบนแผนที่เพิ่มจุด · คลิกขวาที่จุดเพื่อลบ</span>
+                      <button className="btn btn-sm btn-ghost" onClick={() => { setEditing(false); setEditedGeom(null); }}>ยกเลิกการแก้</button>
+                      {editedGeom && <span className="badge badge-success">มีรูปใหม่รอบันทึก</span>}
+                    </>
+                  )}
+                </div>
+              )}
               <p className="text-xs opacity-60 mt-2">
                 <span className="text-red-600 font-bold">▬</span> รูปแปลง ม.10 ·
                 <span className="text-blue-600 font-bold"> ▬</span> basemap candidate (คลิกเลือก) ·
