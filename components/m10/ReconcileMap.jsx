@@ -31,7 +31,7 @@ function FitBounds({ geoms }) {
     const pts = [];
     for (const g of geoms) latLngsOf(g, pts);
     if (pts.length) {
-      try { map.fitBounds(L.latLngBounds(pts), { padding: [25, 25], maxZoom: 19 }); } catch { /* noop */ }
+      try { map.fitBounds(L.latLngBounds(pts), { padding: [10, 10], maxZoom: 21 }); } catch { /* noop */ }
     }
   }, [geoms, map]);
   return null;
@@ -78,8 +78,8 @@ export default function ReconcileMap({ m10Geometry, candidates, nearby, selected
   const removeVertex = (i) => { if (ring.length > 3) commit(ring.filter((_, j) => j !== i)); };
 
   return (
-    <MapContainer center={center} zoom={18} style={{ height: 420, width: "100%" }} scrollWheelZoom>
-      <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+    <MapContainer center={center} zoom={19} maxZoom={21} style={{ height: 420, width: "100%" }} scrollWheelZoom>
+      <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} maxZoom={21} />
       {!editing && <FitBounds geoms={fitGeoms} />}
       {nearby?.map((n, i) => n.geometry && (
         <GeoJSON key={`n${i}`} data={n.geometry} style={{ color: "#9ca3af", weight: 1, fillOpacity: 0.05 }} />
