@@ -388,15 +388,33 @@ export async function getReconcileItem(recordKey: string) {
     const ovDocs = await M10Basemap.find({ parcelCode: ovCode }).select("parcelCode deedNo landNo survey area geometry").limit(20).lean();
     docs = [...docs, ...ovDocs];
   }
-  const candidates = docs.map((d) => ({
-    parcelCode: d.parcelCode as string, basemapId: String(d._id),
-    deedNo: (d.deedNo as string) ?? null,
-    landNo: (d.landNo as string) ?? null,
-    survey: (d.survey as string) ?? null,
-    area: (d.area as { rai: number; ngan: number; wa: number; sqm: number }) ?? null,
-    overlapPct: overlapOf(effGeometry, d.geometry),
-    geometry: d.geometry ?? null,
-  }));
+  // ยุบเป็น 1 แถวต่อ parcelCode (1 รหัส = 1 แปลง; fragment = polygon หลายชิ้นรวมเป็น MultiPolygon บนแผนที่)
+  const byCode = new Map<string, Record<string, unknown>[]>();
+  for (const d of docs) {
+    const code = d.parcelCode as string;
+    if (!byCode.has(code)) byCode.set(code, []);
+    byCode.get(code)!.push(d);
+  }
+  const candidates = [...byCode.entries()].map(([code, frags]) => {
+    const first = frags[0];
+    const polys = frags.map((f) => f.geometry).filter((g): g is Geom => !!g && ((g as Geom).type === "Polygon" || (g as Geom).type === "MultiPolygon"));
+    let geometry: Geom | null = null;
+    if (polys.length === 1) geometry = polys[0];
+    else if (polys.length > 1) {
+      geometry = { type: "MultiPolygon", coordinates: polys.flatMap((g) => (g.type === "MultiPolygon" ? g.coordinates : [g.coordinates])) } as Geom;
+    }
+    const overlaps = frags.map((f) => overlapOf(effGeometry, f.geometry)).filter((v): v is number => v != null);
+    return {
+      parcelCode: code, basemapId: String(first._id),
+      deedNo: (first.deedNo as string) ?? null,
+      landNo: (first.landNo as string) ?? null,
+      survey: (first.survey as string) ?? null,
+      area: (first.area as { rai: number; ngan: number; wa: number; sqm: number }) ?? null,
+      fragmentCount: frags.length,
+      overlapPct: overlaps.length ? Math.max(...overlaps) : null,
+      geometry,
+    };
+  });
 
   let nearby: { parcelCode: string; geometry: unknown }[] = [];
   if (effGeometry) {

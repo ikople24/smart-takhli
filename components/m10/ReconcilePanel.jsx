@@ -146,12 +146,10 @@ export default function ReconcilePanel() {
               <div className="bg-base-200 rounded p-3">
                 <p className="text-sm font-semibold mb-2">เลือกแปลง basemap ที่ถูกต้อง</p>
                 {detail.candidates.length === 0 && <p className="text-sm opacity-60">ไม่มี candidate (unmatched) — แก้ attribute แล้วเช็คใหม่</p>}
-                {detail.candidates.map((c, i) => {
-                  // เลขชิ้น เมื่อรหัสเดียวกันมีหลาย fragment (basemap เก็บแปลงเดียวเป็นหลาย polygon)
-                  const sameCode = detail.candidates.filter((x) => x.parcelCode === c.parcelCode);
-                  const frag = sameCode.length > 1 ? ` (ชิ้นที่ ${sameCode.indexOf(c) + 1}/${sameCode.length})` : "";
+                {detail.candidates.map((c) => {
+                  const frag = c.fragmentCount > 1 ? ` (${c.fragmentCount} ชิ้น)` : "";
                   return (
-                    <label key={c.basemapId} className="flex items-center gap-2 py-1 cursor-pointer">
+                    <label key={c.parcelCode} className="flex items-center gap-2 py-1 cursor-pointer">
                       <input type="radio" name="cand" className="radio radio-sm" checked={selectedId === c.basemapId}
                         onChange={() => { setSelectedId(c.basemapId); pickCandidate(c); }} />
                       <span className="font-mono">{c.parcelCode}</span>
