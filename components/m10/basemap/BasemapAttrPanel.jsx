@@ -56,8 +56,28 @@ export default function BasemapAttrPanel({
               </label>
             ))}
           </div>
+          {/* เนื้อที่ตามเอกสาร — แก้ได้ (ไม่อิงการคำนวณรูป) */}
+          <div>
+            <span className="text-xs opacity-60">เนื้อที่ตามเอกสาร (ไร่-งาน-วา)</span>
+            <div className="flex gap-1">
+              <input type="number" className="input input-sm input-bordered w-full" placeholder="ไร่" disabled={!editing}
+                value={form.areaRai ?? ""} onChange={(e) => set("areaRai", e.target.value)} />
+              <input type="number" className="input input-sm input-bordered w-full" placeholder="งาน" disabled={!editing}
+                value={form.areaNgan ?? ""} onChange={(e) => set("areaNgan", e.target.value)} />
+              <input type="number" step="0.01" className="input input-sm input-bordered w-full" placeholder="วา" disabled={!editing}
+                value={form.areaWa ?? ""} onChange={(e) => set("areaWa", e.target.value)} />
+            </div>
+          </div>
           {areaParts && (
-            <p className="text-xs opacity-70">พื้นที่จากรูป: <b>{formatAreaStr(areaParts)}</b> (≈{areaParts.sqm} ตร.ม.)</p>
+            <p className="text-[11px] opacity-50">
+              พื้นที่จากรูป (อ้างอิง): {formatAreaStr(areaParts)} ≈ {areaParts.sqm} ตร.ม.
+              {editing && (
+                <button type="button" className="link link-primary ml-1"
+                  onClick={() => setForm((f) => ({ ...f, areaRai: areaParts.rai, areaNgan: areaParts.ngan, areaWa: areaParts.wa }))}>
+                  ใช้ค่านี้
+                </button>
+              )}
+            </p>
           )}
         </>
       )}

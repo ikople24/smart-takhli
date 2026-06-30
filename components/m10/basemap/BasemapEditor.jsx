@@ -5,11 +5,11 @@ import { EditFeature, DrawNew } from "./BasemapGeoman";
 import BasemapViewportLoader from "./BasemapViewportLoader";
 import BasemapAttrPanel from "./BasemapAttrPanel";
 import { parcelColor, LAND_TYPE_COLORS, OTHER_COLOR } from "./landTypeColors";
-import { geometryAreaSqm } from "@/lib/m10-ingest/basemap/area";
+import { geometryAreaSqm, partsToSqm } from "@/lib/m10-ingest/basemap/area";
 
 const MIN_ZOOM = 16;
 const CENTER = [15.255, 100.342]; // เทศบาลเมืองตาคลี
-const EMPTY_FORM = { parcelCode: "", deedNo: "", landNo: "", survey: "", landType: "", zoneId: "", blockId: "", lot: "" };
+const EMPTY_FORM = { parcelCode: "", deedNo: "", landNo: "", survey: "", landType: "", zoneId: "", blockId: "", lot: "", areaRai: "", areaNgan: "", areaWa: "" };
 
 // เก็บ ref ของ map ไว้สั่ง flyToBounds จากผลค้นหา
 function MapRef({ mapRef }) {
@@ -56,11 +56,15 @@ export default function BasemapEditor() {
     setLowZoom(false); setLastBbox(bbox); loadBbox(bbox);
   }, [loadBbox]);
 
-  const formFromProps = (p) => ({
-    parcelCode: p.parcelCode ?? "", deedNo: p.deedNo ?? "", landNo: p.landNo ?? "",
-    survey: p.survey ?? "", landType: p.landType ?? "", zoneId: p.zoneId ?? "",
-    blockId: p.blockId ?? "", lot: p.lot ?? "",
-  });
+  const formFromProps = (p) => {
+    const a = p.area || {};
+    return {
+      parcelCode: p.parcelCode ?? "", deedNo: p.deedNo ?? "", landNo: p.landNo ?? "",
+      survey: p.survey ?? "", landType: p.landType ?? "", zoneId: p.zoneId ?? "",
+      blockId: p.blockId ?? "", lot: p.lot ?? "",
+      areaRai: a.rai ?? "", areaNgan: a.ngan ?? "", areaWa: a.wa ?? "",
+    };
+  };
 
   const selectFeature = (f) => {
     if (mode !== "view") return;
@@ -86,7 +90,10 @@ export default function BasemapEditor() {
     if (mode === "draw" && !geometry) { alert("ยังไม่ได้วาดรูปแปลง"); return; }
     setSaving(true);
     try {
-      const body = { ...form, geometry: geometry || undefined, kind: mode === "draw" ? "new" : "edit" };
+      // เนื้อที่อิงตามเอกสาร (ที่ จนท. กรอก) ไม่ใช่จากการคำนวณรูป
+      const rai = Number(form.areaRai) || 0, ngan = Number(form.areaNgan) || 0, wa = Number(form.areaWa) || 0;
+      const area = (rai || ngan || wa) ? { rai, ngan, wa, sqm: partsToSqm(rai, ngan, wa) } : null;
+      const body = { ...form, area, geometry: geometry || undefined, kind: mode === "draw" ? "new" : "edit" };
       const r = await fetch("/api/m10-ingest/basemap/save", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
@@ -117,7 +124,7 @@ export default function BasemapEditor() {
   const fc = useMemo(() => ({ type: "FeatureCollection", features }), [features]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full">
+    <div className="flex h-full w-full">
       <div className="relative flex-1">
         {lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-warning">ซูมเข้าเพื่อโหลดแปลง</div>}
         {truncated && !lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-error">แปลงเยอะเกิน — ซูมเข้าอีก</div>}

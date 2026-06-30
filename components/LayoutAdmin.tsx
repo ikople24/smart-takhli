@@ -59,6 +59,9 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // หน้าแบบเต็มจอ (แผนที่) — ไม่ใส่ padding/scroll ให้แผนที่กิน area เต็ม
+  const fullBleed = ['/admin/m10/basemap'].includes(router.pathname);
+
   const { role, allowedPages, isLoaded } = usePermissionsStore();
   const { user } = useUser();
 
@@ -311,17 +314,16 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0 */}
-        <div className="flex-1 overflow-auto pb-14">
-          <div className="p-6">
-            {children}
+        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0; fullBleed = แผนที่เต็มจอ ไม่มี padding */}
+        {fullBleed ? (
+          <div className="flex-1 overflow-hidden min-h-0">{children}</div>
+        ) : (
+          <div className="flex-1 overflow-auto pb-14">
+            <div className="p-6">
+              {children}
+            </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3 text-center text-sm text-base-content/60 mb-14 md:mb-0">
-          <p>&copy; 2025 Smart Municipality System. All rights reserved.</p>
-        </footer>
+        )}
       </main>
 
       {/* Mobile backdrop */}
