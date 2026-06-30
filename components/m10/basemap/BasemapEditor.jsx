@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { EditFeature, DrawNew } from "./BasemapGeoman";
 import BasemapViewportLoader from "./BasemapViewportLoader";
 import BasemapAttrPanel from "./BasemapAttrPanel";
+import { parcelColor, LAND_TYPE_COLORS, OTHER_COLOR } from "./landTypeColors";
 import { geometryAreaSqm } from "@/lib/m10-ingest/basemap/area";
 
 const MIN_ZOOM = 16;
@@ -120,6 +121,17 @@ export default function BasemapEditor() {
       <div className="relative flex-1">
         {lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-warning">ซูมเข้าเพื่อโหลดแปลง</div>}
         {truncated && !lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-error">แปลงเยอะเกิน — ซูมเข้าอีก</div>}
+        {/* legend สีตามประเภทเอกสารสิทธิ์ */}
+        <div className="absolute z-[1000] top-2 right-2 bg-base-100/90 rounded px-2 py-1 text-[11px] shadow space-y-0.5">
+          {LAND_TYPE_COLORS.map((x) => (
+            <div key={x.type} className="flex items-center gap-1.5">
+              <span style={{ background: x.color }} className="inline-block w-3 h-3 rounded-sm" />{x.type}
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5">
+            <span style={{ background: OTHER_COLOR }} className="inline-block w-3 h-3 rounded-sm" />อื่น ๆ
+          </div>
+        </div>
         {/* HUD วินิจฉัยชั่วคราว — ลบออกหลังแก้บั๊กเสร็จ */}
         <div className="absolute z-[1000] bottom-2 left-2 bg-base-100/90 rounded px-2 py-1 text-[11px] shadow font-mono">
           zoom {curZoom ?? "–"} · โหลด {features.length}{truncated ? "+" : ""} แปลง · HTTP {httpStatus ?? "–"}
@@ -133,11 +145,11 @@ export default function BasemapEditor() {
             <GeoJSON
               key={features.length + "|" + selectedCode + "|" + mode}
               data={fc}
-              style={(f) => ({
-                color: f.properties.parcelCode === selectedCode ? "#16a34a" : "#6b7280",
-                weight: f.properties.parcelCode === selectedCode ? 3 : 1,
-                fillOpacity: f.properties.parcelCode === selectedCode ? 0.3 : 0.05,
-              })}
+              style={(f) => {
+                const c = parcelColor(f.properties.landType);
+                const sel = f.properties.parcelCode === selectedCode;
+                return { color: c, weight: sel ? 4 : 1.5, fillColor: c, fillOpacity: sel ? 0.5 : 0.12 };
+              }}
               onEachFeature={(f, layer) => {
                 layer.on("click", () => selectFeature(f));
                 if (f.properties.parcelCode) {
