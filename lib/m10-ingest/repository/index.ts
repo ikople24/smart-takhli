@@ -482,4 +482,55 @@ export async function resolveReconcile(recordKey: string, by: string, input: {
   return { ok: true, status: "resolved", parcelCode: override.parcelCode };
 }
 
+// escape อักขระพิเศษ regex (parcelCode มี "/")
+function escapeRegExp(s: string): string { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+// basemap doc → GeoJSON Feature (properties = attribute)
+function basemapToFeature(d: Record<string, unknown>): GeoJSON.Feature {
+  return {
+    type: "Feature",
+    geometry: (d.geometry ?? null) as GeoJSON.Geometry,
+    properties: {
+      parcelCode: d.parcelCode ?? null, deedNo: d.deedNo ?? null, landNo: d.landNo ?? null,
+      survey: d.survey ?? null, landType: d.landType ?? null, zoneId: d.zoneId ?? null,
+      blockId: d.blockId ?? null, lot: d.lot ?? null, area: d.area ?? null,
+    },
+  };
+}
+
+// แปลงในกรอบ bbox=[minLng,minLat,maxLng,maxLat] (cap; เกิน → truncated)
+export async function listBasemapInBbox(
+  bbox: [number, number, number, number], limit = 800
+): Promise<{ features: GeoJSON.Feature[]; truncated: boolean }> {
+  const poly = turfBboxPolygon(bbox).geometry;
+  const docs = await M10Basemap.find({ geometry: { $geoIntersects: { $geometry: poly } } })
+    .limit(limit + 1).lean();
+  const truncated = docs.length > limit;
+  const sliced = truncated ? docs.slice(0, limit) : docs;
+  return { features: sliced.map(basemapToFeature), truncated };
+}
+
+// ค้นหารหัสแปลง (มี "/" = prefix) หรือ deedNo (ตรง) → รวมเป็น 1 แถว/รหัส พร้อม bbox สำหรับ flyTo
+export async function searchBasemap(
+  q: string, limit = 20
+): Promise<{ results: { parcelCode: string; deedNo: string | null; bbox: [number, number, number, number] }[] }> {
+  const query = q.includes("/")
+    ? { parcelCode: new RegExp("^" + escapeRegExp(q)) }
+    : { $or: [{ deedNo: q }, { parcelCode: new RegExp("^" + escapeRegExp(q)) }] };
+  const docs = await M10Basemap.find(query).select("parcelCode deedNo geometry").limit(200).lean();
+  const byCode = new Map<string, { parcelCode: string; deedNo: string | null; geoms: Geom[] }>();
+  for (const d of docs) {
+    const code = String(d.parcelCode ?? "");
+    if (!byCode.has(code)) byCode.set(code, { parcelCode: code, deedNo: (d.deedNo as string) ?? null, geoms: [] });
+    if (d.geometry) byCode.get(code)!.geoms.push(d.geometry as Geom);
+  }
+  const results = [...byCode.values()].slice(0, limit).map((g) => ({
+    parcelCode: g.parcelCode, deedNo: g.deedNo,
+    bbox: (g.geoms.length
+      ? turfBbox(turfFC(g.geoms.map((x) => turfFeature(x))))
+      : [0, 0, 0, 0]) as [number, number, number, number],
+  }));
+  return { results };
+}
+
 export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap, M10BasemapEdit };
