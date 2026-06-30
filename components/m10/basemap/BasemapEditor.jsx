@@ -33,17 +33,24 @@ export default function BasemapEditor() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [lastBbox, setLastBbox] = useState(null);
+  const [curZoom, setCurZoom] = useState(null);
+  const [httpStatus, setHttpStatus] = useState(null);
+  const [loadErr, setLoadErr] = useState(null);
 
   const loadBbox = useCallback(async (bbox) => {
     try {
       const r = await fetch(`/api/m10-ingest/basemap?bbox=${bbox.join(",")}`);
-      const j = await r.json();
+      setHttpStatus(r.status);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setLoadErr(j.error || `HTTP ${r.status}`); setFeatures([]); return; }
+      setLoadErr(null);
       setFeatures(j.features || []);
       setTruncated(!!j.truncated);
-    } catch { /* noop */ }
+    } catch (e) { setHttpStatus(-1); setLoadErr(String(e?.message || e)); }
   }, []);
 
-  const onViewport = useCallback((bbox) => {
+  const onViewport = useCallback((bbox, zoom) => {
+    setCurZoom(zoom);
     if (!bbox) { setLowZoom(true); setFeatures([]); return; }
     setLowZoom(false); setLastBbox(bbox); loadBbox(bbox);
   }, [loadBbox]);
@@ -113,6 +120,11 @@ export default function BasemapEditor() {
       <div className="relative flex-1">
         {lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-warning">ซูมเข้าเพื่อโหลดแปลง</div>}
         {truncated && !lowZoom && <div className="absolute z-[1000] top-2 left-1/2 -translate-x-1/2 badge badge-error">แปลงเยอะเกิน — ซูมเข้าอีก</div>}
+        {/* HUD วินิจฉัยชั่วคราว — ลบออกหลังแก้บั๊กเสร็จ */}
+        <div className="absolute z-[1000] bottom-2 left-2 bg-base-100/90 rounded px-2 py-1 text-[11px] shadow font-mono">
+          zoom {curZoom ?? "–"} · โหลด {features.length}{truncated ? "+" : ""} แปลง · HTTP {httpStatus ?? "–"}
+          {loadErr ? <span className="text-error"> · {loadErr}</span> : null}
+        </div>
         <MapContainer center={CENTER} zoom={15} maxZoom={21} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
           <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxNativeZoom={19} maxZoom={21} />
           <MapRef mapRef={mapRef} />
