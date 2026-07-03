@@ -88,13 +88,15 @@ export default function SmartSchoolDashboard() {
   };
 
   const stats = data?.stats;
+  // ปีในแท็บ = union ของ data.years กับ data.year กัน edge case ปีงบใหม่ที่ยังไม่มีใบสมัคร (data.year ไม่อยู่ใน years)
+  const yearTabs = data ? Array.from(new Set([...(data.years || []), data.year])).sort((a, b) => b - a) : [];
 
   return (
     <div className="space-y-4">
       {/* แท็บปีงบประมาณ */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-gray-600">ปีงบประมาณ:</span>
-        {(data?.years || []).map((y) => (
+        {yearTabs.map((y) => (
           <button key={y}
             className={`btn btn-sm rounded-full ${y === data?.year ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setYear(y)}>

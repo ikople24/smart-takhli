@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       }
     }
     if (householdMembers !== undefined) application.householdMembers = parseInt(householdMembers) || 1;
-    if (annualIncome !== undefined) application.annualIncome = parseInt(annualIncome) || 0;
+    if (annualIncome !== undefined) application.annualIncome = Math.max(0, parseInt(annualIncome) || 0);
     if (Array.isArray(incomeSource)) application.incomeSource = incomeSource;
     if (Array.isArray(familyStatus)) application.familyStatus = familyStatus;
     if (Array.isArray(receivedScholarship)) application.receivedScholarship = receivedScholarship;
