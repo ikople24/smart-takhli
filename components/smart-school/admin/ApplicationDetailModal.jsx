@@ -48,8 +48,8 @@ export default function ApplicationDetailModal({ row, onClose, onSetStatus, onEd
             <Row label="สถานภาพที่อยู่" value={row.housingStatus} />
             <Row label="สมาชิกในบ้าน" value={row.householdMembers} />
             <Row label="รายได้/ปี" value={(row.annualIncome || 0).toLocaleString() + ' บาท'} />
-            <Row label="สถานะครอบครัว" value={(row.familyStatus || []).join(', ')} />
-            <Row label="ทุนที่เคยได้ (self-report)" value={(row.takhliScholarshipHistory || []).join(', ')} />
+            <Row label="สถานะครอบครัว" value={(row.familyStatus || []).join(', ') || '-'} />
+            <Row label="ทุนที่เคยได้ (self-report)" value={(row.takhliScholarshipHistory || []).join(', ') || '-'} />
             <Row label="หมายเหตุ" value={row.note} />
             <Row label="สถานะ"
               value={`${row.status}${row.statusUpdatedBy ? ` (โดย ${row.statusUpdatedBy})` : ''}`} />

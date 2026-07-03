@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import ApplicationTable from './ApplicationTable';
@@ -14,18 +14,21 @@ export default function SmartSchoolDashboard() {
   const [view, setView] = useState('table'); // 'table' | 'map'
   const [detailRow, setDetailRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
+  const reqIdRef = useRef(0);
 
   const fetchData = useCallback(async () => {
+    const myId = ++reqIdRef.current;
     setLoading(true);
     try {
       const q = year ? `?year=${year}` : '';
       const res = await fetch(`/api/smart-school/list${q}`);
       if (!res.ok) throw new Error((await res.json()).message || 'โหลดข้อมูลไม่สำเร็จ');
-      setData(await res.json());
+      const json = await res.json();
+      if (myId === reqIdRef.current) setData(json);
     } catch (e) {
       Swal.fire({ icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ', text: e.message });
     } finally {
-      setLoading(false);
+      if (myId === reqIdRef.current) setLoading(false);
     }
   }, [year]);
 
@@ -55,6 +58,7 @@ export default function SmartSchoolDashboard() {
     });
     if (res.ok) {
       await fetchData();
+      setDetailRow(null);
     } else {
       Swal.fire({ icon: 'error', title: 'เปลี่ยนสถานะไม่สำเร็จ', text: (await res.json()).message });
     }
@@ -124,7 +128,7 @@ export default function SmartSchoolDashboard() {
         </div>
       )}
 
-      {loading ? (
+      {loading && !data ? (
         <div className="flex justify-center items-center h-60">
           <span className="loading loading-spinner loading-lg text-primary" />
         </div>

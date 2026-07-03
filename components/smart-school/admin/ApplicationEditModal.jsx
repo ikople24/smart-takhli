@@ -30,16 +30,26 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     imageUrl: row.imageUrl || [],
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [incomeSourceText, setIncomeSourceText] = useState((row.incomeSource || []).join(', '));
+  const [scholarshipText, setScholarshipText] = useState((row.receivedScholarship || []).join(', '));
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   const handleSave = async () => {
     setSaving(true);
     try {
+      const parseList = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
       const res = await fetch('/api/smart-school/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: row._id, ...form, gpa: form.gpa === '' ? null : form.gpa }),
+        body: JSON.stringify({
+          _id: row._id,
+          ...form,
+          gpa: form.gpa === '' ? null : form.gpa,
+          incomeSource: parseList(incomeSourceText),
+          receivedScholarship: parseList(scholarshipText),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'บันทึกไม่สำเร็จ');
@@ -62,7 +72,7 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     <div className="space-y-1">
       <label className="text-sm font-medium text-gray-700">{label}</label>
       <input type={type} className="input input-bordered input-sm w-full" value={form[key]}
-        onChange={(e) => set({ [key]: type === 'number' ? e.target.value : e.target.value })}
+        onChange={(e) => set({ [key]: e.target.value })}
         {...extra} />
     </div>
   );
@@ -86,7 +96,12 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
           </div>
           {input('คำนำหน้า', 'prefix')}
           {input('ชื่อ-นามสกุล', 'name')}
-          {input('เบอร์โทร', 'phone', 'tel', { maxLength: 10 })}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">เบอร์โทร</label>
+            <input type="tel" maxLength={10} className="input input-bordered input-sm w-full"
+              value={form.phone}
+              onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '') })} />
+          </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">ระดับการศึกษา</label>
             <select className="select select-bordered select-sm w-full" value={form.educationLevel}
@@ -156,18 +171,14 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">แหล่งรายได้ (คั่นด้วย ,)</label>
             <input type="text" className="input input-bordered input-sm w-full"
-              value={form.incomeSource.join(', ')}
-              onChange={(e) => set({
-                incomeSource: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-              })} />
+              value={incomeSourceText}
+              onChange={(e) => setIncomeSourceText(e.target.value)} />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">ทุนอื่นที่ได้รับ (คั่นด้วย ,)</label>
             <input type="text" className="input input-bordered input-sm w-full"
-              value={form.receivedScholarship.join(', ')}
-              onChange={(e) => set({
-                receivedScholarship: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-              })} />
+              value={scholarshipText}
+              onChange={(e) => setScholarshipText(e.target.value)} />
           </div>
           <div className="md:col-span-2 space-y-1">
             <label className="text-sm font-medium text-gray-700">หมายเหตุ</label>
@@ -182,13 +193,14 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
             <ImageUploads
               initialImages={form.imageUrl}
               onChange={(urls) => set({ imageUrl: urls })}
+              onUploadingChange={setUploading}
             />
           </div>
         </div>
 
         <div className="flex gap-2 p-4 border-t sticky bottom-0 bg-white">
           <button className="btn btn-secondary flex-1" onClick={onClose} disabled={saving}>ยกเลิก</button>
-          <button className="btn btn-primary flex-1" onClick={handleSave} disabled={saving}>
+          <button className="btn btn-primary flex-1" onClick={handleSave} disabled={saving || uploading}>
             {saving ? <span className="loading loading-spinner loading-sm" /> : 'บันทึก'}
           </button>
         </div>
