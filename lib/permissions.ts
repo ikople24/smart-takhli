@@ -66,10 +66,10 @@ export const ALL_PAGES: PagePermission[] = [
     hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   {
-    path: '/admin/education-map',
+    path: '/admin/smart-school',
     label: 'smart-school',
     icon: '🏫',
-    description: 'ระบบการศึกษา',
+    description: 'ระบบสำรวจการศึกษา/ทุนการศึกษา (ทะเบียนบุคคล + ใบสมัครรายปี)',
     category: 'management'
   },
   {
