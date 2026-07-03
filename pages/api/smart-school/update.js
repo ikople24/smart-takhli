@@ -1,0 +1,93 @@
+import mongoose from "mongoose";
+import dbConnect from "@/lib/dbConnect";
+import SchoolApplicant from "@/models/smart-school/SchoolApplicant";
+import SchoolApplication from "@/models/smart-school/SchoolApplication";
+import { isValidCitizenId } from "@/lib/smart-school/citizenId";
+import { notifySchoolEvent } from "@/lib/smart-school/notify";
+import { requireSchoolAdmin } from "./_auth";
+
+export default async function handler(req, res) {
+  if (req.method !== "PUT") {
+    return res.status(405).json({ message: "Method Not Allowed" });
+  }
+  const auth = await requireSchoolAdmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
+
+  try {
+    await dbConnect();
+    const {
+      _id, citizenId, prefix, name, phone,
+      educationLevel, schoolName, gradeLevel, gpa,
+      address, actualAddress, housingStatus, householdMembers, annualIncome,
+      incomeSource, familyStatus, receivedScholarship, takhliScholarshipHistory,
+      note, imageUrl, location,
+    } = req.body || {};
+
+    if (!_id) return res.status(400).json({ message: "Missing _id" });
+    if (!mongoose.Types.ObjectId.isValid(_id)) {
+      return res.status(400).json({ message: "_id ไม่ถูกต้อง" });
+    }
+
+    const application = await SchoolApplication.findById(_id);
+    if (!application) return res.status(404).json({ message: "Record not found" });
+    const applicant = await SchoolApplicant.findById(application.applicantRef);
+    if (!applicant) return res.status(404).json({ message: "Applicant not found" });
+
+    // --- ข้อมูลบุคคล (รวม backfill เลขบัตรให้รายเก่า) ---
+    if (citizenId !== undefined && citizenId !== null && citizenId !== "" &&
+        citizenId !== applicant.citizenId) {
+      if (!isValidCitizenId(citizenId)) {
+        return res.status(400).json({ message: "เลขบัตรประชาชนไม่ถูกต้อง" });
+      }
+      const dup = await SchoolApplicant.findOne({ citizenId, _id: { $ne: applicant._id } }).lean();
+      if (dup) {
+        return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับบุคคลอื่นแล้ว" });
+      }
+      applicant.citizenId = citizenId;
+    }
+    if (prefix !== undefined) applicant.prefix = prefix;
+    if (name) applicant.name = name;
+    if (phone !== undefined) applicant.phone = phone;
+    await applicant.save();
+
+    // --- ข้อมูลใบสมัคร ---
+    const before = JSON.stringify(application.imageUrl || []);
+    const assign = {
+      educationLevel, schoolName, gradeLevel,
+      address, actualAddress, housingStatus, note,
+    };
+    for (const [k, v] of Object.entries(assign)) {
+      if (v !== undefined) application[k] = v;
+    }
+    if (gpa !== undefined) application.gpa = gpa === null || gpa === "" ? null : parseFloat(gpa);
+    if (householdMembers !== undefined) application.householdMembers = parseInt(householdMembers) || 1;
+    if (annualIncome !== undefined) application.annualIncome = parseInt(annualIncome) || 0;
+    if (Array.isArray(incomeSource)) application.incomeSource = incomeSource;
+    if (Array.isArray(familyStatus)) application.familyStatus = familyStatus;
+    if (Array.isArray(receivedScholarship)) application.receivedScholarship = receivedScholarship;
+    if (Array.isArray(takhliScholarshipHistory)) application.takhliScholarshipHistory = takhliScholarshipHistory;
+    if (Array.isArray(imageUrl)) application.imageUrl = imageUrl.slice(0, 3);
+    if (location?.lat) application.location = { lat: location.lat, lng: location.lng };
+    await application.save();
+
+    const imagesChanged = JSON.stringify(application.imageUrl || []) !== before;
+    if (imagesChanged) {
+      await notifySchoolEvent("school.images_changed", {
+        applicationId: application.applicationId,
+        surveyYear: application.surveyYear,
+        name: `${applicant.prefix || ""} ${applicant.name}`.trim(),
+        educationLevel: application.educationLevel,
+        phone: applicant.phone,
+        address: application.address,
+        note: `แก้ไขรูปโดย ${auth.name || "แอดมิน"}`,
+        image: application.imageUrl,
+        location: application.location,
+      });
+    }
+
+    return res.status(200).json({ message: "Updated successfully", imagesChanged });
+  } catch (err) {
+    console.error("❌ smart-school update error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
