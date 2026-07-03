@@ -16,13 +16,17 @@ export default function IdentityStep({ onDone, disabled }) {
   const idValid = isValidCitizenId(citizenId);
 
   const post = async (url, body) => {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    } catch {
+      return { ok: false, status: 0, data: { message: 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่' } };
+    }
   };
 
   // รายเก่า: ค้นด้วยเลขบัตร
@@ -73,13 +77,15 @@ export default function IdentityStep({ onDone, disabled }) {
     // กันเลขซ้ำ: ถ้าเลขนี้มีในระบบแล้ว พาเข้าเส้นทางรายเก่า
     setLoading(true);
     const { ok, data } = await post('/api/smart-school/lookup', { citizenId });
-    setLoading(false);
-    if (ok && data.found) {
+    if (!ok) { setLoading(false); return setError(data.message || 'เกิดข้อผิดพลาด'); }
+    if (data.found) {
       setMode('renewal');
       setLookupState({ result: data.result });
       setError('เลขบัตรนี้เคยยื่นแล้ว — ระบบพาเข้าเส้นทางรายเก่าให้');
+      setLoading(false);
       return;
     }
+    setLoading(false);
     onDone({ citizenId, applicant: null, prevApplication: null });
   };
 
@@ -92,14 +98,14 @@ export default function IdentityStep({ onDone, disabled }) {
       <div className="space-y-2">
         <label className="font-extrabold text-sm text-gray-600">ท่านเคยยื่นแบบสำรวจนี้มาก่อนหรือไม่</label>
         <div className="flex gap-2 justify-center">
-          <button type="button" disabled={disabled}
+          <button type="button" disabled={disabled || loading}
             className={`btn btn-sm rounded-full flex-1 ${mode === 'new' ? 'btn-info' : 'btn-outline'}`}
-            onClick={() => { setMode('new'); setLookupState(null); setError(''); }}>
+            onClick={() => { setMode('new'); setLookupState(null); setSearchResults(null); setSelectedRef(null); setError(''); }}>
             รายใหม่ (ครั้งแรก)
           </button>
-          <button type="button" disabled={disabled}
+          <button type="button" disabled={disabled || loading}
             className={`btn btn-sm rounded-full flex-1 ${mode === 'renewal' ? 'btn-info' : 'btn-outline'}`}
-            onClick={() => { setMode('renewal'); setLookupState(null); setError(''); }}>
+            onClick={() => { setMode('renewal'); setLookupState(null); setSearchResults(null); setSelectedRef(null); setError(''); }}>
             รายเก่า (เคยยื่นแล้ว)
           </button>
         </div>
@@ -113,6 +119,8 @@ export default function IdentityStep({ onDone, disabled }) {
             onChange={(e) => {
               setCitizenId(e.target.value.replace(/\D/g, ''));
               setLookupState(null);
+              setSearchResults(null);
+              setSelectedRef(null);
               setError('');
             }} />
           {citizenId.length === 13 && !idValid && (

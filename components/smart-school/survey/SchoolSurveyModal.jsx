@@ -43,6 +43,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const reset = () => {
     setStep(1);
@@ -50,6 +51,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
     setFormData(EMPTY_FORM);
     setUseCurrent(false);
     setLocation(null);
+    setUploading(false);
   };
 
   const handleIdentityDone = ({ citizenId, applicant, prevApplication }) => {
@@ -69,9 +71,21 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         householdMembers: prev.householdMembers || 1,
         annualIncome: prev.annualIncome != null ? String(prev.annualIncome) : '',
       });
-      if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
+      if (prev.location?.lat) { setLocation({ lat: prev.location.lat, lng: prev.location.lng }); setUseCurrent(true); }
     }
     setStep(2);
+  };
+
+  const goToMedia = () => {
+    const partial = surveySchema.pick({
+      educationLevel: true, prefix: true, fullName: true, address: true, phone: true, annualIncome: true,
+    }).safeParse(formData);
+    if (!partial.success) {
+      const messages = partial.error.errors.map((e, i) => `${i + 1}. ${e.message}`).join('\n');
+      Swal.fire({ icon: 'warning', title: 'กรอกข้อมูลขั้นนี้ให้ครบก่อน', text: messages, confirmButtonText: 'ตกลง' });
+      return;
+    }
+    setStep(3);
   };
 
   const handleSubmit = async () => {
@@ -126,7 +140,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 bg-white/10 backdrop-blur-sm flex justify-center items-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4 relative">
-        <button className="absolute top-2 right-2 text-gray-500"
+        <button className="absolute top-2 right-2 text-gray-500" disabled={isSubmitting}
           onClick={() => { onClose(); reset(); }}>✕</button>
         <h2 className="text-lg font-semibold text-center text-blue-600">แบบฟอร์มสำรวจการศึกษา</h2>
 
@@ -156,7 +170,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
               <button className="btn btn-secondary flex-1" disabled={isSubmitting}
                 onClick={() => setStep(1)}>ย้อนกลับ</button>
               <button className="btn btn-primary flex-1" disabled={isSubmitting}
-                onClick={() => setStep(3)}>ถัดไป</button>
+                onClick={goToMedia}>ถัดไป</button>
             </div>
           </>
         )}
@@ -172,6 +186,8 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
             isSubmitting={isSubmitting}
             onSubmit={handleSubmit}
             onBack={() => setStep(2)}
+            uploading={uploading}
+            onUploadingChange={setUploading}
           />
         )}
       </div>
