@@ -16,7 +16,7 @@ import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
 import { BookOpen, Download } from "lucide-react";
 
-import EducationFormModal from "@/components/education/EducationFormModal";
+import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
 import ActivityFeed from "@/components/activities/ActivityFeed";
 import SiteStatsBar from "@/components/site-stats/SiteStatsBar";
 
@@ -188,7 +188,7 @@ export default function Home() {
         />
       )}
 
-      <EducationFormModal
+      <SchoolSurveyModal
         isOpen={showEducationForm}
         onClose={() => setShowEducationForm(false)}
       />
