@@ -48,10 +48,10 @@ export default async function handler(req, res) {
     if (prefix !== undefined) applicant.prefix = prefix;
     if (name) applicant.name = name;
     if (phone !== undefined) applicant.phone = phone;
-    await applicant.save();
 
     // --- ข้อมูลใบสมัคร ---
-    const before = JSON.stringify(application.imageUrl || []);
+    const imageKey = (arr) => JSON.stringify([...(arr || [])].sort());
+    const before = imageKey(application.imageUrl);
     const assign = {
       educationLevel, schoolName, gradeLevel,
       address, actualAddress, housingStatus, note,
@@ -59,7 +59,14 @@ export default async function handler(req, res) {
     for (const [k, v] of Object.entries(assign)) {
       if (v !== undefined) application[k] = v;
     }
-    if (gpa !== undefined) application.gpa = gpa === null || gpa === "" ? null : parseFloat(gpa);
+    if (gpa !== undefined) {
+      if (gpa === null || gpa === "") {
+        application.gpa = null;
+      } else {
+        const g = parseFloat(gpa);
+        application.gpa = Number.isNaN(g) ? null : Math.min(4, Math.max(0, g));
+      }
+    }
     if (householdMembers !== undefined) application.householdMembers = parseInt(householdMembers) || 1;
     if (annualIncome !== undefined) application.annualIncome = parseInt(annualIncome) || 0;
     if (Array.isArray(incomeSource)) application.incomeSource = incomeSource;
@@ -68,9 +75,21 @@ export default async function handler(req, res) {
     if (Array.isArray(takhliScholarshipHistory)) application.takhliScholarshipHistory = takhliScholarshipHistory;
     if (Array.isArray(imageUrl)) application.imageUrl = imageUrl.slice(0, 3);
     if (location?.lat) application.location = { lat: location.lat, lng: location.lng };
+
+    // validate ใบสมัครก่อนค่อยบันทึกทั้งคู่ — กันเคสบันทึกบุคคลไปแล้วแต่ใบสมัคร validate ไม่ผ่าน
+    await application.validate();
+    try {
+      await applicant.save();
+    } catch (err) {
+      // TOCTOU: สอง request ผูกเลขบัตรเดียวกันพร้อมกันอาจผ่าน pre-check ทั้งคู่ — unique index จับซ้ำได้ที่นี่
+      if (err.code === 11000) {
+        return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับบุคคลอื่นแล้ว" });
+      }
+      throw err;
+    }
     await application.save();
 
-    const imagesChanged = JSON.stringify(application.imageUrl || []) !== before;
+    const imagesChanged = imageKey(application.imageUrl) !== before;
     if (imagesChanged) {
       await notifySchoolEvent("school.images_changed", {
         applicationId: application.applicationId,
@@ -88,6 +107,9 @@ export default async function handler(req, res) {
     return res.status(200).json({ message: "Updated successfully", imagesChanged });
   } catch (err) {
     console.error("❌ smart-school update error:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: "ข้อมูลไม่ผ่านการตรวจสอบของระบบ" });
+    }
     return res.status(500).json({ message: "Server error" });
   }
 }

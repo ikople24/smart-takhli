@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       const a = app.applicantRef || {};
       return {
         ...app,
-        applicantRef: String(a._id || app.applicantRef),
+        applicantRef: String(a._id || app.applicantRef || ""),
         prefix: a.prefix || "",
         name: a.name || "",
         phone: a.phone || "",

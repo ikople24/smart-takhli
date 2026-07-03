@@ -22,13 +22,20 @@ export default async function handler(req, res) {
     const application = await SchoolApplication.findByIdAndDelete(_id);
     if (!application) return res.status(404).json({ message: "Record not found" });
 
-    const remaining = await SchoolApplication.countDocuments({
-      applicantRef: application.applicantRef,
-    });
+    // หมายเหตุ: ช่วงสั้น ๆ ระหว่างลบกับนับ อาจชนกับ submit พร้อมกันได้ (Mongo standalone ไม่มี transaction) — ยอมรับความเสี่ยงระดับ tool ภายใน
     let applicantDeleted = false;
-    if (remaining === 0) {
-      await SchoolApplicant.findByIdAndDelete(application.applicantRef);
-      applicantDeleted = true;
+    try {
+      const remaining = await SchoolApplication.countDocuments({
+        applicantRef: application.applicantRef,
+      });
+      if (remaining === 0) {
+        await SchoolApplicant.findByIdAndDelete(application.applicantRef);
+        applicantDeleted = true;
+      }
+    } catch (cascadeErr) {
+      // ใบสมัครถูกลบสำเร็จแล้ว — cascade ล้มเหลวไม่ควรรายงานเป็น 500 หลอกผู้ใช้
+      console.error("❌ smart-school delete cascade error:", cascadeErr);
+      return res.status(200).json({ message: "Deleted", applicantDeleted: false });
     }
 
     return res.status(200).json({ message: "Deleted", applicantDeleted });
