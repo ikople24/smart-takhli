@@ -71,7 +71,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         householdMembers: prev.householdMembers || 1,
         annualIncome: prev.annualIncome != null ? String(prev.annualIncome) : '',
       });
-      if (prev.location?.lat) { setLocation({ lat: prev.location.lat, lng: prev.location.lng }); setUseCurrent(true); }
+      if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
     }
     setStep(2);
   };

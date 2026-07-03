@@ -23,6 +23,11 @@ export default function MediaStep({
 
       <div className="space-y-2">
         <label className="font-extrabold text-sm text-gray-600">10. ตำแหน่งที่ตั้ง</label>
+        {location?.lat && (
+          <div className="alert alert-info text-xs">
+            📍 ใช้ตำแหน่งเดิมจากปีที่แล้ว ({location.lat.toFixed(5)}, {location.lng.toFixed(5)}) — เปิดสวิตช์ด้านล่างเพื่ออัปเดตเป็นตำแหน่งปัจจุบัน หากย้ายที่อยู่
+          </div>
+        )}
         <LocationConfirm
           useCurrent={useCurrent}
           onToggle={setUseCurrent}

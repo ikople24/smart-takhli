@@ -52,6 +52,7 @@ export default function IdentityStep({ onDone, disabled }) {
   // ไม่เจอ → ค้นชื่อ (เฉพาะ record ที่ยังไม่ผูกเลขบัตร)
   const handleSearchName = async () => {
     setError('');
+    setSelectedRef(null);
     setLoading(true);
     const { ok, data } = await post('/api/smart-school/lookup', { name: searchName });
     setLoading(false);
