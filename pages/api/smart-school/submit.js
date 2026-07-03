@@ -31,15 +31,26 @@ export default async function handler(req, res) {
 
     // หา/สร้างทะเบียนบุคคล + อัปเดตข้อมูลติดต่อล่าสุด
     let applicant = await SchoolApplicant.findOne({ citizenId });
-    const isNewApplicant = !applicant;
+    let isNewApplicant = !applicant;
     if (isNewApplicant) {
-      applicant = await SchoolApplicant.create({
-        citizenId,
-        prefix: prefix || "",
-        name: fullName,
-        phone: phone || "",
-      });
-    } else {
+      try {
+        applicant = await SchoolApplicant.create({
+          citizenId,
+          prefix: prefix || "",
+          name: fullName,
+          phone: phone || "",
+        });
+      } catch (err) {
+        // กันกดส่งซ้ำ/ยิงพร้อมกัน (double-submit) — ถือเป็นการ update ใบเดิม
+        if (err.code === 11000) {
+          applicant = await SchoolApplicant.findOne({ citizenId });
+          isNewApplicant = false;
+        } else {
+          throw err;
+        }
+      }
+    }
+    if (!isNewApplicant) {
       applicant.prefix = prefix || applicant.prefix;
       applicant.name = fullName;
       applicant.phone = phone || applicant.phone;
@@ -59,8 +70,8 @@ export default async function handler(req, res) {
       address: address || "",
       note: note || "",
       housingStatus: housingStatus || "ไม่ระบุ",
-      householdMembers: parseInt(householdMembers) || 1,
-      annualIncome: parseInt(annualIncome) || 0,
+      householdMembers: Math.max(1, parseInt(householdMembers) || 1),
+      annualIncome: Math.max(0, parseInt(annualIncome) || 0),
       imageUrl: image.slice(0, 3),
       location: { lat: location.lat, lng: location.lng },
       status: "รับคำร้อง",
@@ -77,12 +88,26 @@ export default async function handler(req, res) {
       Object.assign(application, fields);
       await application.save();
     } else {
-      application = await SchoolApplication.create({
-        applicantRef: applicant._id,
-        surveyYear,
-        applicationId: await nextApplicationId(surveyYear),
-        ...fields,
-      });
+      try {
+        application = await SchoolApplication.create({
+          applicantRef: applicant._id,
+          surveyYear,
+          applicationId: await nextApplicationId(surveyYear),
+          ...fields,
+        });
+      } catch (err) {
+        // กันกดส่งซ้ำ/ยิงพร้อมกัน (double-submit) — ถือเป็นการ update ใบเดิม
+        if (err.code === 11000) {
+          application = await SchoolApplication.findOne({
+            applicantRef: applicant._id,
+            surveyYear,
+          });
+          Object.assign(application, fields);
+          await application.save();
+        } else {
+          throw err;
+        }
+      }
     }
 
     await notifySchoolEvent(
@@ -108,6 +133,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("❌ smart-school submit error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
