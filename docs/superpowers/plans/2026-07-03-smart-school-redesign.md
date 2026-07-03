@@ -123,7 +123,7 @@ Run:
 ```bash
 node -e "
 const fs = require('fs');
-const load = (p) => eval(fs.readFileSync(p, 'utf8').replace(/export /g, ''));
+const load = (p) => (0, eval)(fs.readFileSync(p, 'utf8').replace(/export /g, '')); // indirect eval — ให้ function ประกาศลง global scope
 load('lib/smart-school/citizenId.js');
 load('lib/smart-school/mask.js');
 load('lib/smart-school/fiscalYear.js');
