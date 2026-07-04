@@ -15,51 +15,45 @@ export default async function handler(req, res) {
     await dbConnect();
     const year = parseInt(req.query.year) || getFiscalYearBE();
 
-    const [apps, yearsRaw, prevAwarded] = await Promise.all([
+    const [apps, yearsRaw] = await Promise.all([
       SchoolApplication.find({ surveyYear: year })
         .populate("applicantRef")
         .sort({ createdAt: -1 })
         .lean(),
       SchoolApplication.distinct("surveyYear"),
-      SchoolApplication.find({ surveyYear: year - 1, status: "ได้รับทุน" })
-        .select("applicantRef")
-        .lean(),
     ]);
 
-    const prevAwardedSet = new Set(prevAwarded.map((a) => String(a.applicantRef)));
+    // จัดกลุ่มครัวเรือนจาก householdKey (fallback normalize address)
+    const hkOf = (app) =>
+      app.householdKey ||
+      (String(app.address || "").replace(/\s+/g, "").toLowerCase().length >= 6
+        ? String(app.address || "").replace(/\s+/g, "").toLowerCase()
+        : null);
 
-    // จัดกลุ่มครัวเรือน: key = เบอร์โทร (p:) หรือที่อยู่ตรงกันทั้งข้อความ (a:)
-    const keysOf = (app) => {
-      const phone = (app.applicantRef?.phone || "").trim();
-      const addr = (app.address || "").trim();
-      return [phone && `p:${phone}`, addr && `a:${addr}`].filter(Boolean);
-    };
     const groups = {};
     for (const app of apps) {
-      for (const key of keysOf(app)) (groups[key] = groups[key] || []).push(app);
+      const k = hkOf(app);
+      if (k) (groups[k] = groups[k] || []).push(app);
     }
 
     const applications = apps.map((app) => {
-      const keys = keysOf(app);
-      const mates = new Map();
-      for (const k of keys) {
-        for (const m of groups[k] || []) {
-          if (String(m._id) !== String(app._id)) mates.set(String(m._id), m);
-        }
-      }
       const a = app.applicantRef || {};
+      const k = hkOf(app);
+      const members = (groups[k] || [])
+        .filter((m) => String(m._id) !== String(app._id))
+        .map((m) => ({
+          ref: String(m._id),
+          name: (m.applicantRef?.prefix || "") + (m.applicantRef?.name || ""),
+          level: m.educationLevel || "",
+          status: m.status,
+        }));
       return {
         ...app,
         applicantRef: String(a._id || app.applicantRef || ""),
         prefix: a.prefix || "",
         name: a.name || "",
         phone: a.phone || "",
-        citizenId: a.citizenId || null,
-        flags: {
-          prevYearAwarded: prevAwardedSet.has(String(a._id)),
-          householdKey: keys.find((k) => (groups[k] || []).length >= 2) || null,
-          householdAwardedOther: [...mates.values()].some((m) => m.status === "ได้รับทุน"),
-        },
+        household: { key: k, members },
       };
     });
 
