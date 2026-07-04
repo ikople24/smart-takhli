@@ -78,7 +78,7 @@ export default function AllocationBoard({ rows, onRefresh }) {
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `ผู้ได้รับทุน_${levelTab}.csv`;
+    a.download = `ผู้ได้รับทุน_${levelTab.replace(/[/\\]/g, '-')}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -91,7 +91,7 @@ export default function AllocationBoard({ rows, onRefresh }) {
           const over = awarded > b.quota;
           return (
             <button key={b.key}
-              className={`btn btn-xs ${levelTab === b.key ? 'btn-primary' : 'btn-outline'} ${over ? 'btn-error' : ''}`}
+              className={`btn btn-xs ${over ? 'btn-error' : levelTab === b.key ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setLevelTab(b.key)}>
               {b.label} {awarded}/{b.quota}
             </button>

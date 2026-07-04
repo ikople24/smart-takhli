@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import SchoolApplication, { APPLICATION_STATUSES } from "@/models/smart-school/SchoolApplication";
 import { levelBucket, bucketInfo } from "@/lib/smart-school/scholarshipLevels";
@@ -10,7 +11,6 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
     const { _id, status } = req.body || {};
-    const mongoose = (await import("mongoose")).default;
     if (!_id || !mongoose.Types.ObjectId.isValid(_id) || !APPLICATION_STATUSES.includes(status)) {
       return res.status(400).json({ message: "ต้องระบุ _id และ status ที่ถูกต้อง" });
     }
