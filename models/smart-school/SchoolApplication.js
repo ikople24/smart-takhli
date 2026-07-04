@@ -50,6 +50,17 @@ const SchoolApplicationSchema = new mongoose.Schema(
     },
     location: { lat: Number, lng: Number },
 
+    // --- เกณฑ์พิจารณาทุน (เฟส scholarship) ---
+    residencyOverOneYear: { type: Boolean, default: null }, // มีชื่อในทะเบียนบ้านในเขต ≥1 ปี (จากฟอร์ม)
+    schoolEligibility: { type: String, enum: ["ok", "block"], default: "ok" }, // block ถ้าตรง blocklist
+    eligibilityChecklist: {
+      residencyVerified: { type: Boolean, default: false },
+      schoolVerified: { type: Boolean, default: false },
+      documentsVerified: { type: Boolean, default: false },
+    },
+    householdKey: { type: String, default: null, index: true }, // จัดกลุ่มครัวเรือน
+    scholarshipAmount: { type: Number, default: null }, // เงินทุนเมื่อ "ได้รับทุน"
+
     status: { type: String, enum: APPLICATION_STATUSES, default: "รับคำร้อง" },
     statusUpdatedBy: { type: String, default: "" },
     statusUpdatedAt: { type: Date, default: null },
