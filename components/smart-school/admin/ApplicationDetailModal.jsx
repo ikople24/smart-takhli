@@ -60,6 +60,9 @@ export default function ApplicationDetailModal({ row, onClose, onSetStatus, onEd
             <Row label="หมายเหตุ" value={row.note} />
             <Row label="สถานะ"
               value={`${row.status}${row.statusUpdatedBy ? ` (โดย ${row.statusUpdatedBy})` : ''}`} />
+            {row.scholarshipAmount != null && (
+              <Row label="จำนวนเงินทุน" value={`${row.scholarshipAmount.toLocaleString()} บาท`} />
+            )}
           </div>
 
           {(row.imageUrl || []).length > 0 && (

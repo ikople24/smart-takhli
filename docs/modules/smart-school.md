@@ -1,30 +1,71 @@
 # Smart School (สำรวจการศึกษา / ทุนการศึกษา)
 
-ทะเบียนผู้ขอทุนแบบ "บุคคล + ใบสมัครรายปีงบประมาณ" — รายเก่ายืนยันตัวด้วย
-เลขบัตร 13 หลักแล้วดึงข้อมูลปีที่แล้วมาแก้ไขได้ ข้อมูลทุกปีเก็บครบ
-(spec: `docs/superpowers/specs/2026-07-03-smart-school-redesign-design.md`)
+ทะเบียนผู้ขอทุนแบบ "บุคคล + ใบสมัครรายปีงบประมาณ" — รายเก่าค้นด้วยชื่อ-นามสกุล
+แล้วยืนยันตัวเบา ๆ ด้วยเลข 4 ตัวท้ายเบอร์โทรก่อนดึงข้อมูลปีที่แล้วมาแก้ไข
+(กันคนเดาชื่อคนอื่นแล้ว harvest ที่อยู่/รายได้/GPS/เบอร์โทร — เบอร์ใช้ร่วมกันใน
+บ้านเดียวกันยืนยันผ่านได้ เพราะเป็นแค่ soft confirm ไม่ใช่ตัวชี้ตัวเฉพาะคน)
+ข้อมูลทุกปีเก็บครบ
+(spec: `docs/superpowers/specs/2026-07-03-smart-school-redesign-design.md`,
+ต่อยอดกระบวนการพิจารณา/จัดสรรทุน:
+`docs/superpowers/specs/2026-07-04-smart-school-scholarship-consideration-design.md`)
 
 ## หน้า
 
-- `/admin/smart-school` — แดชบอร์ด (แท็บปีงบ, ตาราง+แผนที่, สถานะ 4 ค่า,
-  ป้ายกติกาทุน 1 คน/ครัวเรือน/ปี + หมุนเวียนผู้รับ)
+- `/admin/smart-school` — แดชบอร์ด (แท็บปีงบ, มุมมองตาราง/แผนที่/โรงเรียนไม่ผ่าน/
+  จัดสรรทุน, สถานะ 4 ค่า, แท็กครัวเรือนเดียวกันคลิกดูสมาชิกได้)
 - `/admin/education-map` — path เดิม redirect มาหน้านี้
 - ฟอร์มสาธารณะ: wizard ใน `components/smart-school/survey/` เปิดจากหน้าแรก
 
 ## API — `pages/api/smart-school/`
 
-- public: `lookup` (ค้นมาสก์), `verify` (ยืนยันเลข 13 หลัก + ผูกเลขให้รายเก่า),
-  `submit` (ใบสมัครปีปัจจุบัน + n8n)
-- admin (`_auth.js` pattern เดียวกับ pm25): `list` (+flags ครัวเรือน),
-  `update` (รวมรูป + backfill เลขบัตร), `status`, `delete`
+- public: `lookup` (ค้นด้วยชื่อ คืนผลมาสก์ ≤10 รายการ), `prefill` (POST
+  `{ ref, phoneLast4 }` — ต้องส่งเลข 4 ตัวท้ายเบอร์โทรตรงกับที่มีในระบบก่อนคืน
+  ข้อมูลใบสมัครล่าสุดของ `ref` นั้น; ไม่ตรง = 403), `submit` (ใบสมัครปีปัจจุบัน +
+  n8n), `blocked-schools/public` (GET รายชื่อโรงเรียนไม่ผ่านเกณฑ์ ไม่ต้อง auth
+  ให้ฟอร์มเตือน)
+- admin (`_auth.js` pattern เดียวกับ pm25): `list` (จัดกลุ่มครัวเรือนจาก
+  `householdKey` แนบ `household.members` ต่อแถว), `update` (รวมรูป), `status`,
+  `delete`, `blocked-schools/index` (GET/PUT/DELETE จัดการ blocklist)
+- `verify.js` (ยืนยันเลขบัตร 13 หลัก) **ถูกลบแล้ว** — เส้นทางรายเก่าเปลี่ยนเป็น
+  `lookup` → เลือก ref → `prefill` (ยืนยันด้วยเลข 4 ตัวท้ายเบอร์โทรแทน)
 
 ## Models — `models/smart-school/`
 
-- `SchoolApplicant` → `school_applicants` (บุคคล; `citizenId` unique sparse)
+- `SchoolApplicant` → `school_applicants` (บุคคล; **ไม่มี** `citizenId` แล้ว —
+  เลิกใช้เลขบัตรเป็น credential ยืนยันตัวตน)
 - `SchoolApplication` → `school_applications` (ใบสมัคร/ปี; unique
-  `applicantRef+surveyYear`; เลขใบสมัคร `TKC69-001` ออกผ่าน `school_counters`)
+  `applicantRef+surveyYear`; เลขใบสมัคร `TKC69-001` ออกผ่าน `school_counters`;
+  ฟิลด์เกณฑ์/จัดสรรทุน: `residencyOverOneYear` (bool|null),
+  `schoolEligibility` (`ok`/`block`), `eligibilityChecklist`
+  (`residencyVerified`/`schoolVerified`/`documentsVerified`), `householdKey`
+  (คีย์ครัวเรือน normalize จากที่อยู่), `scholarshipAmount`)
+- `BlockedSchool` → `school_blocked_schools` (ชื่อโรงเรียนที่ไม่ผ่านเกณฑ์ —
+  เอกชน/นอกเขต; แอดมินเพิ่ม/ลบเองผ่านหน้าแอดมิน ไม่มี whitelist — โรงเรียนที่ไม่
+  อยู่ในลิสต์ถือว่า `ok` โดยปริยาย)
 - collection เดิม `educationregisters` **ไม่ถูกแตะ** — backup ถาวร
   (migrate ด้วย `scripts/migrate-education-to-smart-school.js`)
+
+## lib/smart-school/
+
+- `scholarshipLevels.js` — ค่าคงที่โควตา + จำนวนเงินทุนต่อระดับ (`levelBucket`)
+  ปี 2569 (แก้ปีถัดไปที่ไฟล์นี้ที่เดียว) พร้อม helper `levelBucket()` (แม็ป
+  educationLevel → กลุ่มระดับ), `bucketInfo()`, `normalizeSchool()`,
+  `householdKeyOf()`
+- `mask.js`, `fiscalYear.js`, `notify.js` — เดิม
+
+## ครัวเรือนเดียวกัน + จัดสรรทุน (แอดมิน)
+
+- `householdKey` คำนวณจากที่อยู่ (normalize ตัดช่องว่าง/lowercase) เก็บตอน
+  submit/update — `list.js` จับกลุ่มด้วยคีย์นี้แล้วแนบ `household.members`
+  (ไม่รวมตัวเอง) ต่อแถว; ตาราง/`ApplicationDetailModal` แสดงแท็ก "🏠 บ้านเดียว
+  กับ" คลิกดูรายละเอียดสมาชิกได้
+- `AllocationBoard` (แท็บ "จัดสรรทุน" ใน dashboard) — โต๊ะช่วยเจ้าหน้าที่คัดเลือก
+  ผู้รับทุนตามโควตาแต่ละระดับจาก `scholarshipLevels.js`; **decision-support
+  เท่านั้น ไม่มี auto-ranking** — เจ้าหน้าที่เลือกเอง กด "ให้ทุน" แล้วตั้ง
+  `status='ได้รับทุน'` + `scholarshipAmount`; `ApplicationDetailModal` โชว์
+  "จำนวนเงินทุน" เมื่อมีค่า
+- `BlockedSchoolsPanel` (แท็บ "โรงเรียนไม่ผ่าน") — ดู/เพิ่ม/ลบ blocklist ผ่าน
+  `blocked-schools/index`
 
 ## n8n
 

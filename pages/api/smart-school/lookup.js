@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       applicants.map(async (a) => {
         const latest = await SchoolApplication.findOne({ applicantRef: a._id })
           .sort({ surveyYear: -1 })
-          .select("surveyYear educationLevel address")
+          .select("surveyYear educationLevel")
           .lean();
         return {
           ref: String(a._id),
