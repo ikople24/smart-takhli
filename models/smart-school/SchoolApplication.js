@@ -60,6 +60,7 @@ const SchoolApplicationSchema = new mongoose.Schema(
     },
     householdKey: { type: String, default: null, index: true }, // จัดกลุ่มครัวเรือน
     scholarshipAmount: { type: Number, default: null }, // เงินทุนเมื่อ "ได้รับทุน"
+    scholarshipRank: { type: Number, default: null, min: 1 }, // ลำดับที่เจ้าหน้าที่จัดเอง (ต่อระดับ)
 
     status: { type: String, enum: APPLICATION_STATUSES, default: "รับคำร้อง" },
     statusUpdatedBy: { type: String, default: "" },
