@@ -5,6 +5,7 @@ import ApplicationTable from './ApplicationTable';
 import ApplicationDetailModal from './ApplicationDetailModal';
 import ApplicationEditModal from './ApplicationEditModal';
 import BlockedSchoolsPanel from './BlockedSchoolsPanel';
+import AllocationBoard from './AllocationBoard';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
 
@@ -35,23 +36,7 @@ export default function SmartSchoolDashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // เปลี่ยนสถานะ — เตือนก่อนตั้ง "ได้รับทุน" ถ้าขัดกติกาครัวเรือน (เตือนอย่างเดียว ไม่บล็อก)
   const handleSetStatus = async (row, status) => {
-    if (status === 'ได้รับทุน' && (row.flags?.prevYearAwarded || row.flags?.householdAwardedOther)) {
-      const reasons = [
-        row.flags.prevYearAwarded && '• คนนี้ได้รับทุนปีที่แล้ว — ตามกติกาต้องหมุนเวียนเปลี่ยนคน',
-        row.flags.householdAwardedOther && '• ครัวเรือนเดียวกัน (เบอร์/ที่อยู่ตรงกัน) มีผู้ได้รับทุนปีนี้แล้ว',
-      ].filter(Boolean).join('\n');
-      const c = await Swal.fire({
-        icon: 'warning',
-        title: 'ขัดกติกาทุน 1 คน/ครัวเรือน/ปี',
-        text: reasons,
-        showCancelButton: true,
-        confirmButtonText: 'ยืนยันให้ทุน (เจ้าหน้าที่ตัดสิน)',
-        cancelButtonText: 'ยกเลิก',
-      });
-      if (!c.isConfirmed) return;
-    }
     const res = await fetch('/api/smart-school/status', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -111,6 +96,8 @@ export default function SmartSchoolDashboard() {
             onClick={() => setView('map')}>แผนที่</button>
           <button className={`btn btn-sm join-item ${view === 'blocked' ? 'btn-active' : ''}`}
             onClick={() => setView('blocked')}>โรงเรียนไม่ผ่าน</button>
+          <button className={`btn btn-sm join-item ${view === 'allocation' ? 'btn-active' : ''}`}
+            onClick={() => setView('allocation')}>จัดสรรทุน</button>
         </div>
       </div>
 
@@ -139,6 +126,8 @@ export default function SmartSchoolDashboard() {
         </div>
       ) : view === 'blocked' ? (
         <BlockedSchoolsPanel />
+      ) : view === 'allocation' ? (
+        <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
       ) : view === 'map' ? (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <MapPoints data={data?.applications || []} />
