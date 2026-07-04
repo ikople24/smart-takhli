@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import { z } from 'zod';
 import IdentityStep from './IdentityStep';
@@ -16,6 +16,8 @@ const EMPTY_FORM = {
   housingStatus: 'ไม่ระบุ',
   householdMembers: 1,
   annualIncome: '',
+  schoolName: '',
+  residencyOverOneYear: null,
 };
 
 const surveySchema = z.object({
@@ -35,15 +37,25 @@ const surveySchema = z.object({
 });
 
 // แบบฟอร์มสำรวจการศึกษา wizard 3 ขั้น (แทน EducationFormModal เดิม)
-// ขั้น 1 ระบุตัวตนด้วยเลข 13 หลัก → ขั้น 2 ข้อมูล (prefill ถ้ารายเก่า) → ขั้น 3 รูป+พิกัด
+// ขั้น 1 ระบุตัวตนด้วยค้นชื่อ → ขั้น 2 ข้อมูล (prefill ถ้ารายเก่า) → ขั้น 3 รูป+พิกัด
 export default function SchoolSurveyModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
-  const [identity, setIdentity] = useState(null); // { citizenId, applicant, prevApplication }
+  const [identity, setIdentity] = useState(null); // { ref, applicant, prevApplication }
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [useCurrent, setUseCurrent] = useState(false);
   const [location, setLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [blockedSchools, setBlockedSchools] = useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/smart-school/blocked-schools/public')
+        .then((r) => (r.ok ? r.json() : { items: [] }))
+        .then((d) => setBlockedSchools(d.items || []))
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
   const reset = () => {
     setStep(1);
@@ -54,8 +66,8 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
     setUploading(false);
   };
 
-  const handleIdentityDone = ({ citizenId, applicant, prevApplication }) => {
-    setIdentity({ citizenId, applicant, prevApplication });
+  const handleIdentityDone = ({ ref, applicant, prevApplication }) => {
+    setIdentity({ ref, applicant, prevApplication });
     if (applicant) {
       // รายเก่า: prefill จากปีล่าสุด (รูปไม่ prefill — ถ่ายใหม่ทุกปี)
       const prev = prevApplication || {};
@@ -70,6 +82,8 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         housingStatus: prev.housingStatus || 'ไม่ระบุ',
         householdMembers: prev.householdMembers || 1,
         annualIncome: prev.annualIncome != null ? String(prev.annualIncome) : '',
+        schoolName: prev.schoolName || '',
+        residencyOverOneYear: prev.residencyOverOneYear ?? null,
       });
       if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
     }
@@ -107,7 +121,9 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          citizenId: identity.citizenId,
+          ref: identity.ref,
+          schoolName: formData.schoolName,
+          residencyOverOneYear: formData.residencyOverOneYear,
           annualIncome: parseInt(formData.annualIncome) || 0,
           location,
         }),
@@ -165,6 +181,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
               prevApplication={identity?.prevApplication}
               prevYear={prevYear}
               disabled={isSubmitting}
+              blockedSchools={blockedSchools}
             />
             <div className="flex gap-2 pt-2">
               <button className="btn btn-secondary flex-1" disabled={isSubmitting}

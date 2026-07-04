@@ -9,7 +9,7 @@ function PrevHint({ year, value }) {
 }
 
 // ขั้นที่ 2: ข้อมูลผู้ขอ — formData/setFormData ถือ state ที่ orchestrator
-export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled }) {
+export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled, blockedSchools }) {
   const set = (patch) => setFormData({ ...formData, ...patch });
   const prev = prevApplication || {};
 
@@ -115,6 +115,35 @@ export default function InfoStep({ formData, setFormData, prevApplication, prevY
           </div>
         )}
         <PrevHint year={prevYear} value={prev.annualIncome} />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-extrabold text-sm text-gray-600">9. สถานศึกษา</label>
+        <input type="text" placeholder="ชื่อสถานศึกษา"
+          value={formData.schoolName || ''} disabled={disabled}
+          onChange={(e) => set({ schoolName: e.target.value })}
+          className="input input-bordered w-full" />
+        {(() => {
+          const clean = (formData.schoolName || '').replace(/\s+/g, ' ').trim();
+          const hit = (blockedSchools || []).find((s) => s.name === clean);
+          if (hit) return <p className="text-xs text-error">⚠️ โรงเรียนนี้เคยไม่ผ่านเกณฑ์ (เอกชน/นอกเขต) — โปรดตรวจสอบกับเจ้าหน้าที่</p>;
+          return null;
+        })()}
+        <PrevHint year={prevYear} value={prev.schoolName} />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-extrabold text-sm text-gray-600">10. ทะเบียนบ้าน</label>
+        <p className="text-xs text-gray-500">ท่านมีชื่ออยู่ในทะเบียนบ้านในเขตเทศบาลเมืองตาคลีมาแล้วเกิน 1 ปีหรือไม่</p>
+        <div className="flex gap-2">
+          {[['ใช่', true], ['ไม่ใช่/ไม่แน่ใจ', false]].map(([label, val]) => (
+            <button key={label} type="button" disabled={disabled}
+              className={`btn btn-sm rounded-full flex-1 ${formData.residencyOverOneYear === val ? 'btn-info' : 'btn-outline'}`}
+              onClick={() => set({ residencyOverOneYear: val })}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
