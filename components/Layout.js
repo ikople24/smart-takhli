@@ -9,7 +9,7 @@ const ADMIN_META = {
   '/admin/dashboard':                 { title: 'แดชบอร์ด' },
   '/admin/manage-complaints':         { title: 'การร้องเรียน' },
   '/admin/smart-health':              { title: 'Smart Health' },
-  '/admin/education-map':             { title: 'Smart School' },
+  '/admin/smart-school':              { title: 'Smart School' },
   '/admin/register-user':             { title: 'จัดการผู้ใช้งาน' },
   '/admin/manage-activities':         { title: 'จัดการกิจกรรม' },
   '/admin/pm25-settings':             { title: 'จัดการ PM2.5' },

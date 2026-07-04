@@ -1,4 +1,4 @@
-// components/education/MapEducationPoints.js
+// components/smart-school/admin/MapPoints.js
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -64,7 +64,7 @@ const createCustomIcon = (level) => {
   });
 };
 
-export default function MapEducationPoints({ data }) {
+export default function MapPoints({ data }) {
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
