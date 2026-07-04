@@ -8,6 +8,7 @@ export default function IdentityStep({ onDone, disabled }) {
   const [searchName, setSearchName] = useState('');
   const [searchResults, setSearchResults] = useState(null); // null | []
   const [selectedRef, setSelectedRef] = useState(null);
+  const [phoneLast4, setPhoneLast4] = useState('');
 
   const post = async (url, body) => {
     try {
@@ -31,13 +32,14 @@ export default function IdentityStep({ onDone, disabled }) {
     setLoading(false);
     if (!ok) return setError(data.message || 'เกิดข้อผิดพลาด');
     setSearchResults(data.results || []);
+    setPhoneLast4('');
   };
 
   // เลือกรายการ → ดึงข้อมูลใบล่าสุดมา prefill
   const handlePickPrev = async () => {
     setError('');
     setLoading(true);
-    const { ok, data } = await post('/api/smart-school/prefill', { ref: selectedRef });
+    const { ok, data } = await post('/api/smart-school/prefill', { ref: selectedRef, phoneLast4 });
     setLoading(false);
     if (!ok) return setError(data.message || 'ดึงข้อมูลไม่สำเร็จ');
     onDone({ ref: data.applicant.ref, applicant: data.applicant, prevApplication: data.application });
@@ -54,12 +56,12 @@ export default function IdentityStep({ onDone, disabled }) {
         <div className="flex gap-2 justify-center">
           <button type="button" disabled={disabled || loading}
             className={`btn btn-sm rounded-full flex-1 ${mode === 'new' ? 'btn-info' : 'btn-outline'}`}
-            onClick={() => { setMode('new'); setSearchResults(null); setSelectedRef(null); setError(''); }}>
+            onClick={() => { setMode('new'); setSearchResults(null); setSelectedRef(null); setPhoneLast4(''); setError(''); }}>
             รายใหม่ (ครั้งแรก)
           </button>
           <button type="button" disabled={disabled || loading}
             className={`btn btn-sm rounded-full flex-1 ${mode === 'renewal' ? 'btn-info' : 'btn-outline'}`}
-            onClick={() => { setMode('renewal'); setSearchResults(null); setSelectedRef(null); setError(''); }}>
+            onClick={() => { setMode('renewal'); setSearchResults(null); setSelectedRef(null); setPhoneLast4(''); setError(''); }}>
             รายเก่า (เคยยื่นแล้ว)
           </button>
         </div>
@@ -97,8 +99,13 @@ export default function IdentityStep({ onDone, disabled }) {
                   {r.lastYear ? ` · ปีงบ ${r.lastYear}` : ''}
                 </label>
               ))}
+              <input type="tel" inputMode="numeric" maxLength={4}
+                className="input input-bordered input-sm w-full"
+                placeholder="ยืนยันตัวตน: เลข 4 ตัวท้ายเบอร์โทรที่เคยให้ไว้"
+                value={phoneLast4} disabled={disabled}
+                onChange={(e) => setPhoneLast4(e.target.value.replace(/\D/g, ''))} />
               <button type="button" className="btn btn-success btn-sm w-full"
-                disabled={!selectedRef || loading || disabled} onClick={handlePickPrev}>
+                disabled={!selectedRef || phoneLast4.length !== 4 || loading || disabled} onClick={handlePickPrev}>
                 ใช่ ข้อมูลของฉัน — ดึงข้อมูลเดิมมาแก้ไข
               </button>
             </div>
