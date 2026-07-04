@@ -16,7 +16,7 @@
 |---|---|
 | การค้นในฟอร์มสาธารณะ | **เลิกใช้เลขบัตร 13 หลัก** — ค้นด้วยชื่อ-นามสกุล, ตัวตนภายในใช้ `_id`, เจ้าหน้าที่ยืนยันเอกสารเอง |
 | การจัดสรรทุน | **decision-support** — ระบบแสดงโควตา/ผู้ผ่านเกณฑ์/กลุ่มครัวเรือน แล้ว**เจ้าหน้าที่จัดอันดับ+เลือกเอง** (ไม่มี auto-ranking) |
-| เกณฑ์โรงเรียน | whitelist สถาบัน (โรงเรียนรัฐ) — สร้างจากไฟล์ผู้ได้ทุนปี 68 |
+| เกณฑ์โรงเรียน | **blocklist โรงเรียนที่ไม่ผ่าน** (เอกชน/นอกเขต) — แอดมินเพิ่มเองได้ (ไม่ import ไฟล์); ฟอร์มเตือนเมื่อพิมพ์ชื่อตรง. เหตุผลไม่ผ่านหลัก ๆ จากไฟล์ 68: เอกชน/ต่อยอด, นอกเขต, ทะเบียนบ้าน<1ปี |
 | เกณฑ์ทะเบียนบ้าน | ถาม yes/no ตอนสมัคร เก็บเป็นคอลัมน์ + เจ้าหน้าที่ checklist |
 | ครัวเรือนเดียวกัน | จับกลุ่มจากที่อยู่ + แท็ก "บ้านเดียวกับ [ชื่อ]" คลิกดูได้ |
 | กติกาบ้านเดียวกัน (แก้จากเดิม) | ระดับสูงสุดพิจารณาก่อน (คำแนะนำ); ถ้าโควตาเหลือ บ้านเดียวกันรับได้หลายคน; **เคยได้ทุนปีก่อนไม่บล็อก** |
@@ -45,8 +45,8 @@
 ### models/smart-school/SchoolApplication.js — เพิ่มฟิลด์
 - `residencyOverOneYear: Boolean|null` (default null) — คำตอบ "มีชื่อในทะเบียนบ้าน
   ในเขตเทศบาล ≥1 ปี" จากฟอร์ม (null=ยังไม่ตอบ)
-- `schoolEligibility: String` enum `['allow','block','unknown']` default `unknown`
-  — ผลเทียบ `schoolName` กับ whitelist ตอน submit (คำนวณ + เก็บ; เจ้าหน้าที่แก้ได้)
+- `schoolEligibility: String` enum `['ok','block']` default `ok`
+  — `block` เมื่อ `schoolName` ตรงกับ blocklist ตอน submit (คำนวณ + เก็บ; เจ้าหน้าที่แก้ได้)
 - `eligibilityChecklist: { residencyVerified: Boolean, schoolVerified: Boolean,
   documentsVerified: Boolean }` (default false ทั้งหมด) — เจ้าหน้าที่ติ๊กยืนยัน
 - `householdKey: String|null` — คีย์ครัวเรือน (normalize จากที่อยู่) เก็บตอน submit/update
@@ -55,37 +55,29 @@
   = amount ของ levelBucket)
 - คง `status` 4 ค่าเดิม; `ได้รับทุน` = ผ่านการจัดสรร
 
-### models/smart-school/SchoolInstitution.js (ใหม่)
-- collection `school_institutions`
-- `name: String` (unique, normalize ช่องว่าง), `kind: String` enum
-  `['public','private']`, `source: String` (`'import-2568'|'manual'`),
-  `note: String`
-- ใช้เป็น whitelist: `public`=allow, `private`=block
+### models/smart-school/BlockedSchool.js (ใหม่)
+- collection `school_blocked_schools`
+- `name: String` (unique, normalize ช่องว่าง), `reason: String` enum
+  `['private','out-of-district','other']` default `private`, `note: String`
+- รายการโรงเรียนที่ **ไม่ผ่านเกณฑ์** — แอดมินเพิ่ม/ลบเองได้ (seed ค่าเริ่มต้นจาก
+  ชื่อ รร.เอกชนที่ผู้ใช้ให้). ทุกโรงเรียนที่ไม่อยู่ในลิสต์ = `ok` โดยปริยาย
+  (ไม่ต้องมี whitelist โรงเรียนรัฐ)
 
-## เฟส C — Import ไฟล์ 68 → whitelist สถาบัน (ทำก่อน)
+## เฟส C — Blocklist โรงเรียนที่ไม่ผ่าน (ทำก่อน)
 
-> **สำคัญ: ไม่ import "คน"/ใบสมัครจาก CSV เข้าระบบ** (ทั้งคนผ่านและไม่ผ่าน) —
-> ปี 69 ทุกคนสมัครใหม่เข้าเงื่อนไขเดิม. ไฟล์ 68 ใช้แค่ 2 อย่าง: (1) ดึงรายชื่อ
-> โรงเรียนไปทำ whitelist (2) เหตุผลที่ไม่ผ่าน (เอกชน/ต่อยอด, ทะเบียนบ้าน<1ปี)
-> เป็นที่มาของ "ตัวเลือก/เกณฑ์" ในฟอร์ม (เฟส A) — CSV ไม่แตะ collection
-> `school_applicants`/`school_applications`
+> **ไม่ import ไฟล์/ไม่ import คน.** ไฟล์ 68 ใช้แค่เป็นที่มาของ (1) เหตุผลที่ไม่ผ่าน
+> (เอกชน/ต่อยอด, นอกเขต, ทะเบียนบ้าน<1ปี) → ออกแบบ 2 signal ในฟอร์ม (เตือนโรงเรียน +
+> คำถามทะเบียนบ้าน), (2) รายชื่อ รร.เอกชนไม่กี่ชื่อ → seed blocklist เริ่มต้น
+> (ผู้ใช้พิมพ์ชื่อให้; ชื่อในไฟล์ encoding เพี้ยน decode เป๊ะไม่ได้)
 
-**สคริปต์** `scripts/import-institutions-2568.js` (idempotent, --dry-run) —
-เขียนเฉพาะ collection `school_institutions`:
-- อ่าน CSV (UTF-8; ไฟล์ต้นฉบับเป็น mojibake — decode/re-save เป็น UTF-8 ก่อน วางที่
-  `scripts/data/scholarship-2568.csv`)
-- แถวที่**ผ่าน** (มีเงินทุน/ไม่มีหมายเหตุปฏิเสธ) → `สถานศึกษา` เข้า whitelist เป็น
-  `public`
-- แถวที่**ไม่ผ่านเพราะ "โรงเรียนต่อยอด/เอกชน"** (ตรวจจาก `หมายเหตุ`) → `สถานศึกษา`
-  เป็น `private`
-- normalize ชื่อ (ตัดช่องว่างซ้ำ, trim) แล้ว upsert; ถ้าโรงเรียนซ้ำทั้ง public/private
-  ให้ `private` ชนะ (กันพลาด) + log ให้เจ้าหน้าที่ทวน
-
-**API admin** `pages/api/smart-school/institutions/` — `list` (GET),
-`upsert` (PUT: เพิ่ม/แก้ public↔private), `delete` — auth `requireSchoolAdmin`
-
-**หน้าแอดมิน** เพิ่มแท็บ/ปุ่ม "สถานศึกษา (whitelist)" ใน `/admin/smart-school`
-(หรือหน้าย่อย) ให้เจ้าหน้าที่ดู/แก้รายการโรงเรียน
+**model + admin เท่านั้น (ไม่มี import script):**
+- `BlockedSchool` model (ข้างบน) — แอดมินเพิ่ม/ลบเอง; seed ค่าเริ่มต้นจากชื่อ รร.
+  เอกชนที่ผู้ใช้ให้ (ผ่านสคริปต์ seed สั้น ๆ หรือกรอกในหน้าแอดมิน)
+- **API admin** `pages/api/smart-school/blocked-schools/` — `list` (GET),
+  `upsert` (PUT), `delete` — auth `requireSchoolAdmin`
+- **API public** `pages/api/smart-school/blocked-schools/public` (GET, ไม่ auth) —
+  คืนรายชื่อ (name+reason) ให้ฟอร์มเตือน
+- **หน้าแอดมิน** เพิ่มแท็บ "โรงเรียนไม่ผ่าน" ใน `/admin/smart-school` ให้ดู/เพิ่ม/ลบ
 
 ## เฟส A — ฟอร์มสาธารณะ: เลิกเลขบัตร + ค้นชื่อ + ฟิลด์เกณฑ์
 
@@ -97,14 +89,14 @@
   เลือก ref → เรียก endpoint ใหม่ `prefill` (POST `{ ref }`) คืนข้อมูลใบล่าสุดของ ref
   นั้น (ข้อมูลสาธารณะ: ระดับ/ที่อยู่/รายได้/หมายเหตุ — ไม่มีข้อมูลลับกว่านี้อยู่แล้ว)
 - `submit.js` — ตัด `citizenId`; รับ `residencyOverOneYear` (bool) + `schoolName`;
-  คำนวณ `schoolEligibility` เทียบ whitelist; คำนวณ `householdKey`; `isRenewal`
-  ตัดสินจาก `ref` ที่ส่งมา (มี ref = รายเก่า) แทนการเทียบเลขบัตร
+  คำนวณ `schoolEligibility` (`block` ถ้าตรง blocklist ไม่งั้น `ok`); คำนวณ
+  `householdKey`; `isRenewal` ตัดสินจาก `ref` ที่ส่งมา (มี ref = รายเก่า)
 
 **Wizard** `components/smart-school/survey/`:
 - `IdentityStep.jsx` — ตัด input เลขบัตร; รายเก่า→ค้นชื่อ→radio picker (ชื่อมาสก์ +
   ระดับ + ชุมชน + ปีล่าสุด) → เลือก → `prefill`; รายใหม่→ถัดไปเลย
-- `InfoStep.jsx` — เพิ่ม (1) เลือกสถานศึกษา (autocomplete จาก whitelist + พิมพ์เองได้;
-  ถ้าตรง `private` เตือน "โรงเรียนเอกชน อาจไม่ผ่านเกณฑ์"), (2) คำถาม yes/no
+- `InfoStep.jsx` — เพิ่ม (1) ช่องพิมพ์ชื่อสถานศึกษา; ถ้าตรง blocklist เตือน
+  "โรงเรียนนี้เคยไม่ผ่านเกณฑ์ (เอกชน/นอกเขต)", (2) คำถาม yes/no
   "มีชื่อในทะเบียนบ้านในเขตเทศบาลตาคลี ≥1 ปี หรือไม่"
 - n8n: payload เพิ่ม schoolName/residency ได้ (ไม่บังคับ)
 
@@ -128,8 +120,8 @@ householdAwardedOther`) ด้วย:
 **หน้า/แท็บใหม่ "จัดสรรทุน"** ใน `/admin/smart-school` (ต่อจากตาราง):
 - **แท็บย่อยตามระดับทุน** (5 กลุ่ม) — แต่ละแท็บโชว์ `เลือกแล้ว X / โควตา N` +
   ยอดเงินรวม
-- ในแต่ละระดับ: รายชื่อผู้สมัคร**ที่ผ่านเกณฑ์** (schoolEligibility=allow +
-  residency + documents ครบ — หรือแสดงทั้งหมดแต่ไฮไลต์ที่ยังไม่ครบ) เรียงตามที่
+- ในแต่ละระดับ: แสดงผู้สมัครทั้งหมด ไฮไลต์คนที่ยัง**ไม่ผ่านเกณฑ์**
+  (schoolEligibility=block, residency=ไม่ใช่, หรือ checklist ไม่ครบ) เรียงตามที่
   เจ้าหน้าที่เลือก (คลิกหัวคอลัมน์เรียง รายได้/เกรด/ชื่อ), มีคอลัมน์ครัวเรือน
   (แท็กบ้านเดียวกัน) + เช็คบ็อกซ์ "ให้ทุน"
 - กด "ให้ทุน" → ตั้ง `status='ได้รับทุน'` + `scholarshipAmount` = amount ของระดับ;
@@ -147,15 +139,17 @@ householdAwardedOther`) ด้วย:
 2. household flags: จาก "หมุนเวียน" → "จัดกลุ่ม+ระบุตัว" (list.js + table + detail)
 3. เพิ่ม residency/schoolEligibility/checklist/scholarshipAmount ใน model + edit modal
 4. ข้อมูลที่ migrate มาแล้ว (238 ราย ปี 2568) ไม่มี citizenId อยู่แล้ว → สอดคล้อง;
-   householdKey/schoolEligibility ของ record เก่าเป็น null/unknown จนแตะแก้ (ยอมรับได้)
+   householdKey ของ record เก่าเป็น null (backfill), schoolEligibility เป็น `ok`
+   โดยปริยายจนแตะแก้ (ยอมรับได้)
 
 ## ขอบเขตที่ยังไม่ทำ (YAGNI)
-- **ไม่ import คน/ใบสมัครจาก CSV 68** — ทุกคนสมัครใหม่ปี 69 (ไฟล์ใช้แค่ทำ whitelist
-  โรงเรียน + เป็นที่มาของเกณฑ์)
+- **ไม่ import คน/ใบสมัคร และไม่ import ไฟล์ CSV 68** — ทุกคนสมัครใหม่ปี 69;
+  blocklist โรงเรียนแอดมินเพิ่มเอง (seed ค่าเริ่มต้นจากชื่อที่ผู้ใช้ให้)
+- whitelist โรงเรียนรัฐ (ใช้ blocklist แทน — โรงเรียนที่ไม่อยู่ในลิสต์ = ok)
 - auto-ranking/auto-allocation (เจ้าหน้าที่เลือกเอง)
 - cross-check รายชื่อผู้ไม่ผ่านปีก่อนอัตโนมัติ
 - ผูกเลขบัตร/OTP/ยืนยันตัวตนออนไลน์
 
 ## Prerequisite ก่อน implement
-- ต้องมีไฟล์ CSV ปี 68 decode เป็น UTF-8 วางที่ `scripts/data/scholarship-2568.csv`
-  (ผู้ใช้ส่งไฟล์ต้นฉบับมาแล้ว — จะ decode/normalize ตอนเริ่มเฟส C)
+- ไม่ต้องวางไฟล์ CSV. seed blocklist เริ่มต้นจากชื่อ รร.เอกชนที่ผู้ใช้ให้ (ถ้ามี)
+  หรือแอดมินเพิ่มเองภายหลัง
