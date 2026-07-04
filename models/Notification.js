@@ -60,7 +60,7 @@ const NotificationSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    index: true,
+    // index ประกาศเป็น TTL index ด้านล่าง (expireAfterSeconds) — อย่าใส่ index: true ซ้ำ
   },
   createdAt: {
     type: Date,
