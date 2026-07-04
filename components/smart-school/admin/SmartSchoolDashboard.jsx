@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import ApplicationTable from './ApplicationTable';
 import ApplicationDetailModal from './ApplicationDetailModal';
 import ApplicationEditModal from './ApplicationEditModal';
+import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
 
@@ -11,7 +12,7 @@ export default function SmartSchoolDashboard() {
   const [year, setYear] = useState(null); // null = ปีปัจจุบัน (server ตัดสิน)
   const [data, setData] = useState(null); // { year, years, applications, stats }
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('table'); // 'table' | 'map'
+  const [view, setView] = useState('table'); // 'table' | 'map' | 'blocked'
   const [detailRow, setDetailRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const reqIdRef = useRef(0);
@@ -108,6 +109,8 @@ export default function SmartSchoolDashboard() {
             onClick={() => setView('table')}>ตาราง</button>
           <button className={`btn btn-sm join-item ${view === 'map' ? 'btn-active' : ''}`}
             onClick={() => setView('map')}>แผนที่</button>
+          <button className={`btn btn-sm join-item ${view === 'blocked' ? 'btn-active' : ''}`}
+            onClick={() => setView('blocked')}>โรงเรียนไม่ผ่าน</button>
         </div>
       </div>
 
@@ -134,6 +137,8 @@ export default function SmartSchoolDashboard() {
         <div className="flex justify-center items-center h-60">
           <span className="loading loading-spinner loading-lg text-primary" />
         </div>
+      ) : view === 'blocked' ? (
+        <BlockedSchoolsPanel />
       ) : view === 'map' ? (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <MapPoints data={data?.applications || []} />
