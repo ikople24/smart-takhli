@@ -26,22 +26,29 @@ export default function ApplicationDetailModal({ row, onClose, onSetStatus, onEd
         </div>
 
         <div className="p-4 space-y-4">
-          {(row.flags?.prevYearAwarded || row.flags?.householdAwardedOther) && (
-            <div className="alert alert-warning text-xs whitespace-pre-line">
-              {[
-                row.flags.prevYearAwarded && '🔁 ได้ทุนปีที่แล้ว — ตามกติกาต้องหมุนเวียนเปลี่ยนคน',
-                row.flags.householdAwardedOther && '🏠 ครัวเรือนเดียวกันมีผู้ได้รับทุนปีนี้แล้ว',
-              ].filter(Boolean).join('\n')}
+          {row.household?.members?.length > 0 && (
+            <div className="alert alert-warning text-xs">
+              🏠 สมาชิกครัวเรือนเดียวกัน:
+              <ul className="list-disc ml-4">
+                {row.household.members.map((m) => (
+                  <li key={m.ref}>{m.name} · {m.level || '-'} · {m.status}</li>
+                ))}
+              </ul>
             </div>
           )}
 
           <div className="space-y-1">
-            <Row label="เลขบัตรประชาชน" value={row.citizenId || 'ยังไม่ผูก (backfill ได้ในหน้าแก้ไข)'} />
             <Row label="ปีงบประมาณ" value={row.surveyYear} />
             <Row label="ประเภท" value={row.isRenewal ? 'รายเก่า (อัปเดตข้อมูล)' : 'รายใหม่'} />
             <Row label="ระดับการศึกษา" value={row.educationLevel} />
             <Row label="โรงเรียน / ชั้น / GPA"
               value={`${row.schoolName || '-'} / ${row.gradeLevel || '-'} / ${row.gpa ?? '-'}`} />
+            <Row label="สถานศึกษา (เกณฑ์)"
+              value={`${row.schoolName || '-'} — ${row.schoolEligibility === 'block' ? 'ไม่ผ่าน (เอกชน/นอกเขต) ✗' : 'ok ✓'}`} />
+            <Row label="ทะเบียนบ้าน ≥1 ปี"
+              value={row.residencyOverOneYear === true ? 'ใช่' : row.residencyOverOneYear === false ? 'ไม่ใช่/ไม่แน่ใจ' : '-'} />
+            <Row label="เจ้าหน้าที่ตรวจ"
+              value={`ทะเบียนบ้าน ${row.eligibilityChecklist?.residencyVerified ? '✓' : '—'} · โรงเรียน ${row.eligibilityChecklist?.schoolVerified ? '✓' : '—'} · เอกสาร ${row.eligibilityChecklist?.documentsVerified ? '✓' : '—'}`} />
             <Row label="เบอร์โทร" value={row.phone} />
             <Row label="ที่อยู่" value={row.address} />
             <Row label="ที่อยู่จริง" value={row.actualAddress} />

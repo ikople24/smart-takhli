@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import SchoolApplicant from "@/models/smart-school/SchoolApplicant";
 import SchoolApplication from "@/models/smart-school/SchoolApplication";
-import { isValidCitizenId } from "@/lib/smart-school/citizenId";
+import { householdKeyOf } from "@/lib/smart-school/scholarshipLevels";
 import { notifySchoolEvent } from "@/lib/smart-school/notify";
 import { requireSchoolAdmin } from "./_auth";
 
@@ -16,11 +16,12 @@ export default async function handler(req, res) {
   try {
     await dbConnect();
     const {
-      _id, citizenId, prefix, name, phone,
+      _id, prefix, name, phone,
       educationLevel, schoolName, gradeLevel, gpa,
       address, actualAddress, housingStatus, householdMembers, annualIncome,
       incomeSource, familyStatus, receivedScholarship, takhliScholarshipHistory,
       note, imageUrl, location,
+      schoolEligibility, residencyOverOneYear, eligibilityChecklist,
     } = req.body || {};
 
     if (!_id) return res.status(400).json({ message: "Missing _id" });
@@ -33,18 +34,6 @@ export default async function handler(req, res) {
     const applicant = await SchoolApplicant.findById(application.applicantRef);
     if (!applicant) return res.status(404).json({ message: "Applicant not found" });
 
-    // --- ข้อมูลบุคคล (รวม backfill เลขบัตรให้รายเก่า) ---
-    if (citizenId !== undefined && citizenId !== null && citizenId !== "" &&
-        citizenId !== applicant.citizenId) {
-      if (!isValidCitizenId(citizenId)) {
-        return res.status(400).json({ message: "เลขบัตรประชาชนไม่ถูกต้อง" });
-      }
-      const dup = await SchoolApplicant.findOne({ citizenId, _id: { $ne: applicant._id } }).lean();
-      if (dup) {
-        return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับบุคคลอื่นแล้ว" });
-      }
-      applicant.citizenId = citizenId;
-    }
     if (prefix !== undefined) applicant.prefix = prefix;
     if (name) applicant.name = name;
     if (phone !== undefined) applicant.phone = phone;
@@ -69,6 +58,18 @@ export default async function handler(req, res) {
     }
     if (householdMembers !== undefined) application.householdMembers = parseInt(householdMembers) || 1;
     if (annualIncome !== undefined) application.annualIncome = Math.max(0, parseInt(annualIncome) || 0);
+    if (schoolEligibility === "ok" || schoolEligibility === "block") application.schoolEligibility = schoolEligibility;
+    if (residencyOverOneYear === true || residencyOverOneYear === false || residencyOverOneYear === null) {
+      application.residencyOverOneYear = residencyOverOneYear;
+    }
+    if (eligibilityChecklist && typeof eligibilityChecklist === "object") {
+      application.eligibilityChecklist = {
+        residencyVerified: !!eligibilityChecklist.residencyVerified,
+        schoolVerified: !!eligibilityChecklist.schoolVerified,
+        documentsVerified: !!eligibilityChecklist.documentsVerified,
+      };
+    }
+    if (address !== undefined) application.householdKey = householdKeyOf(address);
     if (Array.isArray(incomeSource)) application.incomeSource = incomeSource;
     if (Array.isArray(familyStatus)) application.familyStatus = familyStatus;
     if (Array.isArray(receivedScholarship)) application.receivedScholarship = receivedScholarship;
@@ -78,15 +79,7 @@ export default async function handler(req, res) {
 
     // validate ใบสมัครก่อนค่อยบันทึกทั้งคู่ — กันเคสบันทึกบุคคลไปแล้วแต่ใบสมัคร validate ไม่ผ่าน
     await application.validate();
-    try {
-      await applicant.save();
-    } catch (err) {
-      // TOCTOU: สอง request ผูกเลขบัตรเดียวกันพร้อมกันอาจผ่าน pre-check ทั้งคู่ — unique index จับซ้ำได้ที่นี่
-      if (err.code === 11000) {
-        return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับบุคคลอื่นแล้ว" });
-      }
-      throw err;
-    }
+    await applicant.save();
     await application.save();
 
     const imagesChanged = imageKey(application.imageUrl) !== before;

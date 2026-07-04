@@ -9,7 +9,6 @@ const FAMILY_STATUS_OPTIONS = [
 
 export default function ApplicationEditModal({ row, onClose, onSaved }) {
   const [form, setForm] = useState({
-    citizenId: row.citizenId || '',
     prefix: row.prefix || '',
     name: row.name || '',
     phone: row.phone || '',
@@ -28,6 +27,9 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     takhliScholarshipHistory: row.takhliScholarshipHistory || [],
     note: row.note || '',
     imageUrl: row.imageUrl || [],
+    schoolEligibility: row.schoolEligibility || 'ok',
+    residencyOverOneYear: row.residencyOverOneYear ?? null,
+    eligibilityChecklist: row.eligibilityChecklist || { residencyVerified: false, schoolVerified: false, documentsVerified: false },
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -86,14 +88,6 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
         </div>
 
         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-sm font-medium text-gray-700">
-              เลขบัตรประชาชน 13 หลัก {!row.citizenId && <span className="text-amber-600">(ยังไม่ผูก — backfill ที่นี่)</span>}
-            </label>
-            <input type="text" maxLength={13} className="input input-bordered input-sm w-full"
-              value={form.citizenId}
-              onChange={(e) => set({ citizenId: e.target.value.replace(/\D/g, '') })} />
-          </div>
           {input('คำนำหน้า', 'prefix')}
           {input('ชื่อ-นามสกุล', 'name')}
           <div className="space-y-1">
@@ -113,6 +107,34 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
             </select>
           </div>
           {input('โรงเรียน', 'schoolName')}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">เกณฑ์โรงเรียน</label>
+            <select className="select select-bordered select-sm w-full" value={form.schoolEligibility}
+              onChange={(e) => set({ schoolEligibility: e.target.value })}>
+              <option value="ok">ผ่าน (ok)</option>
+              <option value="block">ไม่ผ่าน (เอกชน/นอกเขต)</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">ทะเบียนบ้าน ≥1 ปี</label>
+            <select className="select select-bordered select-sm w-full"
+              value={form.residencyOverOneYear === true ? 'yes' : form.residencyOverOneYear === false ? 'no' : ''}
+              onChange={(e) => set({ residencyOverOneYear: e.target.value === 'yes' ? true : e.target.value === 'no' ? false : null })}>
+              <option value="">ไม่ระบุ</option>
+              <option value="yes">ใช่</option>
+              <option value="no">ไม่ใช่/ไม่แน่ใจ</option>
+            </select>
+          </div>
+          <div className="md:col-span-2 flex flex-wrap gap-3">
+            {[['residencyVerified', 'ยืนยันทะเบียนบ้าน ≥1 ปี'], ['schoolVerified', 'ยืนยันสถานศึกษา'], ['documentsVerified', 'ยืนยันเอกสารครบ']].map(([k, label]) => (
+              <label key={k} className="flex items-center gap-1 text-xs cursor-pointer">
+                <input type="checkbox" className="checkbox checkbox-xs"
+                  checked={form.eligibilityChecklist?.[k] || false}
+                  onChange={(e) => set({ eligibilityChecklist: { ...form.eligibilityChecklist, [k]: e.target.checked } })} />
+                {label}
+              </label>
+            ))}
+          </div>
           {input('ระดับชั้น', 'gradeLevel')}
           {input('GPA', 'gpa', 'number', { step: '0.01', min: 0, max: 4 })}
           <div className="md:col-span-2 space-y-1">
