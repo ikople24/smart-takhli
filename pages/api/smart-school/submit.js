@@ -16,6 +16,20 @@ async function evalSchool(schoolName) {
   return blocked ? "block" : "ok";
 }
 
+// อัปเดตใบเดิม: เขียนทับเฉพาะข้อมูล แล้ว save
+// รีเซ็ตสถานะให้ตรวจใหม่เฉพาะเมื่อยังไม่ถูกตัดสิน — กันการ resubmit ทับผล "ได้รับทุน"/"ไม่ผ่านเกณฑ์"
+async function applyUpdate(application, fields) {
+  Object.assign(application, fields);
+  if (application.status === "รับคำร้อง" || application.status === "ตรวจสอบแล้ว") {
+    application.status = "รับคำร้อง";
+    application.statusUpdatedBy = "";
+    application.statusUpdatedAt = null;
+    application.scholarshipAmount = null;
+  }
+  await application.save();
+  return application;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
@@ -77,10 +91,6 @@ export default async function handler(req, res) {
       householdKey: householdKeyOf(address),
       imageUrl: image.slice(0, 3),
       location: { lat: location.lat, lng: location.lng },
-      status: "รับคำร้อง",
-      statusUpdatedBy: "",
-      statusUpdatedAt: null,
-      scholarshipAmount: null,
       isRenewal,
     };
 
@@ -89,8 +99,7 @@ export default async function handler(req, res) {
       surveyYear,
     });
     if (application) {
-      Object.assign(application, fields);
-      await application.save();
+      await applyUpdate(application, fields);
     } else {
       try {
         application = await SchoolApplication.create({
@@ -98,12 +107,15 @@ export default async function handler(req, res) {
           surveyYear,
           applicationId: await nextApplicationId(surveyYear),
           ...fields,
+          status: "รับคำร้อง",
+          statusUpdatedBy: "",
+          statusUpdatedAt: null,
+          scholarshipAmount: null,
         });
       } catch (err) {
         if (err.code === 11000) {
           application = await SchoolApplication.findOne({ applicantRef: applicant._id, surveyYear });
-          Object.assign(application, fields);
-          await application.save();
+          await applyUpdate(application, fields);
         } else {
           throw err;
         }
