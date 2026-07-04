@@ -62,9 +62,16 @@
   `note: String`
 - ใช้เป็น whitelist: `public`=allow, `private`=block
 
-## เฟส C — Import ไฟล์ 68 + whitelist สถาบัน (ทำก่อน)
+## เฟส C — Import ไฟล์ 68 → whitelist สถาบัน (ทำก่อน)
 
-**สคริปต์** `scripts/import-institutions-2568.js` (idempotent, --dry-run):
+> **สำคัญ: ไม่ import "คน"/ใบสมัครจาก CSV เข้าระบบ** (ทั้งคนผ่านและไม่ผ่าน) —
+> ปี 69 ทุกคนสมัครใหม่เข้าเงื่อนไขเดิม. ไฟล์ 68 ใช้แค่ 2 อย่าง: (1) ดึงรายชื่อ
+> โรงเรียนไปทำ whitelist (2) เหตุผลที่ไม่ผ่าน (เอกชน/ต่อยอด, ทะเบียนบ้าน<1ปี)
+> เป็นที่มาของ "ตัวเลือก/เกณฑ์" ในฟอร์ม (เฟส A) — CSV ไม่แตะ collection
+> `school_applicants`/`school_applications`
+
+**สคริปต์** `scripts/import-institutions-2568.js` (idempotent, --dry-run) —
+เขียนเฉพาะ collection `school_institutions`:
 - อ่าน CSV (UTF-8; ไฟล์ต้นฉบับเป็น mojibake — decode/re-save เป็น UTF-8 ก่อน วางที่
   `scripts/data/scholarship-2568.csv`)
 - แถวที่**ผ่าน** (มีเงินทุน/ไม่มีหมายเหตุปฏิเสธ) → `สถานศึกษา` เข้า whitelist เป็น
@@ -143,8 +150,10 @@ householdAwardedOther`) ด้วย:
    householdKey/schoolEligibility ของ record เก่าเป็น null/unknown จนแตะแก้ (ยอมรับได้)
 
 ## ขอบเขตที่ยังไม่ทำ (YAGNI)
+- **ไม่ import คน/ใบสมัครจาก CSV 68** — ทุกคนสมัครใหม่ปี 69 (ไฟล์ใช้แค่ทำ whitelist
+  โรงเรียน + เป็นที่มาของเกณฑ์)
 - auto-ranking/auto-allocation (เจ้าหน้าที่เลือกเอง)
-- cross-check รายชื่อผู้ไม่ผ่านปีก่อนอัตโนมัติ (ไฟล์ 68 ใช้แค่ทำ whitelist)
+- cross-check รายชื่อผู้ไม่ผ่านปีก่อนอัตโนมัติ
 - ผูกเลขบัตร/OTP/ยืนยันตัวตนออนไลน์
 
 ## Prerequisite ก่อน implement
