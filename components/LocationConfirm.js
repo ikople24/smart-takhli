@@ -11,8 +11,16 @@ const LocationConfirm = ({
   location,
   setLocation,
   formSubmitted,
+  accent = "blue", // "blue" (default เดิม) | "purple" (ธีม Smart School survey)
 }) => {
   const [loading, setLoading] = useState(false);
+  const isPurple = accent === "purple";
+  const boxCls = isPurple ? "bg-[#F6F3FD] border-[#E7E2F2]" : "bg-blue-50 border-blue-200";
+  const labelTextCls = isPurple ? "text-[#57506A]" : "text-gray-700";
+  const toggleCls = isPurple
+    ? `toggle ${useCurrent ? "checked:bg-[#7C3AED] checked:border-[#7C3AED]" : ""}`
+    : `toggle ${useCurrent ? "toggle-success" : formSubmitted ? "toggle-error" : ""}`;
+  const mapBoxCls = isPurple ? "border-[#E7E2F2] bg-[#F6F3FD]" : "border-blue-200 bg-blue-50";
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -51,21 +59,15 @@ const LocationConfirm = ({
 
   return (
     <div className="space-y-2">
-      <div className="form-control bg-blue-50 p-3 rounded-md border border-blue-200">
+      <div className={`form-control p-3 rounded-md border ${boxCls}`}>
         <label className="flex items-center gap-2 cursor-pointer w-full justify-between">
-          <span className="label-text text-base font-medium text-gray-700">
+          <span className={`label-text text-base font-medium ${labelTextCls}`}>
             กดปุ่มเพื่อใช้ตำแหน่งปัจจุบันของคุณ
           </span>
           <input
             id="toggle-location"
             type="checkbox"
-            className={`toggle ${
-              useCurrent
-                ? "toggle-success"
-                : formSubmitted
-                ? "toggle-error"
-                : ""
-            }`}
+            className={toggleCls}
             checked={useCurrent}
             onChange={() => onToggle(!useCurrent)}
           />
@@ -75,7 +77,7 @@ const LocationConfirm = ({
       {loading && <p className="text-sm text-gray-500">กำลังดึงตำแหน่ง...</p>}
 
       {typeof window !== "undefined" && useCurrent && location?.lat && location?.lng && (
-        <div className="rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50 space-y-2">
+        <div className={`rounded-lg overflow-hidden border shadow-sm space-y-2 ${mapBoxCls}`}>
           <div className="h-64 rounded overflow-hidden border">
             <MapDisplay lat={location.lat} lng={location.lng} showPopup={true} />
           </div>
