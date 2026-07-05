@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { FaMapMarkerAlt, FaSchool, FaUniversity, FaBaby, FaUserGraduate } from 'react-icons/fa';
+import { cardCls } from '@/components/smart-school/adminTheme';
 
 // ป้องกัน marker icon หายในบางระบบ
 delete L.Icon.Default.prototype._getIconUrl;
@@ -14,22 +15,25 @@ L.Icon.Default.mergeOptions({
   shadowUrl: '/leaflet/marker-shadow.png',
 });
 
-// สร้าง custom icons สำหรับแต่ละระดับการศึกษา
-const createCustomIcon = (level) => {
-  const colors = {
-    'อนุบาล': '#FF6B9D',
-    'ประถม': '#FF6B35',
-    'มัธยมต้น': '#6BCF7F',
-    'มัธยมปลาย': '#4D96FF',
-    'ปวช': '#9B59B6',
-    'ปวช.': '#9B59B6',
-    'ปวส': '#E67E22',
-    'ปวส.': '#E67E22',
-    'ปริญญาตรี': '#E74C3C',
-    'ไม่ระบุ': '#95A5A6'
-  };
+// สีจุดหมุดตามสถานะใบสมัคร (ธีมม่วง-ครีม) — ตัวอักษรกลางจุดยังบอกระดับการศึกษาเหมือนเดิม
+const STATUS_COLORS = {
+  'รับคำร้อง': '#7C3AED',
+  'ตรวจสอบแล้ว': '#6D28D9',
+  'ได้รับทุน': '#16A34A',
+  'ไม่ผ่านเกณฑ์': '#9CA3AF',
+};
+const DEFAULT_STATUS_COLOR = '#9CA3AF';
 
-  const color = colors[level] || colors['ไม่ระบุ'];
+const LEGEND_ITEMS = [
+  { label: 'รับคำร้อง', color: STATUS_COLORS['รับคำร้อง'] },
+  { label: 'ตรวจสอบแล้ว', color: STATUS_COLORS['ตรวจสอบแล้ว'] },
+  { label: 'ได้รับทุน', color: STATUS_COLORS['ได้รับทุน'] },
+  { label: 'ไม่ผ่านเกณฑ์', color: STATUS_COLORS['ไม่ผ่านเกณฑ์'] },
+];
+
+// สร้าง custom icon: สีพื้นหลังตาม "สถานะ" ใบสมัคร, ตัวอักษรกลางจุดตาม "ระดับการศึกษา"
+const createCustomIcon = (level, status) => {
+  const color = STATUS_COLORS[status] || DEFAULT_STATUS_COLOR;
 
   return L.divIcon({
     html: `
@@ -178,8 +182,15 @@ export default function MapPoints({ data }) {
       </div>
 
       {/* แผนที่ */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <MapContainer 
+      <div className={cardCls + ' p-4'}>
+        <h3 className="text-[15px] font-bold text-[#3D3653] mb-3">
+          🗺️ แผนที่ผู้สมัคร
+          <span className="ml-2 text-[13px] font-normal text-[#8A8398]">
+            ({filteredData.length} จุด)
+          </span>
+        </h3>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <MapContainer
           center={center} 
           zoom={12} 
           style={{ height: '600px', width: '100%', zIndex: 0 }}
@@ -195,7 +206,7 @@ export default function MapPoints({ data }) {
             if (!item.location || !item.location.lat || !item.location.lng) return null;
             
             const level = item.educationLevel || 'ไม่ระบุ';
-            const icon = createCustomIcon(level);
+            const icon = createCustomIcon(level, item.status);
             
             return (
               <Marker
@@ -281,6 +292,18 @@ export default function MapPoints({ data }) {
             );
           })}
         </MapContainer>
+        </div>
+
+        {/* legend สีสถานะ */}
+        <div className="flex flex-wrap items-center gap-4 mt-3 px-1 text-[12.5px] text-[#57506A]">
+          <span className="font-semibold text-[#3D3653]">สถานะ:</span>
+          {LEGEND_ITEMS.map(({ label, color }) => (
+            <span key={label} className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+              {label}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* สถิติสรุป */}
