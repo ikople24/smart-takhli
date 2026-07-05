@@ -6,6 +6,7 @@ import ApplicationDetailModal from './ApplicationDetailModal';
 import ApplicationEditModal from './ApplicationEditModal';
 import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 import AllocationBoard from './AllocationBoard';
+import { DashboardHeader, YearPills, PillTabs, StatCard, cardCls } from '@/components/smart-school/adminTheme';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
 
@@ -79,66 +80,58 @@ export default function SmartSchoolDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* แท็บปีงบประมาณ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-gray-600">ปีงบประมาณ:</span>
-        {yearTabs.map((y) => (
-          <button key={y}
-            className={`btn btn-sm rounded-full ${y === data?.year ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setYear(y)}>
-            {y}
-          </button>
-        ))}
-        <div className="ml-auto join">
-          <button className={`btn btn-sm join-item ${view === 'table' ? 'btn-active' : ''}`}
-            onClick={() => setView('table')}>ตาราง</button>
-          <button className={`btn btn-sm join-item ${view === 'map' ? 'btn-active' : ''}`}
-            onClick={() => setView('map')}>แผนที่</button>
-          <button className={`btn btn-sm join-item ${view === 'blocked' ? 'btn-active' : ''}`}
-            onClick={() => setView('blocked')}>โรงเรียนไม่ผ่าน</button>
-          <button className={`btn btn-sm join-item ${view === 'allocation' ? 'btn-active' : ''}`}
-            onClick={() => setView('allocation')}>จัดสรรทุน</button>
-        </div>
-      </div>
-
-      {/* สรุป */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {[
-            ['ทั้งหมด', stats.total],
-            ['รายเก่า', stats.renewals],
-            ['รับคำร้อง', stats.byStatus?.['รับคำร้อง'] || 0],
-            ['ตรวจสอบแล้ว', stats.byStatus?.['ตรวจสอบแล้ว'] || 0],
-            ['ได้รับทุน', stats.byStatus?.['ได้รับทุน'] || 0],
-            ['ไม่ผ่านเกณฑ์', stats.byStatus?.['ไม่ผ่านเกณฑ์'] || 0],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 text-center">
-              <p className="text-2xl font-bold text-gray-800">{value}</p>
-              <p className="text-xs text-gray-500">{label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {loading && !data ? (
-        <div className="flex justify-center items-center h-60">
-          <span className="loading loading-spinner loading-lg text-primary" />
-        </div>
-      ) : view === 'blocked' ? (
-        <BlockedSchoolsPanel />
-      ) : view === 'allocation' ? (
-        <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
-      ) : view === 'map' ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <MapPoints data={data?.applications || []} />
-        </div>
-      ) : (
-        <ApplicationTable
-          rows={data?.applications || []}
-          onDetail={setDetailRow}
-          onEdit={setEditRow}
+      <div className={cardCls + ' p-5'}>
+        <DashboardHeader
+          title="Smart School — สำรวจการศึกษา"
+          subtitle="ทะเบียนผู้ขอทุน + แบบสำรวจรายปีงบประมาณ"
+          right={<YearPills years={yearTabs} value={data?.year} onChange={(y) => setYear(y)} />}
         />
-      )}
+
+        <div className="mb-5">
+          <PillTabs
+            active={view}
+            onChange={setView}
+            tabs={[
+              { key: 'table', label: '📋 ตาราง' },
+              { key: 'map', label: '🗺️ แผนที่' },
+              { key: 'blocked', label: '🚫 โรงเรียนไม่ผ่าน' },
+              { key: 'allocation', label: '🎯 จัดสรรทุน' },
+            ]}
+          />
+        </div>
+
+        {/* สรุป */}
+        {stats && view === 'table' && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+            <StatCard value={stats.total} label="ทั้งหมด" tone="purple" />
+            <StatCard value={stats.renewals} label="รายเก่า" />
+            <StatCard value={stats.byStatus?.['รับคำร้อง'] || 0} label="รับคำร้อง" />
+            <StatCard value={stats.byStatus?.['ตรวจสอบแล้ว'] || 0} label="ตรวจสอบแล้ว" tone="deep" />
+            <StatCard value={stats.byStatus?.['ได้รับทุน'] || 0} label="ได้รับทุน" tone="green" />
+            <StatCard value={stats.byStatus?.['ไม่ผ่านเกณฑ์'] || 0} label="ไม่ผ่านเกณฑ์" tone="gray" />
+          </div>
+        )}
+
+        {loading && !data ? (
+          <div className="flex justify-center items-center h-60">
+            <span className="loading loading-spinner loading-lg text-primary" />
+          </div>
+        ) : view === 'blocked' ? (
+          <BlockedSchoolsPanel />
+        ) : view === 'allocation' ? (
+          <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
+        ) : view === 'map' ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <MapPoints data={data?.applications || []} />
+          </div>
+        ) : (
+          <ApplicationTable
+            rows={data?.applications || []}
+            onDetail={setDetailRow}
+            onEdit={setEditRow}
+          />
+        )}
+      </div>
 
       {detailRow && (
         <ApplicationDetailModal
