@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { SCHOLARSHIP_LEVELS, levelBucket, bucketInfo } from '@/lib/smart-school/scholarshipLevels';
+import { cardCls, tableHeadCls, chipCls, statusBadgeCls, FONT_DISPLAY } from '@/components/smart-school/adminTheme';
 
 const bucketRank = (key) => SCHOLARSHIP_LEVELS.findIndex((b) => b.key === key);
 
@@ -131,83 +132,111 @@ export default function AllocationBoard({ rows, onRefresh }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
-      <div className="flex flex-wrap gap-1">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {SCHOLARSHIP_LEVELS.map((b) => {
           const awarded = (byLevel[b.key] || []).filter((r) => r.status === 'ได้รับทุน').length;
           const over = awarded > b.quota;
+          const pct = Math.min(100, Math.round((awarded / b.quota) * 100));
           return (
-            <button key={b.key}
-              className={`btn btn-xs ${over ? 'btn-error' : levelTab === b.key ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setLevelTab(b.key)}>
-              {b.label} {awarded}/{b.quota}
-            </button>
+            <div key={b.key} className={'rounded-[18px] p-4 ' + (over ? 'bg-white border border-[#FBCFE0]' : 'bg-white border border-[#E7E2F2]')}>
+              <div className="text-[12px] text-[#8A8398]">{b.label}</div>
+              <div className="text-[26px] font-bold mt-1" style={{ fontFamily: FONT_DISPLAY, color: over ? '#B91C1C' : undefined }}>
+                {awarded}<span className="text-[14px] text-[#8A8398]">/{b.quota}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[#EDE7FD] mt-2">
+                <div className="h-full rounded-full" style={{ width: (over ? 100 : pct) + '%', background: over ? '#DC2626' : '#7C3AED' }} />
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-semibold">{info.label}</span>
-        <span className={`badge ${awardedInLevel > info.quota ? 'badge-error' : 'badge-primary'}`}>
-          เลือกแล้ว {awardedInLevel} / โควตา {info.quota}
-        </span>
-        <span className="text-gray-500">ทุนละ {info.amount.toLocaleString()} บาท · รวม {(awardedInLevel * info.amount).toLocaleString()} บาท</span>
-        <select className="select select-bordered select-xs ml-auto max-w-[12rem]" value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
-          <option value="all">ทุกโรงเรียน ({schools.length})</option>
-          {schools.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="select select-bordered select-xs" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          <option value="rank">เรียงตามลำดับที่จัด</option>
-          <option value="income">เรียงรายได้น้อย→มาก</option>
-          <option value="name">เรียงชื่อ</option>
-        </select>
-        <button className="btn btn-xs btn-outline" onClick={exportCsv}>Export ผู้ได้ทุน</button>
-      </div>
+      <div className={cardCls + ' p-4 space-y-3'}>
+        <div className="flex flex-wrap gap-1.5">
+          {SCHOLARSHIP_LEVELS.map((b) => {
+            const awarded = (byLevel[b.key] || []).filter((r) => r.status === 'ได้รับทุน').length;
+            const over = awarded > b.quota;
+            return (
+              <button key={b.key} type="button"
+                className={chipCls(levelTab === b.key) + (over ? ' ring-2 ring-[#DC2626] ring-offset-1' : '')}
+                onClick={() => setLevelTab(b.key)}>
+                {b.label} {awarded}/{b.quota}
+              </button>
+            );
+          })}
+        </div>
 
-      <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead><tr>
-            <th className="text-center">ลำดับ</th><th>ชื่อ-นามสกุล</th><th>สถานศึกษา</th><th>รายได้/ปี</th><th>ทะเบียนบ้าน</th><th>ครัวเรือน</th><th>สถานะ</th><th></th>
-          </tr></thead>
-          <tbody>
-            {visible.map((r) => {
-              const awarded = r.status === 'ได้รับทุน';
-              const reasons = notMet(r);
-              return (
-                <tr key={r._id} className={`hover ${reasons.length ? 'bg-amber-50' : ''}`}>
-                  <td className="text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <input
-                        type="number" min="1"
-                        className="input input-bordered input-xs w-14 text-center"
-                        placeholder="–"
-                        value={draftRank[r._id] ?? (r.scholarshipRank ?? '')}
-                        onChange={(e) => setDraftRank((d) => ({ ...d, [r._id]: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveRank(r, e.currentTarget.value); }}
-                      />
-                      {draftRank[r._id] !== undefined && (
-                        <button className="btn btn-xs btn-primary px-2" onClick={() => saveRank(r, draftRank[r._id])}>OK</button>
-                      )}
-                    </div>
-                  </td>
-                  <td>{r.prefix}{r.name}</td>
-                  <td>{r.schoolName || '-'}{r.schoolEligibility === 'block' && <span className="badge badge-error badge-xs ml-1">ไม่ผ่าน</span>}</td>
-                  <td>{(r.annualIncome || 0).toLocaleString()}</td>
-                  <td>{r.residencyOverOneYear === true ? '✓' : r.residencyOverOneYear === false ? '✗' : '-'}</td>
-                  <td>{r.household?.members?.length > 0 ? <span className="badge badge-warning badge-xs" title={r.household.members.map((m) => `${m.name} (${m.level})`).join(', ')}>🏠 {r.household.members.length}</span> : ''}</td>
-                  <td><span className={`badge badge-sm ${awarded ? 'badge-success' : 'badge-ghost'}`}>{r.status}</span></td>
-                  <td>
-                    <button className={`btn btn-xs ${awarded ? 'btn-outline btn-error' : 'btn-success'}`}
-                      onClick={() => setAward(r, !awarded)}>
-                      {awarded ? 'ถอนทุน' : 'ให้ทุน'}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {visible.length === 0 && <tr><td colSpan={8} className="text-center text-gray-400 py-6">{schoolFilter === 'all' ? 'ไม่มีผู้สมัครในระดับนี้' : 'ไม่มีผู้สมัครจากโรงเรียนนี้'}</td></tr>}
-          </tbody>
-        </table>
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          <span className="font-bold text-[#211B2E]">{info.label}</span>
+          <span className={awardedInLevel > info.quota
+            ? 'inline-block text-[11.5px] font-semibold px-2.5 py-1 rounded-full bg-[#FEE2E2] text-[#B91C1C]'
+            : 'inline-block text-[11.5px] font-semibold px-2.5 py-1 rounded-full bg-[#EDE7FD] text-[#6D28D9]'}>
+            เลือกแล้ว {awardedInLevel} / โควตา {info.quota}
+          </span>
+          <span className="text-[#8A8398]">ทุนละ {info.amount.toLocaleString()} บาท · รวม {(awardedInLevel * info.amount).toLocaleString()} บาท</span>
+          <select className="ml-auto max-w-[12rem] bg-white border border-[#E7E2F2] rounded-[10px] px-2.5 py-1.5 text-[12.5px] font-medium text-[#211B2E] outline-none focus:border-[#7C3AED]" value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
+            <option value="all">ทุกโรงเรียน ({schools.length})</option>
+            {schools.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select className="bg-white border border-[#E7E2F2] rounded-[10px] px-2.5 py-1.5 text-[12.5px] font-medium text-[#211B2E] outline-none focus:border-[#7C3AED]" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="rank">เรียงตามลำดับที่จัด</option>
+            <option value="income">เรียงรายได้น้อย→มาก</option>
+            <option value="name">เรียงชื่อ</option>
+          </select>
+          <button type="button" className="text-[12.5px] font-bold text-[#7C3AED] bg-[#F1ECFB] rounded-[10px] px-3.5 py-1.5 transition hover:bg-[#DDD2FB]" onClick={exportCsv}>Export ผู้ได้ทุน</button>
+        </div>
+
+        <div className="overflow-hidden rounded-[16px] border border-[#E7E2F2]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
+              <thead><tr className={tableHeadCls}>
+                <th className="text-center px-3 py-2.5">ลำดับ</th><th className="text-left px-3 py-2.5">ชื่อ-นามสกุล</th><th className="text-left px-3 py-2.5">สถานศึกษา</th><th className="text-left px-3 py-2.5">รายได้/ปี</th><th className="text-left px-3 py-2.5">ทะเบียนบ้าน</th><th className="text-left px-3 py-2.5">ครัวเรือน</th><th className="text-left px-3 py-2.5">สถานะ</th><th className="px-3 py-2.5"></th>
+              </tr></thead>
+              <tbody>
+                {visible.map((r) => {
+                  const awarded = r.status === 'ได้รับทุน';
+                  const reasons = notMet(r);
+                  return (
+                    <tr key={r._id} className={'border-t border-[#F0ECF8] hover:bg-[#F6F3FD] ' + (reasons.length ? 'bg-[#FFFBEB]' : '')}>
+                      <td className="text-center px-3 py-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number" min="1"
+                            className="w-14 text-center bg-white border border-[#E7E2F2] rounded-[10px] px-1.5 py-1 text-[13px] font-medium text-[#211B2E] outline-none focus:border-[#7C3AED]"
+                            placeholder="–"
+                            value={draftRank[r._id] ?? (r.scholarshipRank ?? '')}
+                            onChange={(e) => setDraftRank((d) => ({ ...d, [r._id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveRank(r, e.currentTarget.value); }}
+                          />
+                          {draftRank[r._id] !== undefined && (
+                            <button type="button" className="text-[11.5px] font-bold text-white bg-[#7C3AED] rounded-[8px] px-2 py-1 transition hover:bg-[#6D28D9]" onClick={() => saveRank(r, draftRank[r._id])}>OK</button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">{r.prefix}{r.name}</td>
+                      <td className="px-3 py-2">{r.schoolName || '-'}{r.schoolEligibility === 'block' && <span className="inline-block text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#B91C1C] ml-1">ไม่ผ่าน</span>}</td>
+                      <td className="px-3 py-2">{(r.annualIncome || 0).toLocaleString()}</td>
+                      <td className="px-3 py-2">{r.residencyOverOneYear === true ? '✓' : r.residencyOverOneYear === false ? '✗' : '-'}</td>
+                      <td className="px-3 py-2">{r.household?.members?.length > 0 ? <span className="inline-block text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309]" title={r.household.members.map((m) => `${m.name} (${m.level})`).join(', ')}>🏠 {r.household.members.length}</span> : ''}</td>
+                      <td className="px-3 py-2"><span className={statusBadgeCls(r.status)}>{r.status}</span></td>
+                      <td className="px-3 py-2">
+                        <button type="button"
+                          className={awarded
+                            ? 'text-[12px] font-bold text-[#B91C1C] bg-[#FEE2E2] rounded-[10px] px-3 py-1.5 transition hover:bg-[#FECACA]'
+                            : 'text-[12px] font-bold text-white bg-[#16A34A] rounded-[10px] px-3 py-1.5 transition hover:bg-[#15803D]'}
+                          onClick={() => setAward(r, !awarded)}>
+                          {awarded ? 'ถอนทุน' : 'ให้ทุน'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {visible.length === 0 && <tr><td colSpan={8} className="text-center text-[#B9B0C9] py-6">{schoolFilter === 'all' ? 'ไม่มีผู้สมัครในระดับนี้' : 'ไม่มีผู้สมัครจากโรงเรียนนี้'}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -78,6 +78,14 @@ body {
 
 
 
+/* ขณะเปิดฟอร์ม survey แบบเต็มจอ: ซ่อน BottomNav กันกดโดนแล้วเด้งออก + ล็อกสกรอลล์พื้นหลัง */
+body.survey-form-open {
+  overflow: hidden;
+}
+body.survey-form-open .app-bottom-nav {
+  display: none;
+}
+
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.3s ease-out forwards;

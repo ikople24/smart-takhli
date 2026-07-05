@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
+import { cardCls, tableHeadCls, inputCls, chipCls, primaryBtnCls } from '@/components/smart-school/adminTheme';
 
 const REASON_BADGE = {
-  private: 'badge-error',
-  'out-of-district': 'badge-warning',
-  other: 'badge-ghost',
+  private: 'bg-[#FCE4E4] text-[#C0392B]',
+  'out-of-district': 'bg-[#FDF1D6] text-[#B7791F]',
+  other: 'bg-[#F1ECFB] text-[#57506A]',
 };
 
 const REASON_LABEL = {
@@ -12,6 +13,12 @@ const REASON_LABEL = {
   'out-of-district': 'นอกเขต',
   other: 'อื่นๆ',
 };
+
+const REASON_OPTIONS = [
+  { value: 'private', label: 'เอกชน' },
+  { value: 'out-of-district', label: 'นอกเขต' },
+  { value: 'other', label: 'อื่นๆ' },
+];
 
 export default function BlockedSchoolsPanel() {
   const [items, setItems] = useState([]);
@@ -94,46 +101,52 @@ export default function BlockedSchoolsPanel() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+    <div className={cardCls + ' p-5 space-y-5'}>
+      <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <input type="text" placeholder="ค้นหาชื่อโรงเรียน"
-            className="input input-bordered input-sm flex-1 min-w-48"
+            className={inputCls + ' flex-1 min-w-48'}
             value={search} onChange={(e) => setSearch(e.target.value)} />
-          <span className="text-xs text-gray-500 self-center">{filtered.length} รายการ</span>
+          <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-[16px] border border-[#E7E2F2]">
           <table className="table table-sm">
             <thead>
               <tr>
-                <th>ชื่อโรงเรียน</th>
-                <th>เหตุผล</th>
-                <th>หมายเหตุ</th>
-                <th></th>
+                <th className={tableHeadCls}>ชื่อโรงเรียน</th>
+                <th className={tableHeadCls}>เหตุผล</th>
+                <th className={tableHeadCls}>หมายเหตุ</th>
+                <th className={tableHeadCls}></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={4} className="text-center text-gray-400 py-6">กำลังโหลด...</td></tr>
+                <tr><td colSpan={4} className="text-center text-[#8A8398] py-6">กำลังโหลด...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-gray-400 py-6">
+                  <td colSpan={4} className="text-center text-[#8A8398] py-6">
                     {items.length === 0 ? 'ยังไม่มีรายการ — เพิ่มด้านล่าง' : 'ไม่พบรายการที่ค้นหา'}
                   </td>
                 </tr>
               ) : (
                 filtered.map((it) => (
-                  <tr key={it.name} className="hover">
+                  <tr key={it.name} className="border-t border-[#F0ECF8] hover:bg-[#F6F3FD]">
                     <td>{it.name}</td>
                     <td>
-                      <span className={`badge badge-sm ${REASON_BADGE[it.reason] || 'badge-ghost'}`}>
+                      <span className={`inline-block text-[11.5px] font-semibold px-2.5 py-1 rounded-full ${REASON_BADGE[it.reason] || 'bg-[#F1ECFB] text-[#57506A]'}`}>
                         {REASON_LABEL[it.reason] || 'อื่นๆ'}
                       </span>
                     </td>
-                    <td className="text-gray-500">{it.note || '-'}</td>
+                    <td className="text-[#8A8398]">{it.note || '-'}</td>
                     <td className="whitespace-nowrap">
-                      <button className="btn btn-xs btn-error" onClick={() => handleDelete(it)}>ลบ</button>
+                      <button
+                        type="button"
+                        className="text-[12.5px] font-semibold text-[#DC2626] hover:text-[#B91C1C] transition"
+                        onClick={() => handleDelete(it)}
+                      >
+                        ลบ
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -143,29 +156,32 @@ export default function BlockedSchoolsPanel() {
         </div>
       </div>
 
-      <form onSubmit={handleAdd} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-wrap items-end gap-2">
+      <form onSubmit={handleAdd} className="border-t border-[#E7E2F2] pt-5 flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-48">
-          <label className="label py-1"><span className="label-text text-xs">ชื่อโรงเรียน</span></label>
+          <label className="label py-1"><span className="label-text text-xs text-[#8A8398]">ชื่อโรงเรียน</span></label>
           <input type="text" placeholder="ชื่อโรงเรียน"
-            className="input input-bordered input-sm w-full"
+            className={inputCls}
             value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label className="label py-1"><span className="label-text text-xs">เหตุผล</span></label>
-          <select className="select select-bordered select-sm" value={reason}
-            onChange={(e) => setReason(e.target.value)}>
-            <option value="private">เอกชน</option>
-            <option value="out-of-district">นอกเขต</option>
-            <option value="other">อื่นๆ</option>
-          </select>
+          <label className="label py-1"><span className="label-text text-xs text-[#8A8398]">เหตุผล</span></label>
+          <div className="flex flex-wrap gap-2">
+            {REASON_OPTIONS.map((opt) => (
+              <button key={opt.value} type="button"
+                className={chipCls(reason === opt.value)}
+                onClick={() => setReason(opt.value)}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex-1 min-w-48">
-          <label className="label py-1"><span className="label-text text-xs">หมายเหตุ</span></label>
+          <label className="label py-1"><span className="label-text text-xs text-[#8A8398]">หมายเหตุ</span></label>
           <input type="text" placeholder="หมายเหตุ (ถ้ามี)"
-            className="input input-bordered input-sm w-full"
+            className={inputCls}
             value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
-        <button type="submit" className="btn btn-sm btn-primary" disabled={saving}>
+        <button type="submit" className={primaryBtnCls} disabled={saving}>
           {saving ? <span className="loading loading-spinner loading-xs" /> : 'เพิ่ม'}
         </button>
       </form>
