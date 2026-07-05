@@ -87,7 +87,7 @@ export default function SmartSchoolDashboard() {
           right={<YearPills years={yearTabs} value={data?.year} onChange={(y) => setYear(y)} />}
         />
 
-        <div className="mb-5">
+        <div className={stats && view === 'table' ? 'mb-5' : ''}>
           <PillTabs
             active={view}
             onChange={setView}
@@ -102,7 +102,7 @@ export default function SmartSchoolDashboard() {
 
         {/* สรุป */}
         {stats && view === 'table' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard value={stats.total} label="ทั้งหมด" tone="purple" />
             <StatCard value={stats.renewals} label="รายเก่า" />
             <StatCard value={stats.byStatus?.['รับคำร้อง'] || 0} label="รับคำร้อง" />
@@ -111,27 +111,26 @@ export default function SmartSchoolDashboard() {
             <StatCard value={stats.byStatus?.['ไม่ผ่านเกณฑ์'] || 0} label="ไม่ผ่านเกณฑ์" tone="gray" />
           </div>
         )}
-
-        {loading && !data ? (
-          <div className="flex justify-center items-center h-60">
-            <span className="loading loading-spinner loading-lg text-primary" />
-          </div>
-        ) : view === 'blocked' ? (
-          <BlockedSchoolsPanel />
-        ) : view === 'allocation' ? (
-          <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
-        ) : view === 'map' ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <MapPoints data={data?.applications || []} />
-          </div>
-        ) : (
-          <ApplicationTable
-            rows={data?.applications || []}
-            onDetail={setDetailRow}
-            onEdit={setEditRow}
-          />
-        )}
       </div>
+
+      {/* เนื้อหาแต่ละแท็บ — แต่ละ view ห่อการ์ดของตัวเอง (กันการ์ดซ้อนการ์ด) */}
+      {loading && !data ? (
+        <div className="flex justify-center items-center h-60">
+          <span className="loading loading-spinner loading-lg text-primary" />
+        </div>
+      ) : view === 'blocked' ? (
+        <BlockedSchoolsPanel />
+      ) : view === 'allocation' ? (
+        <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
+      ) : view === 'map' ? (
+        <MapPoints data={data?.applications || []} />
+      ) : (
+        <ApplicationTable
+          rows={data?.applications || []}
+          onDetail={setDetailRow}
+          onEdit={setEditRow}
+        />
+      )}
 
       {detailRow && (
         <ApplicationDetailModal

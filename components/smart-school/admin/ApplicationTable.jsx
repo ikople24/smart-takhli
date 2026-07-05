@@ -22,7 +22,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
   }, [rows, search, statusFilter, renewalFilter, levelTab]);
 
   return (
-    <div className="space-y-3">
+    <div className={cardCls + ' p-4 space-y-3'}>
       <div className="flex flex-wrap gap-2">
         <button className={chipCls(levelTab === 'all')}
           onClick={() => setLevelTab('all')}>ทั้งหมด ({rows.length})</button>
@@ -58,7 +58,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
         <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
       </div>
 
-      <div className={cardCls + ' overflow-hidden'}>
+      <div className="overflow-hidden rounded-[16px] border border-[#E7E2F2]">
         <div className="overflow-x-auto">
           <table className="table table-sm w-full">
             <thead>
