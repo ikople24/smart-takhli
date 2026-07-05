@@ -159,9 +159,7 @@ export default function AllocationBoard({ rows, onRefresh }) {
             const over = awarded > b.quota;
             return (
               <button key={b.key} type="button"
-                className={over
-                  ? 'text-[11.5px] leading-none px-3.5 py-2 rounded-full font-semibold transition bg-[#DC2626] text-white shadow-[0_6px_14px_-8px_rgba(220,38,38,0.8)]'
-                  : chipCls(levelTab === b.key)}
+                className={chipCls(levelTab === b.key) + (over ? ' ring-2 ring-[#DC2626] ring-offset-1' : '')}
                 onClick={() => setLevelTab(b.key)}>
                 {b.label} {awarded}/{b.quota}
               </button>
@@ -189,7 +187,7 @@ export default function AllocationBoard({ rows, onRefresh }) {
           <button type="button" className="text-[12.5px] font-bold text-[#7C3AED] bg-[#F1ECFB] rounded-[10px] px-3.5 py-1.5 transition hover:bg-[#DDD2FB]" onClick={exportCsv}>Export ผู้ได้ทุน</button>
         </div>
 
-        <div className={cardCls + ' overflow-hidden'}>
+        <div className="overflow-hidden rounded-[16px] border border-[#E7E2F2]">
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead><tr className={tableHeadCls}>
