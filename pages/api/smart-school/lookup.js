@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import SchoolApplicant from "@/models/smart-school/SchoolApplicant";
 import SchoolApplication from "@/models/smart-school/SchoolApplication";
-import { maskName } from "@/lib/smart-school/mask";
+import { maskName, maskPhoneHint } from "@/lib/smart-school/mask";
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
         return {
           ref: String(a._id),
           maskedName: maskName(a.name),
+          maskedPhone: maskPhoneHint(a.phone), // ใบ้ 6 หลักแรก (4 ตัวท้ายไม่ออกจาก server)
           level: latest?.educationLevel || "",
           lastYear: latest?.surveyYear || null,
         };

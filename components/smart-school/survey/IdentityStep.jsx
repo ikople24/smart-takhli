@@ -224,7 +224,7 @@ export default function IdentityStep({ onDone, onClose, disabled }) {
                     <div className="flex-1">
                       <div className="text-[14px] font-bold text-[#211B2E]">{r.maskedName}</div>
                       <div className="mt-0.5 text-[11px] text-[#8A8398]">
-                        {[r.lastYear ? `ปีงบ ${r.lastYear}` : null, r.level || null]
+                        {[r.lastYear ? `ปีงบ ${r.lastYear}` : null, r.level || null, r.maskedPhone ? `📞 ${r.maskedPhone}` : null]
                           .filter(Boolean)
                           .join(' · ')}
                       </div>
@@ -271,7 +271,7 @@ export default function IdentityStep({ onDone, onClose, disabled }) {
           <div>
             <div className="text-[13px] font-bold text-[#211B2E]">{selected?.maskedName}</div>
             <div className="text-[11px] text-[#8A8398]">
-              {[selected?.lastYear ? `ปีงบ ${selected.lastYear}` : null, selected?.level || null]
+              {[selected?.lastYear ? `ปีงบ ${selected.lastYear}` : null, selected?.level || null, selected?.maskedPhone ? `📞 ${selected.maskedPhone}` : null]
                 .filter(Boolean)
                 .join(' · ')}
             </div>
@@ -279,6 +279,15 @@ export default function IdentityStep({ onDone, onClose, disabled }) {
         </div>
 
         <div className="text-[12px] font-bold text-[#57506A]">เลข 4 ตัวท้ายเบอร์โทร</div>
+        {selected?.maskedPhone && (
+          <p className="text-center text-[12px] text-[#57506A]">
+            เบอร์ที่เคยให้ไว้{' '}
+            <span className="font-bold text-[#7C3AED]" style={{ fontFamily: FONT_DISPLAY }}>
+              {selected.maskedPhone}
+            </span>{' '}
+            — กรอก 4 ตัวท้าย
+          </p>
+        )}
         <div className="flex justify-center gap-2.5">
           {[0, 1, 2, 3].map((i) => (
             <input
@@ -304,6 +313,17 @@ export default function IdentityStep({ onDone, onClose, disabled }) {
           เพื่อความปลอดภัยของข้อมูลผู้ขอทุน
         </p>
         {error && <p className="text-center text-[12px] text-[#B91C1C]">{error}</p>}
+        <div className="text-center text-[11px] text-[#8A8398]">
+          จำเบอร์ไม่ได้?{' '}
+          <button
+            type="button"
+            onClick={startNew}
+            disabled={disabled || loading}
+            className="font-semibold text-[#7C3AED] hover:underline"
+          >
+            ยื่นเป็นรายใหม่แทน
+          </button>
+        </div>
       </div>
       <div className="shrink-0 px-5 pb-5 pt-3">
         <button
