@@ -1,5 +1,6 @@
 import React from 'react';
 import { inputCls, labelCls, chipCls } from './surveyTheme';
+import SchoolPicker from './SchoolPicker';
 
 // hint แสดงค่าเดิมของปีที่แล้ว (เฉพาะรายเก่า)
 function PrevHint({ year, value }) {
@@ -24,8 +25,6 @@ function FieldRow({ n, label, children, hint }) {
 export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled, blockedSchools }) {
   const set = (patch) => setFormData({ ...formData, ...patch });
   const prev = prevApplication || {};
-  const cleanSchool = (formData.schoolName || '').replace(/\s+/g, ' ').trim();
-  const blockedHit = (blockedSchools || []).some((s) => s.name === cleanSchool);
 
   return (
     <div className="space-y-4">
@@ -168,19 +167,13 @@ export default function InfoStep({ formData, setFormData, prevApplication, prevY
       </FieldRow>
 
       <FieldRow n={9} label="สถานศึกษา" hint={<PrevHint year={prevYear} value={prev.schoolName} />}>
-        <input
-          type="text"
-          placeholder="ชื่อสถานศึกษา"
+        <SchoolPicker
           value={formData.schoolName || ''}
+          onChange={(schoolName) => set({ schoolName })}
+          level={formData.educationLevel}
           disabled={disabled}
-          onChange={(e) => set({ schoolName: e.target.value })}
-          className={inputCls}
+          blockedSchools={blockedSchools}
         />
-        {blockedHit && (
-          <p className="mt-1 text-[11px] text-[#B91C1C]">
-            ⚠️ โรงเรียนนี้เคยไม่ผ่านเกณฑ์ (เอกชน/นอกเขต) — โปรดตรวจสอบกับเจ้าหน้าที่
-          </p>
-        )}
       </FieldRow>
 
       <FieldRow n={10} label="ทะเบียนบ้าน">
