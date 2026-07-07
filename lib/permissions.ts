@@ -201,6 +201,23 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   guest: [],
 };
 
+// Preset "ผู้บริหาร (boss)" — เห็นทุกโมดูลยกเว้นการตั้งค่า
+// ใช้เป็น "แหล่งความจริงเดียว" ให้ปุ่ม preset ในหน้า /admin/superadmin (superadmin กด
+// apply ให้ user รายคน แล้วบันทึกลง allowedPages) — เพิ่มหน้าโมดูลใหม่ในหมวด management/
+// reports/user เมื่อไร preset นี้จะรวมให้อัตโนมัติ
+//
+// /admin/pm25-settings อยู่หมวด management แต่เนื้อหาคือ "ตั้งค่าแหล่งข้อมูลฝุ่น"
+// จึงถูกนับเป็นการตั้งค่าและตัดออกจาก preset นี้ (ไม่ให้ผู้บริหารเห็น)
+export const EXECUTIVE_EXCLUDED_PATHS = ['/admin/pm25-settings'];
+
+// รายการ path สำหรับ preset ผู้บริหาร = ทุกหน้าที่ category !== 'settings'
+// และไม่อยู่ใน EXECUTIVE_EXCLUDED_PATHS
+export function getExecutivePagePaths(): string[] {
+  return ALL_PAGES
+    .filter(p => p.category !== 'settings' && !EXECUTIVE_EXCLUDED_PATHS.includes(p.path))
+    .map(p => p.path);
+}
+
 // path ที่ต้อง match แบบ exact เท่านั้น — ห้ามทำตัวเป็น prefix ครอบหน้าอื่น
 // ('/admin' คือหน้า "ตั้งค่าหน้าจอ" — ถ้าปล่อยให้ prefix match จะกลายเป็น wildcard
 // เปิดทุกหน้า /admin/* ซึ่งเป็น bug ที่เคยทำให้ admin ธรรมดาเห็นทุกหน้า)

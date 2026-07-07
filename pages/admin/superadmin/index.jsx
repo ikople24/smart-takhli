@@ -14,9 +14,10 @@ import {
   X,
   Save,
   AlertTriangle,
-  Building2
+  Building2,
+  Briefcase
 } from "lucide-react";
-import { ALL_PAGES } from "@/lib/permissions";
+import { ALL_PAGES, getExecutivePagePaths } from "@/lib/permissions";
 
 // App ID ปัจจุบัน (ดึงจาก env)
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
@@ -94,6 +95,14 @@ export default function SuperAdminPage() {
     setEditedPages(prev => ({
       ...prev,
       [userId]: []
+    }));
+  };
+
+  // Preset "ผู้บริหาร" — เห็นทุกโมดูลยกเว้นการตั้งค่า (ดู getExecutivePagePaths ใน lib/permissions)
+  const applyExecutivePreset = (userId) => {
+    setEditedPages(prev => ({
+      ...prev,
+      [userId]: getExecutivePagePaths()
     }));
   };
 
@@ -395,7 +404,15 @@ export default function SuperAdminPage() {
                     <div className="border-t border-white/10 p-4 bg-black/20">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-white font-medium">หน้าที่อนุญาต</h4>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); applyExecutivePreset(userData._id); }}
+                            title="เห็นทุกโมดูลยกเว้นการตั้งค่า"
+                            className="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+                          >
+                            <Briefcase className="w-3 h-3 mr-1" />
+                            ผู้บริหาร
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); selectAllPages(userData._id); }}
                             className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-0"
