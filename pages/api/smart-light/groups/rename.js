@@ -28,6 +28,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "ชื่อกลุ่มใหม่ซ้ำกับชื่อเดิม" });
     }
 
+    // ถ้าชื่อใหม่ชนกับกลุ่มที่มีอยู่ = การรวมกลุ่ม — ต้องยืนยันชัดเจนก่อน (bulk write ย้อนกลับยาก)
+    const confirmMerge = req.body?.confirmMerge === true;
+    if (!confirmMerge) {
+      const targetCount = await StreetLightPole.countDocuments({ group: to });
+      if (targetCount > 0) {
+        return res.status(409).json({
+          success: false,
+          needsConfirm: true,
+          message: `กลุ่ม "${to}" มีอยู่แล้ว (${targetCount} ต้น) — ยืนยันอีกครั้งเพื่อรวมกลุ่ม`,
+        });
+      }
+    }
+
     const result = await StreetLightPole.updateMany(
       { group: from },
       { $set: { group: to } }
