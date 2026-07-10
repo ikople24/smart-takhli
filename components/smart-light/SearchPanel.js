@@ -9,7 +9,6 @@ const MAX_RESULTS = 10;
 
 export default function SearchPanel({ poles, onFocusPole }) {
   const [query, setQuery] = useState("");
-  const [gpsPoint, setGpsPoint] = useState(null); // จุดอ้างอิงจากปุ่ม "ตำแหน่งปัจจุบัน"
   const [gpsError, setGpsError] = useState("");
 
   const useCurrentLocation = () => {
@@ -22,7 +21,6 @@ export default function SearchPanel({ poles, onFocusPole }) {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setQuery(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-        setGpsPoint({ lat: latitude, lng: longitude });
       },
       () => setGpsError("อ่านตำแหน่งไม่ได้ — เปิดสิทธิ์ GPS หรือพิมพ์พิกัด/แตะแผนที่แทน")
     );
@@ -32,8 +30,8 @@ export default function SearchPanel({ poles, onFocusPole }) {
     const q = query.trim();
     if (!q) return { mode: null, items: [] };
 
-    const point = parseLatLng(q) || gpsPoint;
-    if (parseLatLng(q)) {
+    const point = parseLatLng(q);
+    if (point) {
       // โหมดพิกัด: เสาใกล้สุด 10 อันดับ
       const items = poles
         .map((p) => ({
@@ -56,7 +54,7 @@ export default function SearchPanel({ poles, onFocusPole }) {
       .slice(0, MAX_RESULTS)
       .map((p) => ({ pole: p, distance: null }));
     return { mode: "text", items };
-  }, [query, gpsPoint, poles]);
+  }, [query, poles]);
 
   const formatDistance = (m) =>
     m >= 1000 ? `${(m / 1000).toFixed(1)} กม.` : `${Math.round(m)} ม.`;
