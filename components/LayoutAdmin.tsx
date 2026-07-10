@@ -29,6 +29,7 @@ const navigationItems = [
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
 
   // รายงาน
