@@ -25,6 +25,7 @@ const EditPoleModal = dynamic(() => import("@/components/smart-light/EditPoleMod
 export default function SmartLightPage() {
   const [poles, setPoles] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [boundaries, setBoundaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -64,6 +65,16 @@ export default function SmartLightPage() {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // โหลดขอบเขตชุมชนครั้งเดียว (พื้นหลังแผนที่) — พังได้โดยไม่กระทบหน้า
+  useEffect(() => {
+    fetch("/api/geojson-features")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.features)) setBoundaries(d.features);
+      })
+      .catch(() => {});
+  }, []);
 
   const groupNames = useMemo(() => groups.map((g) => g.group), [groups]);
 
@@ -248,6 +259,7 @@ export default function SmartLightPage() {
           ) : (
             <SmartLightMap
               poles={filteredPoles}
+              boundaries={boundaries}
               groups={groups.filter(
                 (g) => filterGroup === "all" || g.group === filterGroup
               )}

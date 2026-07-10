@@ -6,6 +6,7 @@ import {
   TileLayer,
   CircleMarker,
   Marker,
+  GeoJSON,
   useMap,
   useMapEvents,
 } from "react-leaflet";
@@ -68,6 +69,7 @@ function groupBubbleIcon(total) {
 
 export default function SmartLightMap({
   poles,
+  boundaries,
   groups,
   focusTarget,
   selectedPoleId,
@@ -87,6 +89,19 @@ export default function SmartLightMap({
     return poles.filter((p) => padded.contains([p.lat, p.lng]));
   }, [poles, view, showPoles]);
 
+  // ขอบเขตชุมชนเป็นพื้นหลัง — วาดใต้หมุด ไม่รับ event (คลิกทะลุไปหมุด/แผนที่ได้)
+  const boundaryCollection = useMemo(() => {
+    if (!boundaries || boundaries.length === 0) return null;
+    return {
+      type: "FeatureCollection",
+      features: boundaries.map((b) => ({
+        type: "Feature",
+        geometry: b.geometry,
+        properties: { name: b.name, color: b.color || "#3B82F6" },
+      })),
+    };
+  }, [boundaries]);
+
   return (
     <MapContainer
       center={DEFAULT_MAP_CENTER}
@@ -98,6 +113,21 @@ export default function SmartLightMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="© OpenStreetMap contributors"
       />
+      {/* ขอบเขตชุมชน (จัดการที่ /admin/settings/geojson-map) — key remount เมื่อข้อมูลมา เพราะ GeoJSON layer ตั้ง data ตอนสร้างเท่านั้น */}
+      {boundaryCollection && (
+        <GeoJSON
+          key={`boundaries-${boundaries.length}`}
+          data={boundaryCollection}
+          interactive={false}
+          style={(feature) => ({
+            color: feature?.properties?.color || "#3B82F6",
+            weight: 2,
+            opacity: 0.55,
+            fillColor: feature?.properties?.color || "#3B82F6",
+            fillOpacity: 0.08,
+          })}
+        />
+      )}
       <ViewTracker onChange={setView} />
       <FlyTo target={focusTarget} />
       <AddModeClick active={addMode} onPick={onPickLocation} />
