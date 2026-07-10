@@ -1,0 +1,158 @@
+// แผนที่เสาไฟ — เรนเดอร์ 2 ระดับตามซูม: ไกล = bubble รายกลุ่ม, ใกล้ = หมุดรายต้นเฉพาะในกรอบจอ
+// ต้อง import ผ่าน dynamic(..., { ssr: false }) เท่านั้น
+import { useEffect, useMemo, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Marker,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import {
+  POLE_STATUS,
+  POLE_ZOOM_THRESHOLD,
+  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_ZOOM,
+} from "@/lib/smart-light/constants";
+
+// ป้องกัน marker icon หายในบางระบบ (pattern เดียวกับ MapPoints ของ smart-school)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+});
+
+// ติดตาม zoom + bounds ปัจจุบัน ส่งขึ้นไปให้ตัดสินใจว่าจะวาดระดับไหน
+function ViewTracker({ onChange }) {
+  const map = useMapEvents({
+    moveend: () => onChange({ zoom: map.getZoom(), bounds: map.getBounds() }),
+  });
+  useEffect(() => {
+    onChange({ zoom: map.getZoom(), bounds: map.getBounds() });
+  }, [map, onChange]);
+  return null;
+}
+
+// fly ไปตำแหน่งเมื่อ focusTarget เปลี่ยน (key กันการ fly ซ้ำ)
+function FlyTo({ target }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lng], target.zoom || 17);
+  }, [map, target]);
+  return null;
+}
+
+// จับคลิกแผนที่ตอนโหมดเพิ่มเสา
+function AddModeClick({ active, onPick }) {
+  useMapEvents({
+    click: (e) => {
+      if (active) onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
+function groupBubbleIcon(total) {
+  const size = Math.max(36, Math.min(64, 26 + Math.sqrt(total) * 3));
+  return L.divIcon({
+    html: `<div style="width:${size}px;height:${size}px;background:rgba(37,99,235,.85);border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.3);">${total}</div>`,
+    className: "smart-light-bubble",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+export default function SmartLightMap({
+  poles,
+  groups,
+  focusTarget,
+  selectedPoleId,
+  addMode,
+  pickedLatLng,
+  onPickLocation,
+  onSelectPole,
+}) {
+  const [view, setView] = useState(null);
+
+  const showPoles = view && view.zoom >= POLE_ZOOM_THRESHOLD;
+
+  // ซูมใกล้: วาดเฉพาะเสาในกรอบจอ + ขอบเผื่อ 20% — จอหนึ่งเห็นจริงไม่กี่ร้อยต้น
+  const visiblePoles = useMemo(() => {
+    if (!showPoles) return [];
+    const padded = view.bounds.pad(0.2);
+    return poles.filter((p) => padded.contains([p.lat, p.lng]));
+  }, [poles, view, showPoles]);
+
+  return (
+    <MapContainer
+      center={DEFAULT_MAP_CENTER}
+      zoom={DEFAULT_MAP_ZOOM}
+      preferCanvas
+      style={{ height: "100%", width: "100%", zIndex: 0 }}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="© OpenStreetMap contributors"
+      />
+      <ViewTracker onChange={setView} />
+      <FlyTo target={focusTarget} />
+      <AddModeClick active={addMode} onPick={onPickLocation} />
+
+      {/* ซูมไกล: bubble รายกลุ่ม แตะแล้วซูมเข้า */}
+      {!showPoles &&
+        groups.map((g) => (
+          <GroupBubble key={g.group} group={g} />
+        ))}
+
+      {/* ซูมใกล้: หมุดรายต้น สีตามสถานะ */}
+      {showPoles &&
+        visiblePoles.map((p) => (
+          <CircleMarker
+            key={p._id}
+            center={[p.lat, p.lng]}
+            radius={p._id === selectedPoleId ? 11 : 7}
+            pathOptions={{
+              color: "#ffffff",
+              weight: 2,
+              fillColor: (POLE_STATUS[p.status] || POLE_STATUS.unknown).color,
+              fillOpacity: 0.95,
+            }}
+            eventHandlers={{ click: () => !addMode && onSelectPole(p) }}
+          />
+        ))}
+
+      {/* หมุดร่างตอนเพิ่มเสา — ลากปรับตำแหน่งได้ */}
+      {addMode && pickedLatLng && (
+        <Marker
+          position={[pickedLatLng.lat, pickedLatLng.lng]}
+          draggable
+          eventHandlers={{
+            dragend: (e) => {
+              const ll = e.target.getLatLng();
+              onPickLocation({ lat: ll.lat, lng: ll.lng });
+            },
+          }}
+        />
+      )}
+    </MapContainer>
+  );
+}
+
+// bubble รายกลุ่ม (แยก component เพื่อใช้ useMap สำหรับซูมเข้า)
+function GroupBubble({ group }) {
+  const map = useMap();
+  if (!group.centroid || !Number.isFinite(group.centroid.lat)) return null;
+  return (
+    <Marker
+      position={[group.centroid.lat, group.centroid.lng]}
+      icon={groupBubbleIcon(group.total)}
+      eventHandlers={{
+        click: () => map.flyTo([group.centroid.lat, group.centroid.lng], POLE_ZOOM_THRESHOLD),
+      }}
+    />
+  );
+}
