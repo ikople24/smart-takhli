@@ -41,6 +41,7 @@ const ADMIN_META = {
     ],
   },
   '/admin/smart-papar/water-quality':   { title: 'คุณภาพน้ำ (ประปา)' },
+  '/admin/smart-light':               { title: 'เสาไฟสาธารณะ (กองช่าง)', fullBleed: true },
   '/admin/settings/organizations':     { title: 'ข้อมูลองค์กร', subtitle: 'จัดการข้อมูลองค์กรและสำนักงาน' },
   '/admin/settings/communities':       { title: 'ข้อมูลชุมชน', subtitle: 'จัดการข้อมูลชุมชนในพื้นที่' },
   '/admin/settings/geojson-map':      { title: 'แผนที่ GeoJSON', subtitle: 'จัดการและแสดงผล GeoJSON พื้นที่บริการ' },
@@ -67,6 +68,7 @@ const Layout = ({ children }) => {
           subtitle={meta.subtitle}
           breadcrumbs={meta.breadcrumbs}
           noSidebar={meta.noSidebar}
+          fullBleed={meta.fullBleed}
         >
           {children}
         </LayoutAdmin>

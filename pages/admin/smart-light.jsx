@@ -140,7 +140,7 @@ export default function SmartLightPage() {
 
   return (
     <PermissionGuard>
-      <main className="h-screen flex flex-col bg-gray-50">
+      <main className="h-full flex flex-col bg-gray-50">
         {/* แถบหัว + ค้นหา + กรอง */}
         <div className="bg-white border-b border-gray-200 p-3 space-y-2 z-10">
           <div className="flex items-center justify-between gap-2 flex-wrap">
