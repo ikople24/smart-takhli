@@ -14,6 +14,8 @@ interface LayoutAdminProps {
   subtitle?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   noSidebar?: boolean;
+  /** true → children คุมพื้นที่ content เองเต็มผืน (ไม่มี p-6/overflow-auto) — สำหรับหน้าแผนที่เต็มจอ */
+  fullBleed?: boolean;
 }
 
 // Sidebar navigation — รวมทุกหน้าที่เคยอยู่ใน dropdown
@@ -29,6 +31,7 @@ const navigationItems = [
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
 
   // รายงาน
@@ -52,6 +55,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   subtitle,
   breadcrumbs = [],
   noSidebar = false,
+  fullBleed = false,
 }) => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -309,12 +313,19 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0 */}
-        <div className="flex-1 overflow-auto pb-14">
-          <div className="p-6">
+        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0
+            fullBleed: children คุมพื้นที่เองเต็มผืน (หน้าแผนที่) — ไม่มี padding/scroll ของ chrome */}
+        {fullBleed ? (
+          <div className="flex-1 overflow-hidden pb-14 md:pb-0">
             {children}
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 overflow-auto pb-14">
+            <div className="p-6">
+              {children}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3 text-center text-sm text-base-content/60 mb-14 md:mb-0">
