@@ -49,7 +49,7 @@ docs/modules/smart-light.md            — เอกสารโมดูล (+ 
 
 | ฟิลด์ | ชนิด | รายละเอียด |
 |---|---|---|
-| `code` | String, **unique index** | รหัสเสารันอัตโนมัติ `SL-0001`, `SL-0002`, … (gen จากเลขสูงสุด + retry เมื่อชน duplicate key) |
+| `code` | String, **unique index** | รหัสเสารูปแบบ **`TK-LED-ปปดด#####`** เช่น `TK-LED-690700001` = ลงทะเบียนปี พ.ศ. 69 เดือน 07 ต้นที่ 00001 — ปี/เดือนเป็น พ.ศ. 2 หลัก + เดือน 2 หลัก ณ วันที่ลงทะเบียน, เลขต้น 5 หลัก**วิ่งต่อเนื่องทั้งระบบ ไม่รีเซ็ตตามเดือน** (gen จากเลขต้นสูงสุด +1 พร้อม retry เมื่อชน duplicate key); prefix `TK-LED` คงที่ทุกต้นไม่ขึ้นกับ `lampType` |
 | `name` | String | ชื่อ/เลขเดิมจากไฟล์ (เช่น "Marker 12") — optional สำหรับเสาที่เพิ่มเอง |
 | `group` | String, **index** | ชุมชน/กลุ่ม — แก้ย้ายกลุ่มได้ผ่านฟอร์มแก้ไข |
 | `lat`, `lng` | Number, required | พิกัด (validate ช่วงพิกัดไทยคร่าว ๆ: lat 5–21, lng 97–106) |
@@ -84,7 +84,7 @@ Label ภาษาไทยของ enum (อยู่ที่ `lib/smart-ligh
 | `PUT /api/smart-light/poles/[id]` | แก้ไข group / lampType / lat,lng / note / name |
 | `DELETE /api/smart-light/poles/[id]` | ลบเสา (hard delete — UI ยืนยัน 2 ชั้น) |
 | `POST /api/smart-light/poles/[id]/survey` | บันทึกสภาพ: push เข้า `surveys[]` + อัปเดต `status`, `photoUrl`, `lastSurveyedAt/By` |
-| `GET /api/smart-light/groups` | aggregate รายชื่อกลุ่ม + จำนวนเสารวม + จำนวนแยกตามสถานะ |
+| `GET /api/smart-light/groups` | aggregate รายชื่อกลุ่ม + จำนวนเสารวม + จำนวนแยกตามสถานะ + **centroid (`$avg` lat/lng)** สำหรับวาด bubble รายกลุ่มตอนซูมไกล |
 | `PUT /api/smart-light/groups/rename` | เปลี่ยนชื่อกลุ่มทั้งกลุ่ม: `{ from, to }` → `updateMany` |
 
 Validation ฝั่ง server ทุกจุด: enum ต้องถูกต้อง, พิกัดต้องอยู่ในช่วง, `group`/`code` ไม่ว่าง —
@@ -93,9 +93,23 @@ error message เป็นภาษาไทย รูปแบบ `{ success: f
 ## 6. UI — หน้า `/admin/smart-light` (mobile-first ใช้หน้างาน)
 
 - **แผนที่ Leaflet เต็มหน้า** — dynamic import `ssr: false` ตามแบบ component แผนที่เดิมใน repo;
-  ใช้ `preferCanvas: true` + **CircleMarker สีตามสถานะ** รองรับ 1,067 จุดโดยไม่ต้องเพิ่ม dependency ใหม่
+  ใช้ `preferCanvas: true` + **CircleMarker สีตามสถานะ** โดยไม่ต้องเพิ่ม dependency ใหม่
+- **เรนเดอร์ตามสเกลซูม 2 ระดับ** (กันโหลด/วาดช้าเมื่อข้อมูลเยอะ):
+  - **ซูมไกล** (zoom < threshold, ค่าคงที่ ~15 ปรับได้ใน `lib/smart-light/constants.js`):
+    วาด **bubble รายกลุ่ม 21 ฟอง** ที่ centroid ของกลุ่ม ขนาดตามจำนวนเสา + ตัวเลขจำนวน
+    แตะ bubble = ซูมเข้ากลุ่มนั้น
+  - **ซูมใกล้** (zoom ≥ threshold): วาดหมุดรายต้น **เฉพาะที่อยู่ในกรอบจอปัจจุบัน + ขอบเผื่อ**
+    (bounds filter ใน memory, คำนวณใหม่ตอน moveend) — จอหนึ่งเห็นจริงไม่กี่ร้อยต้น วาดเร็ว
+  - โหลดข้อมูลครั้งเดียวตอนเปิดหน้า (payload เบา ~1,067 แถว ไม่มี `surveys[]`) แล้วกรอง/วาดฝั่ง client ทั้งหมด
 - **แถบกรอง**: dropdown กลุ่ม (พร้อมจำนวน), ปุ่มกรองสถานะ, chips สรุปจำนวน รวม/ปกติ/ชำรุด/ดับ/ยังไม่สำรวจ
   (อัปเดตตาม filter) — ข้อมูลจาก `GET /groups` + list ในหน่วยความจำ
+- **ช่องค้นหา** (ช่องเดียว ตรวจรูปแบบอัตโนมัติ):
+  - พิมพ์/วางพิกัด GPS รูปแบบ `lat,lng` (เช่น `15.2230, 100.3635`) หรือกดปุ่ม "ใช้ตำแหน่งปัจจุบัน"
+    → แสดง **เสาใกล้เคียง 10 อันดับ** เรียงตามระยะ (haversine ฝั่ง client จาก list ในหน่วยความจำ)
+    พร้อมระยะเป็นเมตร → แตะรายการ = ซูมไปเสานั้น + เปิด bottom-sheet
+  - พิมพ์ข้อความอื่น → ค้นหาจาก **รหัสเสา** (`TK-LED-…` หรือเลขบางส่วน) และชื่อกลุ่ม
+- **ปุ่ม "นำทาง"** ใน bottom-sheet ของทุกเสา (และในรายการผลค้นหาใกล้เคียง) — เปิด Google Maps
+  directions (`https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>`) มือถือจะเด้งเข้าแอปแผนที่
 - **แตะหมุด → bottom-sheet** (DaisyUI modal ล่าง): รหัส กลุ่ม สถานะ ชนิดโคม รูป หมายเหตุ
   ประวัติสำรวจ (เรียกเต็มจาก `GET /poles/[id]`) + ปุ่ม 2 ปุ่ม:
   - **"บันทึกสภาพ"** — modal เดียวจบ: เลือกสถานะ (ปุ่มใหญ่ 3 สถานะ) + ถ่าย/อัปโหลดรูป (Cloudinary
@@ -111,7 +125,9 @@ error message เป็นภาษาไทย รูปแบบ `{ success: f
 
 - รันด้วย `node --env-file=.env.local scripts/import-street-light-kmz.js`
 - ขั้นตอน: แตก zip KMZ → parse `doc.kml` → วนทั้ง 21 `<Folder>` → ต่อ placemark สร้างเอกสาร
-  `{ code: SL-xxxx (รันต่อเนื่องทั้งชุด), name, group: ชื่อ folder, lat, lng, status: unknown, lampType: unknown, source: kmz-import }`
+  `{ code, name, group: ชื่อ folder, lat, lng, status: unknown, lampType: unknown, source: kmz-import }`
+- `code` ใช้ปี/เดือน พ.ศ. ณ วันรัน script + เลขต้นวิ่งต่อเนื่อง เช่น รันเดือน ก.ค. 2569 →
+  `TK-LED-690700001` … `TK-LED-690701067` (เสาที่เพิ่มใหม่ภายหลังนับต่อจากเลขสูงสุด)
 - **Idempotent**: `updateOne` upsert ด้วยคีย์ `{ source: 'kmz-import', group, name }` — รันซ้ำไม่สร้างซ้ำ
   และไม่ทับข้อมูลที่เจ้าหน้าที่แก้ไปแล้ว (upsert เซ็ตเฉพาะ `$setOnInsert`)
 - สรุปผลท้ายรัน: จำนวน insert / skip
@@ -140,13 +156,17 @@ error message เป็นภาษาไทย รูปแบบ `{ success: f
 
 - `npm run lint` + `npm run build` ต้องผ่าน
 - Manual checklist (ใส่ไว้ใน `docs/modules/smart-light.md`):
-  1. รัน seed → เห็น 1,067 จุด / 21 กลุ่มบนแผนที่; รันซ้ำ → จำนวนไม่เพิ่ม
+  1. รัน seed → เห็น 1,067 จุด / 21 กลุ่มบนแผนที่, รหัสรูปแบบ `TK-LED-ปปดด#####` เรียงต่อเนื่อง;
+     รันซ้ำ → จำนวนไม่เพิ่ม
   2. กรองตามกลุ่ม/สถานะ + chips สรุปถูกต้อง
-  3. บันทึกสภาพ (มี/ไม่มีรูป) → สีหมุดเปลี่ยน, ประวัติเพิ่ม
-  4. เพิ่มเสา (แตะแผนที่ + GPS), แก้ไข, ลากย้ายพิกัด, ลบ
-  5. เปลี่ยนชื่อกลุ่ม → ทุกเสาในกลุ่มอัปเดต
-  6. user ไม่มีสิทธิ์ `/admin/smart-light` → ถูกปฏิเสธทั้งหน้าและ API; superadmin เข้าได้
-  7. ทดสอบบนมือถือ (bottom-sheet, ถ่ายรูป, geolocation)
+  3. เรนเดอร์ตามสเกล: ซูมไกลเห็น bubble รายกลุ่ม, ซูมใกล้เห็นหมุดรายต้น, เลื่อน/ซูมแผนที่ลื่นไม่หน่วง
+  4. บันทึกสภาพ (มี/ไม่มีรูป) → สีหมุดเปลี่ยน, ประวัติเพิ่ม
+  5. เพิ่มเสา (แตะแผนที่ + GPS) → ได้รหัสเลขต้นถัดจากเลขสูงสุด, แก้ไข, ลากย้ายพิกัด, ลบ
+  6. ค้นหา: วางพิกัด `lat,lng` → เห็น 10 เสาใกล้สุดพร้อมระยะ; พิมพ์รหัสเสา/ชื่อกลุ่ม → เจอ;
+     ปุ่ม "นำทาง" เปิด Google Maps ไปพิกัดเสาถูกต้อง (ทดสอบบนมือถือ)
+  7. เปลี่ยนชื่อกลุ่ม → ทุกเสาในกลุ่มอัปเดต
+  8. user ไม่มีสิทธิ์ `/admin/smart-light` → ถูกปฏิเสธทั้งหน้าและ API; superadmin เข้าได้
+  9. ทดสอบบนมือถือ (bottom-sheet, ถ่ายรูป, geolocation)
 
 ## 11. นอกขอบเขตรอบนี้
 
