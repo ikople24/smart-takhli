@@ -119,6 +119,10 @@ export default function SmartLightMap({
           key={`boundaries-${boundaries.length}`}
           data={boundaryCollection}
           interactive={false}
+          eventHandlers={{
+            // กัน race กับหมุดบน canvas เดียวกัน — เข้ามาเมื่อไหร่ก็ถอยไปอยู่ล่างสุดเสมอ
+            add: (e) => e.target.bringToBack(),
+          }}
           style={(feature) => ({
             color: feature?.properties?.color || "#3B82F6",
             weight: 2,
