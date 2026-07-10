@@ -71,7 +71,7 @@ export default async function handler(req, res) {
             group: groupName,
             lat: Number(lat),
             lng: Number(lng),
-            lampType: lampType || "unknown",
+            lampType: lampType ? String(lampType) : "unknown",
             note: String(note || ""),
             photoUrl: String(photoUrl || ""),
             source: "manual",

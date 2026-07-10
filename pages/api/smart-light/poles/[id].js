@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         if (!LAMP_TYPE_VALUES.includes(String(lampType))) {
           return res.status(400).json({ success: false, message: "ชนิดโคมไม่ถูกต้อง" });
         }
-        update.lampType = lampType;
+        update.lampType = String(lampType);
       }
       if (lat !== undefined || lng !== undefined) {
         const coordError = validateCoords(lat, lng);

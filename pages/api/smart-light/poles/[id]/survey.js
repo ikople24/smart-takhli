@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     const doc = await StreetLightPole.findByIdAndUpdate(
       id,
       { $push: { surveys: entry }, $set: set },
-      { new: true }
+      { new: true, runValidators: true }
     ).lean();
     if (!doc) {
       return res.status(404).json({ success: false, message: "ไม่พบข้อมูลเสาไฟ" });
