@@ -96,6 +96,8 @@ export default function SmartLightPage() {
       const res = await fetch(`/api/smart-light/poles/${pole._id}`);
       const data = await res.json();
       if (data.success) setSelectedPole(data.data);
+    } catch {
+      // เน็ตหลุด/ตอบไม่เป็น JSON — คงข้อมูลย่อที่มีอยู่ใน sheet ไว้ (ประวัติจะว่าง)
     } finally {
       setSheetLoading(false);
     }
