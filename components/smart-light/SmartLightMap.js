@@ -151,9 +151,9 @@ export default function SmartLightMap({
             radius={p._id === selectedPoleId ? 11 : 7}
             pathOptions={{
               color: "#ffffff",
-              weight: 2,
+              weight: p._id === selectedPoleId ? 4 : 2,
               fillColor: (POLE_STATUS[p.status] || POLE_STATUS.unknown).color,
-              fillOpacity: 0.95,
+              fillOpacity: 1,
             }}
             eventHandlers={{ click: () => !addMode && onSelectPole(p) }}
           />
