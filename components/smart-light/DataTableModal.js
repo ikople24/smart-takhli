@@ -30,15 +30,15 @@ export default function DataTableModal({ poles, onSelectRow, onClose }) {
   );
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 1100, background: "rgba(33,27,46,.42)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 940, height: "100%", maxHeight: 800, background: SL.surface, borderRadius: 26, boxShadow: "0 40px 90px -40px rgba(33,27,46,.7)", overflow: "hidden", display: "flex", flexDirection: "column", fontFamily: "'IBM Plex Sans Thai'" }}>
-        <div style={{ padding: "18px 24px", display: "flex", alignItems: "center", gap: 14, borderBottom: `1px solid ${SL.line}`, background: "#fff" }}>
+    <div onClick={onClose} className="fixed inset-0 z-[1100] flex items-stretch sm:items-center justify-center p-0 sm:p-6" style={{ background: "rgba(33,27,46,.42)", backdropFilter: "blur(2px)" }}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full h-full sm:max-w-[940px] sm:max-h-[800px] rounded-none sm:rounded-[26px] overflow-hidden flex flex-col" style={{ background: SL.surface, boxShadow: "0 40px 90px -40px rgba(33,27,46,.7)", fontFamily: "'IBM Plex Sans Thai'" }}>
+        <div className="flex items-center gap-3 flex-wrap" style={{ padding: "16px 20px", borderBottom: `1px solid ${SL.line}`, background: "#fff" }}>
           <div>
             <div style={{ font: "700 19px 'Anuphan'", color: SL.ink }}>📋 ตารางทะเบียนเสาไฟ</div>
             <div style={{ fontSize: 12, color: SL.muted, marginTop: 2 }}>ทั้งหมด {poles.length} ต้น · แตะแถวเพื่อดูบนแผนที่</div>
           </div>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 ค้นหารหัส / กลุ่ม" style={{ marginLeft: "auto", background: "#F6F3FD", border: `1px solid ${SL.line}`, borderRadius: 12, padding: "9px 13px", width: 240, font: "500 12.5px 'IBM Plex Sans Thai'", color: SL.ink, outline: "none" }} />
-          <button onClick={onClose} style={{ cursor: "pointer", width: 34, height: 34, borderRadius: "50%", background: SL.soft2, color: SL.primary, border: 0, fontSize: 15 }}>✕</button>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 ค้นหารหัส / กลุ่ม" className="order-last sm:order-none w-full sm:w-60 sm:ml-auto" style={{ background: "#F6F3FD", border: `1px solid ${SL.line}`, borderRadius: 12, padding: "9px 13px", font: "500 12.5px 'IBM Plex Sans Thai'", color: SL.ink, outline: "none" }} />
+          <button onClick={onClose} className="ml-auto sm:ml-0" style={{ cursor: "pointer", width: 34, height: 34, borderRadius: "50%", background: SL.soft2, color: SL.primary, border: 0, fontSize: 15, flex: "0 0 auto" }}>✕</button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 0.9fr 1fr", gap: 8, padding: "13px 24px", background: "#F6F3FD", borderBottom: `1px solid ${SL.line}` }}>
           {th("code", "รหัสเสา")}{th("group", "กลุ่ม / ชุมชน")}{th("status", "สถานะ")}{th("days", "สำรวจล่าสุด", "right")}

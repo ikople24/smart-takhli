@@ -83,7 +83,8 @@ export function SLPrimaryButton({ onClick, disabled, color = SL.primary, childre
 }
 
 // เปลือกโมดัล: backdrop + กล่องพื้นผิวม่วงอ่อน + หัวม่วง (ไอคอน/หัวข้อ/คำโปรย/ปุ่ม ✕) + เนื้อหา + ฟุตเตอร์
-// คง DaisyUI `modal modal-bottom sm:modal-middle` ไว้เพื่อพฤติกรรม bottom-sheet บนมือถือ
+// มือถือ (<sm): เต็มจอ 100dvh — พิมพ์แล้วคีย์บอร์ด/ออโต้ซูมลื่น ไม่ทับซ้อน · เดสก์ท็อป (≥sm): การ์ดกลางจอมุมโค้ง 26
+// * รูปแบบมาตรฐาน mobile modal ของโมดูลนี้ — ฟอร์มใหม่ให้ใช้เปลือกนี้เพื่อได้พฤติกรรมเต็มจอเหมือนกัน
 export function SLModalShell({
   icon,
   title,
@@ -97,10 +98,22 @@ export function SLModalShell({
 }) {
   const guardedClose = disabled ? undefined : onClose;
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[60] flex sm:items-center sm:justify-center"
+    >
+      {/* backdrop (แตะพื้นหลังเพื่อปิด — เห็นชัดบนเดสก์ท็อป) */}
       <div
-        className="modal-box p-0 overflow-hidden flex flex-col"
-        style={{ background: SL.surface, borderRadius: 26, maxWidth, maxHeight: "90vh" }}
+        className="absolute inset-0"
+        style={{ background: "rgba(33,27,46,.42)", backdropFilter: "blur(2px)" }}
+        onClick={guardedClose}
+      />
+
+      {/* กล่อง: มือถือเต็มจอ (100dvh) / เดสก์ท็อปการ์ดกลางมุมโค้ง 26 */}
+      <div
+        className="relative flex flex-col w-full h-[100dvh] rounded-none sm:h-auto sm:w-auto sm:max-h-[90vh] sm:rounded-[26px] overflow-hidden shadow-2xl"
+        style={{ background: SL.surface, maxWidth }}
       >
         {/* หัวม่วง */}
         <div
@@ -149,9 +162,11 @@ export function SLModalShell({
           </button>
         </div>
 
-        {/* เนื้อหา */}
+        {/* เนื้อหา (เลื่อนได้ ดันฟุตเตอร์ไว้ล่างสุดบนมือถือ) */}
         <div
           style={{
+            flex: "1 1 auto",
+            minHeight: 0,
             padding: "20px 22px",
             overflowY: "auto",
             display: "flex",
@@ -162,12 +177,13 @@ export function SLModalShell({
           {children}
         </div>
 
-        {/* ฟุตเตอร์ */}
+        {/* ฟุตเตอร์ (ติดล่างจอบนมือถือ + เผื่อ safe-area) */}
         {footer && (
           <div
             style={{
               flex: "0 0 auto",
               padding: "14px 22px",
+              paddingBottom: "calc(14px + env(safe-area-inset-bottom))",
               borderTop: `1px solid ${SL.line}`,
               background: SL.surface,
               display: "flex",
@@ -179,7 +195,6 @@ export function SLModalShell({
           </div>
         )}
       </div>
-      <div className="modal-backdrop" onClick={guardedClose} />
     </div>
   );
 }

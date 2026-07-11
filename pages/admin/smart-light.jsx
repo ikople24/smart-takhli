@@ -229,8 +229,8 @@ export default function SmartLightPage() {
               />
             )}
 
-            {/* chips ลอยบนแผนที่ */}
-            <div className="absolute z-[8]" style={{ top: 14, left: "50%", transform: "translateX(-50%)" }}>
+            {/* chips ลอยบนแผนที่ — มือถือชิดซ้ายเลื่อนแนวนอน / เดสก์ท็อปจัดกลาง */}
+            <div className="absolute z-[8] left-3 right-3 lg:left-1/2 lg:right-auto lg:-translate-x-1/2" style={{ top: 14 }}>
               <MapStatusChips summary={summary} filterStatus={filterStatus} onFilter={setFilterStatus} />
             </div>
 

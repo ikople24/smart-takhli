@@ -17,7 +17,7 @@ export default function MapStatusChips({ summary, filterStatus, onFilter }) {
     );
   };
   return (
-    <div style={{ display: "flex", gap: 6, background: "rgba(255,255,255,.92)", backdropFilter: "blur(6px)", padding: 6, borderRadius: 16, boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)", overflowX: "auto", maxWidth: "92vw" }}>
+    <div className="no-scrollbar" style={{ display: "flex", gap: 6, background: "rgba(255,255,255,.92)", backdropFilter: "blur(6px)", padding: 6, borderRadius: 16, boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
       {chip("all", "ทั้งหมด", summary.total, null)}
       {Object.entries(POLE_STATUS).map(([value, s]) => chip(value, s.label, summary[value], s.color))}
     </div>
