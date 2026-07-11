@@ -5,7 +5,14 @@ import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
-import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
+import { SL } from "@/lib/smart-light/theme";
+import {
+  SLModalShell,
+  SLCancelButton,
+  SLPrimaryButton,
+  slLabel,
+  slField,
+} from "./modalUi";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -64,142 +71,127 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
   };
 
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box max-h-[90vh] overflow-y-auto p-0">
-        <h3
-          className="px-6 py-4"
-          style={{
-            background: SL.primary,
-            color: "#fff",
-            font: `700 18px ${SL_FONT_HEAD}`,
-          }}
-        >
-          ✏️ แก้ไขข้อมูล — {pole.code}
-        </h3>
-
-        <div className="px-6 pb-6 pt-4">
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชุมชน/กลุ่ม</span>
-          <input
-            className="input input-bordered w-full"
-            list="smart-light-group-names"
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-          />
-          <datalist id="smart-light-group-names">
-            {groupNames.map((g) => (
-              <option key={g} value={g} />
-            ))}
-          </datalist>
-        </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชนิดโคม</span>
-          <select
-            className="select select-bordered w-full"
-            value={lampType}
-            onChange={(e) => setLampType(e.target.value)}
-          >
-            {Object.entries(LAMP_TYPE).map(([value, t]) => (
-              <option key={value} value={value}>{t.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชื่อ/เลขเดิม</span>
-          <input
-            className="input input-bordered w-full"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">หมายเหตุ</span>
-          <textarea
-            className="textarea textarea-bordered"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
-
-        <div className="mt-3">
-          <span className="label-text">ตำแหน่ง (ลากหมุดเพื่อปรับ)</span>
-          <div className="h-56 mt-1 rounded-lg overflow-hidden">
-            <MapContainer
-              center={[pole.lat, pole.lng]}
-              zoom={18}
-              style={{ height: "100%", width: "100%" }}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="© OpenStreetMap contributors"
-              />
-              <Marker
-                position={[position.lat, position.lng]}
-                draggable
-                eventHandlers={{
-                  dragend: (e) => {
-                    const ll = e.target.getLatLng();
-                    setPosition({ lat: ll.lat, lng: ll.lng });
-                  },
-                }}
-              />
-            </MapContainer>
-          </div>
-          <p className="text-xs text-gray-400 mt-1">
-            {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
-          </p>
-        </div>
-
-        {error && <p className="text-error text-sm mt-2">{error}</p>}
-
-        {/* ลบเสา: confirm 2 ชั้น — กดครั้งแรกเปิดกล่องยืนยันแสดงรหัส/กลุ่ม กดปุ่มแดงอีกครั้งจึงลบจริง */}
-        {confirmingDelete ? (
-          <div className="alert alert-error mt-4 flex-col items-start">
-            <p className="font-semibold">
-              ยืนยันลบเสา {pole.code} (กลุ่ม {pole.group})? ลบแล้วกู้คืนไม่ได้
-            </p>
-            <div className="flex gap-2">
-              <button className="btn btn-sm btn-error" onClick={handleDelete} disabled={submitting}>
-                ลบถาวร
-              </button>
-              <button
-                className="btn btn-sm btn-ghost"
-                onClick={() => setConfirmingDelete(false)}
-                disabled={submitting}
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            className="btn btn-outline btn-error btn-sm mt-4"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            🗑 ลบเสานี้
-          </button>
-        )}
-
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
-            ยกเลิก
-          </button>
-          <button
-            className="btn"
-            onClick={handleSave}
-            disabled={submitting}
-            style={{ background: SL.primary, color: "#fff", border: "none" }}
-          >
+    <SLModalShell
+      icon="✏️"
+      title="แก้ไขข้อมูลเสา"
+      subtitle={`${pole.code} · 🏘️ ${pole.group}`}
+      onClose={onClose}
+      disabled={submitting}
+      maxWidth={560}
+      footer={
+        <>
+          <SLCancelButton onClick={onClose} disabled={submitting} />
+          <SLPrimaryButton onClick={handleSave} disabled={submitting}>
             {submitting ? "กำลังบันทึก…" : "บันทึก"}
-          </button>
-        </div>
-        </div>
+          </SLPrimaryButton>
+        </>
+      }
+    >
+      <div>
+        <span style={slLabel}>ชุมชน/กลุ่ม</span>
+        <input
+          style={slField}
+          list="smart-light-group-names"
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+        />
+        <datalist id="smart-light-group-names">
+          {groupNames.map((g) => (
+            <option key={g} value={g} />
+          ))}
+        </datalist>
       </div>
-      <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
-    </div>
+
+      <div>
+        <span style={slLabel}>ชนิดโคม</span>
+        <select
+          style={{ ...slField, cursor: "pointer" }}
+          value={lampType}
+          onChange={(e) => setLampType(e.target.value)}
+        >
+          {Object.entries(LAMP_TYPE).map(([value, t]) => (
+            <option key={value} value={value}>{t.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <span style={slLabel}>ชื่อ/เลขเดิม</span>
+        <input
+          style={slField}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <span style={slLabel}>หมายเหตุ</span>
+        <textarea
+          style={{ ...slField, resize: "none" }}
+          rows={2}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <span style={slLabel}>ตำแหน่ง (ลากหมุดเพื่อปรับ)</span>
+        <div className="h-56 rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${SL.line}` }}>
+          <MapContainer
+            center={[pole.lat, pole.lng]}
+            zoom={18}
+            style={{ height: "100%", width: "100%" }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="© OpenStreetMap contributors"
+            />
+            <Marker
+              position={[position.lat, position.lng]}
+              draggable
+              eventHandlers={{
+                dragend: (e) => {
+                  const ll = e.target.getLatLng();
+                  setPosition({ lat: ll.lat, lng: ll.lng });
+                },
+              }}
+            />
+          </MapContainer>
+        </div>
+        <p className="text-xs mt-1.5" style={{ color: SL.muted }}>
+          {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+        </p>
+      </div>
+
+      {error && <p className="text-error text-sm">{error}</p>}
+
+      {/* ลบเสา: confirm 2 ชั้น — กดครั้งแรกเปิดกล่องยืนยันแสดงรหัส/กลุ่ม กดปุ่มแดงอีกครั้งจึงลบจริง */}
+      {confirmingDelete ? (
+        <div className="alert alert-error flex-col items-start">
+          <p className="font-semibold">
+            ยืนยันลบเสา {pole.code} (กลุ่ม {pole.group})? ลบแล้วกู้คืนไม่ได้
+          </p>
+          <div className="flex gap-2">
+            <button className="btn btn-sm btn-error" onClick={handleDelete} disabled={submitting}>
+              ลบถาวร
+            </button>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => setConfirmingDelete(false)}
+              disabled={submitting}
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          className="btn btn-outline btn-error btn-sm self-start"
+          onClick={() => setConfirmingDelete(true)}
+        >
+          🗑 ลบเสานี้
+        </button>
+      )}
+    </SLModalShell>
   );
 }
