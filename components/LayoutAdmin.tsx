@@ -326,11 +326,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
             </div>
           </div>
         )}
-
-        {/* Footer */}
-        <footer className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3 text-center text-sm text-base-content/60 mb-14 md:mb-0">
-          <p>&copy; 2025 Smart Municipality System. All rights reserved.</p>
-        </footer>
       </main>
 
       {/* Mobile backdrop */}
