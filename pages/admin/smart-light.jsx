@@ -1,19 +1,24 @@
-// หน้าเสาไฟสาธารณะ (กองช่าง) — แผนที่ทะเบียนเสา + สำรวจ/แก้ไข/เพิ่ม/จัดกลุ่ม
+// หน้าเสาไฟสาธารณะ (กองช่าง) — ดีไซน์ใหม่ธีมม่วง: แผนที่ + แถบขวาวิเคราะห์ + มือถือ responsive
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Head from "next/head";
 import dynamic from "next/dynamic";
 import PermissionGuard from "@/components/PermissionGuard";
-import { POLE_STATUS } from "@/lib/smart-light/constants";
+import { SL, SL_FONT_HEAD, SL_FONT_BODY, SL_FONTS_HREF } from "@/lib/smart-light/theme";
 import PoleBottomSheet from "@/components/smart-light/PoleBottomSheet";
 import SurveyModal from "@/components/smart-light/SurveyModal";
 import AddPoleModal from "@/components/smart-light/AddPoleModal";
 import GroupRenameModal from "@/components/smart-light/GroupRenameModal";
 import SearchPanel from "@/components/smart-light/SearchPanel";
+import RightRail from "@/components/smart-light/RightRail";
+import MapStatusChips from "@/components/smart-light/MapStatusChips";
+import DataTableModal from "@/components/smart-light/DataTableModal";
+import NearbyCard from "@/components/smart-light/NearbyCard";
 
 // มี leaflet ข้างใน — โหลดเฉพาะฝั่ง client
 const SmartLightMap = dynamic(() => import("@/components/smart-light/SmartLightMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center h-full text-gray-400">
+    <div className="flex items-center justify-center h-full" style={{ color: SL.muted }}>
       กำลังโหลดแผนที่…
     </div>
   ),
@@ -43,6 +48,7 @@ export default function SmartLightPage() {
   const [addFormOpen, setAddFormOpen] = useState(false);
 
   const [focusTarget, setFocusTarget] = useState(null);
+  const [tableOpen, setTableOpen] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
@@ -122,6 +128,14 @@ export default function SmartLightPage() {
     [openPole]
   );
 
+  // เลือกกลุ่มจาก heatmap: toggle filter + บินไป centroid ของกลุ่ม
+  const selectGroup = useCallback((name, centroid) => {
+    setFilterGroup(name);
+    if (name !== "all" && centroid) {
+      setFocusTarget({ lat: centroid.lat, lng: centroid.lng, zoom: 15, key: Date.now() });
+    }
+  }, []);
+
   const refreshAndClose = useCallback(async () => {
     setSurveyPole(null);
     setEditPole(null);
@@ -151,125 +165,97 @@ export default function SmartLightPage() {
 
   return (
     <PermissionGuard>
-      <main className="h-full flex flex-col bg-gray-50">
-        {/* แถบหัว + ค้นหา + กรอง */}
-        <div className="bg-white border-b border-gray-200 p-3 space-y-2 z-10">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h1 className="font-bold text-gray-900">💡 เสาไฟสาธารณะ (กองช่าง)</h1>
-            <div className="flex gap-2">
-              <button
-                className="btn btn-sm btn-outline"
-                onClick={() => setRenameOpen(true)}
-              >
-                🏘️ จัดการกลุ่ม
-              </button>
-              {addMode ? (
-                <button
-                  className="btn btn-sm btn-error"
-                  onClick={() => {
-                    setAddMode(false);
-                    setPickedLatLng(null);
-                  }}
-                >
-                  ✕ ยกเลิกเพิ่มเสา
-                </button>
-              ) : (
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    setAddMode(true);
-                    setSelectedPole(null);
-                  }}
-                >
-                  ➕ เพิ่มเสา
-                </button>
-              )}
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={SL_FONTS_HREF} />
+      </Head>
+      <main className="sl-root h-full flex flex-col" style={{ fontFamily: SL_FONT_BODY, background: SL.surface }}>
+        {/* Header ม่วง */}
+        <div style={{ background: SL.primary, color: "#fff", flex: "0 0 auto" }} className="flex items-center gap-3 px-4 py-3 flex-wrap">
+          <div style={{ width: 44, height: 44, borderRadius: 13, background: "rgba(255,255,255,.16)", display: "grid", placeItems: "center", fontSize: 22 }}>💡</div>
+          <div className="min-w-0">
+            <div style={{ font: `700 18px ${SL_FONT_HEAD}` }}>เสาไฟสาธารณะ · กองช่าง</div>
+            <div style={{ fontSize: 11.5, color: "rgba(255,255,255,.82)" }}>
+              ทะเบียนเสาไฟ LED · {poles.length} ต้น · {filterGroup === "all" ? "ทุกกลุ่ม" : filterGroup}
             </div>
           </div>
-
-          {addMode && (
-            <div className="alert alert-info py-2 text-sm flex-wrap">
-              <span>แตะจุดบนแผนที่เพื่อวางเสาใหม่ หรือ</span>
-              <button className="btn btn-xs btn-outline" onClick={pickCurrentLocation}>
-                📍 ใช้ตำแหน่งปัจจุบัน
-              </button>
-              {pickedLatLng && (
-                <button
-                  className="btn btn-xs btn-primary"
-                  onClick={() => setAddFormOpen(true)}
-                >
-                  ✓ ยืนยันตำแหน่งนี้ กรอกข้อมูล
-                </button>
-              )}
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            <div className="hidden md:block" style={{ width: 200 }}>
+              <SearchPanel poles={poles} onFocusPole={focusPole} />
             </div>
-          )}
-
-          <SearchPanel poles={poles} onFocusPole={focusPole} />
-
-          <div className="flex gap-2 items-center flex-wrap">
-            <select
-              className="select select-bordered select-sm"
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}
-            >
-              <option value="all">ทุกกลุ่ม ({poles.length})</option>
-              {groups.map((g) => (
-                <option key={g.group} value={g.group}>
-                  {g.group} ({g.total})
-                </option>
-              ))}
-            </select>
-
-            {/* chips สรุป + กรองสถานะ (แตะเพื่อกรอง แตะซ้ำเพื่อยกเลิก) */}
-            <button
-              className={`badge badge-lg cursor-pointer ${filterStatus === "all" ? "badge-neutral" : "badge-ghost"}`}
-              onClick={() => setFilterStatus("all")}
-            >
-              รวม {summary.total}
-            </button>
-            {Object.entries(POLE_STATUS).map(([value, s]) => (
-              <button
-                key={value}
-                className="badge badge-lg cursor-pointer text-white border-0"
-                style={{
-                  backgroundColor: s.color,
-                  opacity: filterStatus === "all" || filterStatus === value ? 1 : 0.35,
-                }}
-                onClick={() => setFilterStatus(filterStatus === value ? "all" : value)}
-              >
-                {s.label} {summary[value]}
-              </button>
-            ))}
+            <button onClick={() => setTableOpen(true)} style={{ border: 0, cursor: "pointer", background: "rgba(255,255,255,.16)", color: "#fff", font: "600 13px 'IBM Plex Sans Thai'", padding: "10px 14px", borderRadius: 12 }}>📋 ตารางข้อมูล</button>
+            <button onClick={() => setRenameOpen(true)} style={{ border: 0, cursor: "pointer", background: "rgba(255,255,255,.16)", color: "#fff", font: "600 13px 'IBM Plex Sans Thai'", padding: "10px 14px", borderRadius: 12 }}>🏘️ กลุ่ม</button>
+            {addMode ? (
+              <button onClick={() => { setAddMode(false); setPickedLatLng(null); }} style={{ border: 0, cursor: "pointer", background: "#DC2626", color: "#fff", font: "700 13px 'IBM Plex Sans Thai'", padding: "10px 16px", borderRadius: 12 }}>✕ ยกเลิก</button>
+            ) : (
+              <button onClick={() => { setAddMode(true); setSelectedPole(null); }} style={{ border: 0, cursor: "pointer", background: "#fff", color: SL.primaryDark, font: "700 13px 'IBM Plex Sans Thai'", padding: "10px 16px", borderRadius: 12 }}>➕ เพิ่มเสา</button>
+            )}
           </div>
-
-          {loadError && (
-            <div className="alert alert-error py-2 text-sm">
-              {loadError}
-              <button className="btn btn-xs" onClick={loadAll}>ลองใหม่</button>
-            </div>
-          )}
         </div>
 
-        {/* แผนที่เต็มพื้นที่ที่เหลือ */}
-        <div className="flex-1 relative">
-          {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              กำลังโหลดข้อมูลเสาไฟ…
+        {/* add-mode banner */}
+        {addMode && (
+          <div className="flex items-center gap-2 flex-wrap px-4 py-2 text-sm" style={{ background: SL.soft, color: SL.primaryDark, flex: "0 0 auto" }}>
+            <span>แตะจุดบนแผนที่เพื่อวางเสาใหม่ หรือ</span>
+            <button className="btn btn-xs" onClick={pickCurrentLocation}>📍 ใช้ตำแหน่งปัจจุบัน</button>
+            {pickedLatLng && <button className="btn btn-xs btn-primary" onClick={() => setAddFormOpen(true)}>✓ ยืนยันตำแหน่งนี้</button>}
+          </div>
+        )}
+
+        {loadError && (
+          <div className="alert alert-error py-2 text-sm mx-4 my-2" style={{ flex: "0 0 auto" }}>
+            {loadError}
+            <button className="btn btn-xs" onClick={loadAll}>ลองใหม่</button>
+          </div>
+        )}
+
+        {/* body: map + right rail */}
+        <div className="flex-1 flex min-h-0">
+          <div className="relative flex-1 min-w-0">
+            {loading ? (
+              <div className="flex items-center justify-center h-full" style={{ color: SL.muted }}>กำลังโหลดข้อมูลเสาไฟ…</div>
+            ) : (
+              <SmartLightMap
+                poles={filteredPoles}
+                boundaries={boundaries}
+                groups={groups.filter((g) => filterGroup === "all" || g.group === filterGroup)}
+                focusTarget={focusTarget}
+                selectedPoleId={selectedPole?._id || null}
+                addMode={addMode}
+                pickedLatLng={pickedLatLng}
+                onPickLocation={setPickedLatLng}
+                onSelectPole={openPole}
+              />
+            )}
+
+            {/* chips ลอยบนแผนที่ */}
+            <div className="absolute z-[8]" style={{ top: 14, left: "50%", transform: "translateX(-50%)" }}>
+              <MapStatusChips summary={summary} filterStatus={filterStatus} onFilter={setFilterStatus} />
             </div>
-          ) : (
-            <SmartLightMap
-              poles={filteredPoles}
-              boundaries={boundaries}
-              groups={groups.filter(
-                (g) => filterGroup === "all" || g.group === filterGroup
-              )}
-              focusTarget={focusTarget}
-              selectedPoleId={selectedPole?._id || null}
-              addMode={addMode}
-              pickedLatLng={pickedLatLng}
-              onPickLocation={setPickedLatLng}
-              onSelectPole={openPole}
-            />
+
+            {/* การ์ดเสาใกล้ตัว (มือถือเท่านั้น) */}
+            {!loading && !selectedPole && (
+              <div className="lg:hidden absolute z-[9]" style={{ left: 14, right: 14, bottom: 16 }}>
+                <NearbyCard poles={poles} onSelect={focusPole} />
+              </div>
+            )}
+          </div>
+
+          {/* แถบขวา (เดสก์ท็อป) */}
+          {!loading && (
+            <div className="hidden lg:flex">
+              <RightRail
+                summary={summary}
+                poles={poles}
+                groups={groups}
+                filterStatus={filterStatus}
+                filterGroup={filterGroup}
+                onFilterStatus={setFilterStatus}
+                onSelectPole={focusPole}
+                onSelectGroup={selectGroup}
+              />
+            </div>
           )}
         </div>
 
@@ -283,36 +269,19 @@ export default function SmartLightPage() {
             onEdit={(p) => setEditPole(p)}
           />
         )}
-        {surveyPole && (
-          <SurveyModal
-            pole={surveyPole}
-            onClose={() => setSurveyPole(null)}
-            onSaved={refreshAndClose}
-          />
-        )}
+        {surveyPole && <SurveyModal pole={surveyPole} onClose={() => setSurveyPole(null)} onSaved={refreshAndClose} />}
         {editPole && (
-          <EditPoleModal
-            key={editPole._id}
-            pole={editPole}
-            groupNames={groupNames}
-            onClose={() => setEditPole(null)}
-            onSaved={refreshAndClose}
-            onDeleted={refreshAndClose}
-          />
+          <EditPoleModal key={editPole._id} pole={editPole} groupNames={groupNames} onClose={() => setEditPole(null)} onSaved={refreshAndClose} onDeleted={refreshAndClose} />
         )}
         {addFormOpen && pickedLatLng && (
-          <AddPoleModal
-            latLng={pickedLatLng}
-            groupNames={groupNames}
-            onClose={() => setAddFormOpen(false)}
-            onSaved={refreshAndClose}
-          />
+          <AddPoleModal latLng={pickedLatLng} groupNames={groupNames} onClose={() => setAddFormOpen(false)} onSaved={refreshAndClose} />
         )}
-        {renameOpen && (
-          <GroupRenameModal
-            groups={groups}
-            onClose={() => setRenameOpen(false)}
-            onRenamed={refreshAndClose}
+        {renameOpen && <GroupRenameModal groups={groups} onClose={() => setRenameOpen(false)} onRenamed={refreshAndClose} />}
+        {tableOpen && (
+          <DataTableModal
+            poles={poles}
+            onClose={() => setTableOpen(false)}
+            onSelectRow={(p) => { setTableOpen(false); focusPole(p); }}
           />
         )}
       </main>
