@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
+import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -64,9 +65,19 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
 
   return (
     <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box max-h-[90vh] overflow-y-auto">
-        <h3 className="font-bold text-lg">✏️ แก้ไขข้อมูล — {pole.code}</h3>
+      <div className="modal-box max-h-[90vh] overflow-y-auto p-0">
+        <h3
+          className="px-6 py-4"
+          style={{
+            background: SL.primary,
+            color: "#fff",
+            font: `700 18px ${SL_FONT_HEAD}`,
+          }}
+        >
+          ✏️ แก้ไขข้อมูล — {pole.code}
+        </h3>
 
+        <div className="px-6 pb-6 pt-4">
         <label className="form-control mt-3">
           <span className="label-text mb-1">ชุมชน/กลุ่ม</span>
           <input
@@ -177,9 +188,15 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
           <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
             ยกเลิก
           </button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={submitting}>
+          <button
+            className="btn"
+            onClick={handleSave}
+            disabled={submitting}
+            style={{ background: SL.primary, color: "#fff", border: "none" }}
+          >
             {submitting ? "กำลังบันทึก…" : "บันทึก"}
           </button>
+        </div>
         </div>
       </div>
       <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
