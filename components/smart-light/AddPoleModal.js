@@ -2,6 +2,15 @@
 import { useState } from "react";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
+import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
+
+const labelStyle = { font: "700 12px 'IBM Plex Sans Thai'", color: SL.ink2, marginBottom: 6 };
+const fieldStyle = {
+  background: "#fff",
+  border: `1.5px solid ${SL.line}`,
+  borderRadius: 14,
+  padding: "11px 13px",
+};
 
 export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
   const [group, setGroup] = useState("");
@@ -56,16 +65,20 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
 
   return (
     <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">➕ เพิ่มเสาไฟใหม่</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          ตำแหน่ง: {latLng.lat.toFixed(6)}, {latLng.lng.toFixed(6)}
-        </p>
+      <div className="modal-box p-0 overflow-hidden">
+        <div style={{ background: SL.primary, color: "#fff", padding: "16px 20px" }}>
+          <div style={{ font: `700 20px ${SL_FONT_HEAD}` }}>➕ เพิ่มเสาใหม่</div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
+            ตำแหน่ง: {latLng.lat.toFixed(6)}, {latLng.lng.toFixed(6)}
+          </div>
+        </div>
 
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชุมชน/กลุ่ม *</span>
+        <div className="p-5">
+        <label className="form-control">
+          <span style={labelStyle}>ชุมชน/กลุ่ม *</span>
           <input
-            className="input input-bordered w-full"
+            className="w-full outline-none"
+            style={fieldStyle}
             list="smart-light-add-group-names"
             value={group}
             onChange={(e) => setGroup(e.target.value)}
@@ -79,9 +92,10 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
         </label>
 
         <label className="form-control mt-3">
-          <span className="label-text mb-1">ชนิดโคม</span>
+          <span style={labelStyle}>ชนิดโคม</span>
           <select
-            className="select select-bordered w-full"
+            className="w-full outline-none"
+            style={fieldStyle}
             value={lampType}
             onChange={(e) => setLampType(e.target.value)}
           >
@@ -92,7 +106,7 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
         </label>
 
         <label className="form-control mt-3">
-          <span className="label-text mb-1">รูปถ่าย</span>
+          <span style={labelStyle}>รูปถ่าย</span>
           <input
             type="file"
             accept="image/*"
@@ -103,9 +117,10 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
         </label>
 
         <label className="form-control mt-3">
-          <span className="label-text mb-1">หมายเหตุ</span>
+          <span style={labelStyle}>หมายเหตุ</span>
           <textarea
-            className="textarea textarea-bordered"
+            className="w-full outline-none"
+            style={fieldStyle}
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -115,12 +130,23 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
         {error && <p className="text-error text-sm mt-2">{error}</p>}
 
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
+          <button
+            className="btn border-0"
+            style={{ background: SL.soft2, color: SL.primary }}
+            onClick={onClose}
+            disabled={submitting}
+          >
             ยกเลิก
           </button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+          <button
+            className="btn border-0 text-white"
+            style={{ background: "#16A34A" }}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
             {submitting ? "กำลังบันทึก…" : "เพิ่มเสา"}
           </button>
+        </div>
         </div>
       </div>
       <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
