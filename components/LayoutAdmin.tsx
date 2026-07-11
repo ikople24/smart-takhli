@@ -98,7 +98,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
     /*
      * h-screen — sidebar spans full viewport height, same level as TopNavbar
      * TopNavbar is rendered INSIDE the content column (not in Layout.js for admin routes)
-     * BottomNav is fixed bottom-0 h-14 — content area has pb-14 to compensate
+     * โหมด admin ไม่มี BottomNav (เป็น nav ของหน้า public) — เนื้อหาใช้พื้นที่เต็มความสูง
      */
     <div className="flex h-screen bg-base-100 overflow-hidden">
 
@@ -313,24 +313,19 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0
+        {/* Scrollable content — โหมด admin ไม่มี BottomNav แล้ว จึงไม่ต้องเผื่อ padding ล่าง
             fullBleed: children คุมพื้นที่เองเต็มผืน (หน้าแผนที่) — ไม่มี padding/scroll ของ chrome */}
         {fullBleed ? (
-          <div className="flex-1 overflow-hidden pb-14 md:pb-0">
+          <div className="flex-1 overflow-hidden">
             {children}
           </div>
         ) : (
-          <div className="flex-1 overflow-auto pb-14">
+          <div className="flex-1 overflow-auto">
             <div className="p-6">
               {children}
             </div>
           </div>
         )}
-
-        {/* Footer */}
-        <footer className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3 text-center text-sm text-base-content/60 mb-14 md:mb-0">
-          <p>&copy; 2025 Smart Municipality System. All rights reserved.</p>
-        </footer>
       </main>
 
       {/* Mobile backdrop */}

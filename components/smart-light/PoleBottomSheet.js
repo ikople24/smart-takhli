@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { POLE_STATUS, LAMP_TYPE } from "@/lib/smart-light/constants";
 import { googleMapsDirectionsUrl } from "@/lib/smart-light/geo";
+import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
 
 function formatThaiDateTime(value) {
   if (!value) return "-";
@@ -27,15 +28,32 @@ function StatusBadge({ status }) {
 export default function PoleBottomSheet({ pole, loading, onClose, onSurvey, onEdit }) {
   if (!pole) return null;
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box max-h-[85vh]">
+    <div
+      role="dialog"
+      className="fixed z-[1000] inset-x-0 bottom-0 lg:inset-auto lg:left-4 lg:bottom-4 lg:w-80"
+      style={{
+        background: "#fff",
+        border: `1px solid ${SL.line}`,
+        borderRadius: 22,
+        boxShadow: "0 26px 54px -26px rgba(33,27,46,.55)",
+        padding: 16,
+        maxHeight: "70vh",
+        overflowY: "auto",
+      }}
+    >
+      <div>
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-bold text-lg">{pole.code}</h3>
+            <h3 style={{ font: `800 16px ${SL_FONT_HEAD}`, color: SL.ink }}>{pole.code}</h3>
             <div className="flex flex-wrap items-center gap-2 mt-1 text-sm">
-              <span className="badge badge-outline">🏘️ {pole.group}</span>
+              <span
+                className="badge border-0"
+                style={{ background: SL.soft2, color: SL.primaryDark }}
+              >
+                🏘️ {pole.group}
+              </span>
               <StatusBadge status={pole.status} />
-              <span className="text-gray-500">
+              <span style={{ color: SL.muted }}>
                 {(LAMP_TYPE[pole.lampType] || LAMP_TYPE.unknown).label}
               </span>
             </div>
@@ -64,14 +82,23 @@ export default function PoleBottomSheet({ pole, loading, onClose, onSurvey, onEd
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <button className="btn btn-primary" onClick={() => onSurvey(pole)}>
-            📋 บันทึกสภาพ
+          <button
+            className="btn border-0"
+            style={{ background: SL.primary, color: "#fff" }}
+            onClick={() => onSurvey(pole)}
+          >
+            🔦 บันทึกสภาพ
           </button>
-          <button className="btn btn-ghost border border-gray-300" onClick={() => onEdit(pole)}>
+          <button
+            className="btn"
+            style={{ border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2 }}
+            onClick={() => onEdit(pole)}
+          >
             ✏️ แก้ไขข้อมูล
           </button>
           <a
-            className="btn btn-outline btn-info"
+            className="btn"
+            style={{ border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2 }}
             href={googleMapsDirectionsUrl(pole.lat, pole.lng)}
             target="_blank"
             rel="noopener noreferrer"
@@ -115,7 +142,6 @@ export default function PoleBottomSheet({ pole, loading, onClose, onSurvey, onEd
           )}
         </div>
       </div>
-      <div className="modal-backdrop" onClick={onClose} />
     </div>
   );
 }

@@ -2,6 +2,14 @@
 import { useState } from "react";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
+import {
+  SLModalShell,
+  SLCancelButton,
+  SLPrimaryButton,
+  slLabel,
+  slField,
+  slDashed,
+} from "./modalUi";
 
 export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
   const [group, setGroup] = useState("");
@@ -55,75 +63,79 @@ export default function AddPoleModal({ latLng, groupNames, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">➕ เพิ่มเสาไฟใหม่</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          ตำแหน่ง: {latLng.lat.toFixed(6)}, {latLng.lng.toFixed(6)}
-        </p>
+    <SLModalShell
+      icon="➕"
+      title="เพิ่มเสาไฟใหม่"
+      subtitle={`ตำแหน่ง: ${latLng.lat.toFixed(6)}, ${latLng.lng.toFixed(6)}`}
+      onClose={onClose}
+      disabled={submitting}
+      maxWidth={560}
+      footer={
+        <>
+          <SLCancelButton onClick={onClose} disabled={submitting} />
+          <SLPrimaryButton onClick={handleSubmit} disabled={submitting} color="#16A34A">
+            {submitting ? "กำลังบันทึก…" : "✓ บันทึกเสาใหม่"}
+          </SLPrimaryButton>
+        </>
+      }
+    >
+      <div>
+        <span style={slLabel}>ชุมชน/กลุ่ม *</span>
+        <input
+          style={slField}
+          list="smart-light-add-group-names"
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+          placeholder="เลือกจากรายการ หรือพิมพ์กลุ่มใหม่"
+        />
+        <datalist id="smart-light-add-group-names">
+          {groupNames.map((g) => (
+            <option key={g} value={g} />
+          ))}
+        </datalist>
+      </div>
 
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชุมชน/กลุ่ม *</span>
-          <input
-            className="input input-bordered w-full"
-            list="smart-light-add-group-names"
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            placeholder="เลือกจากรายการ หรือพิมพ์กลุ่มใหม่"
-          />
-          <datalist id="smart-light-add-group-names">
-            {groupNames.map((g) => (
-              <option key={g} value={g} />
-            ))}
-          </datalist>
-        </label>
+      <div>
+        <span style={slLabel}>ชนิดโคม</span>
+        <select
+          style={{ ...slField, cursor: "pointer" }}
+          value={lampType}
+          onChange={(e) => setLampType(e.target.value)}
+        >
+          {Object.entries(LAMP_TYPE).map(([value, t]) => (
+            <option key={value} value={value}>{t.label}</option>
+          ))}
+        </select>
+      </div>
 
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชนิดโคม</span>
-          <select
-            className="select select-bordered w-full"
-            value={lampType}
-            onChange={(e) => setLampType(e.target.value)}
-          >
-            {Object.entries(LAMP_TYPE).map(([value, t]) => (
-              <option key={value} value={value}>{t.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">รูปถ่าย</span>
+      <div>
+        <span style={slLabel}>รูปถ่าย (ถ่ายจากกล้องได้เลย)</span>
+        <label style={{ ...slDashed, display: "block", cursor: "pointer" }}>
+          <div style={{ fontSize: 13, marginBottom: 8 }}>
+            📷 {file ? file.name : "แตะเพื่อถ่ายรูป หรือเลือกไฟล์"}
+          </div>
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            className="file-input file-input-bordered w-full"
+            className="file-input file-input-bordered file-input-sm w-full"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
           />
         </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">หมายเหตุ</span>
-          <textarea
-            className="textarea textarea-bordered"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
-
-        {error && <p className="text-error text-sm mt-2">{error}</p>}
-
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
-            ยกเลิก
-          </button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "กำลังบันทึก…" : "เพิ่มเสา"}
-          </button>
-        </div>
       </div>
-      <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
-    </div>
+
+      <div>
+        <span style={slLabel}>หมายเหตุ</span>
+        <textarea
+          style={{ ...slField, resize: "none" }}
+          rows={2}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="เช่น หลอดกระพริบ เสาเอียง"
+        />
+      </div>
+
+      {error && <p className="text-error text-sm">{error}</p>}
+    </SLModalShell>
   );
 }

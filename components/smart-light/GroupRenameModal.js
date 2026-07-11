@@ -1,6 +1,14 @@
 // modal จัดการกลุ่ม — เปลี่ยนชื่อกลุ่มทั้งกลุ่ม (updateMany ฝั่ง server)
 // ถ้าชื่อใหม่ชนกลุ่มที่มีอยู่ server ตอบ 409 needsConfirm — ต้องยืนยันรวมกลุ่มก่อนส่งซ้ำ
 import { useState } from "react";
+import { SL } from "@/lib/smart-light/theme";
+import {
+  SLModalShell,
+  SLCancelButton,
+  SLPrimaryButton,
+  slLabel,
+  slField,
+} from "./modalUi";
 
 export default function GroupRenameModal({ groups, onClose, onRenamed }) {
   const [from, setFrom] = useState("");
@@ -46,51 +54,53 @@ export default function GroupRenameModal({ groups, onClose, onRenamed }) {
   };
 
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">🏘️ เปลี่ยนชื่อกลุ่ม/ชุมชน</h3>
-        <p className="text-sm text-gray-500 mt-1">
-          เปลี่ยนแล้วมีผลกับเสาทุกต้นในกลุ่ม (ไว้แก้ชื่อที่สะกดผิดจากไฟล์เดิม)
-        </p>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">กลุ่มเดิม</span>
-          <select
-            className="select select-bordered w-full"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          >
-            <option value="">— เลือกกลุ่ม —</option>
-            {groups.map((g) => (
-              <option key={g.group} value={g.group}>
-                {g.group} ({g.total} ต้น)
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">ชื่อใหม่</span>
-          <input
-            className="input input-bordered w-full"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            placeholder="เช่น ชุมชนตาคลี"
-          />
-        </label>
-
-        {error && <p className="text-error text-sm mt-2">{error}</p>}
-
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
-            ยกเลิก
-          </button>
-          <button className="btn btn-primary" onClick={handleRename} disabled={submitting}>
+    <SLModalShell
+      icon="🏘️"
+      title="เปลี่ยนชื่อกลุ่ม/ชุมชน"
+      subtitle="เปลี่ยนแล้วมีผลกับเสาทุกต้นในกลุ่ม"
+      onClose={onClose}
+      disabled={submitting}
+      maxWidth={480}
+      footer={
+        <>
+          <SLCancelButton onClick={onClose} disabled={submitting} />
+          <SLPrimaryButton onClick={handleRename} disabled={submitting}>
             {submitting ? "กำลังเปลี่ยน…" : "เปลี่ยนชื่อ"}
-          </button>
-        </div>
+          </SLPrimaryButton>
+        </>
+      }
+    >
+      <p className="text-sm" style={{ color: SL.ink2 }}>
+        ไว้แก้ชื่อที่สะกดผิดจากไฟล์เดิม — เลือกกลุ่มเดิมแล้วกรอกชื่อใหม่
+      </p>
+
+      <div>
+        <span style={slLabel}>กลุ่มเดิม</span>
+        <select
+          style={{ ...slField, cursor: "pointer" }}
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        >
+          <option value="">— เลือกกลุ่ม —</option>
+          {groups.map((g) => (
+            <option key={g.group} value={g.group}>
+              {g.group} ({g.total} ต้น)
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
-    </div>
+
+      <div>
+        <span style={slLabel}>ชื่อใหม่</span>
+        <input
+          style={slField}
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="เช่น ชุมชนตาคลี"
+        />
+      </div>
+
+      {error && <p className="text-error text-sm">{error}</p>}
+    </SLModalShell>
   );
 }

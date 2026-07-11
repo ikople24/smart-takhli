@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { POLE_STATUS, SURVEY_STATUS_VALUES } from "@/lib/smart-light/constants";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
+import { SL } from "@/lib/smart-light/theme";
+import {
+  SLModalShell,
+  SLCancelButton,
+  SLPrimaryButton,
+  slLabel,
+  slField,
+  slDashed,
+} from "./modalUi";
 
 export default function SurveyModal({ pole, onClose, onSaved }) {
   const [status, setStatus] = useState(
@@ -46,57 +55,78 @@ export default function SurveyModal({ pole, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">📋 บันทึกสภาพ — {pole.code}</h3>
-
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          {SURVEY_STATUS_VALUES.map((value) => (
-            <button
-              key={value}
-              className={`btn h-16 text-white border-0 ${status === value ? "" : "opacity-40"}`}
-              style={{ backgroundColor: POLE_STATUS[value].color }}
-              onClick={() => setStatus(value)}
-            >
-              {POLE_STATUS[value].label}
-            </button>
-          ))}
+    <SLModalShell
+      icon="📋"
+      title="บันทึกสภาพเสา"
+      subtitle={`${pole.code} · 🏘️ ${pole.group}`}
+      onClose={onClose}
+      disabled={submitting}
+      maxWidth={520}
+      bodyGap={18}
+      footer={
+        <>
+          <SLCancelButton onClick={onClose} disabled={submitting} />
+          <SLPrimaryButton onClick={handleSubmit} disabled={submitting} color="#16A34A">
+            {submitting ? "กำลังบันทึก…" : "✓ บันทึกสภาพ"}
+          </SLPrimaryButton>
+        </>
+      }
+    >
+      <div>
+        <span style={slLabel}>สถานะที่พบหน้างาน</span>
+        <div className="grid grid-cols-3 gap-2.5">
+          {SURVEY_STATUS_VALUES.map((value) => {
+            const active = status === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                className="border-0"
+                style={{
+                  height: 66,
+                  borderRadius: 16,
+                  font: "700 15px 'Anuphan'",
+                  cursor: "pointer",
+                  background: active ? POLE_STATUS[value].color : SL.soft2,
+                  color: active ? "#fff" : SL.muted,
+                }}
+                onClick={() => setStatus(value)}
+              >
+                {POLE_STATUS[value].label}
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        <label className="form-control mt-4">
-          <span className="label-text mb-1">รูปถ่าย (ถ่ายจากกล้องได้เลย)</span>
+      <div>
+        <span style={slLabel}>รูปถ่าย (ถ่ายจากกล้องได้เลย)</span>
+        <label style={{ ...slDashed, display: "block", cursor: "pointer" }}>
+          <div style={{ fontSize: 13, marginBottom: 8 }}>
+            📷 {file ? file.name : "แตะเพื่อถ่ายรูป หรือเลือกไฟล์"}
+          </div>
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            className="file-input file-input-bordered w-full"
+            className="file-input file-input-bordered file-input-sm w-full"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
           />
         </label>
-
-        <label className="form-control mt-3">
-          <span className="label-text mb-1">หมายเหตุ</span>
-          <textarea
-            className="textarea textarea-bordered"
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="เช่น หลอดกระพริบ เสาเอียง"
-          />
-        </label>
-
-        {error && <p className="text-error text-sm mt-2">{error}</p>}
-
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
-            ยกเลิก
-          </button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "กำลังบันทึก…" : "บันทึก"}
-          </button>
-        </div>
       </div>
-      <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
-    </div>
+
+      <div>
+        <span style={slLabel}>หมายเหตุ</span>
+        <textarea
+          style={{ ...slField, resize: "none" }}
+          rows={2}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="เช่น หลอดกระพริบ เสาเอียง"
+        />
+      </div>
+
+      {error && <p className="text-error text-sm">{error}</p>}
+    </SLModalShell>
   );
 }

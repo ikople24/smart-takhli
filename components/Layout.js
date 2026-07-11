@@ -72,7 +72,6 @@ const Layout = ({ children }) => {
         >
           {children}
         </LayoutAdmin>
-        <BottomNav />
       </div>
     );
   }
