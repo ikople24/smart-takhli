@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { POLE_STATUS, SURVEY_STATUS_VALUES } from "@/lib/smart-light/constants";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
+import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
 
 export default function SurveyModal({ pole, onClose, onSaved }) {
   const [status, setStatus] = useState(
@@ -47,35 +48,68 @@ export default function SurveyModal({ pole, onClose, onSaved }) {
 
   return (
     <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">📋 บันทึกสภาพ — {pole.code}</h3>
+      <div className="modal-box p-0 overflow-hidden">
+        <div style={{ background: SL.primary, color: "#fff", padding: "16px 20px" }}>
+          <div style={{ font: `700 20px ${SL_FONT_HEAD}` }}>🔦 บันทึกสภาพเสา</div>
+          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.85)", marginTop: 2 }}>
+            {pole.code} · 🏘️ {pole.group}
+          </div>
+        </div>
 
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          {SURVEY_STATUS_VALUES.map((value) => (
-            <button
-              key={value}
-              className={`btn h-16 text-white border-0 ${status === value ? "" : "opacity-40"}`}
-              style={{ backgroundColor: POLE_STATUS[value].color }}
-              onClick={() => setStatus(value)}
-            >
-              {POLE_STATUS[value].label}
-            </button>
-          ))}
+        <div className="p-5">
+        <div className="grid grid-cols-3 gap-2">
+          {SURVEY_STATUS_VALUES.map((value) => {
+            const active = status === value;
+            return (
+              <button
+                key={value}
+                className="border-0"
+                style={{
+                  height: 66,
+                  borderRadius: 16,
+                  font: "700 15px 'Anuphan'",
+                  background: active ? POLE_STATUS[value].color : SL.soft2,
+                  color: active ? "#fff" : SL.muted,
+                }}
+                onClick={() => setStatus(value)}
+              >
+                {POLE_STATUS[value].label}
+              </button>
+            );
+          })}
         </div>
 
         <label className="form-control mt-4">
-          <span className="label-text mb-1">รูปถ่าย (ถ่ายจากกล้องได้เลย)</span>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="file-input file-input-bordered w-full"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
+          <span style={{ font: "700 12px 'IBM Plex Sans Thai'", color: SL.ink2, marginBottom: 6 }}>
+            รูปถ่าย (ถ่ายจากกล้องได้เลย)
+          </span>
+          <div
+            style={{
+              border: "1.5px dashed #DDD2FB",
+              background: "#fff",
+              borderRadius: 14,
+              padding: "18px 14px",
+              textAlign: "center",
+              color: SL.ink2,
+            }}
+          >
+            <div style={{ fontSize: 13, marginBottom: 8 }}>
+              📷 {file ? file.name : "แตะเพื่อถ่ายรูป หรือเลือกไฟล์"}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="file-input file-input-bordered file-input-sm w-full"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </div>
         </label>
 
         <label className="form-control mt-3">
-          <span className="label-text mb-1">หมายเหตุ</span>
+          <span style={{ font: "700 12px 'IBM Plex Sans Thai'", color: SL.ink2, marginBottom: 6 }}>
+            หมายเหตุ
+          </span>
           <textarea
             className="textarea textarea-bordered"
             rows={2}
@@ -88,12 +122,23 @@ export default function SurveyModal({ pole, onClose, onSaved }) {
         {error && <p className="text-error text-sm mt-2">{error}</p>}
 
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
+          <button
+            className="btn border-0"
+            style={{ background: SL.soft2, color: SL.primary }}
+            onClick={onClose}
+            disabled={submitting}
+          >
             ยกเลิก
           </button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "กำลังบันทึก…" : "บันทึก"}
+          <button
+            className="btn border-0 text-white"
+            style={{ background: "#16A34A" }}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? "กำลังบันทึก…" : "✓ บันทึกสภาพ"}
           </button>
+        </div>
         </div>
       </div>
       <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
