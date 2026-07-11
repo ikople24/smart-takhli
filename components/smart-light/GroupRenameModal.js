@@ -1,6 +1,7 @@
 // modal จัดการกลุ่ม — เปลี่ยนชื่อกลุ่มทั้งกลุ่ม (updateMany ฝั่ง server)
 // ถ้าชื่อใหม่ชนกลุ่มที่มีอยู่ server ตอบ 409 needsConfirm — ต้องยืนยันรวมกลุ่มก่อนส่งซ้ำ
 import { useState } from "react";
+import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
 
 export default function GroupRenameModal({ groups, onClose, onRenamed }) {
   const [from, setFrom] = useState("");
@@ -47,8 +48,19 @@ export default function GroupRenameModal({ groups, onClose, onRenamed }) {
 
   return (
     <div className="modal modal-open modal-bottom sm:modal-middle" role="dialog">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">🏘️ เปลี่ยนชื่อกลุ่ม/ชุมชน</h3>
+      <div className="modal-box p-0">
+        <h3
+          className="px-6 py-4"
+          style={{
+            background: SL.primary,
+            color: "#fff",
+            font: `700 18px ${SL_FONT_HEAD}`,
+          }}
+        >
+          🏘️ เปลี่ยนชื่อกลุ่ม/ชุมชน
+        </h3>
+
+        <div className="px-6 pb-6 pt-4">
         <p className="text-sm text-gray-500 mt-1">
           เปลี่ยนแล้วมีผลกับเสาทุกต้นในกลุ่ม (ไว้แก้ชื่อที่สะกดผิดจากไฟล์เดิม)
         </p>
@@ -85,9 +97,15 @@ export default function GroupRenameModal({ groups, onClose, onRenamed }) {
           <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>
             ยกเลิก
           </button>
-          <button className="btn btn-primary" onClick={handleRename} disabled={submitting}>
+          <button
+            className="btn"
+            onClick={handleRename}
+            disabled={submitting}
+            style={{ background: SL.primary, color: "#fff", border: "none" }}
+          >
             {submitting ? "กำลังเปลี่ยน…" : "เปลี่ยนชื่อ"}
           </button>
+        </div>
         </div>
       </div>
       <div className="modal-backdrop" onClick={submitting ? undefined : onClose} />
