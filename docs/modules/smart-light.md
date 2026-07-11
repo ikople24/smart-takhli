@@ -9,11 +9,15 @@ Spec: `docs/superpowers/specs/2026-07-10-smart-light-design.md`
 |---|---|
 | หน้า admin | `pages/admin/smart-light.jsx` |
 | API | `pages/api/smart-light/` (`poles/`, `groups/`, `_auth.js`) |
-| Components | `components/smart-light/` (SmartLightMap, PoleBottomSheet, SurveyModal, EditPoleModal, AddPoleModal, GroupRenameModal, SearchPanel) |
-| Lib | `lib/smart-light/` (constants, geo, poleCode, uploadImage) |
+| Components | `components/smart-light/` (SmartLightMap, PoleBottomSheet, SurveyModal, EditPoleModal, AddPoleModal, GroupRenameModal, SearchPanel, RightRail, HealthSummaryCard, StatusCards, OverdueCard, GroupHeatmapCard, MapStatusChips, DataTableModal, NearbyCard) |
+| Lib | `lib/smart-light/` (constants, geo, poleCode, uploadImage, theme, metrics) |
 | Model | `models/smart-light/StreetLightPole.js` → collection `street_light_poles` |
 | Scripts | `scripts/import-street-light-kmz.js`, `scripts/grant-smart-light-permission.js` |
 | ข้อมูลดิบ | `public/point_of_ligth/` (KMZ 1,067 จุด/21 กลุ่ม + KML 4 ไฟล์ — backup ห้ามลบ) |
+
+> ดีไซน์ใหม่ (2026-07): ธีมม่วง เดสก์ท็อป (แผนที่ + แถบขวาวิเคราะห์) / มือถือ responsive (bottom-sheet + การ์ดเสาใกล้ตัว)
+> โทเคนสีที่ `lib/smart-light/theme.js` · ตัวเลขสรุป (pure, มีเทสต์) ที่ `lib/smart-light/metrics.js`
+> panel วิเคราะห์ทั้งหมด (โดนัทสุขภาพ/สถานะ/ค้างสำรวจ/heatmap/ตาราง) คำนวณฝั่ง client จาก `/groups` + `/poles` เดิม — ไม่มี API/model เปลี่ยน
 
 ## รหัสเสา
 
@@ -59,6 +63,11 @@ threshold ปรับที่ `POLE_ZOOM_THRESHOLD` ใน `lib/smart-light/co
 7. เปลี่ยนชื่อกลุ่ม → เสาทุกต้นในกลุ่มอัปเดต; เปลี่ยนเป็นชื่อกลุ่มที่มีอยู่ → มีกล่องยืนยันรวมกลุ่มก่อน
 8. user ไม่มีสิทธิ์ `/admin/smart-light` → ถูกปฏิเสธทั้งหน้าและ API; superadmin เข้าได้
 9. ทดสอบบนมือถือ (bottom-sheet, ถ่ายรูป, geolocation)
+10. ดีไซน์ใหม่ (ธีมม่วง): header ม่วง + แถบขวา 4 การ์ด (โดนัทสุขภาพ/สถานะ/ค้างสำรวจ/heatmap) แสดงเลขตรงกับ chip
+11. คลิก StatusCard / heatmap tile / overdue row → กรอง + โฟกัสถูกต้อง
+12. ตารางข้อมูล (DataTableModal): เรียงคอลัมน์, ค้นหารหัส/กลุ่ม, คลิกแถวโฟกัสบนแผนที่
+13. responsive: ย่อจอ <1024px → แถบขวาหาย, chip เลื่อนแนวนอน, การ์ด "เสาไฟใกล้คุณ" โผล่ (หรือข้อความขอสิทธิ์ GPS)
+14. เทสต์ metrics: `node lib/smart-light/__tests__/metrics.test.mjs` → ผ่าน
 
 ## นอกขอบเขต (เฟสถัดไป)
 
