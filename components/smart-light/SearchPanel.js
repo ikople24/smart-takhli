@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { POLE_STATUS } from "@/lib/smart-light/constants";
 import { haversineMeters, googleMapsDirectionsUrl, parseLatLng } from "@/lib/smart-light/geo";
+import { SL } from "@/lib/smart-light/theme";
 
 const MAX_RESULTS = 10;
 
@@ -60,22 +61,53 @@ export default function SearchPanel({ poles, onFocusPole }) {
     m >= 1000 ? `${(m / 1000).toFixed(1)} กม.` : `${Math.round(m)} ม.`;
 
   return (
-    <div className="w-full">
-      <div className="flex gap-2">
+    <div className="w-full" style={{ position: "relative" }}>
+      <div
+        className="flex items-center gap-1"
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: "9px 13px",
+        }}
+      >
+        <span style={{ fontSize: 14, lineHeight: 1 }}>🔍</span>
         <input
-          className="input input-bordered input-sm flex-1"
+          className="flex-1 min-w-0"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="พิกัด 15.22,100.36 หรือรหัสเสา/ชื่อกลุ่ม"
+          placeholder="รหัส / กลุ่ม"
+          style={{
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            fontSize: 13,
+            color: SL.ink,
+          }}
         />
-        <button className="btn btn-sm btn-outline" onClick={useCurrentLocation}>
-          📍 ตำแหน่งปัจจุบัน
+        <button
+          onClick={useCurrentLocation}
+          title="ตำแหน่งปัจจุบัน"
+          style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: 14, lineHeight: 1 }}
+        >
+          📍
         </button>
       </div>
       {gpsError && <p className="text-error text-xs mt-1">{gpsError}</p>}
 
       {results.items.length > 0 && (
-        <ul className="menu bg-base-100 rounded-box shadow mt-1 max-h-64 overflow-y-auto flex-nowrap w-full">
+        <ul
+          className="menu max-h-64 overflow-y-auto flex-nowrap w-full"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            zIndex: 1200,
+            background: "#fff",
+            border: `1px solid ${SL.line}`,
+            borderRadius: 14,
+            boxShadow: "0 22px 44px -22px rgba(33,27,46,.45)",
+          }}
+        >
           {results.items.map(({ pole, distance }) => (
             <li key={pole._id}>
               <div
@@ -110,7 +142,23 @@ export default function SearchPanel({ poles, onFocusPole }) {
         </ul>
       )}
       {query.trim() && results.items.length === 0 && (
-        <p className="text-xs text-gray-400 mt-1">ไม่พบเสาที่ตรงกับคำค้น</p>
+        <p
+          className="text-xs"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            zIndex: 1200,
+            background: "#fff",
+            border: `1px solid ${SL.line}`,
+            borderRadius: 12,
+            padding: "8px 12px",
+            color: SL.muted,
+            boxShadow: "0 22px 44px -22px rgba(33,27,46,.45)",
+          }}
+        >
+          ไม่พบเสาที่ตรงกับคำค้น
+        </p>
       )}
     </div>
   );
