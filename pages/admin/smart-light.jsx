@@ -13,6 +13,7 @@ import RightRail from "@/components/smart-light/RightRail";
 import MapStatusChips from "@/components/smart-light/MapStatusChips";
 import DataTableModal from "@/components/smart-light/DataTableModal";
 import NearbyCard from "@/components/smart-light/NearbyCard";
+import { MapLayerToggle } from "@/components/smart-light/MapLayerToggle";
 
 // มี leaflet ข้างใน — โหลดเฉพาะฝั่ง client
 const SmartLightMap = dynamic(() => import("@/components/smart-light/SmartLightMap"), {
@@ -49,6 +50,7 @@ export default function SmartLightPage() {
 
   const [focusTarget, setFocusTarget] = useState(null);
   const [tableOpen, setTableOpen] = useState(false);
+  const [baseLayer, setBaseLayer] = useState("street"); // แผนที่ถนน / ภาพถ่ายดาวเทียม
 
   const loadAll = useCallback(async () => {
     try {
@@ -226,6 +228,7 @@ export default function SmartLightPage() {
                 pickedLatLng={pickedLatLng}
                 onPickLocation={setPickedLatLng}
                 onSelectPole={openPole}
+                baseLayer={baseLayer}
               />
             )}
 
@@ -233,6 +236,13 @@ export default function SmartLightPage() {
             <div className="absolute z-[8] left-3 right-3 lg:left-1/2 lg:right-auto lg:-translate-x-1/2" style={{ top: 14 }}>
               <MapStatusChips summary={summary} filterStatus={filterStatus} onFilter={setFilterStatus} />
             </div>
+
+            {/* ปุ่มสลับชั้นแผนที่ — มุมขวาบน (มือถือขยับลงใต้แถบ chip กันทับ) */}
+            {!loading && (
+              <div className="absolute z-[8] right-3 top-[60px] lg:top-3">
+                <MapLayerToggle value={baseLayer} onChange={setBaseLayer} />
+              </div>
+            )}
 
             {/* การ์ดเสาใกล้ตัว (มือถือเท่านั้น) */}
             {!loading && !selectedPole && (

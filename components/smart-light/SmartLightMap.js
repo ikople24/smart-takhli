@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
-  TileLayer,
   CircleMarker,
   Marker,
   GeoJSON,
@@ -18,6 +17,7 @@ import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
 } from "@/lib/smart-light/constants";
+import { BaseTileLayers } from "./MapLayers";
 
 // ป้องกัน marker icon หายในบางระบบ (pattern เดียวกับ MapPoints ของ smart-school)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -77,6 +77,7 @@ export default function SmartLightMap({
   pickedLatLng,
   onPickLocation,
   onSelectPole,
+  baseLayer = "street",
 }) {
   const [view, setView] = useState(null);
 
@@ -109,10 +110,7 @@ export default function SmartLightMap({
       preferCanvas
       style={{ height: "100%", width: "100%", zIndex: 0 }}
     >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="© OpenStreetMap contributors"
-      />
+      <BaseTileLayers baseLayer={baseLayer} />
       {/* ขอบเขตชุมชน (จัดการที่ /admin/settings/geojson-map) — key remount เมื่อข้อมูลมา เพราะ GeoJSON layer ตั้ง data ตอนสร้างเท่านั้น */}
       {boundaryCollection && (
         <GeoJSON

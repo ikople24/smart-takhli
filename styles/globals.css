@@ -1008,3 +1008,10 @@ body.survey-form-open .app-bottom-nav {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* smart-light: ซ่อนปุ่ม zoom +/- บนมือถือ (ใช้จีบซูมแทน) กันทับแถบ chip สถานะ — คงไว้บนจอใหญ่ */
+@media (max-width: 1023px) {
+  .sl-root .leaflet-control-zoom {
+    display: none;
+  }
+}
