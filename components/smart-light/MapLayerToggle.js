@@ -1,47 +1,49 @@
-// pill สลับชั้นแผนที่ ธีมม่วง (แผนที่ถนน ↔ ภาพถ่ายดาวเทียม) — pure UI ไม่พึ่ง leaflet
-// แยกจาก MapLayers.js เพื่อให้ import ฝั่ง SSR ได้ (react-leaflet แตะ window ตอน import)
+// ปุ่มไอคอน "ชั้นแผนที่" — แตะสลับ แผนที่ถนน ↔ ภาพถ่ายดาวเทียม (ประหยัดพื้นที่จอ)
+// เปิดใช้ = ดาวเทียม → ปุ่มม่วง, ปิด = แผนที่ถนน → ปุ่มขาว · pure UI ไม่พึ่ง leaflet (import ฝั่ง SSR ได้)
 import { SL } from "@/lib/smart-light/theme";
 
 export function MapLayerToggle({ value, onChange, size = "md", className, style }) {
-  const pad = size === "sm" ? "5px 9px" : "7px 12px";
-  const font = size === "sm" ? "600 11px" : "600 12px";
-  const opt = (val, label) => {
-    const active = value === val;
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(val)}
-        style={{
-          border: 0,
-          cursor: "pointer",
-          font: `${font} 'IBM Plex Sans Thai'`,
-          padding: pad,
-          borderRadius: 9,
-          whiteSpace: "nowrap",
-          background: active ? SL.primary : "transparent",
-          color: active ? "#fff" : SL.ink2,
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
+  const box = size === "sm" ? 32 : 40;
+  const icon = size === "sm" ? 17 : 21;
+  const satellite = value === "satellite";
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onChange(satellite ? "street" : "satellite")}
+      title={satellite ? "สลับเป็นแผนที่ถนน" : "สลับเป็นภาพถ่ายดาวเทียม"}
+      aria-label={satellite ? "สลับเป็นแผนที่ถนน" : "สลับเป็นภาพถ่ายดาวเทียม"}
+      aria-pressed={satellite}
       className={className}
       style={{
-        display: "flex",
-        gap: 3,
-        background: "rgba(255,255,255,.92)",
-        backdropFilter: "blur(6px)",
-        padding: 4,
+        display: "grid",
+        placeItems: "center",
+        width: box,
+        height: box,
+        border: 0,
+        cursor: "pointer",
         borderRadius: 12,
+        background: satellite ? SL.primary : "rgba(255,255,255,.94)",
+        color: satellite ? "#fff" : SL.ink2,
+        backdropFilter: "blur(6px)",
         boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)",
         ...style,
       }}
     >
-      {opt("street", "🗺️ แผนที่")}
-      {opt("satellite", "🛰️ ดาวเทียม")}
-    </div>
+      {/* ไอคอนชั้นแผนที่ (stacked layers) */}
+      <svg
+        width={icon}
+        height={icon}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </svg>
+    </button>
   );
 }
