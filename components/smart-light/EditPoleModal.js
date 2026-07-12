@@ -141,7 +141,7 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
         <span style={slLabel}>ตำแหน่ง (ลากหมุดเพื่อปรับ)</span>
         <div className="relative h-56 rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${SL.line}` }}>
           <div className="absolute z-[500] top-2 right-2">
-            <MapLayerToggle value={baseLayer} onChange={setBaseLayer} size="sm" />
+            <MapLayerToggle value={baseLayer} onChange={setBaseLayer} />
           </div>
           <MapContainer
             center={[pole.lat, pole.lng]}

@@ -7,23 +7,14 @@ import { TileLayer } from "react-leaflet";
 // ต้องเป็นลูกของ <MapContainer> เท่านั้น
 export function BaseTileLayers({ baseLayer }) {
   if (baseLayer === "satellite") {
+    // Google hybrid (lyrs=y) — ภาพถ่ายดาวเทียม + ถนน/ป้ายชื่อภาษาไทยในตัว
     return (
-      <>
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics"
-          maxZoom={19}
-        />
-        {/* ป้ายชื่อถนน/สถานที่ (โปร่งใส) ทับภาพถ่าย */}
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={19}
-        />
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={19}
-        />
-      </>
+      <TileLayer
+        url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        subdomains={["mt0", "mt1", "mt2", "mt3"]}
+        attribution="&copy; Google"
+        maxZoom={20}
+      />
     );
   }
   return (

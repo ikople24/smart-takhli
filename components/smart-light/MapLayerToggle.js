@@ -1,49 +1,31 @@
-// ปุ่มไอคอน "ชั้นแผนที่" — แตะสลับ แผนที่ถนน ↔ ภาพถ่ายดาวเทียม (ประหยัดพื้นที่จอ)
-// เปิดใช้ = ดาวเทียม → ปุ่มม่วง, ปิด = แผนที่ถนน → ปุ่มขาว · pure UI ไม่พึ่ง leaflet (import ฝั่ง SSR ได้)
-import { SL } from "@/lib/smart-light/theme";
-
-export function MapLayerToggle({ value, onChange, size = "md", className, style }) {
-  const box = size === "sm" ? 32 : 40;
-  const icon = size === "sm" ? 17 : 21;
-  const satellite = value === "satellite";
-  return (
+// ปุ่มสลับชั้นแผนที่ — สไตล์เดียวกับฟอร์มร้องเรียน (🗺️ ถนน / 🛰️ ดาวเทียม, btn-xs primary/outline)
+// วางลอยเหนือแผนที่ในกล่องขาวโปร่งให้ปุ่ม outline อ่านออกบนภาพถ่าย · pure UI ไม่พึ่ง leaflet
+export function MapLayerToggle({ value, onChange, className, style }) {
+  const btn = (val, label) => (
     <button
       type="button"
-      onClick={() => onChange(satellite ? "street" : "satellite")}
-      title={satellite ? "สลับเป็นแผนที่ถนน" : "สลับเป็นภาพถ่ายดาวเทียม"}
-      aria-label={satellite ? "สลับเป็นแผนที่ถนน" : "สลับเป็นภาพถ่ายดาวเทียม"}
-      aria-pressed={satellite}
+      className={`btn btn-xs ${value === val ? "btn-primary" : "btn-outline"}`}
+      onClick={() => onChange(val)}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div
       className={className}
       style={{
-        display: "grid",
-        placeItems: "center",
-        width: box,
-        height: box,
-        border: 0,
-        cursor: "pointer",
-        borderRadius: 12,
-        background: satellite ? SL.primary : "rgba(255,255,255,.94)",
-        color: satellite ? "#fff" : SL.ink2,
+        display: "flex",
+        gap: 4,
+        background: "rgba(255,255,255,.9)",
         backdropFilter: "blur(6px)",
+        padding: 4,
+        borderRadius: 10,
         boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)",
         ...style,
       }}
     >
-      {/* ไอคอนชั้นแผนที่ (stacked layers) */}
-      <svg
-        width={icon}
-        height={icon}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polygon points="12 2 2 7 12 12 22 7 12 2" />
-        <polyline points="2 17 12 22 22 17" />
-        <polyline points="2 12 12 17 22 12" />
-      </svg>
-    </button>
+      {btn("street", "🗺️ ถนน")}
+      {btn("satellite", "🛰️ ดาวเทียม")}
+    </div>
   );
 }
