@@ -51,6 +51,26 @@ export default function SmartLightPage() {
   const [focusTarget, setFocusTarget] = useState(null);
   const [tableOpen, setTableOpen] = useState(false);
   const [baseLayer, setBaseLayer] = useState("street"); // แผนที่ถนน / ภาพถ่ายดาวเทียม
+  const [locating, setLocating] = useState(false); // แสดงตำแหน่งเจ้าหน้าที่บนแผนที่
+  const [locateNonce, setLocateNonce] = useState(0);
+
+  const onLocate = () => {
+    if (typeof window !== "undefined" && window.isSecureContext === false) {
+      alert("ต้องเปิดหน้านี้ผ่าน HTTPS ถึงจะแสดงตำแหน่งของคุณได้");
+      return;
+    }
+    setLocating(true);
+    setLocateNonce((n) => n + 1);
+  };
+
+  const onLocateError = useCallback((e) => {
+    setLocating(false);
+    alert(
+      e && e.code === 1
+        ? "ถูกปฏิเสธสิทธิ์ตำแหน่ง — เปิดสิทธิ์ในเบราว์เซอร์แล้วลองใหม่"
+        : "หาตำแหน่งไม่สำเร็จ ลองใหม่อีกครั้ง"
+    );
+  }, []);
 
   const loadAll = useCallback(async () => {
     try {
@@ -229,6 +249,9 @@ export default function SmartLightPage() {
                 onPickLocation={setPickedLatLng}
                 onSelectPole={openPole}
                 baseLayer={baseLayer}
+                locating={locating}
+                locateNonce={locateNonce}
+                onLocateError={onLocateError}
               />
             )}
 
@@ -237,10 +260,34 @@ export default function SmartLightPage() {
               <MapStatusChips summary={summary} filterStatus={filterStatus} onFilter={setFilterStatus} />
             </div>
 
-            {/* ปุ่มสลับชั้นแผนที่ — มุมขวาบน (มือถือขยับลงใต้แถบ chip กันทับ) */}
+            {/* ควบคุมแผนที่ มุมขวาบน (มือถือขยับลงใต้แถบ chip กันทับ): สลับชั้นแผนที่ + ตำแหน่งของฉัน */}
             {!loading && (
-              <div className="absolute z-[8] right-3 top-[60px] lg:top-3">
+              <div className="absolute z-[8] right-3 top-[60px] lg:top-3 flex flex-col gap-2">
                 <MapLayerToggle value={baseLayer} onChange={setBaseLayer} />
+                <button
+                  onClick={onLocate}
+                  title="ตำแหน่งของฉัน"
+                  aria-label="แสดงตำแหน่งของฉัน"
+                  aria-pressed={locating}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    display: "grid",
+                    placeItems: "center",
+                    border: 0,
+                    cursor: "pointer",
+                    borderRadius: 11,
+                    background: locating ? "#2563EB" : "rgba(255,255,255,.95)",
+                    color: locating ? "#fff" : SL.ink2,
+                    backdropFilter: "blur(6px)",
+                    boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)",
+                  }}
+                >
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                  </svg>
+                </button>
               </div>
             )}
 
