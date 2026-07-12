@@ -9,7 +9,7 @@ Spec: `docs/superpowers/specs/2026-07-10-smart-light-design.md`
 |---|---|
 | หน้า admin | `pages/admin/smart-light.jsx` |
 | API | `pages/api/smart-light/` (`poles/`, `groups/`, `_auth.js`) |
-| Components | `components/smart-light/` (SmartLightMap, PoleBottomSheet, SurveyModal, EditPoleModal, AddPoleModal, GroupRenameModal, SearchPanel, RightRail, HealthSummaryCard, StatusCards, OverdueCard, GroupHeatmapCard, MapStatusChips, DataTableModal, NearbyCard) |
+| Components | `components/smart-light/` (SmartLightMap, PoleBottomSheet, SurveyModal, EditPoleModal, AddPoleModal, GroupRenameModal, SearchPanel, RightRail, HealthSummaryCard, StatusCards, OverdueCard, GroupHeatmapCard, MapStatusChips, DataTableModal, NearbyCard, MapLayers, MapLayerToggle, modalUi) |
 | Lib | `lib/smart-light/` (constants, geo, poleCode, uploadImage, theme, metrics) |
 | Model | `models/smart-light/StreetLightPole.js` → collection `street_light_poles` |
 | Scripts | `scripts/import-street-light-kmz.js`, `scripts/grant-smart-light-permission.js` |
@@ -45,6 +45,7 @@ Idempotent ด้วยคีย์ `(source, group, name, lat, lng)` — ต้
 zoom < 15 → bubble รายกลุ่ม (centroid จาก API groups) · zoom ≥ 15 → หมุดรายต้นเฉพาะในกรอบจอ+ขอบเผื่อ 20%
 threshold ปรับที่ `POLE_ZOOM_THRESHOLD` ใน `lib/smart-light/constants.js`
 พื้นหลังแสดงขอบเขตชุมชน (GeoJSON polygons) จาก `GET /api/geojson-features` — จัดการข้อมูลที่ `/admin/settings/geojson-map`
+สลับ base layer แผนที่ถนน (OSM) ↔ ภาพถ่ายดาวเทียม (Esri World Imagery เฉพาะภาพถ่าย) ด้วย `MapLayerToggle` (ปุ่มไอคอนเลเยอร์เล็ก แตะสลับ, มุมขวาบน) — เริ่มที่แผนที่ถนน; ใช้ทั้งแผนที่หลักและแผนที่ย่อยในฟอร์มแก้ไข. ใช้ Esri เพราะ Google `/vt/` มักถูกบล็อก (ขึ้นขาว) ในบางเครือข่าย; ไม่ใส่ชั้นป้ายกำกับเพราะคืน "Map data not yet available" ในพื้นที่ไม่มีข้อมูล (`maxNativeZoom 18` ให้ขยายภาพแทน). แตะในเขตชุมชนแสดง popup ชื่อชุมชน. ไม่มีปุ่ม zoom +/- (`zoomControl={false}`) — ซูมด้วย scroll (เดสก์ท็อป) / จีบ (มือถือ)
 
 ## สิทธิ์
 

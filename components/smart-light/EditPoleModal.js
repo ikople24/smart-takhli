@@ -1,11 +1,13 @@
 // modal แก้ไขข้อมูลเสา + ลากหมุดปรับพิกัดบนแผนที่ย่อย + ลบเสา (confirm 2 ชั้น)
 // มี leaflet ข้างใน — ต้อง import ผ่าน dynamic(..., { ssr: false }) เท่านั้น
 import { useState } from "react";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
 import { SL } from "@/lib/smart-light/theme";
+import { BaseTileLayers } from "./MapLayers";
+import { MapLayerToggle } from "./MapLayerToggle";
 import {
   SLModalShell,
   SLCancelButton,
@@ -27,6 +29,7 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
   const [name, setName] = useState(pole.name || "");
   const [note, setNote] = useState(pole.note || "");
   const [position, setPosition] = useState({ lat: pole.lat, lng: pole.lng });
+  const [baseLayer, setBaseLayer] = useState("street");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -136,16 +139,17 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
 
       <div>
         <span style={slLabel}>ตำแหน่ง (ลากหมุดเพื่อปรับ)</span>
-        <div className="h-56 rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${SL.line}` }}>
+        <div className="relative h-56 rounded-2xl overflow-hidden" style={{ border: `1.5px solid ${SL.line}` }}>
+          <div className="absolute z-[500] top-2 right-2">
+            <MapLayerToggle value={baseLayer} onChange={setBaseLayer} />
+          </div>
           <MapContainer
             center={[pole.lat, pole.lng]}
             zoom={18}
+            zoomControl={false}
             style={{ height: "100%", width: "100%" }}
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="© OpenStreetMap contributors"
-            />
+            <BaseTileLayers baseLayer={baseLayer} />
             <Marker
               position={[position.lat, position.lng]}
               draggable
