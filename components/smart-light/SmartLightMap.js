@@ -131,7 +131,11 @@ export default function SmartLightMap({
           onEachFeature={(feature, layer) => {
             const name = feature?.properties?.name;
             // แตะ/คลิกในเขตชุมชน → popup ชื่อชุมชนนั้น
-            if (name) layer.bindPopup(communityPopupHtml(name), { closeButton: false });
+            if (name)
+              layer.bindPopup(communityPopupHtml(name), {
+                closeButton: false,
+                className: "sl-community-popup",
+              });
           }}
           eventHandlers={{
             // กัน race กับหมุดบน canvas เดียวกัน — เข้ามาเมื่อไหร่ก็ถอยไปอยู่ล่างสุดเสมอ

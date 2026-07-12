@@ -7,27 +7,15 @@ import { TileLayer } from "react-leaflet";
 // ต้องเป็นลูกของ <MapContainer> เท่านั้น
 export function BaseTileLayers({ baseLayer }) {
   if (baseLayer === "satellite") {
-    // Esri World Imagery (ภาพถ่าย) + ป้ายถนน/สถานที่ — เสถียรกว่า Google ที่มักถูกบล็อก
-    // maxNativeZoom: เกินระดับที่มีภาพจริง (พื้นที่ตาคลี ~z18) ให้ขยายภาพเดิมแทน tile "Map data not yet available"
+    // Google Satellite (lyrs=s) — แหล่งเดียวกับหน้าแจ้งเหตุ/ร้องเรียน ซูมได้ลึกกว่า Esri
+    // subdomains ค่าเริ่มต้น a/b/c (เหมือน LocationPickerModal) — mt0-3 เคยขึ้นเทาบนเครือข่ายนี้
     return (
-      <>
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics"
-          maxZoom={22}
-          maxNativeZoom={18}
-        />
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={22}
-          maxNativeZoom={18}
-        />
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={22}
-          maxNativeZoom={18}
-        />
-      </>
+      <TileLayer
+        url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+        attribution="&copy; Google"
+        maxZoom={22}
+        maxNativeZoom={20}
+      />
     );
   }
   return (
