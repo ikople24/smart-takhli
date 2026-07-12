@@ -1,7 +1,7 @@
 import React, { ReactNode, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Bars3Icon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { usePermissionsStore } from '@/stores/usePermissionsStore';
 import { DEFAULT_PERMISSIONS, pathMatchesPermission } from '@/lib/permissions';
 import type { Role } from '@/lib/permissions';
@@ -257,22 +257,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
       {/* ─── Main Content ─── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน) */}
-        <TopNavbar />
+        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน)
+            hamburger เปิด sidebar (มือถือ) ย้ายมาอยู่บน TopNavbar แล้ว */}
+        <TopNavbar onMenuClick={noSidebar ? undefined : () => setMobileMenuOpen(true)} />
 
-        {/* Page title / subtitle / breadcrumbs sub-header */}
-        {(title || subtitle || breadcrumbs.length > 0) && (
+        {/* Page title / subtitle / breadcrumbs sub-header
+            ข้าม fullBleed (หน้าแผนที่มี header ของตัวเอง ไม่ให้ชื่อซ้ำ) — hamburger ย้ายไป TopNavbar แล้ว */}
+        {!fullBleed && (title || subtitle || breadcrumbs.length > 0) && (
           <div className="flex-shrink-0 bg-base-100 border-b border-base-300">
             <div className="flex items-center gap-4 px-6 h-12">
-              {/* Mobile sidebar toggle */}
-              {!noSidebar && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden btn btn-ghost btn-sm btn-circle"
-                >
-                  <Bars3Icon className="w-5 h-5" />
-                </button>
-              )}
               {(title || subtitle) && (
                 <div>
                   {title && <h2 className="text-base font-semibold leading-tight">{title}</h2>}
@@ -298,18 +291,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Mobile sidebar toggle when no title bar */}
-        {!noSidebar && !title && !subtitle && breadcrumbs.length === 0 && (
-          <div className="flex-shrink-0 px-4 py-2 md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-ghost btn-sm btn-circle"
-            >
-              <Bars3Icon className="w-5 h-5" />
-            </button>
           </div>
         )}
 
