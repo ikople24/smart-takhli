@@ -8,20 +8,24 @@ import { TileLayer } from "react-leaflet";
 export function BaseTileLayers({ baseLayer }) {
   if (baseLayer === "satellite") {
     // Esri World Imagery (ภาพถ่าย) + ป้ายถนน/สถานที่ — เสถียรกว่า Google ที่มักถูกบล็อก
+    // maxNativeZoom: เกินระดับที่มีภาพจริง (พื้นที่ตาคลี ~z18) ให้ขยายภาพเดิมแทน tile "Map data not yet available"
     return (
       <>
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics"
-          maxZoom={19}
+          maxZoom={22}
+          maxNativeZoom={18}
         />
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={19}
+          maxZoom={22}
+          maxNativeZoom={18}
         />
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-          maxZoom={19}
+          maxZoom={22}
+          maxNativeZoom={18}
         />
       </>
     );
@@ -30,7 +34,8 @@ export function BaseTileLayers({ baseLayer }) {
     <TileLayer
       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       attribution="&copy; OpenStreetMap contributors"
-      maxZoom={19}
+      maxZoom={22}
+      maxNativeZoom={19}
     />
   );
 }

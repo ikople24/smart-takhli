@@ -57,6 +57,14 @@ function AddModeClick({ active, onPick }) {
   return null;
 }
 
+// HTML popup ชื่อชุมชน (escape กัน injection — ชื่อมาจากข้อมูล GeoJSON)
+function communityPopupHtml(name) {
+  const safe = String(name).replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])
+  );
+  return `<div style="font:700 13px 'Anuphan',sans-serif;color:#211B2E;">🏘️ ${safe}</div>`;
+}
+
 function groupBubbleIcon(total) {
   const size = Math.max(36, Math.min(64, 26 + Math.sqrt(total) * 3));
   return L.divIcon({
@@ -115,9 +123,16 @@ export default function SmartLightMap({
       {/* ขอบเขตชุมชน (จัดการที่ /admin/settings/geojson-map) — key remount เมื่อข้อมูลมา เพราะ GeoJSON layer ตั้ง data ตอนสร้างเท่านั้น */}
       {boundaryCollection && (
         <GeoJSON
-          key={`boundaries-${boundaries.length}`}
+          // remount เมื่อข้อมูลมา หรือสลับโหมดเพิ่มเสา (interactive เปลี่ยนตาม addMode)
+          key={`boundaries-${boundaries.length}-${addMode ? "add" : "view"}`}
           data={boundaryCollection}
-          interactive={false}
+          // interactive เฉพาะตอนไม่ได้เพิ่มเสา — โหมดเพิ่มเสาให้คลิกทะลุไปวางหมุดบนแผนที่
+          interactive={!addMode}
+          onEachFeature={(feature, layer) => {
+            const name = feature?.properties?.name;
+            // แตะ/คลิกในเขตชุมชน → popup ชื่อชุมชนนั้น
+            if (name) layer.bindPopup(communityPopupHtml(name), { closeButton: false });
+          }}
           eventHandlers={{
             // กัน race กับหมุดบน canvas เดียวกัน — เข้ามาเมื่อไหร่ก็ถอยไปอยู่ล่างสุดเสมอ
             add: (e) => e.target.bringToBack(),
