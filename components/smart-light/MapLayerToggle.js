@@ -1,37 +1,38 @@
-// เลือกชนิดแผนที่แบบ dropdown — แผนที่ถนน / ภาพถ่ายดาวเทียม (มุมขวาบนแผนที่)
-// pure UI ไม่พึ่ง leaflet (import ฝั่ง SSR ได้)
+// ปุ่มไอคอนเลเยอร์เล็ก ๆ — แตะสลับ แผนที่ถนน ↔ ภาพถ่ายดาวเทียม (ลดพื้นที่จอ)
+// เปิดดาวเทียม = ปุ่มม่วง, ถนน = ปุ่มขาว · pure UI ไม่พึ่ง leaflet (import ฝั่ง SSR ได้)
 import { SL } from "@/lib/smart-light/theme";
 
 export function MapLayerToggle({ value, onChange, className, style }) {
+  const satellite = value === "satellite";
   return (
-    <select
+    <button
+      type="button"
+      onClick={() => onChange(satellite ? "street" : "satellite")}
+      title={satellite ? "แผนที่ถนน" : "ภาพถ่ายดาวเทียม"}
+      aria-label={satellite ? "สลับเป็นแผนที่ถนน" : "สลับเป็นภาพถ่ายดาวเทียม"}
+      aria-pressed={satellite}
       className={className}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label="เลือกชนิดแผนที่"
       style={{
-        border: `1px solid ${SL.line}`,
-        background: "rgba(255,255,255,.95)",
-        backdropFilter: "blur(6px)",
-        color: SL.ink,
-        font: "600 12.5px 'IBM Plex Sans Thai'",
-        padding: "7px 30px 7px 11px",
-        borderRadius: 10,
+        display: "grid",
+        placeItems: "center",
+        width: 38,
+        height: 38,
+        border: 0,
         cursor: "pointer",
+        borderRadius: 11,
+        background: satellite ? SL.primary : "rgba(255,255,255,.95)",
+        color: satellite ? "#fff" : SL.ink2,
+        backdropFilter: "blur(6px)",
         boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)",
-        outline: "none",
-        appearance: "none",
-        WebkitAppearance: "none",
-        // ลูกศร dropdown เล็ก ๆ
-        backgroundImage:
-          "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2357506A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "right 9px center",
         ...style,
       }}
     >
-      <option value="street">🗺️ แผนที่ถนน</option>
-      <option value="satellite">🛰️ ภาพถ่ายดาวเทียม</option>
-    </select>
+      {/* ไอคอนเลเยอร์ (stacked layers) */}
+      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </svg>
+    </button>
   );
 }
