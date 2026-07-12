@@ -5,6 +5,23 @@ import { POLE_STATUS, LAMP_TYPE } from "@/lib/smart-light/constants";
 import { googleMapsDirectionsUrl } from "@/lib/smart-light/geo";
 import { SL, SL_FONT_HEAD } from "@/lib/smart-light/theme";
 
+// ปุ่ม action ความสูงเท่ากัน จัดกลาง ไอคอนบน–ข้อความล่าง บรรทัดเดียว (สมมาตร ไม่บวม)
+const ACTION_BTN = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 3,
+  height: 58,
+  borderRadius: 14,
+  border: 0,
+  cursor: "pointer",
+  font: "600 11.5px 'IBM Plex Sans Thai'",
+  lineHeight: 1.1,
+  whiteSpace: "nowrap",
+};
+const ACTION_ICON = { fontSize: 17, lineHeight: 1 };
+
 function formatThaiDateTime(value) {
   if (!value) return "-";
   return new Date(value).toLocaleString("th-TH", {
@@ -83,27 +100,27 @@ export default function PoleBottomSheet({ pole, loading, onClose, onSurvey, onEd
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <button
-            className="btn border-0"
-            style={{ background: SL.primary, color: "#fff" }}
+            style={{ ...ACTION_BTN, background: SL.primary, color: "#fff" }}
             onClick={() => onSurvey(pole)}
           >
-            🔦 บันทึกสภาพ
+            <span style={ACTION_ICON}>🔦</span>
+            <span>บันทึกสภาพ</span>
           </button>
           <button
-            className="btn"
-            style={{ border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2 }}
+            style={{ ...ACTION_BTN, border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2 }}
             onClick={() => onEdit(pole)}
           >
-            ✏️ แก้ไขข้อมูล
+            <span style={ACTION_ICON}>✏️</span>
+            <span>แก้ไขข้อมูล</span>
           </button>
           <a
-            className="btn"
-            style={{ border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2 }}
+            style={{ ...ACTION_BTN, border: `1px solid ${SL.line}`, background: "#fff", color: SL.ink2, textDecoration: "none" }}
             href={googleMapsDirectionsUrl(pole.lat, pole.lng)}
             target="_blank"
             rel="noopener noreferrer"
           >
-            🧭 นำทาง
+            <span style={ACTION_ICON}>🧭</span>
+            <span>นำทาง</span>
           </a>
         </div>
 

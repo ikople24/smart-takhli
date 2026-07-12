@@ -1,9 +1,10 @@
 // แผนที่เสาไฟ — เรนเดอร์ 2 ระดับตามซูม: ไกล = bubble รายกลุ่ม, ใกล้ = หมุดรายต้นเฉพาะในกรอบจอ
 // ต้อง import ผ่าน dynamic(..., { ssr: false }) เท่านั้น
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   CircleMarker,
+  Circle,
   Marker,
   GeoJSON,
   useMap,
@@ -57,6 +58,44 @@ function AddModeClick({ active, onPick }) {
   return null;
 }
 
+// ติดตามตำแหน่ง GPS ของเจ้าหน้าที่ (watchPosition) + บินไปตำแหน่งเมื่อกดปุ่มหาตำแหน่ง (nonce เปลี่ยน)
+function LocateLayer({ enabled, nonce, onPos, onError }) {
+  const map = useMap();
+  const lastPos = useRef(null);
+  const wantCenter = useRef(false);
+
+  // กดปุ่ม → ขอ recenter; ถ้ารู้ตำแหน่งแล้วบินเลย ไม่งั้นรอ fix ถัดไป
+  useEffect(() => {
+    if (nonce > 0) {
+      wantCenter.current = true;
+      if (lastPos.current) {
+        map.flyTo([lastPos.current.lat, lastPos.current.lng], Math.max(map.getZoom(), 17));
+        wantCenter.current = false;
+      }
+    }
+  }, [nonce, map]);
+
+  useEffect(() => {
+    if (!enabled || typeof navigator === "undefined" || !navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      (p) => {
+        const ll = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        lastPos.current = ll;
+        onPos(ll);
+        if (wantCenter.current) {
+          map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17));
+          wantCenter.current = false;
+        }
+      },
+      (e) => onError && onError(e),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [enabled, onPos, onError, map]);
+
+  return null;
+}
+
 // HTML popup ชื่อชุมชน (escape กัน injection — ชื่อมาจากข้อมูล GeoJSON)
 function communityPopupHtml(name) {
   const safe = String(name).replace(/[&<>"]/g, (c) =>
@@ -86,8 +125,12 @@ export default function SmartLightMap({
   onPickLocation,
   onSelectPole,
   baseLayer = "street",
+  locating = false,
+  locateNonce = 0,
+  onLocateError,
 }) {
   const [view, setView] = useState(null);
+  const [userPos, setUserPos] = useState(null); // ตำแหน่งเจ้าหน้าที่ {lat,lng,accuracy}
 
   const showPoles = view && view.zoom >= POLE_ZOOM_THRESHOLD;
 
@@ -153,6 +196,25 @@ export default function SmartLightMap({
       <ViewTracker onChange={setView} />
       <FlyTo target={focusTarget} />
       <AddModeClick active={addMode} onPick={onPickLocation} />
+      <LocateLayer enabled={locating} nonce={locateNonce} onPos={setUserPos} onError={onLocateError} />
+
+      {/* ตำแหน่งเจ้าหน้าที่ — วงความแม่นยำ + จุดน้ำเงิน "คุณอยู่ที่นี่" (ไม่รับคลิก) */}
+      {userPos && (
+        <>
+          <Circle
+            center={[userPos.lat, userPos.lng]}
+            radius={Math.min(userPos.accuracy || 25, 120)}
+            interactive={false}
+            pathOptions={{ color: "#2563EB", weight: 1, opacity: 0.5, fillColor: "#2563EB", fillOpacity: 0.12 }}
+          />
+          <CircleMarker
+            center={[userPos.lat, userPos.lng]}
+            radius={8}
+            interactive={false}
+            pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#2563EB", fillOpacity: 1 }}
+          />
+        </>
+      )}
 
       {/* ซูมไกล: bubble รายกลุ่ม แตะแล้วซูมเข้า */}
       {!showPoles &&

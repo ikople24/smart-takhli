@@ -45,7 +45,7 @@ Idempotent ด้วยคีย์ `(source, group, name, lat, lng)` — ต้
 zoom < 15 → bubble รายกลุ่ม (centroid จาก API groups) · zoom ≥ 15 → หมุดรายต้นเฉพาะในกรอบจอ+ขอบเผื่อ 20%
 threshold ปรับที่ `POLE_ZOOM_THRESHOLD` ใน `lib/smart-light/constants.js`
 พื้นหลังแสดงขอบเขตชุมชน (GeoJSON polygons) จาก `GET /api/geojson-features` — จัดการข้อมูลที่ `/admin/settings/geojson-map`
-สลับ base layer แผนที่ถนน (OSM) ↔ ภาพถ่ายดาวเทียม (Esri World Imagery เฉพาะภาพถ่าย) ด้วย `MapLayerToggle` (ปุ่มไอคอนเลเยอร์เล็ก แตะสลับ, มุมขวาบน) — เริ่มที่แผนที่ถนน; ใช้ทั้งแผนที่หลักและแผนที่ย่อยในฟอร์มแก้ไข. ใช้ Esri เพราะ Google `/vt/` มักถูกบล็อก (ขึ้นขาว) ในบางเครือข่าย; ไม่ใส่ชั้นป้ายกำกับเพราะคืน "Map data not yet available" ในพื้นที่ไม่มีข้อมูล (`maxNativeZoom 18` ให้ขยายภาพแทน). แตะในเขตชุมชนแสดง popup ชื่อชุมชน. ไม่มีปุ่ม zoom +/- (`zoomControl={false}`) — ซูมด้วย scroll (เดสก์ท็อป) / จีบ (มือถือ)
+สลับ base layer แผนที่ถนน (OSM) ↔ ภาพถ่ายดาวเทียม (Esri World Imagery เฉพาะภาพถ่าย) ด้วย `MapLayerToggle` (ปุ่มไอคอนเลเยอร์เล็ก แตะสลับ, มุมขวาบน) — เริ่มที่แผนที่ถนน; ใช้ทั้งแผนที่หลักและแผนที่ย่อยในฟอร์มแก้ไข. ใช้ Esri เพราะ Google `/vt/` มักถูกบล็อก (ขึ้นขาว) ในบางเครือข่าย; ไม่ใส่ชั้นป้ายกำกับเพราะคืน "Map data not yet available" ในพื้นที่ไม่มีข้อมูล (`maxNativeZoom 18` ให้ขยายภาพแทน). แตะในเขตชุมชนแสดง popup ชื่อชุมชน. ไม่มีปุ่ม zoom +/- (`zoomControl={false}`) — ซูมด้วย scroll (เดสก์ท็อป) / จีบ (มือถือ). ปุ่ม "ตำแหน่งของฉัน" (มุมขวาบน ใต้ปุ่มเลเยอร์) → `watchPosition` แสดงจุดน้ำเงิน + วงความแม่นยำ "คุณอยู่ที่นี่" สำหรับเจ้าหน้าที่หน้างาน (ต้อง HTTPS)
 
 ## สิทธิ์
 
