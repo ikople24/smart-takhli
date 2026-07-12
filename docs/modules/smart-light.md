@@ -45,7 +45,7 @@ Idempotent ด้วยคีย์ `(source, group, name, lat, lng)` — ต้
 zoom < 15 → bubble รายกลุ่ม (centroid จาก API groups) · zoom ≥ 15 → หมุดรายต้นเฉพาะในกรอบจอ+ขอบเผื่อ 20%
 threshold ปรับที่ `POLE_ZOOM_THRESHOLD` ใน `lib/smart-light/constants.js`
 พื้นหลังแสดงขอบเขตชุมชน (GeoJSON polygons) จาก `GET /api/geojson-features` — จัดการข้อมูลที่ `/admin/settings/geojson-map`
-สลับ base layer แผนที่ถนน (OSM) ↔ ภาพถ่ายดาวเทียม (Esri World Imagery + ป้ายถนน hybrid) ด้วย `MapLayerToggle` (ปุ่มมุมขวาบน) — เริ่มที่แผนที่ถนน; ใช้ทั้งแผนที่หลักและแผนที่ย่อยในฟอร์มแก้ไข. บนมือถือซ่อนปุ่ม zoom +/- (จีบซูมแทน กันทับแถบ chip) ผ่าน CSS scoped `.sl-root`
+สลับ base layer แผนที่ถนน (OSM) ↔ ภาพถ่ายดาวเทียม (Esri World Imagery + ป้ายถนน hybrid) ด้วย `MapLayerToggle` (ปุ่มมุมขวาบน) — เริ่มที่แผนที่ถนน; ใช้ทั้งแผนที่หลักและแผนที่ย่อยในฟอร์มแก้ไข. ไม่มีปุ่ม zoom +/- (`zoomControl={false}`) — ซูมด้วย scroll (เดสก์ท็อป) / จีบ (มือถือ) กันทับแถบ chip สถานะ
 
 ## สิทธิ์
 

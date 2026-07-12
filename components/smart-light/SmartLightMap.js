@@ -108,6 +108,7 @@ export default function SmartLightMap({
       center={DEFAULT_MAP_CENTER}
       zoom={DEFAULT_MAP_ZOOM}
       preferCanvas
+      zoomControl={false}
       style={{ height: "100%", width: "100%", zIndex: 0 }}
     >
       <BaseTileLayers baseLayer={baseLayer} />

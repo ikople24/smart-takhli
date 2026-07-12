@@ -146,6 +146,7 @@ export default function EditPoleModal({ pole, groupNames, onClose, onSaved, onDe
           <MapContainer
             center={[pole.lat, pole.lng]}
             zoom={18}
+            zoomControl={false}
             style={{ height: "100%", width: "100%" }}
           >
             <BaseTileLayers baseLayer={baseLayer} />
