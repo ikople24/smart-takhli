@@ -7,15 +7,12 @@ import { TileLayer } from "react-leaflet";
 // ต้องเป็นลูกของ <MapContainer> เท่านั้น
 export function BaseTileLayers({ baseLayer }) {
   if (baseLayer === "satellite") {
-    // Esri World Imagery เฉพาะภาพถ่าย (Google ขึ้นขาว/ถูกบล็อกบนเครือข่ายนี้)
-    // ไม่ใส่ชั้นป้ายกำกับ (World_Transportation/Boundaries) เพราะมันคืน "Map data not yet available" ในพื้นที่ไม่มีข้อมูล
-    // maxNativeZoom 18: ซูมเกินระดับที่มีภาพให้ขยายภาพเดิมแทน
+    // Esri World Imagery — config เดียวกับ smart-namphare (ไม่ตั้ง maxZoom/maxNativeZoom
+    // → ใช้ค่า default z18 ที่ Esri มีภาพจริง ภาพคมชัด ไม่ขึ้น "Map data not yet available")
     return (
       <TileLayer
         url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        attribution="Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics"
-        maxZoom={22}
-        maxNativeZoom={18}
+        attribution="&copy; Esri, Maxar, Earthstar Geographics"
       />
     );
   }
@@ -23,8 +20,6 @@ export function BaseTileLayers({ baseLayer }) {
     <TileLayer
       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       attribution="&copy; OpenStreetMap contributors"
-      maxZoom={22}
-      maxNativeZoom={19}
     />
   );
 }
