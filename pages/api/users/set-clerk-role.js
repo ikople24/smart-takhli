@@ -39,6 +39,16 @@ export default async function handler(req, res) {
       }
     }
 
+    // กันอุบัติเหตุ: ฟอร์ม /admin/register-user ส่ง role ที่เติมมาจาก "Mongo role" (มักเป็น "admin")
+    // ถ้า superadmin กดบันทึกโปรไฟล์ตัวเอง จะถูกลดขั้นเป็น admin ทันทีและกู้คืนเองไม่ได้
+    // → ห้ามลดขั้น superadmin ผ่าน endpoint นี้ (ถ้าตั้งใจลดจริง ใช้ script/Clerk dashboard)
+    const target = clerkId === callerId ? caller : await client.users.getUser(clerkId);
+    if (target.publicMetadata?.role === "superadmin" && role !== "superadmin") {
+      return res.status(403).json({
+        message: "ลดขั้น superadmin ผ่าน endpoint นี้ไม่ได้ (กันการลดขั้นตัวเองโดยไม่ตั้งใจ)",
+      });
+    }
+
     // merge เฉพาะคีย์ role — คีย์อื่นใน publicMetadata (เช่น allowedApps) คงเดิม
     await client.users.updateUserMetadata(clerkId, {
       publicMetadata: { role },
