@@ -27,14 +27,6 @@ export const ALL_PAGES: PagePermission[] = [
     description: 'ตั้งค่าหน้าจอและระบบ',
     category: 'settings'
   },
-  {
-    path: '/admin/register-user',
-    label: 'จัดการผู้ใช้งาน',
-    icon: '👥',
-    description: 'ลงทะเบียนและแก้ไขข้อมูลผู้ใช้',
-    category: 'settings'
-  },
-  
   // Management
   {
     path: '/admin/manage-complaints',
@@ -172,6 +164,16 @@ export const ALL_PAGES: PagePermission[] = [
 
   // User
   {
+    // หน้านี้ "ไม่ใช่" หน้าจัดการผู้ใช้คนอื่น — แก้ได้เฉพาะโปรไฟล์ของคนที่ล็อกอินอยู่
+    // (ฟอร์มผูกกับ user.id เสมอ) จึงจัดหมวด 'user' ไม่ใช่ 'settings'
+    // ถ้าอยู่หมวด settings จะโดน preset ผู้บริหารตัดทิ้ง = boss แก้โปรไฟล์ตัวเองไม่ได้
+    path: '/admin/register-user',
+    label: 'ข้อมูลส่วนตัว',
+    icon: '👤',
+    description: 'ลงทะเบียนและแก้ไขข้อมูลโปรไฟล์ของตัวเอง',
+    category: 'user'
+  },
+  {
     path: '/user/satisfaction',
     label: 'ประเมินความพึงพอใจ',
     icon: '⭐',
@@ -197,8 +199,8 @@ export const SUPERADMIN_ONLY_PAGES = [
 export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   superadmin: ALL_PAGES.map(p => p.path), // superadmin เข้าถึงได้ทุกหน้า
   admin: [
-    // หน้าลงทะเบียน/แก้โปรไฟล์ตัวเอง — ต้องอยู่ในชุดพื้นฐาน ไม่งั้นพนักงานใหม่
-    // (allowedPages ว่าง) จะเข้าหน้านี้ไม่ได้เลย = ลงทะเบียนตัวเองไม่ได้
+    // หน้าโปรไฟล์ตัวเอง — ต้องอยู่ในชุดพื้นฐาน ไม่งั้นพนักงานใหม่ (allowedPages ว่าง)
+    // เข้าหน้านี้ไม่ได้เลย = ลงทะเบียนตัวเองไม่ได้
     '/admin/register-user',
     '/admin/dashboard',
     '/admin/my-tasks',
@@ -207,6 +209,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/user/satisfaction',
   ],
   user: [
+    '/admin/register-user', // แก้โปรไฟล์ตัวเอง — ทุกคนที่ล็อกอินได้ต้องเข้าได้
     '/user/satisfaction',
   ],
   guest: [],

@@ -1,7 +1,7 @@
 // PUT /api/users/update
 // อัปเดต user ใน MongoDB โดยตรง (ไม่ผ่าน Express)
 
-import { getAuth } from '@clerk/nextjs/server';
+import { getAuth, clerkClient } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/dbConnect';
 import mongoose from 'mongoose';
 
@@ -42,6 +42,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // แก้ได้เฉพาะโปรไฟล์ "ของตัวเอง" — แก้ของคนอื่นได้เฉพาะ superadmin
+    // (เดิมรับ clerkId จาก body ตรง ๆ → ใครก็แก้ข้อมูล/role ของคนอื่นได้)
+    if (clerkId !== userId) {
+      const client = await clerkClient();
+      const caller = await client.users.getUser(userId);
+      if (caller.publicMetadata?.role !== 'superadmin') {
+        return res.status(403).json({ success: false, message: 'แก้ไขข้อมูลผู้ใช้อื่นได้เฉพาะ superadmin' });
+      }
+    }
+
     await dbConnect();
 
     const updatedUser = await User.findOneAndUpdate(
