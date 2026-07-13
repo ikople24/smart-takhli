@@ -197,6 +197,9 @@ export const SUPERADMIN_ONLY_PAGES = [
 export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   superadmin: ALL_PAGES.map(p => p.path), // superadmin เข้าถึงได้ทุกหน้า
   admin: [
+    // หน้าลงทะเบียน/แก้โปรไฟล์ตัวเอง — ต้องอยู่ในชุดพื้นฐาน ไม่งั้นพนักงานใหม่
+    // (allowedPages ว่าง) จะเข้าหน้านี้ไม่ได้เลย = ลงทะเบียนตัวเองไม่ได้
+    '/admin/register-user',
     '/admin/dashboard',
     '/admin/my-tasks',
     '/admin/notifications',
