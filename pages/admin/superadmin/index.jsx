@@ -14,9 +14,11 @@ import {
   X,
   Save,
   AlertTriangle,
-  Building2
+  Building2,
+  Briefcase,
+  UserPlus
 } from "lucide-react";
-import { ALL_PAGES } from "@/lib/permissions";
+import { ALL_PAGES, getExecutivePagePaths } from "@/lib/permissions";
 
 // App ID ปัจจุบัน (ดึงจาก env)
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
@@ -32,6 +34,8 @@ export default function SuperAdminPage() {
   const [expandedUser, setExpandedUser] = useState(null);
   const [editedPages, setEditedPages] = useState({});
   const [showOnlyCurrentApp, setShowOnlyCurrentApp] = useState(true); // กรองเฉพาะ app ปัจจุบัน
+  const [unregistered, setUnregistered] = useState([]); // มีบัญชี Clerk แต่ยังไม่มี doc ใน Mongo
+  const [onboarding, setOnboarding] = useState({});
 
   const isSuperAdmin = user?.publicMetadata?.role === 'superadmin';
 
@@ -65,10 +69,54 @@ export default function SuperAdminPage() {
         pagesMap[u._id] = u.allowedPages || ALL_PAGES.map(p => p.path);
       });
       setEditedPages(pagesMap);
+
+      // พนักงานใหม่: มีบัญชี Clerk แล้วแต่ยังไม่มี doc ใน Mongo → ยังใช้งานระบบไม่ได้
+      const unregRes = await fetch('/api/permissions/clerk-unregistered');
+      const unregData = await unregRes.json();
+      setUnregistered(unregData.users || []);
     } catch (error) {
       console.error("Error:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // เพิ่มพนักงานใหม่เข้าระบบ = สร้าง Mongo doc (ผูก clerkId + appId ปัจจุบัน)
+  // หลังจากนี้เขาจะเข้าระบบได้ และโผล่ในรายการด้านล่างให้ติ๊กสิทธิ์ต่อ
+  const onboardUser = async (clerkUser) => {
+    try {
+      setOnboarding(prev => ({ ...prev, [clerkUser.clerkId]: true }));
+
+      const res = await fetch('/api/users/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkId: clerkUser.clerkId,
+          name: clerkUser.name || clerkUser.email,
+          role: 'admin',
+          profileUrl: clerkUser.imageUrl,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed');
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'เพิ่มเข้าระบบแล้ว',
+        text: `${clerkUser.name || clerkUser.email} ใช้งาน ${CURRENT_APP_ID} ได้แล้ว — กำหนดสิทธิ์หน้าต่อได้ด้านล่าง`,
+        timer: 2500,
+        showConfirmButton: false,
+      });
+
+      await fetchUsers();
+    } catch (error) {
+      console.error(error);
+      Swal.fire({ icon: 'error', title: 'เพิ่มไม่สำเร็จ', text: error.message });
+    } finally {
+      setOnboarding(prev => ({ ...prev, [clerkUser.clerkId]: false }));
     }
   };
 
@@ -94,6 +142,14 @@ export default function SuperAdminPage() {
     setEditedPages(prev => ({
       ...prev,
       [userId]: []
+    }));
+  };
+
+  // Preset "ผู้บริหาร" — เห็นทุกโมดูลยกเว้นการตั้งค่า (ดู getExecutivePagePaths ใน lib/permissions)
+  const applyExecutivePreset = (userId) => {
+    setEditedPages(prev => ({
+      ...prev,
+      [userId]: getExecutivePagePaths()
     }));
   };
 
@@ -303,6 +359,66 @@ export default function SuperAdminPage() {
           </p>
         </div>
 
+        {/* พนักงานใหม่: มีบัญชี Clerk แต่ยังไม่มี doc ใน Mongo → ยังเข้าระบบไม่ได้ */}
+        {!loading && unregistered.length > 0 && (
+          <div className="bg-emerald-500/10 border border-emerald-500/40 rounded-2xl p-4 mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <UserPlus className="w-5 h-5 text-emerald-400" />
+              <h3 className="text-white font-semibold">
+                พนักงานใหม่รอเพิ่มเข้าระบบ ({unregistered.length})
+              </h3>
+            </div>
+            <p className="text-emerald-200/80 text-sm mb-4">
+              มีบัญชี Clerk แล้วแต่ยังไม่มีข้อมูลในระบบ → ตอนนี้เข้าใช้งานไม่ได้ (ขึ้น &quot;ยังไม่ได้ลงทะเบียน&quot;)
+              กด &quot;เพิ่มเข้าระบบ&quot; เพื่อสร้างข้อมูลและกำหนด App <strong>{CURRENT_APP_ID}</strong> ให้
+            </p>
+
+            <div className="space-y-2">
+              {unregistered.map((cu) => (
+                <div
+                  key={cu.clerkId}
+                  className="flex items-center justify-between gap-4 bg-white/5 rounded-xl p-3 border border-white/10"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {cu.imageUrl ? (
+                      <img
+                        src={cu.imageUrl}
+                        alt={cu.name}
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold">
+                        {(cu.name || cu.email || '?').charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-white font-medium truncate">
+                        {cu.name || '(ยังไม่ตั้งชื่อใน Clerk)'}
+                      </div>
+                      <div className="text-sm text-gray-400 truncate">{cu.email}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => onboardUser(cu)}
+                    disabled={onboarding[cu.clerkId]}
+                    className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-0 shrink-0"
+                  >
+                    {onboarding[cu.clerkId] ? (
+                      <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 mr-1" />
+                        เพิ่มเข้าระบบ
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Users List */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -395,7 +511,15 @@ export default function SuperAdminPage() {
                     <div className="border-t border-white/10 p-4 bg-black/20">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-white font-medium">หน้าที่อนุญาต</h4>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); applyExecutivePreset(userData._id); }}
+                            title="เห็นทุกโมดูลยกเว้นการตั้งค่า"
+                            className="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+                          >
+                            <Briefcase className="w-3 h-3 mr-1" />
+                            ผู้บริหาร
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); selectAllPages(userData._id); }}
                             className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-0"

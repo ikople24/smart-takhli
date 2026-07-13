@@ -24,6 +24,8 @@ const navigationItems = [
   { label: 'Dashboard',          href: '/admin/dashboard',                icon: '📊', group: 'ภาพรวม' },
   { label: 'งานของฉัน',         href: '/admin/my-tasks',                 icon: '✅', group: 'ภาพรวม' },
   { label: 'การแจ้งเตือน',     href: '/admin/notifications',             icon: '🔔', group: 'ภาพรวม' },
+  // แก้โปรไฟล์ของตัวเองเท่านั้น (ไม่ใช่หน้าจัดการผู้ใช้คนอื่น) — จึงไม่อยู่กลุ่ม 'ตั้งค่า'
+  { label: 'ข้อมูลส่วนตัว',    href: '/admin/register-user',             icon: '👤', group: 'ภาพรวม' },
 
   // จัดการ
   { label: 'การร้องเรียน',     href: '/admin/manage-complaints',         icon: '📋', group: 'จัดการ' },
@@ -39,7 +41,6 @@ const navigationItems = [
 
   // ตั้งค่า
   { label: 'ตั้งค่าหน้าจอ',   href: '/admin',                                   icon: '🛠️', group: 'ตั้งค่า' },
-  { label: 'จัดการผู้ใช้',     href: '/admin/register-user',                    icon: '👥', group: 'ตั้งค่า' },
   { label: 'จัดการ PM2.5',     href: '/admin/pm25-settings',                    icon: '🌫️', group: 'ตั้งค่า' },
   { label: 'ข้อมูลองค์กร',     href: '/admin/settings/organizations',           icon: '🏛️', group: 'ตั้งค่า' },
   { label: 'ข้อมูลชุมชน',      href: '/admin/settings/communities',             icon: '🏘️', group: 'ตั้งค่า' },
