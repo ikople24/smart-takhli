@@ -1,7 +1,7 @@
 import React, { ReactNode, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Bars3Icon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { usePermissionsStore } from '@/stores/usePermissionsStore';
 import { DEFAULT_PERMISSIONS, pathMatchesPermission } from '@/lib/permissions';
 import type { Role } from '@/lib/permissions';
@@ -14,6 +14,8 @@ interface LayoutAdminProps {
   subtitle?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   noSidebar?: boolean;
+  /** true → children คุมพื้นที่ content เองเต็มผืน (ไม่มี p-6/overflow-auto) — สำหรับหน้าแผนที่เต็มจอ */
+  fullBleed?: boolean;
 }
 
 // Sidebar navigation — รวมทุกหน้าที่เคยอยู่ใน dropdown
@@ -29,6 +31,7 @@ const navigationItems = [
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
 
   // รายงาน
@@ -52,6 +55,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   subtitle,
   breadcrumbs = [],
   noSidebar = false,
+  fullBleed = false,
 }) => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,7 +98,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
     /*
      * h-screen — sidebar spans full viewport height, same level as TopNavbar
      * TopNavbar is rendered INSIDE the content column (not in Layout.js for admin routes)
-     * BottomNav is fixed bottom-0 h-14 — content area has pb-14 to compensate
+     * โหมด admin ไม่มี BottomNav (เป็น nav ของหน้า public) — เนื้อหาใช้พื้นที่เต็มความสูง
      */
     <div className="flex h-screen bg-base-100 overflow-hidden">
 
@@ -253,22 +257,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
       {/* ─── Main Content ─── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน) */}
-        <TopNavbar />
+        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน)
+            hamburger เปิด sidebar (มือถือ) ย้ายมาอยู่บน TopNavbar แล้ว */}
+        <TopNavbar onMenuClick={noSidebar ? undefined : () => setMobileMenuOpen(true)} />
 
-        {/* Page title / subtitle / breadcrumbs sub-header */}
-        {(title || subtitle || breadcrumbs.length > 0) && (
+        {/* Page title / subtitle / breadcrumbs sub-header
+            ข้าม fullBleed (หน้าแผนที่มี header ของตัวเอง ไม่ให้ชื่อซ้ำ) — hamburger ย้ายไป TopNavbar แล้ว */}
+        {!fullBleed && (title || subtitle || breadcrumbs.length > 0) && (
           <div className="flex-shrink-0 bg-base-100 border-b border-base-300">
             <div className="flex items-center gap-4 px-6 h-12">
-              {/* Mobile sidebar toggle */}
-              {!noSidebar && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden btn btn-ghost btn-sm btn-circle"
-                >
-                  <Bars3Icon className="w-5 h-5" />
-                </button>
-              )}
               {(title || subtitle) && (
                 <div>
                   {title && <h2 className="text-base font-semibold leading-tight">{title}</h2>}
@@ -297,29 +294,19 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Mobile sidebar toggle when no title bar */}
-        {!noSidebar && !title && !subtitle && breadcrumbs.length === 0 && (
-          <div className="flex-shrink-0 px-4 py-2 md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-ghost btn-sm btn-circle"
-            >
-              <Bars3Icon className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
-        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0 */}
-        <div className="flex-1 overflow-auto pb-14">
-          <div className="p-6">
+        {/* Scrollable content — โหมด admin ไม่มี BottomNav แล้ว จึงไม่ต้องเผื่อ padding ล่าง
+            fullBleed: children คุมพื้นที่เองเต็มผืน (หน้าแผนที่) — ไม่มี padding/scroll ของ chrome */}
+        {fullBleed ? (
+          <div className="flex-1 overflow-hidden">
             {children}
           </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="flex-shrink-0 bg-base-200 border-t border-base-300 px-6 py-3 text-center text-sm text-base-content/60 mb-14 md:mb-0">
-          <p>&copy; 2025 Smart Municipality System. All rights reserved.</p>
-        </footer>
+        ) : (
+          <div className="flex-1 overflow-auto">
+            <div className="p-6">
+              {children}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Mobile backdrop */}

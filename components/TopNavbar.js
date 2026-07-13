@@ -4,9 +4,12 @@ import { UserButton, useUser, SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { NotificationBell } from "@/components/NotificationBell";
-import { ClipboardDocumentListIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
+import { ClipboardDocumentListIcon, Squares2X2Icon, Bars3Icon } from "@heroicons/react/24/outline";
 
-const TopNavbar = () => {
+/**
+ * @param {{ onMenuClick?: () => void }} props
+ */
+const TopNavbar = ({ onMenuClick } = {}) => {
   const { isSignedIn, user } = useUser();
   const router = useRouter();
 
@@ -17,8 +20,16 @@ const TopNavbar = () => {
 
   return (
     <header className="w-full min-w-[320px] bg-base-100/90 backdrop-blur-md border-b border-base-300 px-4 h-14 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-      {/* Left: ปุ่มไปหน้า admin บนหน้า public / placeholder บนหน้า admin (sidebar จัดการแล้ว) */}
-      {isSignedIn && isAdmin && !isAdminRoute ? (
+      {/* Left: hamburger เปิด sidebar (มือถือ, หน้า admin) / ปุ่มไป admin (หน้า public) / placeholder */}
+      {isAdminRoute && onMenuClick ? (
+        <button
+          onClick={onMenuClick}
+          className="md:hidden btn btn-ghost btn-sm btn-circle"
+          aria-label="เปิดเมนู"
+        >
+          <Bars3Icon className="w-6 h-6" />
+        </button>
+      ) : isSignedIn && isAdmin && !isAdminRoute ? (
         <Link
           href="/admin/dashboard"
           className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors"

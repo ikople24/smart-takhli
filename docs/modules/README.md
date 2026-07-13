@@ -8,6 +8,7 @@
 | โรงเรียนผู้สูงอายุ | [elderly-school.md](elderly-school.md) | `/admin/elderly-school` |
 | Smart Health (ยืม-คืนอุปกรณ์, สุขภาพพนักงาน) | [smart-health.md](smart-health.md) | `/admin/smart-health` |
 | การศึกษา (Smart School) | [smart-school.md](smart-school.md) | `/admin/smart-school` |
+| เสาไฟสาธารณะ (Smart Light) | [smart-light.md](smart-light.md) | `/admin/smart-light` |
 | กิจกรรม | [activities.md](activities.md) | `/activities`, `/admin/manage-activities` |
 | ประเมินความพึงพอใจ | [satisfaction.md](satisfaction.md) | `/user/satisfaction` |
 | PM2.5 (DustBoy) | [pm25.md](pm25.md) | `/admin/pm25-settings` |

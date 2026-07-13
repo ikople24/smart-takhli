@@ -80,6 +80,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/smart-light',
+    label: 'เสาไฟสาธารณะ',
+    icon: '💡',
+    description: 'ทะเบียน+สำรวจเสาไฟสาธารณะ LED บนแผนที่ (กองช่าง)',
+    category: 'management'
+  },
+  {
     path: '/admin/pm25-settings',
     label: 'จัดการ PM2.5',
     icon: '🌫️',
@@ -193,6 +200,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/dashboard',
     '/admin/my-tasks',
     '/admin/notifications',
+    '/admin/smart-light',
     '/user/satisfaction',
   ],
   user: [
