@@ -76,6 +76,7 @@ export default function ApplicationDetailModal({ row, onClose, onSetStatus, onEd
 
           <Section title="ข้อมูลติดต่อ & ที่อยู่">
             <Row label="เบอร์โทร" value={row.phone} />
+            <Row label="เลขบัตรประชาชน" value={row.citizenIdMasked || 'ยังไม่มี'} />
             <Row label="ที่อยู่" value={row.address} />
             <Row label="ที่อยู่จริง" value={row.actualAddress} />
             <Row label="สถานภาพที่อยู่" value={row.housingStatus} />

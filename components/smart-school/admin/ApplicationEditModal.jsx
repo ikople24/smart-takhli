@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import ImageUploads from '@/components/ImageUploads';
 import { inputCls, labelCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
+import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
 
 const FAMILY_STATUS_OPTIONS = [
   'บิดา-มารดาแยกกันอยู่', 'แยกกันอยู่ชั่วคราว', 'หย่าร้าง',
@@ -39,6 +40,9 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
   const [uploading, setUploading] = useState(false);
   const [incomeSourceText, setIncomeSourceText] = useState((row.incomeSource || []).join(', '));
   const [scholarshipText, setScholarshipText] = useState((row.receivedScholarship || []).join(', '));
+  // เลขบัตร: server ไม่เคยส่งเลขเต็มมา — แก้ = พิมพ์ใหม่ทั้ง 13 หลัก, ล้าง = ติ๊ก checkbox
+  const [citizenIdInput, setCitizenIdInput] = useState('');
+  const [clearCitizenId, setClearCitizenId] = useState(false);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -46,6 +50,10 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     setSaving(true);
     try {
       const parseList = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+      const citizenDigits = normalizeCitizenId(citizenIdInput);
+      if (!clearCitizenId && citizenDigits && !isValidThaiCitizenId(citizenDigits)) {
+        throw new Error('เลขบัตรประชาชนไม่ถูกต้อง (ต้องครบ 13 หลักและ checksum ผ่าน)');
+      }
       const res = await fetch('/api/smart-school/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -55,6 +63,8 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
           gpa: form.gpa === '' ? null : form.gpa,
           incomeSource: parseList(incomeSourceText),
           receivedScholarship: parseList(scholarshipText),
+          // null = ล้างเลข, undefined (JSON ตัดทิ้ง) = ไม่แตะเลขเดิม
+          citizenId: clearCitizenId ? null : citizenDigits || undefined,
         }),
       });
       const data = await res.json();
@@ -112,6 +122,23 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
             <input type="tel" maxLength={10} className={inputCls}
               value={form.phone}
               onChange={(e) => set({ phone: e.target.value.replace(/\D/g, '') })} />
+          </div>
+          <div className="space-y-1">
+            <label className={labelCls}>
+              เลขบัตรประชาชน {row.citizenIdMasked ? `(ปัจจุบัน ${row.citizenIdMasked})` : '(ยังไม่มี)'}
+            </label>
+            <input type="text" inputMode="numeric" maxLength={17} className={inputCls}
+              placeholder={row.citizenIdMasked ? 'พิมพ์เลขใหม่ 13 หลักเพื่อเปลี่ยน' : 'กรอกเลข 13 หลัก'}
+              value={citizenIdInput}
+              disabled={clearCitizenId}
+              onChange={(e) => setCitizenIdInput(e.target.value)} />
+            {row.citizenIdMasked && (
+              <label className={CHECKBOX_LABEL_CLS}>
+                <input type="checkbox" className={CHECKBOX_CLS} checked={clearCitizenId}
+                  onChange={(e) => { setClearCitizenId(e.target.checked); if (e.target.checked) setCitizenIdInput(''); }} />
+                ล้างเลขบัตร (กรณีผูกผิดคน)
+              </label>
+            )}
           </div>
           <div className="space-y-1">
             <label className={labelCls}>ระดับการศึกษา</label>
