@@ -89,7 +89,8 @@ export default async function handler(req, res) {
     if (Array.isArray(imageUrl)) application.imageUrl = imageUrl.slice(0, 3);
     if (location?.lat) application.location = { lat: location.lat, lng: location.lng };
 
-    // validate ใบสมัครก่อนค่อยบันทึกทั้งคู่ — กันเคสบันทึกบุคคลไปแล้วแต่ใบสมัคร validate ไม่ผ่าน
+    // validate ทั้งคู่ก่อนค่อยเขียน DB — กันเคสเขียนไปแล้วบางส่วนแต่ตัวที่เหลือ validate ไม่ผ่าน
+    await applicant.validate();
     await application.validate();
     // เลขบัตร apply ก่อน save อื่น — ถ้าแพ้ race (E11000) จะยังไม่มีอะไรถูกบันทึก
     await applyCitizenIdChange(applicant._id, citizenResolved);
@@ -115,6 +116,7 @@ export default async function handler(req, res) {
   } catch (err) {
     if (err?.code === 11000) {
       // แพ้ race ผูกเลขบัตร — unique index กันไว้ชั้นสุดท้าย
+      // (ตีความ 11000 เป็นเลขบัตรได้ เพราะ handler นี้ไม่แตะฟิลด์ unique อื่น: applicationId/applicantRef/surveyYear ไม่ถูกแก้ที่นี่)
       return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับผู้สมัครคนอื่นแล้ว" });
     }
     console.error("❌ smart-school update error:", err);
