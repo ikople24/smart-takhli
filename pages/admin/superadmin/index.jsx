@@ -235,11 +235,17 @@ export default function SuperAdminPage() {
 
   // กรอง users ตาม search และ appId
   const filteredUsers = users.filter(u => {
-    const matchSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.department?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    // สำคัญ: อย่าใช้ (u.name?...  || u.department?...) ตรง ๆ เพราะถ้า user "ไม่มีทั้ง
+    // name และ department" ผลจะเป็น undefined (falsy) → ถูกซ่อนถาวรแม้ search ว่าง
+    // (เคสจริง: doc ที่สร้างข้ามแอปมาไม่มี name → หายไปจากรายการทั้งหมด)
+    const q = searchTerm.trim().toLowerCase();
+    const matchSearch = q === "" ||
+      (u.name || "").toLowerCase().includes(q) ||
+      (u.department || "").toLowerCase().includes(q) ||
+      (u.clerkId || "").toLowerCase().includes(q);
+
     if (!showOnlyCurrentApp) return matchSearch;
-    
+
     // กรองเฉพาะ user ที่มี appId ตรงกัน หรือยังไม่ได้กำหนด appId
     const userAppId = u.appId || "";
     return matchSearch && (userAppId === "" || userAppId === CURRENT_APP_ID);
@@ -455,7 +461,11 @@ export default function SuperAdminPage() {
                       )}
                       <div>
                         <div className="font-semibold text-white flex items-center gap-2">
-                          {userData.name}
+                          {userData.name || (
+                            <span className="italic text-amber-300">
+                              (ยังไม่มีชื่อ) {userData.clerkId}
+                            </span>
+                          )}
                           {/* แสดงสถานะ appId */}
                           {userData.appId === CURRENT_APP_ID ? (
                             <span className="badge badge-sm bg-emerald-600 border-0 text-white">
