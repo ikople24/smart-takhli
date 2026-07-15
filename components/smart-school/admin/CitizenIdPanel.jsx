@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { cardCls, inputCls, tableHeadCls, successBtnCls } from '@/components/smart-school/adminTheme';
 import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
 
@@ -9,10 +9,16 @@ export default function CitizenIdPanel({ rows }) {
   const [savedMap, setSavedMap] = useState({}); // applicantRef -> masked (บันทึกรอบนี้)
   const [errorMap, setErrorMap] = useState({}); // applicantRef -> ข้อความ error
   const [inputMap, setInputMap] = useState({}); // applicantRef -> ค่าที่พิมพ์
-  const [savingRef, setSavingRef] = useState(null);
+  const [savingSet, setSavingSet] = useState(() => new Set()); // applicantRef ที่กำลังบันทึก (กันกดซ้อนรายแถว)
   const [showAll, setShowAll] = useState(false);
   const [q, setQ] = useState('');
   const inputRefs = useRef({});
+
+  // เปลี่ยนปีงบ/refetch แล้วล้าง draft กับ error ค้าง (savedMap คงไว้ — เลขผูกที่ตัวบุคคล ข้ามปีได้)
+  useEffect(() => {
+    setInputMap({});
+    setErrorMap({});
+  }, [rows]);
 
   // 1 คน = 1 แถวต่อปีงบ (unique applicantRef+surveyYear การันตีจาก model)
   const withStatus = useMemo(
@@ -37,7 +43,7 @@ export default function CitizenIdPanel({ rows }) {
       setRowError(row.applicantRef, 'เลขไม่ถูกต้อง (ต้องครบ 13 หลักและ checksum ผ่าน)');
       return false;
     }
-    setSavingRef(row.applicantRef);
+    setSavingSet((s) => new Set(s).add(row.applicantRef));
     try {
       const res = await fetch('/api/smart-school/citizen-id', {
         method: 'PUT',
@@ -56,7 +62,11 @@ export default function CitizenIdPanel({ rows }) {
       setRowError(row.applicantRef, 'เครือข่ายมีปัญหา ลองใหม่อีกครั้ง');
       return false;
     } finally {
-      setSavingRef(null);
+      setSavingSet((s) => {
+        const n = new Set(s);
+        n.delete(row.applicantRef);
+        return n;
+      });
     }
   };
 
@@ -143,15 +153,15 @@ export default function CitizenIdPanel({ rows }) {
                               setInputMap((m) => ({ ...m, [row.applicantRef]: e.target.value }))
                             }
                             onKeyDown={(e) => handleKeyDown(e, row, idx)}
-                            disabled={savingRef === row.applicantRef}
+                            disabled={savingSet.has(row.applicantRef)}
                           />
                           <button
                             type="button"
                             className={successBtnCls + ' !px-3 !py-1.5 text-[12px]'}
                             onClick={() => save(row)}
-                            disabled={savingRef === row.applicantRef}
+                            disabled={savingSet.has(row.applicantRef)}
                           >
-                            {savingRef === row.applicantRef ? (
+                            {savingSet.has(row.applicantRef) ? (
                               <span className="loading loading-spinner loading-xs" />
                             ) : (
                               'บันทึก'
