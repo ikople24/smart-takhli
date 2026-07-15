@@ -145,12 +145,16 @@ export default function CitizenIdPanel({ rows }) {
                             ref={(el) => { inputRefs.current[row.applicantRef] = el; }}
                             type="text"
                             inputMode="numeric"
-                            maxLength={17}
                             className={inputCls + ' !w-44'}
                             placeholder="13 หลัก"
                             value={inputMap[row.applicantRef] || ''}
                             onChange={(e) =>
-                              setInputMap((m) => ({ ...m, [row.applicantRef]: e.target.value }))
+                              // รับเฉพาะตัวเลข ตัดที่ 13 หลัก — sanitize ใน onChange แทน maxLength
+                              // เพื่อให้ paste เลขมีขีด (1-2345-...) ไม่โดน browser ตัดก่อน strip
+                              setInputMap((m) => ({
+                                ...m,
+                                [row.applicantRef]: normalizeCitizenId(e.target.value).slice(0, 13),
+                              }))
                             }
                             onKeyDown={(e) => handleKeyDown(e, row, idx)}
                             disabled={savingSet.has(row.applicantRef)}

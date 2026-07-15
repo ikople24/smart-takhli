@@ -127,11 +127,11 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
             <label className={labelCls}>
               เลขบัตรประชาชน {row.citizenIdMasked ? `(ปัจจุบัน ${row.citizenIdMasked})` : '(ยังไม่มี)'}
             </label>
-            <input type="text" inputMode="numeric" maxLength={17} className={inputCls}
+            <input type="text" inputMode="numeric" className={inputCls}
               placeholder={row.citizenIdMasked ? 'พิมพ์เลขใหม่ 13 หลักเพื่อเปลี่ยน' : 'กรอกเลข 13 หลัก'}
               value={citizenIdInput}
               disabled={clearCitizenId}
-              onChange={(e) => setCitizenIdInput(e.target.value)} />
+              onChange={(e) => setCitizenIdInput(normalizeCitizenId(e.target.value).slice(0, 13))} />
             {row.citizenIdMasked && (
               <label className={CHECKBOX_LABEL_CLS}>
                 <input type="checkbox" className={CHECKBOX_CLS} checked={clearCitizenId}
