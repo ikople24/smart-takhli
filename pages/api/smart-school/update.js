@@ -5,6 +5,7 @@ import SchoolApplication from "@/models/smart-school/SchoolApplication";
 import { householdKeyOf } from "@/lib/smart-school/scholarshipLevels";
 import { notifySchoolEvent } from "@/lib/smart-school/notify";
 import { requireSchoolAdmin } from "./_auth";
+import { resolveCitizenIdChange, applyCitizenIdChange } from "./_citizenId";
 
 export default async function handler(req, res) {
   if (req.method !== "PUT") {
@@ -22,6 +23,7 @@ export default async function handler(req, res) {
       incomeSource, familyStatus, receivedScholarship, takhliScholarshipHistory,
       note, imageUrl, location,
       schoolEligibility, residencyOverOneYear, eligibilityChecklist,
+      citizenId,
     } = req.body || {};
 
     if (!_id) return res.status(400).json({ message: "Missing _id" });
@@ -33,6 +35,16 @@ export default async function handler(req, res) {
     if (!application) return res.status(404).json({ message: "Record not found" });
     const applicant = await SchoolApplicant.findById(application.applicantRef);
     if (!applicant) return res.status(404).json({ message: "Applicant not found" });
+
+    // เลขบัตร: ตรวจ checksum + เช็คซ้ำก่อนแตะฟิลด์อื่น — พังแล้วพังทั้งก้อน ไม่บันทึกครึ่งเดียว
+    // (undefined = client ไม่ได้ส่งมา = ไม่แตะเลขเดิม)
+    const citizenResolved = await resolveCitizenIdChange(applicant._id, citizenId);
+    if (!citizenResolved.ok) {
+      return res.status(citizenResolved.status).json({
+        message: citizenResolved.message,
+        duplicateOf: citizenResolved.duplicateOf,
+      });
+    }
 
     if (prefix !== undefined) applicant.prefix = prefix;
     if (name) applicant.name = name;
@@ -77,8 +89,11 @@ export default async function handler(req, res) {
     if (Array.isArray(imageUrl)) application.imageUrl = imageUrl.slice(0, 3);
     if (location?.lat) application.location = { lat: location.lat, lng: location.lng };
 
-    // validate ใบสมัครก่อนค่อยบันทึกทั้งคู่ — กันเคสบันทึกบุคคลไปแล้วแต่ใบสมัคร validate ไม่ผ่าน
+    // validate ทั้งคู่ก่อนค่อยเขียน DB — กันเคสเขียนไปแล้วบางส่วนแต่ตัวที่เหลือ validate ไม่ผ่าน
+    await applicant.validate();
     await application.validate();
+    // เลขบัตร apply ก่อน save อื่น — ถ้าแพ้ race (E11000) จะยังไม่มีอะไรถูกบันทึก
+    await applyCitizenIdChange(applicant._id, citizenResolved);
     await applicant.save();
     await application.save();
 
@@ -99,6 +114,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ message: "Updated successfully", imagesChanged });
   } catch (err) {
+    if (err?.code === 11000) {
+      // แพ้ race ผูกเลขบัตร — unique index กันไว้ชั้นสุดท้าย
+      // (ตีความ 11000 เป็นเลขบัตรได้ เพราะ handler นี้ไม่แตะฟิลด์ unique อื่น: applicationId/applicantRef/surveyYear ไม่ถูกแก้ที่นี่)
+      return res.status(409).json({ message: "เลขบัตรนี้ถูกใช้กับผู้สมัครคนอื่นแล้ว" });
+    }
     console.error("❌ smart-school update error:", err);
     if (err.name === "ValidationError") {
       return res.status(400).json({ message: "ข้อมูลไม่ผ่านการตรวจสอบของระบบ" });

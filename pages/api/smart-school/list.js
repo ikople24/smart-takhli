@@ -2,6 +2,7 @@ import dbConnect from "@/lib/dbConnect";
 import SchoolApplication from "@/models/smart-school/SchoolApplication";
 import "@/models/smart-school/SchoolApplicant"; // ให้ mongoose รู้จัก model ก่อน populate
 import { getFiscalYearBE } from "@/lib/smart-school/fiscalYear";
+import { maskCitizenId } from "@/lib/smart-school/citizenId";
 import { requireSchoolAdmin } from "./_auth";
 
 export default async function handler(req, res) {
@@ -47,12 +48,17 @@ export default async function handler(req, res) {
           level: m.educationLevel || "",
           status: m.status,
         }));
+      // derive ทั้งคู่จาก masked เดียวกัน — เลขผิดรูปใน DB จะโชว์เป็น "ยังไม่มีเลข" ให้กรอกทับได้
+      const citizenIdMasked = a.citizenId ? maskCitizenId(a.citizenId) : "";
       return {
         ...app,
         applicantRef: String(a._id || app.applicantRef || ""),
         prefix: a.prefix || "",
         name: a.name || "",
         phone: a.phone || "",
+        // เลขเต็มอยู่ใน a.citizenId (populate) — mask ฝั่ง server เท่านั้น ห้ามส่งเลขเต็มออก
+        hasCitizenId: !!citizenIdMasked,
+        citizenIdMasked: citizenIdMasked || null,
         household: { key: k, members },
       };
     });

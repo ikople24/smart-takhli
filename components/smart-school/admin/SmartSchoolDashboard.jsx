@@ -6,6 +6,7 @@ import ApplicationDetailModal from './ApplicationDetailModal';
 import ApplicationEditModal from './ApplicationEditModal';
 import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 import AllocationBoard from './AllocationBoard';
+import CitizenIdPanel from './CitizenIdPanel';
 import { DashboardHeader, YearPills, PillTabs, StatCard, cardCls } from '@/components/smart-school/adminTheme';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
@@ -14,7 +15,7 @@ export default function SmartSchoolDashboard() {
   const [year, setYear] = useState(null); // null = ปีปัจจุบัน (server ตัดสิน)
   const [data, setData] = useState(null); // { year, years, applications, stats }
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('table'); // 'table' | 'map' | 'blocked'
+  const [view, setView] = useState('table'); // 'table' | 'map' | 'blocked' | 'allocation' | 'citizenid'
   const [detailRow, setDetailRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const reqIdRef = useRef(0);
@@ -74,6 +75,12 @@ export default function SmartSchoolDashboard() {
     }
   };
 
+  // ออกจากแท็บเลขบัตรแล้วรีเฟรชลิสต์ — เลขที่กรอกใน worklist จะได้สดเสมอในตาราง/ฟอร์มแก้ไข
+  const handleViewChange = (v) => {
+    if (view === 'citizenid' && v !== 'citizenid') fetchData();
+    setView(v);
+  };
+
   const stats = data?.stats;
   // ปีในแท็บ = union ของ data.years กับ data.year กัน edge case ปีงบใหม่ที่ยังไม่มีใบสมัคร (data.year ไม่อยู่ใน years)
   const yearTabs = data ? Array.from(new Set([...(data.years || []), data.year])).sort((a, b) => b - a) : [];
@@ -90,12 +97,13 @@ export default function SmartSchoolDashboard() {
         <div className={stats && view === 'table' ? 'mb-5' : ''}>
           <PillTabs
             active={view}
-            onChange={setView}
+            onChange={handleViewChange}
             tabs={[
               { key: 'table', label: '📋 ตาราง' },
               { key: 'map', label: '🗺️ แผนที่' },
               { key: 'blocked', label: '🚫 โรงเรียนไม่ผ่าน' },
               { key: 'allocation', label: '🎯 จัดสรรทุน' },
+              { key: 'citizenid', label: '🪪 เลขบัตร' },
             ]}
           />
         </div>
@@ -122,6 +130,8 @@ export default function SmartSchoolDashboard() {
         <BlockedSchoolsPanel />
       ) : view === 'allocation' ? (
         <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
+      ) : view === 'citizenid' ? (
+        <CitizenIdPanel rows={data?.applications || []} />
       ) : view === 'map' ? (
         <MapPoints data={data?.applications || []} />
       ) : (

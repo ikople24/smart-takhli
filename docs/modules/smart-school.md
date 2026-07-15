@@ -12,7 +12,7 @@
 ## หน้า
 
 - `/admin/smart-school` — แดชบอร์ด (แท็บปีงบ, มุมมองตาราง/แผนที่/โรงเรียนไม่ผ่าน/
-  จัดสรรทุน, สถานะ 4 ค่า, แท็กครัวเรือนเดียวกันคลิกดูสมาชิกได้)
+  จัดสรรทุน/เลขบัตร, สถานะ 4 ค่า, แท็กครัวเรือนเดียวกันคลิกดูสมาชิกได้)
 - `/admin/education-map` — path เดิม redirect มาหน้านี้
 - ฟอร์มสาธารณะ: wizard ใน `components/smart-school/survey/` เปิดจากหน้าแรก
 
@@ -26,13 +26,19 @@
 - admin (`_auth.js` pattern เดียวกับ pm25): `list` (จัดกลุ่มครัวเรือนจาก
   `householdKey` แนบ `household.members` ต่อแถว), `update` (รวมรูป), `status`,
   `delete`, `blocked-schools/index` (GET/PUT/DELETE จัดการ blocklist)
+- `citizen-id` (PUT, admin) — ผูก/ล้างเลขบัตร 13 หลักให้ applicant (checksum
+  mod-11 + unique sparse กันซ้ำ, ซ้ำ = 409 พร้อมชื่อผู้ถือเลข); `update` รับ
+  `citizenId` ด้วย; ทุก endpoint ตอบเฉพาะเลขมาสก์ — **เลขเต็มไม่ออกจากเซิร์ฟเวอร์**
+  (logic รวมที่ `_citizenId.js`, helper pure ที่ `lib/smart-school/citizenId.js`)
 - `verify.js` (ยืนยันเลขบัตร 13 หลัก) **ถูกลบแล้ว** — เส้นทางรายเก่าเปลี่ยนเป็น
   `lookup` → เลือก ref → `prefill` (ยืนยันด้วยเลข 4 ตัวท้ายเบอร์โทรแทน)
 
 ## Models — `models/smart-school/`
 
-- `SchoolApplicant` → `school_applicants` (บุคคล; **ไม่มี** `citizenId` แล้ว —
-  เลิกใช้เลขบัตรเป็น credential ยืนยันตัวตน)
+- `SchoolApplicant` → `school_applicants` (บุคคล; `citizenId` unique sparse —
+  เจ้าหน้าที่ backfill ฝั่งแอดมิน เตรียมยืนยันตัวตนปีหน้า (spec 2026-07-15);
+  **ไม่ใช่ credential ฝั่ง public ปีนี้** — ฟอร์มสาธารณะยังใช้ค้นชื่อ + เบอร์ 4 ตัวท้าย;
+  โปรดักชันรัน `node --env-file=.env.local scripts/sync-school-citizenid-index.js` ครั้งเดียว)
 - `SchoolApplication` → `school_applications` (ใบสมัคร/ปี; unique
   `applicantRef+surveyYear`; เลขใบสมัคร `TKC69-001` ออกผ่าน `school_counters`;
   ฟิลด์เกณฑ์/จัดสรรทุน: `residencyOverOneYear` (bool|null),
@@ -51,6 +57,7 @@
   ปี 2569 (แก้ปีถัดไปที่ไฟล์นี้ที่เดียว) พร้อม helper `levelBucket()` (แม็ป
   educationLevel → กลุ่มระดับ), `bucketInfo()`, `normalizeSchool()`,
   `householdKeyOf()`
+- `citizenId.js` — normalize/checksum mod-11/mask เลขบัตร (pure — client ใช้ด้วย)
 - `mask.js`, `fiscalYear.js`, `notify.js` — เดิม
 
 ## ครัวเรือนเดียวกัน + จัดสรรทุน (แอดมิน)
