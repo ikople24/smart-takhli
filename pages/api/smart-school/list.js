@@ -48,6 +48,8 @@ export default async function handler(req, res) {
           level: m.educationLevel || "",
           status: m.status,
         }));
+      // derive ทั้งคู่จาก masked เดียวกัน — เลขผิดรูปใน DB จะโชว์เป็น "ยังไม่มีเลข" ให้กรอกทับได้
+      const citizenIdMasked = a.citizenId ? maskCitizenId(a.citizenId) : "";
       return {
         ...app,
         applicantRef: String(a._id || app.applicantRef || ""),
@@ -55,8 +57,8 @@ export default async function handler(req, res) {
         name: a.name || "",
         phone: a.phone || "",
         // เลขเต็มอยู่ใน a.citizenId (populate) — mask ฝั่ง server เท่านั้น ห้ามส่งเลขเต็มออก
-        hasCitizenId: !!a.citizenId,
-        citizenIdMasked: a.citizenId ? maskCitizenId(a.citizenId) : null,
+        hasCitizenId: !!citizenIdMasked,
+        citizenIdMasked: citizenIdMasked || null,
         household: { key: k, members },
       };
     });

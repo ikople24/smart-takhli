@@ -21,6 +21,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("❌", e.message);
+  console.error("❌", e);
   process.exit(1);
 });
