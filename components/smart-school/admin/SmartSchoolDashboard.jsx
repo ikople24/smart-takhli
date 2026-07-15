@@ -75,6 +75,12 @@ export default function SmartSchoolDashboard() {
     }
   };
 
+  // ออกจากแท็บเลขบัตรแล้วรีเฟรชลิสต์ — เลขที่กรอกใน worklist จะได้สดเสมอในตาราง/ฟอร์มแก้ไข
+  const handleViewChange = (v) => {
+    if (view === 'citizenid' && v !== 'citizenid') fetchData();
+    setView(v);
+  };
+
   const stats = data?.stats;
   // ปีในแท็บ = union ของ data.years กับ data.year กัน edge case ปีงบใหม่ที่ยังไม่มีใบสมัคร (data.year ไม่อยู่ใน years)
   const yearTabs = data ? Array.from(new Set([...(data.years || []), data.year])).sort((a, b) => b - a) : [];
@@ -91,7 +97,7 @@ export default function SmartSchoolDashboard() {
         <div className={stats && view === 'table' ? 'mb-5' : ''}>
           <PillTabs
             active={view}
-            onChange={setView}
+            onChange={handleViewChange}
             tabs={[
               { key: 'table', label: '📋 ตาราง' },
               { key: 'map', label: '🗺️ แผนที่' },

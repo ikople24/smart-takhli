@@ -51,7 +51,7 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     try {
       const parseList = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
       const citizenDigits = normalizeCitizenId(citizenIdInput);
-      if (!clearCitizenId && citizenDigits && !isValidThaiCitizenId(citizenDigits)) {
+      if (!clearCitizenId && citizenIdInput.trim() && !isValidThaiCitizenId(citizenDigits)) {
         throw new Error('เลขบัตรประชาชนไม่ถูกต้อง (ต้องครบ 13 หลักและ checksum ผ่าน)');
       }
       const res = await fetch('/api/smart-school/update', {
