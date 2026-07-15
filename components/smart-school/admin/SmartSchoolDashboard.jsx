@@ -6,6 +6,7 @@ import ApplicationDetailModal from './ApplicationDetailModal';
 import ApplicationEditModal from './ApplicationEditModal';
 import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 import AllocationBoard from './AllocationBoard';
+import CitizenIdPanel from './CitizenIdPanel';
 import { DashboardHeader, YearPills, PillTabs, StatCard, cardCls } from '@/components/smart-school/adminTheme';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
@@ -14,7 +15,7 @@ export default function SmartSchoolDashboard() {
   const [year, setYear] = useState(null); // null = ปีปัจจุบัน (server ตัดสิน)
   const [data, setData] = useState(null); // { year, years, applications, stats }
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('table'); // 'table' | 'map' | 'blocked'
+  const [view, setView] = useState('table'); // 'table' | 'map' | 'blocked' | 'allocation' | 'citizenid'
   const [detailRow, setDetailRow] = useState(null);
   const [editRow, setEditRow] = useState(null);
   const reqIdRef = useRef(0);
@@ -96,6 +97,7 @@ export default function SmartSchoolDashboard() {
               { key: 'map', label: '🗺️ แผนที่' },
               { key: 'blocked', label: '🚫 โรงเรียนไม่ผ่าน' },
               { key: 'allocation', label: '🎯 จัดสรรทุน' },
+              { key: 'citizenid', label: '🪪 เลขบัตร' },
             ]}
           />
         </div>
@@ -122,6 +124,8 @@ export default function SmartSchoolDashboard() {
         <BlockedSchoolsPanel />
       ) : view === 'allocation' ? (
         <AllocationBoard rows={data?.applications || []} onRefresh={fetchData} />
+      ) : view === 'citizenid' ? (
+        <CitizenIdPanel rows={data?.applications || []} />
       ) : view === 'map' ? (
         <MapPoints data={data?.applications || []} />
       ) : (
