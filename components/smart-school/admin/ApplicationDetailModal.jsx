@@ -81,6 +81,23 @@ export default function ApplicationDetailModal({ row, onClose, onSetStatus, onEd
             <Row label="ที่อยู่จริง" value={row.actualAddress} />
             <Row label="สถานภาพที่อยู่" value={row.housingStatus} />
             <Row label="สมาชิกในบ้าน" value={row.householdMembers} />
+            <Row
+              label="พิกัด"
+              value={
+                row.location?.lat != null ? (
+                  <a
+                    href={`https://www.google.com/maps?q=${row.location.lat},${row.location.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#7C3AED] hover:underline"
+                  >
+                    📍 {row.location.lat.toFixed(5)}, {row.location.lng.toFixed(5)} — เปิดแผนที่
+                  </a>
+                ) : (
+                  'ยังไม่มีพิกัด'
+                )
+              }
+            />
           </Section>
 
           <Section title="ครัวเรือน & รายได้">
