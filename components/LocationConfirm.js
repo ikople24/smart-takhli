@@ -76,7 +76,10 @@ const LocationConfirm = ({
 
       {loading && <p className="text-sm text-gray-500">กำลังดึงตำแหน่ง...</p>}
 
-      {typeof window !== "undefined" && useCurrent && location?.lat && location?.lng && (
+      {/* โชว์แผนที่เมื่อมีพิกัดแล้ว (ไม่ต้องกดสวิตช์) — รายเก่าที่ prefill พิกัดเดิมมาจะเห็นหมุดทันที
+          จึงไม่ต้องกดสวิตช์ ซึ่งจะ getCurrentPosition ทับพิกัดเดิม.
+          ฟอร์มอื่นที่ไม่มี prefill พฤติกรรมเท่าเดิม (พิกัดมีค่าก็ต่อเมื่อกดสวิตช์) */}
+      {typeof window !== "undefined" && location?.lat && location?.lng && (
         <div className={`rounded-lg overflow-hidden border shadow-sm space-y-2 ${mapBoxCls}`}>
           <div className="h-64 rounded overflow-hidden border">
             <MapDisplay lat={location.lat} lng={location.lng} showPopup={true} />
