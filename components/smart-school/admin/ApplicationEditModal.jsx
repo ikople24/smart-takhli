@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import ImageUploads from '@/components/ImageUploads';
 import { inputCls, labelCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
 import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
+
+// leaflet ใช้ window — ต้อง ssr:false
+const LocationPickerMap = dynamic(() => import('@/components/LocationPickerMap'), { ssr: false });
 
 const FAMILY_STATUS_OPTIONS = [
   'บิดา-มารดาแยกกันอยู่', 'แยกกันอยู่ชั่วคราว', 'หย่าร้าง',
@@ -35,8 +39,13 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
     schoolEligibility: row.schoolEligibility || 'ok',
     residencyOverOneYear: row.residencyOverOneYear ?? null,
     eligibilityChecklist: row.eligibilityChecklist || { residencyVerified: false, schoolVerified: false, documentsVerified: false },
+    location: row.location?.lat != null ? { lat: row.location.lat, lng: row.location.lng } : null,
   });
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  // bump เพื่อ remount แผนที่ให้ recenter (MapContainer center ใช้ตอน mount เท่านั้น)
+  // — ใช้เฉพาะตอนกด "ใช้ตำแหน่งปัจจุบัน"; ลากหมุดไม่ remount จะได้ไม่กระตุก
+  const [mapKey, setMapKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [incomeSourceText, setIncomeSourceText] = useState((row.incomeSource || []).join(', '));
   const [scholarshipText, setScholarshipText] = useState((row.receivedScholarship || []).join(', '));
@@ -45,6 +54,28 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
   const [clearCitizenId, setClearCitizenId] = useState(false);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  // เจ้าหน้าที่สำรวจหน้างาน: ยืนที่บ้านแล้วกดปุ่มนี้บนมือถือ
+  const useCurrentLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      Swal.fire({ icon: 'error', title: 'อุปกรณ์ไม่รองรับการหาตำแหน่ง' });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        set({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+        setMapKey((k) => k + 1); // recenter แผนที่ไปตำแหน่งใหม่
+        setLocating(false);
+      },
+      (err) => {
+        console.error('Geolocation error:', err);
+        setLocating(false);
+        Swal.fire({ icon: 'error', title: 'ไม่สามารถเข้าถึงตำแหน่งได้', text: 'ตรวจสอบการอนุญาตตำแหน่งของเบราว์เซอร์' });
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -187,6 +218,31 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
               onChange={(e) => set({ address: e.target.value })} />
           </div>
           {input('ที่อยู่จริง', 'actualAddress')}
+
+          <div className="md:col-span-2 space-y-1.5">
+            <label className={labelCls}>ตำแหน่งที่ตั้ง (พิกัด)</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[12px] text-[#57506A]">
+                {form.location?.lat != null
+                  ? `📍 ${form.location.lat.toFixed(5)}, ${form.location.lng.toFixed(5)}`
+                  : 'ยังไม่มีพิกัด — คลิกบนแผนที่เพื่อระบุ'}
+              </span>
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={locating}
+                className="text-[12px] font-bold text-[#7C3AED] bg-[#F1ECFB] rounded-[10px] px-3 py-1.5 transition hover:bg-[#DDD2FB] disabled:opacity-60"
+              >
+                {locating ? 'กำลังหาตำแหน่ง…' : '📱 ใช้ตำแหน่งปัจจุบัน'}
+              </button>
+            </div>
+            <LocationPickerMap
+              key={mapKey}
+              initialLocation={form.location || undefined}
+              onLocationChange={(loc) => set({ location: loc })}
+            />
+          </div>
+
           <div className="space-y-1">
             <label className={labelCls}>สถานภาพที่อยู่</label>
             <select className={inputCls} value={form.housingStatus}
