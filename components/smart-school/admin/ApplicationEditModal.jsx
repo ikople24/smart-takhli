@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import PhotoSlots from '@/components/smart-school/survey/PhotoSlots';
+import SchoolPicker from '@/components/smart-school/survey/SchoolPicker';
 import { inputCls, labelCls, chipCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
 import { gradesForLevel, gradeOptionsWithCurrent } from '@/lib/smart-school/gradeLevels';
 import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
@@ -182,7 +183,15 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
               ))}
             </select>
           </div>
-          {input('โรงเรียน', 'schoolName')}
+          <div className="md:col-span-2 space-y-1">
+            <label className={labelCls}>โรงเรียน</label>
+            <SchoolPicker
+              value={form.schoolName || ''}
+              onChange={(schoolName) => set({ schoolName })}
+              level={form.educationLevel}
+              disabled={saving}
+            />
+          </div>
           <div className="space-y-1">
             <label className={labelCls}>เกณฑ์โรงเรียน</label>
             <select className={inputCls} value={form.schoolEligibility}
