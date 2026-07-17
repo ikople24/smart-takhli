@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import SchoolApplicant from "@/models/smart-school/SchoolApplicant";
-import SchoolApplication from "@/models/smart-school/SchoolApplication";
+import SchoolApplication, { FAMILY_STATUS_OPTIONS } from "@/models/smart-school/SchoolApplication";
 import BlockedSchool from "@/models/smart-school/BlockedSchool";
 import { getFiscalYearBE } from "@/lib/smart-school/fiscalYear";
 import { nextApplicationId } from "@/lib/smart-school/applicationId";
@@ -40,6 +40,8 @@ export default async function handler(req, res) {
       ref, prefix, fullName, phone, educationLevel, schoolName,
       address, note, housingStatus, householdMembers, annualIncome,
       residencyOverOneYear, image, location,
+      gradeLevel, gpa, actualAddress, familyStatus,
+      incomeSource, receivedScholarship, takhliScholarshipHistory,
     } = req.body || {};
 
     if (!fullName || !location?.lat) {
@@ -90,6 +92,18 @@ export default async function handler(req, res) {
       schoolEligibility,
       householdKey: householdKeyOf(address),
       location: { lat: location.lat, lng: location.lng },
+      gradeLevel: gradeLevel || "",
+      gpa: gpa === "" || gpa === null || gpa === undefined || Number.isNaN(parseFloat(gpa))
+        ? null
+        : Math.min(4, Math.max(0, parseFloat(gpa))),
+      actualAddress: actualAddress || "",
+      // กรองตาม enum — ฟอร์มเปิดสาธารณะ ค่ามั่วจะทำ mongoose validation ล้ม 500
+      familyStatus: Array.isArray(familyStatus)
+        ? familyStatus.filter((v) => FAMILY_STATUS_OPTIONS.includes(v))
+        : [],
+      incomeSource: Array.isArray(incomeSource) ? incomeSource.slice(0, 20) : [],
+      receivedScholarship: Array.isArray(receivedScholarship) ? receivedScholarship.slice(0, 20) : [],
+      takhliScholarshipHistory: Array.isArray(takhliScholarshipHistory) ? takhliScholarshipHistory.slice(0, 20) : [],
       isRenewal,
     };
 
