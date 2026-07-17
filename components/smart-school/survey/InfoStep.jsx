@@ -1,6 +1,9 @@
 import React from 'react';
 import { inputCls, labelCls, chipCls } from './surveyTheme';
 import SchoolPicker from './SchoolPicker';
+// import จาก lib ไม่ใช่ models/ — ไฟล์ model นั้น import mongoose ทั้งก้อน ถ้า client component import ตรง ๆ
+// mongoose จะถูกลากเข้า client bundle (วัดจริง: First Load JS หน้าแรกพุ่งจาก 328 kB เป็น 586 kB)
+import { FAMILY_STATUS_OPTIONS } from '@/lib/smart-school/familyStatusOptions';
 
 // hint แสดงค่าเดิมของปีที่แล้ว (เฉพาะรายเก่า)
 function PrevHint({ year, value }) {
@@ -22,7 +25,7 @@ function FieldRow({ n, label, children, hint }) {
 }
 
 // ขั้นที่ 2: ข้อมูลผู้ขอทุน — formData/setFormData ถือ state ที่ orchestrator
-export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled, blockedSchools }) {
+export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled, blockedSchools, fullMode, setFullMode }) {
   const set = (patch) => setFormData({ ...formData, ...patch });
   const prev = prevApplication || {};
 
@@ -199,6 +202,69 @@ export default function InfoStep({ formData, setFormData, prevApplication, prevY
           ))}
         </div>
       </FieldRow>
+
+      <label className="flex cursor-pointer items-center gap-2 rounded-[14px] bg-[#F6F3FD] px-3.5 py-3">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-[#E7E2F2] accent-[#7C3AED]"
+          checked={!!fullMode}
+          disabled={disabled}
+          onChange={(e) => setFullMode(e.target.checked)}
+        />
+        <span className="text-[12px] font-bold text-[#57506A]">กรอกแบบเต็ม (ทวนข้อมูล)</span>
+      </label>
+
+      {fullMode && (
+        <>
+          <FieldRow n={11} label="ระดับชั้น" hint={<PrevHint year={prevYear} value={prev.gradeLevel} />}>
+            <input type="text" placeholder="เช่น ป.5 / ม.2" className={inputCls} disabled={disabled}
+              value={formData.gradeLevel || ''} onChange={(e) => set({ gradeLevel: e.target.value })} />
+          </FieldRow>
+
+          <FieldRow n={12} label="เกรดเฉลี่ย (GPA)" hint={<PrevHint year={prevYear} value={prev.gpa} />}>
+            <input type="number" step="0.01" min="0" max="4" placeholder="0.00–4.00" className={inputCls}
+              disabled={disabled} value={formData.gpa ?? ''} onChange={(e) => set({ gpa: e.target.value })} />
+          </FieldRow>
+
+          <FieldRow n={13} label="ที่อยู่จริง (ถ้าต่างจากทะเบียนบ้าน)" hint={<PrevHint year={prevYear} value={prev.actualAddress} />}>
+            <textarea placeholder="ที่อยู่ที่พักอาศัยจริง" className={inputCls} disabled={disabled}
+              value={formData.actualAddress || ''} onChange={(e) => set({ actualAddress: e.target.value })} />
+          </FieldRow>
+
+          <FieldRow n={14} label="สถานะครอบครัว">
+            <div className="flex flex-wrap gap-1.5">
+              {FAMILY_STATUS_OPTIONS.map((opt) => {
+                const on = (formData.familyStatus || []).includes(opt);
+                return (
+                  <button key={opt} type="button" disabled={disabled} className={chipCls(on)}
+                    onClick={() => set({
+                      familyStatus: on
+                        ? (formData.familyStatus || []).filter((v) => v !== opt)
+                        : [...(formData.familyStatus || []), opt],
+                    })}>
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </FieldRow>
+
+          <FieldRow n={15} label="แหล่งรายได้ (คั่นด้วย ,)" hint={<PrevHint year={prevYear} value={(prev.incomeSource || []).join(', ')} />}>
+            <input type="text" placeholder="เช่น รับจ้าง, ค้าขาย" className={inputCls} disabled={disabled}
+              value={formData.incomeSourceText || ''} onChange={(e) => set({ incomeSourceText: e.target.value })} />
+          </FieldRow>
+
+          <FieldRow n={16} label="ทุนอื่นที่ได้รับ (คั่นด้วย ,)" hint={<PrevHint year={prevYear} value={(prev.receivedScholarship || []).join(', ')} />}>
+            <input type="text" placeholder="เช่น กสศ., ทุนโรงเรียน" className={inputCls} disabled={disabled}
+              value={formData.receivedScholarshipText || ''} onChange={(e) => set({ receivedScholarshipText: e.target.value })} />
+          </FieldRow>
+
+          <FieldRow n={17} label="ทุนเทศบาลที่เคยได้ (คั่นด้วย ,)" hint={<PrevHint year={prevYear} value={(prev.takhliScholarshipHistory || []).join(', ')} />}>
+            <input type="text" placeholder="เช่น 2567, 2568" className={inputCls} disabled={disabled}
+              value={formData.takhliScholarshipHistoryText || ''} onChange={(e) => set({ takhliScholarshipHistoryText: e.target.value })} />
+          </FieldRow>
+        </>
+      )}
     </div>
   );
 }

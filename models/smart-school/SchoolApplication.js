@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+// FAMILY_STATUS_OPTIONS อยู่ใน lib (ไม่ใช่ที่นี่) เพราะไฟล์นี้ import mongoose — client component ห้าม import ไฟล์นี้ตรง ๆ
+// (ดูคอมเมนต์ใน lib/smart-school/familyStatusOptions.js) re-export ไว้ที่นี่ให้โค้ดฝั่งเซิร์ฟเวอร์ (เช่น submit.js) ใช้ทางเดียวกับ enum
+import { FAMILY_STATUS_OPTIONS } from "@/lib/smart-school/familyStatusOptions";
 
 export const APPLICATION_STATUSES = [
   "รับคำร้อง",
@@ -6,6 +9,8 @@ export const APPLICATION_STATUSES = [
   "ได้รับทุน",
   "ไม่ผ่านเกณฑ์",
 ];
+
+export { FAMILY_STATUS_OPTIONS };
 
 // ใบสมัคร/แบบสำรวจ 1 ใบต่อคนต่อปีงบประมาณ
 const SchoolApplicationSchema = new mongoose.Schema(
@@ -35,7 +40,7 @@ const SchoolApplicationSchema = new mongoose.Schema(
     incomeSource: { type: [String], default: [] },
     familyStatus: {
       type: [String],
-      enum: ["บิดา-มารดาแยกกันอยู่", "แยกกันอยู่ชั่วคราว", "หย่าร้าง", "บิดาส่งเสีย", "มารดาส่งเสีย", "บิดา/มารดาไม่ได้ส่งเสีย"],
+      enum: FAMILY_STATUS_OPTIONS,
       default: [],
     },
     receivedScholarship: { type: [String], default: [] },

@@ -26,6 +26,13 @@ const EMPTY_FORM = {
   annualIncome: '',
   schoolName: '',
   residencyOverOneYear: null,
+  gradeLevel: '',
+  gpa: '',
+  actualAddress: '',
+  familyStatus: [],
+  incomeSourceText: '',
+  receivedScholarshipText: '',
+  takhliScholarshipHistoryText: '',
 };
 
 const surveySchema = z.object({
@@ -67,6 +74,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
   const [identity, setIdentity] = useState(null); // { ref, applicant, prevApplication }
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [useCurrent, setUseCurrent] = useState(false);
+  const [fullMode, setFullMode] = useState(false); // ติ๊ก "กรอกแบบเต็ม" — เก็บที่นี่ให้ค้างข้ามสเต็ป
   const [location, setLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -95,6 +103,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
     setIdentity(null);
     setFormData(EMPTY_FORM);
     setUseCurrent(false);
+    setFullMode(false);
     setLocation(null);
     setUploading(false);
   };
@@ -122,6 +131,14 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         annualIncome: prev.annualIncome != null ? String(prev.annualIncome) : '',
         schoolName: prev.schoolName || '',
         residencyOverOneYear: prev.residencyOverOneYear ?? null,
+        image: Array.isArray(prev.imageUrl) ? prev.imageUrl : [],
+        gradeLevel: prev.gradeLevel || '',
+        gpa: prev.gpa != null ? String(prev.gpa) : '',
+        actualAddress: prev.actualAddress || '',
+        familyStatus: Array.isArray(prev.familyStatus) ? prev.familyStatus : [],
+        incomeSourceText: (prev.incomeSource || []).join(', '),
+        receivedScholarshipText: (prev.receivedScholarship || []).join(', '),
+        takhliScholarshipHistoryText: (prev.takhliScholarshipHistory || []).join(', '),
       });
       if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
     }
@@ -172,6 +189,10 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
           residencyOverOneYear: formData.residencyOverOneYear,
           householdMembers: parseInt(formData.householdMembers) || 1,
           annualIncome: parseInt(formData.annualIncome) || 0,
+          gpa: formData.gpa === '' ? null : parseFloat(formData.gpa),
+          incomeSource: formData.incomeSourceText.split(',').map((x) => x.trim()).filter(Boolean),
+          receivedScholarship: formData.receivedScholarshipText.split(',').map((x) => x.trim()).filter(Boolean),
+          takhliScholarshipHistory: formData.takhliScholarshipHistoryText.split(',').map((x) => x.trim()).filter(Boolean),
           location,
         }),
       });
@@ -267,6 +288,8 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
                 prevYear={prevYear}
                 disabled={isSubmitting}
                 blockedSchools={blockedSchools}
+                fullMode={fullMode}
+                setFullMode={setFullMode}
               />
             </div>
             <div className="flex shrink-0 gap-2.5 px-5 pb-5 pt-3">

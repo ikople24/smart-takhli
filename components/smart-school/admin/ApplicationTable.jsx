@@ -7,6 +7,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [renewalFilter, setRenewalFilter] = useState('all'); // all | renewal | new
   const [levelTab, setLevelTab] = useState('all');
+  const [citizenFilter, setCitizenFilter] = useState('all'); // all | has | none
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -15,11 +16,13 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       if (renewalFilter === 'renewal' && !r.isRenewal) return false;
       if (renewalFilter === 'new' && r.isRenewal) return false;
+      if (citizenFilter === 'has' && !r.hasCitizenId) return false;
+      if (citizenFilter === 'none' && r.hasCitizenId) return false;
       if (!q) return true;
       return [r.name, r.applicationId, r.phone, r.address, r.schoolName]
         .some((v) => (v || '').toLowerCase().includes(q));
     });
-  }, [rows, search, statusFilter, renewalFilter, levelTab]);
+  }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter]);
 
   return (
     <div className={cardCls + ' p-4 space-y-3'}>
@@ -55,6 +58,12 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
           <option value="renewal">เฉพาะรายเก่า</option>
           <option value="new">เฉพาะรายใหม่</option>
         </select>
+        <select className="select select-bordered select-sm" value={citizenFilter}
+          onChange={(e) => setCitizenFilter(e.target.value)}>
+          <option value="all">เลขบัตร: ทั้งหมด</option>
+          <option value="has">มีเลขบัตรแล้ว</option>
+          <option value="none">ยังไม่มีเลขบัตร</option>
+        </select>
         <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
       </div>
 
@@ -67,6 +76,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 <th className={tableHeadCls}>ชื่อ-นามสกุล</th>
                 <th className={tableHeadCls}>ระดับ</th>
                 <th className={tableHeadCls}>เบอร์โทร</th>
+                <th className={tableHeadCls}>เลขบัตร</th>
                 <th className={tableHeadCls}>รายได้/ปี</th>
                 <th className={tableHeadCls}>สถานะ</th>
                 <th className={tableHeadCls}>ครัวเรือน/เกณฑ์</th>
@@ -87,6 +97,15 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                   <td>{r.prefix}{r.name}</td>
                   <td>{r.educationLevel || '-'}</td>
                   <td>{r.phone || '-'}</td>
+                  <td className="whitespace-nowrap">
+                    {r.citizenIdMasked ? (
+                      <span className="text-[12px] text-[#211B2E]">{r.citizenIdMasked}</span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F1F1F4] text-[#6B7280] font-bold">
+                        ยังไม่มี
+                      </span>
+                    )}
+                  </td>
                   <td>{(r.annualIncome || 0).toLocaleString()}</td>
                   <td>
                     <span className={statusBadgeCls(r.status)}>{r.status}</span>
@@ -119,7 +138,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="text-center text-gray-400 py-6">ไม่มีข้อมูล</td></tr>
+                <tr><td colSpan={9} className="text-center text-gray-400 py-6">ไม่มีข้อมูล</td></tr>
               )}
             </tbody>
           </table>

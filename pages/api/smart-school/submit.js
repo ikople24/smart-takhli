@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import SchoolApplicant from "@/models/smart-school/SchoolApplicant";
-import SchoolApplication from "@/models/smart-school/SchoolApplication";
+import SchoolApplication, { FAMILY_STATUS_OPTIONS } from "@/models/smart-school/SchoolApplication";
 import BlockedSchool from "@/models/smart-school/BlockedSchool";
 import { getFiscalYearBE } from "@/lib/smart-school/fiscalYear";
 import { nextApplicationId } from "@/lib/smart-school/applicationId";
@@ -40,12 +40,14 @@ export default async function handler(req, res) {
       ref, prefix, fullName, phone, educationLevel, schoolName,
       address, note, housingStatus, householdMembers, annualIncome,
       residencyOverOneYear, image, location,
+      gradeLevel, gpa, actualAddress, familyStatus,
+      incomeSource, receivedScholarship, takhliScholarshipHistory,
     } = req.body || {};
 
-    if (!fullName || !Array.isArray(image) || image.length === 0 || !location?.lat) {
+    if (!fullName || !location?.lat) {
       return res.status(400).json({
         message: "Missing required fields",
-        required: ["fullName", "image", "location.lat"],
+        required: ["fullName", "location.lat"],
       });
     }
 
@@ -89,8 +91,19 @@ export default async function handler(req, res) {
         residencyOverOneYear === true || residencyOverOneYear === false ? residencyOverOneYear : null,
       schoolEligibility,
       householdKey: householdKeyOf(address),
-      imageUrl: image.slice(0, 3),
       location: { lat: location.lat, lng: location.lng },
+      gradeLevel: gradeLevel || "",
+      gpa: gpa === "" || gpa === null || gpa === undefined || Number.isNaN(parseFloat(gpa))
+        ? null
+        : Math.min(4, Math.max(0, parseFloat(gpa))),
+      actualAddress: actualAddress || "",
+      // กรองตาม enum — ฟอร์มเปิดสาธารณะ ค่ามั่วจะทำ mongoose validation ล้ม 500
+      familyStatus: Array.isArray(familyStatus)
+        ? familyStatus.filter((v) => FAMILY_STATUS_OPTIONS.includes(v))
+        : [],
+      incomeSource: Array.isArray(incomeSource) ? incomeSource.slice(0, 20) : [],
+      receivedScholarship: Array.isArray(receivedScholarship) ? receivedScholarship.slice(0, 20) : [],
+      takhliScholarshipHistory: Array.isArray(takhliScholarshipHistory) ? takhliScholarshipHistory.slice(0, 20) : [],
       isRenewal,
     };
 
@@ -98,6 +111,15 @@ export default async function handler(req, res) {
       applicantRef: applicant._id,
       surveyYear,
     });
+
+    // รูป: อัปใหม่ = ทับ; ไม่อัปใหม่ = คงรูปเดิมของใบนั้น (กันเจ้าหน้าที่ต้องอัปมั่วทุกครั้งที่เปิดแก้)
+    const hasNewImages = Array.isArray(image) && image.length > 0;
+    const hasExistingImages = (application?.imageUrl || []).length > 0;
+    if (!hasNewImages && !hasExistingImages) {
+      return res.status(400).json({ message: "กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป" });
+    }
+    if (hasNewImages) fields.imageUrl = image.slice(0, 3);
+
     if (application) {
       await applyUpdate(application, fields);
     } else {
@@ -130,7 +152,7 @@ export default async function handler(req, res) {
       phone: phone || "",
       address: address || "",
       note: note || "",
-      image: image.slice(0, 3),
+      image: (application.imageUrl || []).slice(0, 3),
       location,
     });
 
