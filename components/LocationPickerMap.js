@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents, LayersControl } from "react-leaflet";
+import { MapContainer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { BaseLayersControl } from "@/components/MapBaseTileLayers";
 
 // Fix leaflet default icon issue
 const fixLeafletIcon = () => {
@@ -88,28 +89,7 @@ export default function LocationPickerMap({ initialLocation, onLocationChange })
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
         >
-          <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="แผนที่">
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="ดาวเทียม">
-              <TileLayer
-                url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
-                attribution="&copy; Google Maps"
-                subdomains={["mt0", "mt1", "mt2", "mt3"]}
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="ไฮบริด">
-              <TileLayer
-                url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-                attribution="&copy; Google Maps"
-                subdomains={["mt0", "mt1", "mt2", "mt3"]}
-              />
-            </LayersControl.BaseLayer>
-          </LayersControl>
+          <BaseLayersControl />
 
           <DraggableMarker position={[position.lat, position.lng]} onPositionChange={handlePositionChange} />
           <MapClickHandler onMapClick={handlePositionChange} />

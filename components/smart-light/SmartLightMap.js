@@ -177,7 +177,7 @@ export default function SmartLightMap({
             if (name)
               layer.bindPopup(communityPopupHtml(name), {
                 closeButton: false,
-                className: "sl-community-popup",
+                className: "community-popup",
               });
           }}
           eventHandlers={{

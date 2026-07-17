@@ -6,8 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { FaMapMarkerAlt, FaSchool, FaUniversity, FaBaby, FaUserGraduate } from 'react-icons/fa';
 import { cardCls } from '@/components/smart-school/adminTheme';
-import { BaseTileLayers } from '@/components/MapBaseTileLayers';
-import { MapLayerToggle } from '@/components/MapLayerToggle';
+import { BaseLayersControl } from '@/components/MapBaseTileLayers';
 
 // ป้องกัน marker icon หายในบางระบบ
 delete L.Icon.Default.prototype._getIconUrl;
@@ -81,7 +80,6 @@ function communityPopupHtml(name) {
 export default function MapPoints({ data }) {
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [hoveredPoint, setHoveredPoint] = useState(null);
-  const [baseLayer, setBaseLayer] = useState('street'); // 'street' | 'satellite'
   const [boundaries, setBoundaries] = useState([]);
 
   // ขอบเขตชุมชนชุดเดียวกับ smart-light (จัดการที่ /admin/settings/geojson-map)
@@ -225,20 +223,15 @@ export default function MapPoints({ data }) {
             ({filteredData.length} จุด)
           </span>
         </h3>
-        <div className="relative bg-white rounded-lg shadow-md overflow-hidden">
-        {/* ปุ่มสลับ ถนน ↔ ดาวเทียม — ลอยมุมขวาบน ต้องอยู่เหนือ pane ของ leaflet */}
-        <MapLayerToggle
-          value={baseLayer}
-          onChange={setBaseLayer}
-          style={{ position: 'absolute', top: 10, right: 10, zIndex: 500 }}
-        />
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <MapContainer
           center={center}
           zoom={12}
           style={{ height: '600px', width: '100%', zIndex: 0 }}
           className="rounded-lg"
         >
-          <BaseTileLayers baseLayer={baseLayer} />
+          {/* พื้นแผนที่ 3 แบบ — ชุดเดียวกับฟอร์มกรอกข้อมูลหน้าบ้าน */}
+          <BaseLayersControl />
 
           {/* ขอบเขตชุมชน — key remount เมื่อข้อมูลมา เพราะ GeoJSON layer ตั้ง data ตอนสร้างเท่านั้น */}
           {boundaryCollection && (
@@ -247,7 +240,12 @@ export default function MapPoints({ data }) {
               data={boundaryCollection}
               onEachFeature={(feature, layer) => {
                 const name = feature?.properties?.name;
-                if (name) layer.bindPopup(communityPopupHtml(name), { closeButton: false });
+                // className: กรอบหดตามชื่อ (ดู .community-popup ใน globals.css)
+                if (name)
+                  layer.bindPopup(communityPopupHtml(name), {
+                    closeButton: false,
+                    className: 'community-popup',
+                  });
               }}
               eventHandlers={{
                 // หมุดผู้สมัครต้องอยู่บนสุดเสมอ — ขอบเขตเข้ามาเมื่อไหร่ก็ถอยไปอยู่ล่างสุด
