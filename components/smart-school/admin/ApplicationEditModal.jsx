@@ -5,6 +5,7 @@ import PhotoSlots from '@/components/smart-school/survey/PhotoSlots';
 import SchoolPicker from '@/components/smart-school/survey/SchoolPicker';
 import { inputCls, labelCls, chipCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
 import { gradesForLevel, gradeOptionsWithCurrent } from '@/lib/smart-school/gradeLevels';
+import { TAKHLI_SCHOLARSHIP_OPTIONS } from '@/lib/smart-school/takhliScholarship';
 import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
 
 // leaflet ใช้ window — ต้อง ssr:false
@@ -298,9 +299,7 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
           <div className="md:col-span-2 space-y-1">
             <label className={labelCls}>ทุนเทศบาลที่เคยได้ (self-report)</label>
             <div className="flex flex-wrap gap-2">
-              {['เคยได้รับทุนการศึกษา ปีงบประมาณ 2565', 'เคยได้รับทุนการศึกษา ปีงบประมาณ 2566',
-                'เคยได้รับทุนการศึกษา ปีงบประมาณ 2567', 'เคยได้รับทุนการศึกษา ปีงบประมาณ 2568',
-                'ไม่เคยได้รับทุนการศึกษา'].map((opt) => (
+              {TAKHLI_SCHOLARSHIP_OPTIONS.map((opt) => (
                 <label key={opt} className={CHECKBOX_LABEL_CLS}>
                   <input type="checkbox" className={CHECKBOX_CLS}
                     checked={form.takhliScholarshipHistory.includes(opt)}

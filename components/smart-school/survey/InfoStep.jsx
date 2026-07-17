@@ -5,6 +5,7 @@ import SchoolPicker from './SchoolPicker';
 // mongoose จะถูกลากเข้า client bundle (วัดจริง: First Load JS หน้าแรกพุ่งจาก 328 kB เป็น 586 kB)
 import { FAMILY_STATUS_OPTIONS } from '@/lib/smart-school/familyStatusOptions';
 import { gradesForLevel, gradeOptionsWithCurrent } from '@/lib/smart-school/gradeLevels';
+import { TAKHLI_NEVER, TAKHLI_YEARS, takhliYearValue } from '@/lib/smart-school/takhliScholarship';
 
 // hint แสดงค่าเดิมของปีที่แล้ว (เฉพาะรายเก่า)
 function PrevHint({ year, value }) {
@@ -275,9 +276,37 @@ export default function InfoStep({ formData, setFormData, prevApplication, prevY
               value={formData.receivedScholarshipText || ''} onChange={(e) => set({ receivedScholarshipText: e.target.value })} />
           </FieldRow>
 
-          <FieldRow n={17} label="ทุนเทศบาลที่เคยได้ (คั่นด้วย ,)" hint={<PrevHint year={prevYear} value={(prev.takhliScholarshipHistory || []).join(', ')} />}>
-            <input type="text" placeholder="เช่น 2567, 2568" className={inputCls} disabled={disabled}
-              value={formData.takhliScholarshipHistoryText || ''} onChange={(e) => set({ takhliScholarshipHistoryText: e.target.value })} />
+          <FieldRow n={17} label="ทุนเทศบาลที่เคยได้">
+            <p className="-mt-0.5 mb-2 text-[10.5px] leading-snug text-[#8A8398]">
+              ระบบมีข้อมูลใบสมัครตั้งแต่ปี 2568 — ถ้าเคยได้ทุนก่อนหน้านั้น โปรดติ๊กปีที่เคยได้ เพื่อให้เจ้าหน้าที่ทราบว่าเป็นรายเก่า
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {TAKHLI_YEARS.map((y) => {
+                const v = takhliYearValue(y);
+                const on = (formData.takhliScholarshipHistory || []).includes(v);
+                return (
+                  <button key={y} type="button" disabled={disabled} className={chipCls(on)}
+                    onClick={() => set({
+                      // ติ๊กปี = ตัด "ไม่เคย" ออก (ขัดกันเอง)
+                      takhliScholarshipHistory: on
+                        ? (formData.takhliScholarshipHistory || []).filter((x) => x !== v)
+                        : [...(formData.takhliScholarshipHistory || []).filter((x) => x !== TAKHLI_NEVER), v],
+                    })}>
+                    เคยได้ทุน ปี {y}
+                  </button>
+                );
+              })}
+              <button type="button" disabled={disabled}
+                className={chipCls((formData.takhliScholarshipHistory || []).includes(TAKHLI_NEVER))}
+                onClick={() => set({
+                  // ติ๊ก "ไม่เคย" = ล้างปีทั้งหมด
+                  takhliScholarshipHistory: (formData.takhliScholarshipHistory || []).includes(TAKHLI_NEVER)
+                    ? []
+                    : [TAKHLI_NEVER],
+                })}>
+                ไม่เคยได้รับทุน
+              </button>
+            </div>
           </FieldRow>
         </>
       )}

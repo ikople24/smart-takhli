@@ -32,7 +32,7 @@ const EMPTY_FORM = {
   familyStatus: [],
   incomeSourceText: '',
   receivedScholarshipText: '',
-  takhliScholarshipHistoryText: '',
+  takhliScholarshipHistory: [], // ติ๊กจากตัวเลือกคงที่ (ดู lib/smart-school/takhliScholarship.js)
 };
 
 const surveySchema = z.object({
@@ -138,7 +138,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         familyStatus: Array.isArray(prev.familyStatus) ? prev.familyStatus : [],
         incomeSourceText: (prev.incomeSource || []).join(', '),
         receivedScholarshipText: (prev.receivedScholarship || []).join(', '),
-        takhliScholarshipHistoryText: (prev.takhliScholarshipHistory || []).join(', '),
+        takhliScholarshipHistory: Array.isArray(prev.takhliScholarshipHistory) ? prev.takhliScholarshipHistory : [],
       });
       if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
     }
@@ -192,7 +192,6 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
           gpa: formData.gpa === '' ? null : parseFloat(formData.gpa),
           incomeSource: formData.incomeSourceText.split(',').map((x) => x.trim()).filter(Boolean),
           receivedScholarship: formData.receivedScholarshipText.split(',').map((x) => x.trim()).filter(Boolean),
-          takhliScholarshipHistory: formData.takhliScholarshipHistoryText.split(',').map((x) => x.trim()).filter(Boolean),
           location,
         }),
       });
@@ -347,8 +346,11 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
                   {(fullMode || formData.receivedScholarshipText) && (
                     <SummaryRow label="ทุนอื่นที่ได้รับ" value={formData.receivedScholarshipText || '—'} />
                   )}
-                  {(fullMode || formData.takhliScholarshipHistoryText) && (
-                    <SummaryRow label="ทุนเทศบาลที่เคยได้" value={formData.takhliScholarshipHistoryText || '—'} />
+                  {(fullMode || (formData.takhliScholarshipHistory || []).length > 0) && (
+                    <SummaryRow
+                      label="ทุนเทศบาลที่เคยได้"
+                      value={(formData.takhliScholarshipHistory || []).join(', ') || '—'}
+                    />
                   )}
                 </div>
               </div>
