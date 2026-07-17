@@ -1,6 +1,8 @@
 // ปุ่มไอคอนเลเยอร์เล็ก ๆ — แตะสลับ แผนที่ถนน ↔ ภาพถ่ายดาวเทียม (ลดพื้นที่จอ)
 // เปิดดาวเทียม = ปุ่มม่วง, ถนน = ปุ่มขาว · pure UI ไม่พึ่ง leaflet (import ฝั่ง SSR ได้)
-import { SL } from "@/lib/smart-light/theme";
+// สีม่วง #7C3AED / เทา #57506A ตรงกับธีมทั้ง smart-light และ smart-school
+const ACTIVE_BG = "#7C3AED";
+const IDLE_FG = "#57506A";
 
 export function MapLayerToggle({ value, onChange, className, style }) {
   const satellite = value === "satellite";
@@ -20,8 +22,8 @@ export function MapLayerToggle({ value, onChange, className, style }) {
         border: 0,
         cursor: "pointer",
         borderRadius: 11,
-        background: satellite ? SL.primary : "rgba(255,255,255,.95)",
-        color: satellite ? "#fff" : SL.ink2,
+        background: satellite ? ACTIVE_BG : "rgba(255,255,255,.95)",
+        color: satellite ? "#fff" : IDLE_FG,
         backdropFilter: "blur(6px)",
         boxShadow: "0 12px 34px -18px rgba(33,27,46,.5)",
         ...style,

@@ -6,8 +6,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { LAMP_TYPE } from "@/lib/smart-light/constants";
 import { SL } from "@/lib/smart-light/theme";
-import { BaseTileLayers } from "./MapLayers";
-import { MapLayerToggle } from "./MapLayerToggle";
+import { BaseTileLayers } from "@/components/MapBaseTileLayers";
+import { MapLayerToggle } from "@/components/MapLayerToggle";
 import {
   SLModalShell,
   SLCancelButton,
