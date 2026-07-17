@@ -4,6 +4,7 @@ import SchoolPicker from './SchoolPicker';
 // import จาก lib ไม่ใช่ models/ — ไฟล์ model นั้น import mongoose ทั้งก้อน ถ้า client component import ตรง ๆ
 // mongoose จะถูกลากเข้า client bundle (วัดจริง: First Load JS หน้าแรกพุ่งจาก 328 kB เป็น 586 kB)
 import { FAMILY_STATUS_OPTIONS } from '@/lib/smart-school/familyStatusOptions';
+import { gradesForLevel, gradeOptionsWithCurrent } from '@/lib/smart-school/gradeLevels';
 
 // hint แสดงค่าเดิมของปีที่แล้ว (เฉพาะรายเก่า)
 function PrevHint({ year, value }) {
@@ -28,6 +29,9 @@ function FieldRow({ n, label, children, hint }) {
 export default function InfoStep({ formData, setFormData, prevApplication, prevYear, disabled, blockedSchools, fullMode, setFullMode }) {
   const set = (patch) => setFormData({ ...formData, ...patch });
   const prev = prevApplication || {};
+  // ระดับชั้น: ตัวเลือกกรองตามระดับการศึกษา; ค่าเดิมที่ไม่ตรงมาตรฐาน (ข้อมูลเก่า) โชว์เป็นตัวเลือกเพิ่ม ไม่ให้หาย
+  const curGrade = formData.gradeLevel || '';
+  const gradeOptions = gradeOptionsWithCurrent(formData.educationLevel, curGrade);
 
   return (
     <div className="space-y-4">
@@ -217,8 +221,20 @@ export default function InfoStep({ formData, setFormData, prevApplication, prevY
       {fullMode && (
         <>
           <FieldRow n={11} label="ระดับชั้น" hint={<PrevHint year={prevYear} value={prev.gradeLevel} />}>
-            <input type="text" placeholder="เช่น ป.5 / ม.2" className={inputCls} disabled={disabled}
-              value={formData.gradeLevel || ''} onChange={(e) => set({ gradeLevel: e.target.value })} />
+            {gradesForLevel(formData.educationLevel).length === 0 && !curGrade ? (
+              <div className="rounded-[14px] bg-[#F6F3FD] px-3.5 py-3 text-[12px] leading-relaxed text-[#8A8398]">
+                เลือก<b className="text-[#57506A]"> ระดับการศึกษา </b>ก่อน แล้วจะแสดงระดับชั้นให้เลือก
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {gradeOptions.map((g) => (
+                  <button key={g} type="button" disabled={disabled} className={chipCls(curGrade === g)}
+                    onClick={() => set({ gradeLevel: curGrade === g ? '' : g })}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+            )}
           </FieldRow>
 
           <FieldRow n={12} label="เกรดเฉลี่ย (GPA)" hint={<PrevHint year={prevYear} value={prev.gpa} />}>

@@ -328,6 +328,28 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
                     value={formData.residencyOverOneYear ? 'ใช่' : 'ไม่ใช่/ไม่แน่ใจ'}
                     valueClass={formData.residencyOverOneYear ? 'text-[#16A34A]' : 'text-[#57506A]'}
                   />
+                  {/* ฟิลด์โหมดเต็ม — โชว์เมื่อติ๊กโหมดเต็ม หรือเมื่อมีค่า (รายเก่า prefill มาก็ถูกส่งไปด้วย ต้องได้ทวน) */}
+                  {(fullMode || formData.gradeLevel) && (
+                    <SummaryRow label="ระดับชั้น" value={formData.gradeLevel || '—'} />
+                  )}
+                  {(fullMode || formData.gpa !== '') && (
+                    <SummaryRow label="เกรดเฉลี่ย" value={formData.gpa === '' ? '—' : formData.gpa} />
+                  )}
+                  {(fullMode || formData.actualAddress) && (
+                    <SummaryRow label="ที่อยู่จริง" value={formData.actualAddress || '—'} />
+                  )}
+                  {(fullMode || (formData.familyStatus || []).length > 0) && (
+                    <SummaryRow label="สถานะครอบครัว" value={(formData.familyStatus || []).join(', ') || '—'} />
+                  )}
+                  {(fullMode || formData.incomeSourceText) && (
+                    <SummaryRow label="แหล่งรายได้" value={formData.incomeSourceText || '—'} />
+                  )}
+                  {(fullMode || formData.receivedScholarshipText) && (
+                    <SummaryRow label="ทุนอื่นที่ได้รับ" value={formData.receivedScholarshipText || '—'} />
+                  )}
+                  {(fullMode || formData.takhliScholarshipHistoryText) && (
+                    <SummaryRow label="ทุนเทศบาลที่เคยได้" value={formData.takhliScholarshipHistoryText || '—'} />
+                  )}
                 </div>
               </div>
 

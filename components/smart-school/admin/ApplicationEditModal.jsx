@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
-import ImageUploads from '@/components/ImageUploads';
-import { inputCls, labelCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
+import PhotoSlots from '@/components/smart-school/survey/PhotoSlots';
+import { inputCls, labelCls, chipCls, ghostBtnCls, successBtnCls } from '@/components/smart-school/adminTheme';
+import { gradesForLevel, gradeOptionsWithCurrent } from '@/lib/smart-school/gradeLevels';
 import { normalizeCitizenId, isValidThaiCitizenId } from '@/lib/smart-school/citizenId';
 
 // leaflet ใช้ window — ต้อง ssr:false
@@ -210,7 +211,21 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
               </label>
             ))}
           </div>
-          {input('ระดับชั้น', 'gradeLevel')}
+          <div className="space-y-1">
+            <label className={labelCls}>ระดับชั้น</label>
+            {gradesForLevel(form.educationLevel).length === 0 && !form.gradeLevel ? (
+              <p className="text-[12px] text-[#8A8398]">เลือกระดับการศึกษาก่อน</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {gradeOptionsWithCurrent(form.educationLevel, form.gradeLevel).map((g) => (
+                  <button key={g} type="button" className={chipCls(form.gradeLevel === g)}
+                    onClick={() => set({ gradeLevel: form.gradeLevel === g ? '' : g })}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {input('GPA', 'gpa', 'number', { step: '0.01', min: 0, max: 4 })}
           <div className="md:col-span-2 space-y-1">
             <label className={labelCls}>ที่อยู่</label>
@@ -312,10 +327,11 @@ export default function ApplicationEditModal({ row, onClose, onSaved }) {
             <label className={labelCls}>
               รูปภาพ (บันทึกจริง + แจ้ง n8n เมื่อเปลี่ยน)
             </label>
-            <ImageUploads
-              initialImages={form.imageUrl}
+            <PhotoSlots
+              value={form.imageUrl}
               onChange={(urls) => set({ imageUrl: urls })}
               onUploadingChange={setUploading}
+              disabled={saving}
             />
           </div>
         </div>
