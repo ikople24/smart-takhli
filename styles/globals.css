@@ -1009,13 +1009,14 @@ body.survey-form-open .app-bottom-nav {
   display: none;
 }
 
-/* smart-light: popup ชื่อชุมชนให้กระชับ — override กฎ global .leaflet-popup-content (min-width 280px, margin 0 !important) */
-.sl-community-popup .leaflet-popup-content-wrapper {
+/* popup ชื่อชุมชนให้กระชับ (smart-light + smart-school) — กรอบต้องหดตามชื่อ ไม่ยืดเลยตัวอักษร
+   ต้อง override กฎ global .leaflet-popup-content ด้านบน (min-width 280px, margin 0 !important) */
+.community-popup .leaflet-popup-content-wrapper {
   border-radius: 12px !important;
   padding: 0 !important;
   box-shadow: 0 10px 30px -12px rgba(33, 27, 46, 0.5) !important;
 }
-.sl-community-popup .leaflet-popup-content {
+.community-popup .leaflet-popup-content {
   margin: 8px 13px !important;
   min-width: 0 !important;
   width: auto !important;

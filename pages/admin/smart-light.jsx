@@ -13,7 +13,7 @@ import RightRail from "@/components/smart-light/RightRail";
 import MapStatusChips from "@/components/smart-light/MapStatusChips";
 import DataTableModal from "@/components/smart-light/DataTableModal";
 import NearbyCard from "@/components/smart-light/NearbyCard";
-import { MapLayerToggle } from "@/components/smart-light/MapLayerToggle";
+import { MapLayerToggle } from "@/components/MapLayerToggle";
 
 // มี leaflet ข้างใน — โหลดเฉพาะฝั่ง client
 const SmartLightMap = dynamic(() => import("@/components/smart-light/SmartLightMap"), {

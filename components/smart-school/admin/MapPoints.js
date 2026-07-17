@@ -1,11 +1,12 @@
 // components/smart-school/admin/MapPoints.js
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, Marker, Popup, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { FaMapMarkerAlt, FaSchool, FaUniversity, FaBaby, FaUserGraduate } from 'react-icons/fa';
 import { cardCls } from '@/components/smart-school/adminTheme';
+import { BaseLayersControl } from '@/components/MapBaseTileLayers';
 
 // ป้องกัน marker icon หายในบางระบบ
 delete L.Icon.Default.prototype._getIconUrl;
@@ -68,9 +69,42 @@ const createCustomIcon = (level, status) => {
   });
 };
 
+// HTML popup ชื่อชุมชน (escape กัน injection — ชื่อมาจากข้อมูล GeoJSON)
+function communityPopupHtml(name) {
+  const safe = String(name).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+  );
+  return `<div style="font-weight:700;font-size:13px;color:#3D3653;">🏘️ ${safe}</div>`;
+}
+
 export default function MapPoints({ data }) {
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [boundaries, setBoundaries] = useState([]);
+
+  // ขอบเขตชุมชนชุดเดียวกับ smart-light (จัดการที่ /admin/settings/geojson-map)
+  // โหลดครั้งเดียว — พังได้โดยไม่กระทบแผนที่
+  useEffect(() => {
+    fetch('/api/geojson-features')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.features)) setBoundaries(d.features);
+      })
+      .catch(() => {});
+  }, []);
+
+  // ขอบเขตเป็นพื้นหลัง — วาดใต้หมุด แตะแล้วขึ้นชื่อชุมชน
+  const boundaryCollection = useMemo(() => {
+    if (boundaries.length === 0) return null;
+    return {
+      type: 'FeatureCollection',
+      features: boundaries.map((b) => ({
+        type: 'Feature',
+        geometry: b.geometry,
+        properties: { name: b.name, color: b.color || '#3B82F6' },
+      })),
+    };
+  }, [boundaries]);
 
 
 
@@ -191,16 +225,42 @@ export default function MapPoints({ data }) {
         </h3>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <MapContainer
-          center={center} 
-          zoom={12} 
+          center={center}
+          zoom={12}
           style={{ height: '600px', width: '100%', zIndex: 0 }}
           className="rounded-lg"
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap contributors"
-          />
-          
+          {/* พื้นแผนที่ 3 แบบ — ชุดเดียวกับฟอร์มกรอกข้อมูลหน้าบ้าน */}
+          <BaseLayersControl />
+
+          {/* ขอบเขตชุมชน — key remount เมื่อข้อมูลมา เพราะ GeoJSON layer ตั้ง data ตอนสร้างเท่านั้น */}
+          {boundaryCollection && (
+            <GeoJSON
+              key={`boundaries-${boundaries.length}`}
+              data={boundaryCollection}
+              onEachFeature={(feature, layer) => {
+                const name = feature?.properties?.name;
+                // className: กรอบหดตามชื่อ (ดู .community-popup ใน globals.css)
+                if (name)
+                  layer.bindPopup(communityPopupHtml(name), {
+                    closeButton: false,
+                    className: 'community-popup',
+                  });
+              }}
+              eventHandlers={{
+                // หมุดผู้สมัครต้องอยู่บนสุดเสมอ — ขอบเขตเข้ามาเมื่อไหร่ก็ถอยไปอยู่ล่างสุด
+                add: (e) => e.target.bringToBack(),
+              }}
+              style={(feature) => ({
+                color: feature?.properties?.color || '#3B82F6',
+                weight: 2,
+                opacity: 0.55,
+                fillColor: feature?.properties?.color || '#3B82F6',
+                fillOpacity: 0.08,
+              })}
+            />
+          )}
+
           {/* แสดงจุดข้อมูลการศึกษา */}
           {filteredData.map((item, i) => {
             if (!item.location || !item.location.lat || !item.location.lng) return null;

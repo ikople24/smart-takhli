@@ -18,7 +18,7 @@ import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
 } from "@/lib/smart-light/constants";
-import { BaseTileLayers } from "./MapLayers";
+import { BaseTileLayers } from "@/components/MapBaseTileLayers";
 
 // ป้องกัน marker icon หายในบางระบบ (pattern เดียวกับ MapPoints ของ smart-school)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -177,7 +177,7 @@ export default function SmartLightMap({
             if (name)
               layer.bindPopup(communityPopupHtml(name), {
                 closeButton: false,
-                className: "sl-community-popup",
+                className: "community-popup",
               });
           }}
           eventHandlers={{
