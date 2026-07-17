@@ -42,10 +42,10 @@ export default async function handler(req, res) {
       residencyOverOneYear, image, location,
     } = req.body || {};
 
-    if (!fullName || !Array.isArray(image) || image.length === 0 || !location?.lat) {
+    if (!fullName || !location?.lat) {
       return res.status(400).json({
         message: "Missing required fields",
-        required: ["fullName", "image", "location.lat"],
+        required: ["fullName", "location.lat"],
       });
     }
 
@@ -89,7 +89,6 @@ export default async function handler(req, res) {
         residencyOverOneYear === true || residencyOverOneYear === false ? residencyOverOneYear : null,
       schoolEligibility,
       householdKey: householdKeyOf(address),
-      imageUrl: image.slice(0, 3),
       location: { lat: location.lat, lng: location.lng },
       isRenewal,
     };
@@ -98,6 +97,15 @@ export default async function handler(req, res) {
       applicantRef: applicant._id,
       surveyYear,
     });
+
+    // รูป: อัปใหม่ = ทับ; ไม่อัปใหม่ = คงรูปเดิมของใบนั้น (กันเจ้าหน้าที่ต้องอัปมั่วทุกครั้งที่เปิดแก้)
+    const hasNewImages = Array.isArray(image) && image.length > 0;
+    const hasExistingImages = (application?.imageUrl || []).length > 0;
+    if (!hasNewImages && !hasExistingImages) {
+      return res.status(400).json({ message: "กรุณาอัปโหลดรูปภาพอย่างน้อย 1 รูป" });
+    }
+    if (hasNewImages) fields.imageUrl = image.slice(0, 3);
+
     if (application) {
       await applyUpdate(application, fields);
     } else {
@@ -130,7 +138,7 @@ export default async function handler(req, res) {
       phone: phone || "",
       address: address || "",
       note: note || "",
-      image: image.slice(0, 3),
+      image: (application.imageUrl || []).slice(0, 3),
       location,
     });
 

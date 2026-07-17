@@ -122,6 +122,7 @@ export default function SchoolSurveyModal({ isOpen, onClose }) {
         annualIncome: prev.annualIncome != null ? String(prev.annualIncome) : '',
         schoolName: prev.schoolName || '',
         residencyOverOneYear: prev.residencyOverOneYear ?? null,
+        image: Array.isArray(prev.imageUrl) ? prev.imageUrl : [],
       });
       if (prev.location?.lat) setLocation({ lat: prev.location.lat, lng: prev.location.lng });
     }

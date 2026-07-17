@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
     const application = await SchoolApplication.findOne({ applicantRef: applicant._id })
       .sort({ surveyYear: -1 })
-      .select("surveyYear educationLevel schoolName address note housingStatus householdMembers annualIncome residencyOverOneYear location -_id")
+      .select("surveyYear educationLevel schoolName address note housingStatus householdMembers annualIncome residencyOverOneYear location imageUrl -_id")
       .lean();
     return res.status(200).json({
       applicant: {
