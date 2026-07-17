@@ -3,6 +3,7 @@ import SchoolApplication from "@/models/smart-school/SchoolApplication";
 import "@/models/smart-school/SchoolApplicant"; // ให้ mongoose รู้จัก model ก่อน populate
 import { getFiscalYearBE } from "@/lib/smart-school/fiscalYear";
 import { maskCitizenId } from "@/lib/smart-school/citizenId";
+import { renewalStatus } from "@/lib/smart-school/takhliScholarship";
 import { requireSchoolAdmin } from "./_auth";
 
 export default async function handler(req, res) {
@@ -65,7 +66,11 @@ export default async function handler(req, res) {
 
     const stats = {
       total: applications.length,
-      renewals: applications.filter((r) => r.isRenewal).length,
+      // นับ "รายเก่า" ตามนิยามที่หน้าจอใช้จริง: มีใบปีก่อนในระบบ หรือแจ้งเองว่าเคยได้ทุน
+      // (isRenewal ดิบไม่พอ — ระบบไม่มีข้อมูลก่อนปี 2568 คนได้ทุน 2565-2567 จะเป็น false)
+      renewals: applications.filter((r) => renewalStatus(r).kind === "old").length,
+      newConfirmed: applications.filter((r) => renewalStatus(r).kind === "new").length,
+      unknownRenewal: applications.filter((r) => renewalStatus(r).kind === "unknown").length,
       byStatus: applications.reduce((acc, r) => {
         acc[r.status] = (acc[r.status] || 0) + 1;
         return acc;

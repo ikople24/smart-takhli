@@ -110,9 +110,11 @@ export default function SmartSchoolDashboard() {
 
         {/* สรุป */}
         {stats && view === 'table' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             <StatCard value={stats.total} label="ทั้งหมด" tone="purple" />
             <StatCard value={stats.renewals} label="รายเก่า" />
+            <StatCard value={stats.newConfirmed ?? 0} label="รายใหม่ (ยืนยันแล้ว)" tone="green" />
+            <StatCard value={stats.unknownRenewal ?? 0} label="ยังไม่ระบุประวัติทุน" tone="gray" />
             <StatCard value={stats.byStatus?.['รับคำร้อง'] || 0} label="รับคำร้อง" />
             <StatCard value={stats.byStatus?.['ตรวจสอบแล้ว'] || 0} label="ตรวจสอบแล้ว" tone="deep" />
             <StatCard value={stats.byStatus?.['ได้รับทุน'] || 0} label="ได้รับทุน" tone="green" />

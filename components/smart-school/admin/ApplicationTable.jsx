@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { SCHOLARSHIP_LEVELS, levelBucket } from '@/lib/smart-school/scholarshipLevels';
 import { cardCls, tableHeadCls, chipCls, inputCls, statusBadgeCls } from '@/components/smart-school/adminTheme';
+import { renewalStatus } from '@/lib/smart-school/takhliScholarship';
+
+// badge หน้าชื่อ: เก่า/ใหม่/ไม่ระบุ — isRenewal อย่างเดียวไม่พอ เพราะระบบไม่มีข้อมูลก่อนปี 2568
+const RENEWAL_BADGE = {
+  old: { label: 'เก่า', cls: 'bg-[#FEF3C7] text-[#B45309]' },
+  new: { label: 'ใหม่', cls: 'bg-[#DCFCE7] text-[#15803D]' },
+  unknown: { label: 'ไม่ระบุ', cls: 'bg-[#F1F1F4] text-[#6B7280]' },
+};
 
 export default function ApplicationTable({ rows, onDetail, onEdit }) {
   const [search, setSearch] = useState('');
@@ -14,8 +22,8 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
     return rows.filter((r) => {
       if (levelTab !== 'all' && levelBucket(r.educationLevel) !== levelTab) return false;
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
-      if (renewalFilter === 'renewal' && !r.isRenewal) return false;
-      if (renewalFilter === 'new' && r.isRenewal) return false;
+      // กรองตามสถานะที่ badge แสดงจริง (รวมคำแจ้งของผู้กรอก) ไม่ใช่ isRenewal ดิบ
+      if (renewalFilter !== 'all' && renewalStatus(r).kind !== renewalFilter) return false;
       if (citizenFilter === 'has' && !r.hasCitizenId) return false;
       if (citizenFilter === 'none' && r.hasCitizenId) return false;
       if (!q) return true;
@@ -54,9 +62,10 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
         </select>
         <select className="select select-bordered select-sm" value={renewalFilter}
           onChange={(e) => setRenewalFilter(e.target.value)}>
-          <option value="all">รายเก่า+ใหม่</option>
-          <option value="renewal">เฉพาะรายเก่า</option>
-          <option value="new">เฉพาะรายใหม่</option>
+          <option value="all">เก่า+ใหม่+ไม่ระบุ</option>
+          <option value="old">เฉพาะรายเก่า</option>
+          <option value="new">เฉพาะรายใหม่ (ยืนยันแล้ว)</option>
+          <option value="unknown">ยังไม่ระบุประวัติทุน</option>
         </select>
         <select className="select select-bordered select-sm" value={citizenFilter}
           onChange={(e) => setCitizenFilter(e.target.value)}>
@@ -84,17 +93,18 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
+              {filtered.map((r) => {
+                const rn = renewalStatus(r);
+                const badge = RENEWAL_BADGE[rn.kind];
+                return (
                 <tr key={r._id} className="border-t border-[#F0ECF8] hover:bg-[#F6F3FD]">
+                  <td className="whitespace-nowrap">{r.applicationId}</td>
                   <td className="whitespace-nowrap">
-                    {r.applicationId}
-                    {r.isRenewal && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] font-bold ml-1">
-                        เก่า
-                      </span>
-                    )}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold mr-1 ${badge.cls}`} title={rn.reason}>
+                      {badge.label}
+                    </span>
+                    {r.prefix}{r.name}
                   </td>
-                  <td>{r.prefix}{r.name}</td>
                   <td>{r.educationLevel || '-'}</td>
                   <td>{r.phone || '-'}</td>
                   <td className="whitespace-nowrap">
@@ -136,7 +146,8 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                     <button className="btn btn-xs btn-outline btn-primary ml-1" onClick={() => onEdit(r)}>แก้ไข</button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {filtered.length === 0 && (
                 <tr><td colSpan={9} className="text-center text-gray-400 py-6">ไม่มีข้อมูล</td></tr>
               )}
