@@ -337,14 +337,18 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 Run: `npm run dev` แล้วเปิด `http://localhost:3000/admin/pm25-settings` (ล็อกอินด้วย user ที่มีสิทธิ์)
 
 ตรวจ:
-1. เห็น card "รายงานรายเดือน" พร้อมจำนวนเดือนตรงกับ "กราฟเดือน: N เดือน" ใน card Cache
+1. เห็น card "รายงานรายเดือน" — ตัวเลขจำนวนเดือนบนการ์ดมาจาก `monthsTotal`
+   (`countDocuments()` ทั้ง collection) **อาจมากกว่า** "กราฟเดือน: N เดือน"
+   ใน card Cache ซึ่งแคปที่ 12 เดือนล่าสุด — ไม่ใช่ bug
 2. กด "Export CSV รายเดือน" → ได้ไฟล์ `pm25-monthly-report-<วันนี้>.csv`
-3. เปิดไฟล์ใน Excel/Numbers: หัวคอลัมน์ภาษาไทยไม่เพี้ยน, จำนวนแถวข้อมูล = จำนวนเดือนใน collection `pm25_monthly`, เรียงเก่า→ใหม่, ค่า avg ตรงกับข้อมูลจริง
+3. เปิดไฟล์ใน Excel/Numbers: หัวคอลัมน์ภาษาไทยไม่เพี้ยน, จำนวนแถวข้อมูล =
+   ตัวเลขบนการ์ด "รายงานรายเดือน" (= จำนวน doc ใน `pm25_monthly`),
+   เรียงเก่า→ใหม่, ค่า avg ตรงกับข้อมูลจริง
 
 - [ ] **Step 2: ตรวจกรณีที่แก้ไม่ได้ด้วยตา — เทียบกับ Mongo**
 
 ถ้ามี access DB: นับ document ใน `pm25_monthly` เทียบจำนวนแถว CSV
-(หรืออย่างน้อยเทียบกับ `monthsCount` ที่หน้า settings แสดง)
+(ต้องเท่ากันเป๊ะ — อย่าเทียบกับ "กราฟเดือน" ที่แคป 12)
 
 - [ ] **Step 3: สรุปผลการตรวจให้ผู้ใช้ + เข้าสู่ finishing-a-development-branch**
 
