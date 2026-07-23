@@ -254,7 +254,7 @@ export default function Pm25SettingsPage() {
                 <div className="card-body">
                   <h2 className="card-title text-lg">รายงานรายเดือน</h2>
                   <p className="text-sm text-gray-600">
-                    Export ค่าเฉลี่ย PM2.5 รายเดือนทั้งหมดที่เก็บไว้ ({cache?.monthsCount || 0} เดือน)
+                    Export ค่าเฉลี่ย PM2.5 รายเดือนทั้งหมดที่เก็บไว้ ({cache?.monthsTotal || 0} เดือน)
                     เป็นไฟล์ CSV แบบ UTF-8 + BOM เปิดใน Excel ภาษาไทยไม่เพี้ยน
                   </p>
                   <div className="card-actions justify-end mt-2">
