@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useAuth } from "@clerk/nextjs";
 import Swal from "sweetalert2";
 import { RefreshCw, Save, Cloud, Sheet, Radio } from "lucide-react";
+import ExportPm25Monthly from "@/components/pm25/ExportPm25Monthly";
 
 const MODE_OPTIONS = [
   {
@@ -246,6 +247,19 @@ export default function Pm25SettingsPage() {
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="card bg-white shadow">
+                <div className="card-body">
+                  <h2 className="card-title text-lg">รายงานรายเดือน</h2>
+                  <p className="text-sm text-gray-600">
+                    Export ค่าเฉลี่ย PM2.5 รายเดือนทั้งหมดที่เก็บไว้ ({cache?.monthsCount || 0} เดือน)
+                    เป็นไฟล์ CSV แบบ UTF-8 + BOM เปิดใน Excel ภาษาไทยไม่เพี้ยน
+                  </p>
+                  <div className="card-actions justify-end mt-2">
+                    <ExportPm25Monthly />
+                  </div>
                 </div>
               </div>
 
