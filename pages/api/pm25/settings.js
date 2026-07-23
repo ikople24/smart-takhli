@@ -125,7 +125,7 @@ export default async function handler(req, res) {
     const runners = {
       hourly: syncPm25Hourly,
       daily: syncPm25Daily,
-      monthly: () => syncPm25Monthly({ force: Boolean(req.body?.force) }),
+      monthly: syncPm25Monthly,
     };
     const run = runners[job];
     if (!run) {
