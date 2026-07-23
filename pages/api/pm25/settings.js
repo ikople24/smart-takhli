@@ -58,6 +58,7 @@ export default async function handler(req, res) {
           sheetRealtimeUrl: PM25_SHEET_REALTIME_URL,
           sheetDailyUrl: PM25_SHEET_DAILY_URL,
         },
+        monthsTotal,
         cache: cache
           ? {
               pm25: cache.latest?.pm25,
@@ -67,7 +68,6 @@ export default async function handler(req, res) {
               stale: cache.stale,
               daysCount: cache.dailyAverages?.length || 0,
               monthsCount: cache.monthlyAverages?.length || 0,
-              monthsTotal,
             }
           : null,
         recentLogs: recentLogs.map((l) => ({
