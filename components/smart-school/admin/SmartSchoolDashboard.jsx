@@ -7,6 +7,7 @@ import ApplicationEditModal from './ApplicationEditModal';
 import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 import AllocationBoard from './AllocationBoard';
 import CitizenIdPanel from './CitizenIdPanel';
+import ExportApplicants from './ExportApplicants';
 import { DashboardHeader, YearPills, PillTabs, StatCard, cardCls } from '@/components/smart-school/adminTheme';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
@@ -91,7 +92,12 @@ export default function SmartSchoolDashboard() {
         <DashboardHeader
           title="Smart School — สำรวจการศึกษา"
           subtitle="ทะเบียนผู้ขอทุน + แบบสำรวจรายปีงบประมาณ"
-          right={<YearPills years={yearTabs} value={data?.year} onChange={(y) => setYear(y)} />}
+          right={
+            <div className="flex flex-wrap items-center gap-2">
+              <ExportApplicants rows={data?.applications || []} year={data?.year} />
+              <YearPills years={yearTabs} value={data?.year} onChange={(y) => setYear(y)} />
+            </div>
+          }
         />
 
         <div className={stats && view === 'table' ? 'mb-5' : ''}>
