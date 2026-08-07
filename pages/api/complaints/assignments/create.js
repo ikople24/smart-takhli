@@ -1,7 +1,6 @@
 import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
 import mongoose from 'mongoose';
-import { n8n } from '@/lib/n8nWebhook';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { getAuth } from '@clerk/nextjs/server';
 
@@ -28,11 +27,7 @@ export default async function handler(req, res) {
       remarks,
     });
 
-    const assignedAt = newAssignment.assignedAt instanceof Date
-      ? newAssignment.assignedAt.toISOString()
-      : new Date().toISOString();
-
-    // Audit log + n8n (fire-and-forget)
+    // Audit log (fire-and-forget)
     if (actorClerkId) {
       logAuditEvent({
         actorClerkId,
@@ -43,13 +38,6 @@ export default async function handler(req, res) {
         description: `มอบหมายงานเรื่องร้องเรียน ${String(complaintId).slice(-8)} ให้ ${officerName || userId}`,
       });
     }
-
-    n8n.complaintAssigned({
-      complaintId: String(complaintId),
-      officerName: officerName || 'เจ้าหน้าที่',
-      officerId: String(userId),
-      assignedAt,
-    });
 
     res.status(201).json({ message: 'Assignment created successfully', assignment: newAssignment });
   } catch (error) {

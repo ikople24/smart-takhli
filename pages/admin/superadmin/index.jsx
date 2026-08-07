@@ -268,13 +268,23 @@ export default function SuperAdminPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl shadow-lg">
-              <Crown className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl shadow-lg">
+                <Crown className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Super Admin</h1>
+                <p className="text-purple-200">จัดการหน้าที่อนุญาตสำหรับแต่ละ User</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Super Admin</h1>
-              <p className="text-purple-200">จัดการหน้าที่อนุญาตสำหรับแต่ละ User</p>
+            <div className="flex gap-2">
+              <a href="/admin/superadmin/line-settings" className="btn btn-sm btn-outline text-white border-white/40 hover:bg-white/10">
+                💬 ตั้งค่า LINE
+              </a>
+              <a href="/admin/superadmin/audit-log" className="btn btn-sm btn-outline text-white border-white/40 hover:bg-white/10">
+                📜 Audit Log
+              </a>
             </div>
           </div>
         </div>

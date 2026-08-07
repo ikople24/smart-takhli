@@ -110,11 +110,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 // ---------- Event processing ----------
 
 async function handleEvent(event: LineEvent): Promise<void> {
-  if (event.type !== 'message' || event.message?.type !== 'text') return;
   if (!event.replyToken) return;
+
+  const isGroupChat = event.source?.type === 'group' || event.source?.type === 'room';
+  const groupOrRoomId = event.source?.groupId || event.source?.roomId;
+
+  // บอทถูกเชิญเข้ากลุ่ม — ตอบ groupId ให้เอาไปตั้ง LINE_ADMIN_GROUP_ID
+  if (event.type === 'join') {
+    if (groupOrRoomId) {
+      await lineReply(event.replyToken, [
+        {
+          type: 'text',
+          text:
+            `🆔 Group ID ของกลุ่มนี้คือ\n${groupOrRoomId}\n\n` +
+            `นำไปตั้งค่า LINE_ADMIN_GROUP_ID ในระบบ\nเพื่อรับแจ้งเตือนเรื่องร้องเรียนเข้ากลุ่มนี้`,
+        },
+      ]);
+    }
+    return;
+  }
+
+  if (event.type !== 'message' || event.message?.type !== 'text') return;
 
   const userId = event.source?.userId;
   const text = event.message.text.trim();
+
+  // คำสั่ง "groupid" — ขอ groupId ของกลุ่มปัจจุบัน
+  if (/^groupid$/i.test(text) && groupOrRoomId) {
+    await lineReply(event.replyToken, [
+      { type: 'text', text: `🆔 Group ID ของกลุ่มนี้คือ\n${groupOrRoomId}` },
+    ]);
+    return;
+  }
 
   // คำสั่ง: "สถานะ <รหัส>" หรือ "status <รหัส>"
   const statusMatch = text.match(/^(?:สถานะ|status)\s+(.+)$/i);
@@ -124,6 +151,9 @@ async function handleEvent(event: LineEvent): Promise<void> {
     await handleStatusQuery(event.replyToken, userId, complaintId);
     return;
   }
+
+  // ในกลุ่ม: ตอบเฉพาะคำสั่งข้างบน — ห้ามตอบ default ไม่งั้นบอทสแปมทุกข้อความที่คุยกัน
+  if (isGroupChat) return;
 
   // ช่วยเหลือ / welcome
   if (/^(?:ช่วย|help|สวัสดี|hello|hi|เริ่ม|start)$/i.test(text)) {
@@ -135,7 +165,7 @@ async function handleEvent(event: LineEvent): Promise<void> {
   await lineReply(event.replyToken, [
     {
       type: 'text',
-      text: `พิมพ์ "สถานะ <รหัสเรื่อง>" เพื่อตรวจสอบสถานะ\nเช่น: สถานะ TK-001-2025\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+      text: `พิมพ์ "สถานะ <รหัสเรื่อง>" เพื่อตรวจสอบสถานะ\nเช่น: สถานะ TKC-680001\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
     },
   ]);
 }
