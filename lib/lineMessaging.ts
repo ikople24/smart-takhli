@@ -3,7 +3,9 @@
 //
 // ENV vars ที่ต้องมีใน .env.local:
 //   LINE_CHANNEL_ACCESS_TOKEN  — Channel Access Token จาก LINE Developers Console
-//   LINE_ADMIN_GROUP_ID        — (optional) LINE group/user ID สำหรับแจ้งเจ้าหน้าที่เรื่องใหม่
+//   LINE_ADMIN_GROUP_ID        — groupId ของกลุ่มเจ้าหน้าที่ (ขึ้นต้น C...)
+//                                ได้จากการเชิญบอทเข้ากลุ่มแล้วบอทตอบ groupId กลับมา
+//                                หรือพิมพ์ "groupid" ในกลุ่ม
 //
 // ใช้งาน:
 //   import { lineReply, linePush, formatStatusMessage, buildMessages } from '@/lib/lineMessaging'
@@ -13,6 +15,11 @@
 //
 //   // Push เมื่อสถานะเปลี่ยน (พร้อมภาพ)
 //   await linePush(lineUserId, buildMessages(formatStatusMessage(c), c.images?.[0]))
+//
+//   // แจ้งกลุ่มเจ้าหน้าที่ (skip เงียบ ๆ ถ้าไม่ได้ตั้ง LINE_ADMIN_GROUP_ID)
+//   await lineNotifyAdminGroup(buildMessages(formatNewComplaintMessage(c), c.images?.[0]))
+
+import { getAdminGroupId } from './lineSettings';
 
 const LINE_API = 'https://api.line.me/v2/bot/message';
 const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
@@ -185,11 +192,26 @@ export async function lineMulticast(
   }
 }
 
+/**
+ * ส่งข้อความเข้ากลุ่ม LINE ของเจ้าหน้าที่
+ * groupId มาจาก Mongo (หน้า /admin/superadmin/line-settings) → fallback env LINE_ADMIN_GROUP_ID
+ * fire-and-forget: ถ้าไม่ได้ตั้งค่าจะ log warning แล้ว skip — ระบบหลักทำงานต่อปกติ
+ */
+export async function lineNotifyAdminGroup(messages: LineMessage[]): Promise<boolean> {
+  const groupId = await getAdminGroupId();
+  if (!groupId) {
+    console.warn('[LINE] admin group id not configured — skipping admin group notify');
+    return false;
+  }
+  return linePush(groupId, messages);
+}
+
 // ---------- Message formatters ----------
 
 /** สี badge ตามสถานะ */
 function statusColor(status: string): string {
   const map: Record<string, string> = {
+    'ดำเนินการเสร็จสิ้น': '#22c55e',
     'เสร็จสิ้น': '#22c55e',
     'อยู่ระหว่างดำเนินการ': '#f59e0b',
     'รอการตรวจสอบ': '#06b6d4',
@@ -202,6 +224,7 @@ function statusColor(status: string): string {
 /** Emoji ตามสถานะ */
 function statusEmoji(status: string): string {
   const map: Record<string, string> = {
+    'ดำเนินการเสร็จสิ้น': '✅',
     'เสร็จสิ้น': '✅',
     'อยู่ระหว่างดำเนินการ': '🔄',
     'รอการตรวจสอบ': '🔍',
@@ -394,6 +417,92 @@ export function formatNewComplaintMessage(complaint: {
 }
 
 /**
+ * สร้าง Flex Message แจ้งกลุ่มเจ้าหน้าที่เมื่อปิดงาน
+ */
+export function formatClosedMessage(opts: {
+  complaintId: string;
+  community?: string;
+  fullName?: string;
+  officerName?: string;
+  closedAt?: Date | string | null;
+}): FlexMessage {
+  const { complaintId, community, fullName, officerName, closedAt } = opts;
+
+  const closedStr = closedAt
+    ? new Date(closedAt).toLocaleDateString('th-TH', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '-';
+
+  return {
+    type: 'flex',
+    altText: `✅ ปิดงานเรื่องร้องเรียน #${complaintId}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#22c55e',
+        contents: [
+          {
+            type: 'text',
+            text: '✅ ปิดงานเรียบร้อย',
+            color: '#ffffff',
+            weight: 'bold',
+            size: 'lg',
+          },
+          {
+            type: 'text',
+            text: `#${complaintId}`,
+            color: '#dcfce7',
+            size: 'sm',
+          },
+        ],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          ...(fullName
+            ? [{ type: 'text', text: `ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333' }]
+            : []),
+          ...(community
+            ? [{ type: 'text', text: `ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
+            : []),
+          ...(officerName
+            ? [{ type: 'text', text: `เจ้าหน้าที่: ${officerName}`, size: 'sm', color: '#555555', weight: 'bold' }]
+            : []),
+          { type: 'separator' },
+          {
+            type: 'text',
+            text: `ปิดงานเมื่อ: ${closedStr}`,
+            size: 'xs',
+            color: '#aaaaaa',
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        contents: [
+          {
+            type: 'text',
+            text: 'เทศบาลตำบลตาคลี',
+            size: 'xs',
+            color: '#aaaaaa',
+            align: 'center',
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
  * ข้อความไม่พบเรื่องร้องเรียน
  */
 export function notFoundMessage(complaintId: string): TextMessage {
@@ -402,7 +511,7 @@ export function notFoundMessage(complaintId: string): TextMessage {
     text:
       `❌ ไม่พบเรื่องร้องเรียนรหัส "${complaintId}"\n\n` +
       `กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง\n` +
-      `รูปแบบที่ถูกต้อง: สถานะ TK-001-2025`,
+      `รูปแบบที่ถูกต้อง: สถานะ TKC-680001`,
   };
 }
 
@@ -415,7 +524,7 @@ export const helpMessage: TextMessage = {
     `🏛️ เทศบาลตำบลตาคลี — LINE Bot\n\n` +
     `คำสั่งที่ใช้ได้:\n` +
     `📋 สถานะ <รหัส> — ตรวจสอบสถานะเรื่องร้องเรียน\n` +
-    `   ตัวอย่าง: สถานะ TK-001-2025\n\n` +
+    `   ตัวอย่าง: สถานะ TKC-680001\n\n` +
     `หากต้องการความช่วยเหลือเพิ่มเติม\n` +
     `ติดต่อ: โทร 056-280-366`,
 };

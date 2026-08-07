@@ -38,11 +38,17 @@
 
 ## Integration (LINE)
 
-- **ฝั่ง server (ใช้งานอยู่)**: ยื่นเรื่องใหม่ → multicast แจ้งเจ้าหน้าที่ที่ follow OA
-  (`lib/lineMessaging.ts`, gate ด้วย env `LINE_ADMIN_USER_IDS` — ไม่ตั้ง = skip) + n8n webhook;
-  webhook ขาเข้า `pages/api/integrations/line-webhook.ts`
-- **ฝั่งประชาชน (ลดรูปแล้ว 2026-06-12)**: กรอกฟอร์มปกติ ไม่มี LIFF login/choice screen —
-  dialog หลังส่งสำเร็จมี**ปุ่มเดียว** "เพิ่มเพื่อน LINE OA" (`NEXT_PUBLIC_LINE_OA_URL`)
-  สำหรับติดต่อสอบถามเพิ่มเติม
+- **แจ้งกลุ่มเจ้าหน้าที่ (2026-08)**: เรื่องใหม่ + ปิดงาน → push เข้า **LINE Group**
+  (`lib/lineMessaging.ts#lineNotifyAdminGroup`) — groupId อ่านจาก Mongo `line_settings`
+  (ตั้งผ่านหน้า `/admin/superadmin/line-settings`) fallback ไป env `LINE_ADMIN_GROUP_ID`;
+  ไม่ตั้ง = skip เงียบ ๆ. **เลิกใช้** n8n/Telegram (`submit-tk`, `close-tk`,
+  `complaintStatusChanged`, `complaintAssigned`, `assignmentCompleted`) และเลิกใช้
+  multicast รายคน (`LINE_ADMIN_USER_IDS`)
+- **webhook ขาเข้า** `pages/api/integrations/line-webhook.ts`: คำสั่ง `สถานะ <รหัส>`
+  (บันทึก `lineUserId` ผูกกับเรื่อง → รับ push เมื่อสถานะเปลี่ยน), `groupid` (ตอบ groupId
+  ของกลุ่ม), event `join` (บอทเข้ากลุ่ม → ตอบ groupId); ในกลุ่มบอทตอบ**เฉพาะคำสั่ง**
+  ไม่ตอบข้อความทั่วไป
+- **ฝั่งประชาชน**: dialog หลังส่งสำเร็จแสดงเลขเรื่อง + สอนผูก LINE (เพิ่มเพื่อน OA แล้วพิมพ์
+  `สถานะ <เลขเรื่อง>`) เพื่อรับแจ้งเตือนความคืบหน้าอัตโนมัติ (`NEXT_PUBLIC_LINE_OA_URL`)
 - `lib/liff.ts` + env `NEXT_PUBLIC_LIFF_ID` **เก็บไว้แต่ไม่มีใคร import** — รอพัฒนาการ
-  เรียก user ผ่าน LINE รอบใหม่; ฟิลด์ `lineUserId` ใน Complaint model ยังอยู่ (ไม่ถูกเขียนแล้ว)
+  เรียก user ผ่าน LINE รอบใหม่

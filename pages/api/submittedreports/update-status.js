@@ -3,15 +3,18 @@ import dbConnect from "@/lib/dbConnect";
 import SubmittedReport from "@/models/SubmittedReport";
 import Assignment from "@/models/Assignment";
 import mongoose from "mongoose";
-import { n8n } from "@/lib/n8nWebhook";
 import { logAuditEvent } from "@/lib/auditLogger";
-import { linePush, formatStatusMessage, buildMessages } from "@/lib/lineMessaging";
+import {
+  linePush,
+  lineNotifyAdminGroup,
+  formatStatusMessage,
+  formatClosedMessage,
+  buildMessages,
+} from "@/lib/lineMessaging";
 import { getAuth } from "@clerk/nextjs/server";
 
 // สถานะที่ถือว่า "ปิดงาน" — ตรงกับปุ่มปิดเรื่องใน manage-complaints.jsx
 const CLOSED_STATUS = "ดำเนินการเสร็จสิ้น";
-// webhook แจ้งกลุ่ม Telegram เมื่อปิดงาน (n8n "Api All" → node close-tk)
-const CLOSE_WEBHOOK_URL = "https://primary-production-a1769.up.railway.app/webhook/close-tk";
 
 // schema ย่อ inline สำหรับ lookup ชื่อ officer (เลี่ยง model conflict ระหว่าง handlers)
 const UserNameSchema = new mongoose.Schema({ name: String }, { collection: "users", strict: false });
@@ -25,7 +28,7 @@ export default async function handler(req, res) {
     const { userId } = getAuth(req);
 
     try {
-      // ดึงสถานะเดิมก่อน update เพื่อส่งใน audit log และ n8n
+      // ดึงสถานะเดิมก่อน update เพื่อส่งใน audit log
       const existing = await SubmittedReport.findById(complaintId).lean();
       const oldStatus = existing?.status || "";
 
@@ -51,7 +54,7 @@ export default async function handler(req, res) {
 
       if (!updated) return res.status(404).json({ message: "ไม่พบข้อมูล" });
 
-      // Audit log + n8n (fire-and-forget)
+      // Audit log (fire-and-forget)
       if (userId) {
         logAuditEvent({
           actorClerkId: userId,
@@ -64,14 +67,6 @@ export default async function handler(req, res) {
           after: { status },
         });
       }
-
-      n8n.complaintStatusChanged({
-        complaintId: String(complaintId),
-        fullName: existing?.fullName || "",
-        oldStatus,
-        newStatus: status,
-        changedBy: userId || "admin",
-      });
 
       // LINE push notification — ถ้า user เคยติดต่อผ่าน LINE Bot มาก่อน
       if (existing?.lineUserId) {
@@ -95,7 +90,7 @@ export default async function handler(req, res) {
         ).catch((err) => console.error("[LINE] Push failed:", err));
       }
 
-      // แจ้งกลุ่ม Telegram เมื่อปิดงาน — fire-and-forget (ไม่ block response, ไม่โยน error ถ้า n8n ล่ม)
+      // แจ้งกลุ่ม LINE เจ้าหน้าที่เมื่อปิดงาน — fire-and-forget (ไม่ block response)
       if (status === CLOSED_STATUS) {
         (async () => {
           try {
@@ -106,19 +101,17 @@ export default async function handler(req, res) {
               if (officer?.name) officerName = officer.name;
             }
 
-            const r = await fetch(CLOSE_WEBHOOK_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+            await lineNotifyAdminGroup([
+              formatClosedMessage({
                 complaintId: updated.complaintId || String(complaintId),
                 community: existing?.community || "-",
                 fullName: existing?.isConfidential ? "ไม่เปิดเผย" : (existing?.fullName || "ไม่ระบุ"),
                 officerName,
+                closedAt: updated.updatedAt,
               }),
-            });
-            if (!r.ok) console.error("🚨 close-tk webhook failed:", r.status, await r.text());
+            ]);
           } catch (err) {
-            console.error("[close-tk] notify failed:", err);
+            console.error("[LINE] close notify failed:", err);
           }
         })();
       }

@@ -185,12 +185,15 @@ export const ALL_PAGES: PagePermission[] = [
 
 // หน้าที่ superadmin เท่านั้นที่เข้าถึงได้
 // ต้องตรงกับไฟล์จริงใน pages/admin/superadmin/
-// ✓ index.jsx  → /admin/superadmin
-// ✓ setup.jsx  → /admin/superadmin/setup
+// ✓ index.jsx         → /admin/superadmin
+// ✓ setup.jsx         → /admin/superadmin/setup
+// ✓ audit-log.tsx     → /admin/superadmin/audit-log
+// ✓ line-settings.jsx → /admin/superadmin/line-settings
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
   '/admin/superadmin/setup',
   '/admin/superadmin/audit-log',
+  '/admin/superadmin/line-settings',
 ];
 
 // สิทธิ์เริ่มต้นตาม role — ใช้เมื่อ user ยังไม่มี allowedPages ใน Mongo (= ยังไม่ถูกตั้งค่า)
