@@ -13,6 +13,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import SubmittedReport from '@/models/SubmittedReport';
+import Assignment from '@/models/Assignment';
 import {
   lineReply,
   formatStatusMessage,
@@ -204,6 +205,7 @@ async function handleStatusQuery(
     const complaint = await SubmittedReport.findOne({ complaintId })
       .select('complaintId fullName category status updatedAt lineUserId isConfidential images')
       .lean() as {
+        _id: unknown;
         complaintId: string;
         fullName?: string;
         category?: string;
@@ -227,14 +229,34 @@ async function handleStatusQuery(
       ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
     }
 
+    // เรื่องที่ปิดงานแล้ว: ใช้รูปผลงานหลังแก้ไข + แสดงรายละเอียดการแก้ไขจาก Assignment ล่าสุด
+    let solution: string[] | undefined;
+    let note: string | undefined;
+    let solutionImage: string | null = null;
+    if (complaint.status === 'ดำเนินการเสร็จสิ้น') {
+      const assignment = await Assignment.findOne({ complaintId: complaint._id })
+        .sort({ assignedAt: -1 })
+        .select('solution solutionImages note')
+        .lean() as { solution?: string[]; solutionImages?: string[]; note?: string } | null;
+      if (assignment) {
+        solution = assignment.solution;
+        note = assignment.note;
+        solutionImage =
+          assignment.solutionImages?.find((u) => u?.startsWith('https://')) ?? null;
+      }
+    }
+
     // ซ่อนชื่อสำหรับเรื่องลับ (PDPA)
     const safeComplaint = {
       ...complaint,
       fullName: complaint.isConfidential ? 'ไม่เปิดเผย' : complaint.fullName,
+      solution,
+      note,
     };
 
-    // ส่งภาพแรกพร้อมกับ status card (ถ้ามี)
-    const firstImage = complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
+    // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
+    const firstImage =
+      solutionImage ?? complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
     await lineReply(replyToken, buildMessages(formatStatusMessage(safeComplaint), firstImage));
   } catch (err) {
     console.error('[LINE] Status query error:', err);

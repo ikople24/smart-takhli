@@ -236,6 +236,7 @@ function statusEmoji(status: string): string {
 
 /**
  * สร้าง Flex Message สำหรับแสดงสถานะเรื่องร้องเรียน
+ * เรื่องที่ปิดงานแล้วส่ง solution/note มาด้วยเพื่อแสดงส่วน "การแก้ไข"
  */
 export function formatStatusMessage(complaint: {
   complaintId: string;
@@ -243,8 +244,10 @@ export function formatStatusMessage(complaint: {
   category?: string;
   status: string;
   updatedAt?: Date | string | null;
+  solution?: string[];
+  note?: string;
 }): FlexMessage {
-  const { complaintId, fullName, category, status, updatedAt } = complaint;
+  const { complaintId, fullName, category, status, updatedAt, solution, note } = complaint;
   const color = statusColor(status);
   const emoji = statusEmoji(status);
 
@@ -257,6 +260,27 @@ export function formatStatusMessage(complaint: {
         minute: '2-digit',
       })
     : '-';
+
+  // ส่วน "การแก้ไข" — แสดงเมื่อมีข้อมูล solution/note (เรื่องที่ปิดงานแล้ว)
+  const solutionItems = (solution ?? []).filter(Boolean);
+  const noteText = note?.trim() || '';
+  const fixContents =
+    solutionItems.length || noteText
+      ? [
+          { type: 'separator' },
+          { type: 'text', text: '🔧 การแก้ไข', size: 'sm', weight: 'bold', color: '#166534' },
+          ...solutionItems.map((s) => ({
+            type: 'text',
+            text: `• ${s}`,
+            size: 'sm',
+            color: '#555555',
+            wrap: true,
+          })),
+          ...(noteText
+            ? [{ type: 'text', text: noteText, size: 'sm', color: '#555555', wrap: true }]
+            : []),
+        ]
+      : [];
 
   return {
     type: 'flex',
@@ -295,6 +319,7 @@ export function formatStatusMessage(complaint: {
           ...(category
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
+          ...fixContents,
           { type: 'separator' },
           {
             type: 'text',
