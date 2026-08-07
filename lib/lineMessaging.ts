@@ -310,7 +310,7 @@ export function formatStatusMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -404,7 +404,7 @@ export function formatNewComplaintMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี — กรุณาตรวจสอบและดำเนินการ',
+            text: 'เทศบาลเมืองตาคลี — กรุณาตรวจสอบและดำเนินการ',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -491,7 +491,7 @@ export function formatClosedMessage(opts: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -521,10 +521,10 @@ export function notFoundMessage(complaintId: string): TextMessage {
 export const helpMessage: TextMessage = {
   type: 'text',
   text:
-    `🏛️ เทศบาลตำบลตาคลี — LINE Bot\n\n` +
-    `คำสั่งที่ใช้ได้:\n` +
-    `📋 สถานะ <รหัส> — ตรวจสอบสถานะเรื่องร้องเรียน\n` +
-    `   ตัวอย่าง: สถานะ TKC-680001\n\n` +
+    `🏛️ เทศบาลเมืองตาคลี — LINE Bot\n\n` +
+    `ตรวจสอบสถานะเรื่องร้องเรียน:\n` +
+    `📋 ส่งเลขที่เรื่องมาได้เลย เช่น TKC-690001\n` +
+    `   (หรือพิมพ์ สถานะ TKC-690001)\n\n` +
     `หากต้องการความช่วยเหลือเพิ่มเติม\n` +
     `ติดต่อ: โทร 056-280-366`,
 };
