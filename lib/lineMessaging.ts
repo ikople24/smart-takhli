@@ -236,6 +236,7 @@ function statusEmoji(status: string): string {
 
 /**
  * สร้าง Flex Message สำหรับแสดงสถานะเรื่องร้องเรียน
+ * เรื่องที่ปิดงานแล้วส่ง solution/note มาด้วยเพื่อแสดงส่วน "การแก้ไข"
  */
 export function formatStatusMessage(complaint: {
   complaintId: string;
@@ -243,8 +244,10 @@ export function formatStatusMessage(complaint: {
   category?: string;
   status: string;
   updatedAt?: Date | string | null;
+  solution?: string[];
+  note?: string;
 }): FlexMessage {
-  const { complaintId, fullName, category, status, updatedAt } = complaint;
+  const { complaintId, fullName, category, status, updatedAt, solution, note } = complaint;
   const color = statusColor(status);
   const emoji = statusEmoji(status);
 
@@ -257,6 +260,27 @@ export function formatStatusMessage(complaint: {
         minute: '2-digit',
       })
     : '-';
+
+  // ส่วน "การแก้ไข" — แสดงเมื่อมีข้อมูล solution/note (เรื่องที่ปิดงานแล้ว)
+  const solutionItems = (solution ?? []).filter(Boolean);
+  const noteText = note?.trim() || '';
+  const fixContents =
+    solutionItems.length || noteText
+      ? [
+          { type: 'separator' },
+          { type: 'text', text: '🔧 การแก้ไข', size: 'sm', weight: 'bold', color: '#166534' },
+          ...solutionItems.map((s) => ({
+            type: 'text',
+            text: `• ${s}`,
+            size: 'sm',
+            color: '#555555',
+            wrap: true,
+          })),
+          ...(noteText
+            ? [{ type: 'text', text: noteText, size: 'sm', color: '#555555', wrap: true }]
+            : []),
+        ]
+      : [];
 
   return {
     type: 'flex',
@@ -295,6 +319,7 @@ export function formatStatusMessage(complaint: {
           ...(category
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
+          ...fixContents,
           { type: 'separator' },
           {
             type: 'text',
@@ -310,7 +335,7 @@ export function formatStatusMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -404,7 +429,7 @@ export function formatNewComplaintMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี — กรุณาตรวจสอบและดำเนินการ',
+            text: 'เทศบาลเมืองตาคลี — กรุณาตรวจสอบและดำเนินการ',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -491,7 +516,7 @@ export function formatClosedMessage(opts: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -521,10 +546,10 @@ export function notFoundMessage(complaintId: string): TextMessage {
 export const helpMessage: TextMessage = {
   type: 'text',
   text:
-    `🏛️ เทศบาลตำบลตาคลี — LINE Bot\n\n` +
-    `คำสั่งที่ใช้ได้:\n` +
-    `📋 สถานะ <รหัส> — ตรวจสอบสถานะเรื่องร้องเรียน\n` +
-    `   ตัวอย่าง: สถานะ TKC-680001\n\n` +
+    `🏛️ เทศบาลเมืองตาคลี — LINE Bot\n\n` +
+    `ตรวจสอบสถานะเรื่องร้องเรียน:\n` +
+    `📋 ส่งเลขที่เรื่องมาได้เลย เช่น TKC-690001\n` +
+    `   (หรือพิมพ์ สถานะ TKC-690001)\n\n` +
     `หากต้องการความช่วยเหลือเพิ่มเติม\n` +
     `ติดต่อ: โทร 056-280-366`,
 };

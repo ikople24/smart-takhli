@@ -70,8 +70,13 @@ export default async function handler(req, res) {
 
       // LINE push notification — ถ้า user เคยติดต่อผ่าน LINE Bot มาก่อน
       if (existing?.lineUserId) {
-        // ใช้ภาพแรกใน array ของ DB (images[0])
-        const firstImage = Array.isArray(existing.images)
+        // ปิดงาน: ใช้รูปผลงานหลังแก้ไข + แนบรายละเอียดการแก้ไขจาก assignment
+        // สถานะอื่น: ใช้รูปตอนแจ้งตามเดิม
+        const solutionImage =
+          status === CLOSED_STATUS && Array.isArray(closingAssignment?.solutionImages)
+            ? (closingAssignment.solutionImages.find((u) => u?.startsWith("https://")) ?? null)
+            : null;
+        const complaintImage = Array.isArray(existing.images)
           ? (existing.images.find((u) => u?.startsWith("https://")) ?? null)
           : null;
 
@@ -84,8 +89,11 @@ export default async function handler(req, res) {
               category: existing.category,
               status,
               updatedAt: updated.updatedAt,
+              ...(status === CLOSED_STATUS
+                ? { solution: closingAssignment?.solution, note: closingAssignment?.note }
+                : {}),
             }),
-            firstImage
+            solutionImage ?? complaintImage
           )
         ).catch((err) => console.error("[LINE] Push failed:", err));
       }

@@ -44,11 +44,13 @@
   ไม่ตั้ง = skip เงียบ ๆ. **เลิกใช้** n8n/Telegram (`submit-tk`, `close-tk`,
   `complaintStatusChanged`, `complaintAssigned`, `assignmentCompleted`) และเลิกใช้
   multicast รายคน (`LINE_ADMIN_USER_IDS`)
-- **webhook ขาเข้า** `pages/api/integrations/line-webhook.ts`: คำสั่ง `สถานะ <รหัส>`
-  (บันทึก `lineUserId` ผูกกับเรื่อง → รับ push เมื่อสถานะเปลี่ยน), `groupid` (ตอบ groupId
-  ของกลุ่ม), event `join` (บอทเข้ากลุ่ม → ตอบ groupId); ในกลุ่มบอทตอบ**เฉพาะคำสั่ง**
-  ไม่ตอบข้อความทั่วไป
-- **ฝั่งประชาชน**: dialog หลังส่งสำเร็จแสดงเลขเรื่อง + สอนผูก LINE (เพิ่มเพื่อน OA แล้วพิมพ์
-  `สถานะ <เลขเรื่อง>`) เพื่อรับแจ้งเตือนความคืบหน้าอัตโนมัติ (`NEXT_PUBLIC_LINE_OA_URL`)
+- **webhook ขาเข้า** `pages/api/integrations/line-webhook.ts`: คำสั่ง `สถานะ <รหัส>` หรือ
+  วางเลขเรื่องเปล่า ๆ (`TKC-690001` — เฉพาะแชท 1:1) → บันทึก `lineUserId` ผูกกับเรื่อง
+  → รับ push เมื่อสถานะเปลี่ยน; `groupid` (ตอบ groupId ของกลุ่ม), event `join`
+  (บอทเข้ากลุ่ม → ตอบ groupId), event `follow` (เพิ่มเพื่อน → ทักทาย+สอนวิธีติดตาม);
+  ในกลุ่มบอทตอบ**เฉพาะคำสั่ง** ไม่ตอบข้อความทั่วไป
+- **ฝั่งประชาชน**: dialog หลังส่งสำเร็จมีปุ่ม "ติดตามเรื่องนี้ผ่าน LINE" เป็น **oaMessage
+  deep link** (`https://line.me/R/oaMessage/<basicId>/?สถานะ <เลขเรื่อง>` — parse basicId
+  จาก `NEXT_PUBLIC_LINE_OA_URL`) เปิดแชทพร้อมข้อความเตรียมไว้ กดส่งทีเดียวผูกเรื่องเสร็จ
 - `lib/liff.ts` + env `NEXT_PUBLIC_LIFF_ID` **เก็บไว้แต่ไม่มีใคร import** — รอพัฒนาการ
   เรียก user ผ่าน LINE รอบใหม่

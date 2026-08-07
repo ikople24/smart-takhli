@@ -13,6 +13,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import SubmittedReport from '@/models/SubmittedReport';
+import Assignment from '@/models/Assignment';
 import {
   lineReply,
   formatStatusMessage,
@@ -130,6 +131,22 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
+  // ผู้ใช้เพิ่มเพื่อน — ทักทาย + สอนวิธีติดตามเรื่อง
+  if (event.type === 'follow') {
+    await lineReply(event.replyToken, [
+      {
+        type: 'text',
+        text:
+          `สวัสดีครับ 🏛️ เทศบาลเมืองตาคลี\n\n` +
+          `ต้องการติดตามเรื่องร้องเรียน ส่งเลขที่เรื่องมาได้เลย เช่น\n` +
+          `TKC-690001\n\n` +
+          `ระบบจะแจ้งความคืบหน้าให้อัตโนมัติทาง LINE นี้\n` +
+          `พิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+      },
+    ]);
+    return;
+  }
+
   if (event.type !== 'message' || event.message?.type !== 'text') return;
 
   const userId = event.source?.userId;
@@ -155,6 +172,13 @@ async function handleEvent(event: LineEvent): Promise<void> {
   // ในกลุ่ม: ตอบเฉพาะคำสั่งข้างบน — ห้ามตอบ default ไม่งั้นบอทสแปมทุกข้อความที่คุยกัน
   if (isGroupChat) return;
 
+  // แชท 1:1 — วางเลขเรื่องเปล่า ๆ ก็ได้ ไม่ต้องมีคำว่า "สถานะ" (รองรับ tkc690001 / TKC 690001)
+  const bareMatch = text.match(/^tkc[-\s]?(\d{4,})$/i);
+  if (bareMatch) {
+    await handleStatusQuery(event.replyToken, userId, `TKC-${bareMatch[1]}`);
+    return;
+  }
+
   // ช่วยเหลือ / welcome
   if (/^(?:ช่วย|help|สวัสดี|hello|hi|เริ่ม|start)$/i.test(text)) {
     await lineReply(event.replyToken, [helpMessage]);
@@ -165,7 +189,7 @@ async function handleEvent(event: LineEvent): Promise<void> {
   await lineReply(event.replyToken, [
     {
       type: 'text',
-      text: `พิมพ์ "สถานะ <รหัสเรื่อง>" เพื่อตรวจสอบสถานะ\nเช่น: สถานะ TKC-680001\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+      text: `ส่งเลขที่เรื่องมาได้เลยครับ เช่น TKC-690001\nระบบจะแสดงสถานะและแจ้งความคืบหน้าให้อัตโนมัติ\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
     },
   ]);
 }
@@ -181,6 +205,7 @@ async function handleStatusQuery(
     const complaint = await SubmittedReport.findOne({ complaintId })
       .select('complaintId fullName category status updatedAt lineUserId isConfidential images')
       .lean() as {
+        _id: unknown;
         complaintId: string;
         fullName?: string;
         category?: string;
@@ -204,14 +229,34 @@ async function handleStatusQuery(
       ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
     }
 
+    // เรื่องที่ปิดงานแล้ว: ใช้รูปผลงานหลังแก้ไข + แสดงรายละเอียดการแก้ไขจาก Assignment ล่าสุด
+    let solution: string[] | undefined;
+    let note: string | undefined;
+    let solutionImage: string | null = null;
+    if (complaint.status === 'ดำเนินการเสร็จสิ้น') {
+      const assignment = await Assignment.findOne({ complaintId: complaint._id })
+        .sort({ assignedAt: -1 })
+        .select('solution solutionImages note')
+        .lean() as { solution?: string[]; solutionImages?: string[]; note?: string } | null;
+      if (assignment) {
+        solution = assignment.solution;
+        note = assignment.note;
+        solutionImage =
+          assignment.solutionImages?.find((u) => u?.startsWith('https://')) ?? null;
+      }
+    }
+
     // ซ่อนชื่อสำหรับเรื่องลับ (PDPA)
     const safeComplaint = {
       ...complaint,
       fullName: complaint.isConfidential ? 'ไม่เปิดเผย' : complaint.fullName,
+      solution,
+      note,
     };
 
-    // ส่งภาพแรกพร้อมกับ status card (ถ้ามี)
-    const firstImage = complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
+    // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
+    const firstImage =
+      solutionImage ?? complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
     await lineReply(replyToken, buildMessages(formatStatusMessage(safeComplaint), firstImage));
   } catch (err) {
     console.error('[LINE] Status query error:', err);
