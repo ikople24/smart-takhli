@@ -82,15 +82,18 @@ export default async function handler(req, res) {
         }
       })(),
 
-      // b) LINE push แจ้งกลุ่มเจ้าหน้าที่
+      // b) LINE push แจ้งกลุ่มเจ้าหน้าที่ — เรื่องลับไม่ส่งชื่อ/เบอร์/รายละเอียด
       lineNotifyAdminGroup(
         buildMessages(
           formatNewComplaintMessage({
             complaintId: reportData.complaintId,
             fullName: displayName,
+            phone: reportData.isConfidential ? undefined : reportData.phone,
             category: reportData.category,
+            problems: reportData.problems,
             detail: reportData.isConfidential ? undefined : reportData.detail,
             community: reportData.community,
+            location: reportData.location,
             createdAt: reportData.createdAt,
           }),
           firstImage

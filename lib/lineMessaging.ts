@@ -348,16 +348,22 @@ export function formatStatusMessage(complaint: {
 
 /**
  * สร้าง Flex Message สำหรับแจ้งเรื่องร้องเรียนใหม่ (ส่งให้เจ้าหน้าที่)
+ * รายละเอียดครบตามข้อความ n8n/Telegram เดิม + ปุ่มเปิดแผนที่จากพิกัดผู้แจ้ง
+ * เรื่องลับ: caller ไม่ส่ง fullName/phone/detail มา (เซ็นเซอร์ตั้งแต่ต้นทาง)
  */
 export function formatNewComplaintMessage(complaint: {
   complaintId: string;
   fullName?: string;
+  phone?: string;
   category?: string;
+  problems?: string[];
   detail?: string;
   community?: string;
+  location?: { lat?: number; lng?: number } | null;
   createdAt?: Date | string | null;
 }): FlexMessage {
-  const { complaintId, fullName, category, detail, community, createdAt } = complaint;
+  const { complaintId, fullName, phone, category, problems, detail, community, location, createdAt } =
+    complaint;
 
   const createdStr = createdAt
     ? new Date(createdAt).toLocaleDateString('th-TH', {
@@ -368,9 +374,11 @@ export function formatNewComplaintMessage(complaint: {
       })
     : '-';
 
-  const detailSnippet = detail
-    ? detail.length > 60 ? detail.slice(0, 60) + '…' : detail
-    : '';
+  const problemsStr = (problems ?? []).filter(Boolean).join(', ');
+  const mapUrl =
+    typeof location?.lat === 'number' && typeof location?.lng === 'number'
+      ? `https://www.google.com/maps?q=${location.lat},${location.lng}`
+      : null;
 
   return {
     type: 'flex',
@@ -403,21 +411,31 @@ export function formatNewComplaintMessage(complaint: {
         spacing: 'sm',
         contents: [
           ...(fullName
-            ? [{ type: 'text', text: `ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333', weight: 'bold' }]
+            ? [{ type: 'text', text: `👤 ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333', weight: 'bold' }]
+            : []),
+          ...(phone
+            ? [{ type: 'text', text: `📞 โทร: ${phone}`, size: 'sm', color: '#555555' }]
+            : []),
+          ...(community
+            ? [{ type: 'text', text: `🏘️ ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
             : []),
           ...(category
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
-          ...(community
-            ? [{ type: 'text', text: `ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
+          ...(problemsStr
+            ? [{ type: 'text', text: `🚧 ปัญหา: ${problemsStr}`, size: 'sm', color: '#555555', wrap: true }]
             : []),
-          ...(detailSnippet
-            ? [{ type: 'text', text: detailSnippet, size: 'sm', color: '#666666', wrap: true }]
+          ...(detail
+            ? [
+                { type: 'separator' },
+                { type: 'text', text: '🧾 รายละเอียด', size: 'sm', weight: 'bold', color: '#333333' },
+                { type: 'text', text: detail, size: 'sm', color: '#666666', wrap: true },
+              ]
             : []),
           { type: 'separator' },
           {
             type: 'text',
-            text: `แจ้งเมื่อ: ${createdStr}`,
+            text: `🕒 แจ้งเมื่อ: ${createdStr}`,
             size: 'xs',
             color: '#aaaaaa',
           },
@@ -426,7 +444,19 @@ export function formatNewComplaintMessage(complaint: {
       footer: {
         type: 'box',
         layout: 'vertical',
+        spacing: 'sm',
         contents: [
+          ...(mapUrl
+            ? [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '🗺️ เปิดแผนที่จุดแจ้ง', uri: mapUrl },
+                  style: 'primary',
+                  color: '#6366f1',
+                  height: 'sm',
+                },
+              ]
+            : []),
           {
             type: 'text',
             text: 'เทศบาลเมืองตาคลี — กรุณาตรวจสอบและดำเนินการ',
@@ -551,5 +581,5 @@ export const helpMessage: TextMessage = {
     `📋 ส่งเลขที่เรื่องมาได้เลย เช่น TKC-690001\n` +
     `   (หรือพิมพ์ สถานะ TKC-690001)\n\n` +
     `หากต้องการความช่วยเหลือเพิ่มเติม\n` +
-    `ติดต่อ: โทร 056-280-366`,
+    `ติดต่อ: โทร 056-219-299 หรือ LINE OA @075cphqu`,
 };
