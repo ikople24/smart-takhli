@@ -139,7 +139,7 @@ async function handleEvent(event: LineEvent): Promise<void> {
         text:
           `สวัสดีครับ 🏛️ เทศบาลเมืองตาคลี\n\n` +
           `ต้องการติดตามเรื่องร้องเรียน ส่งเลขที่เรื่องมาได้เลย เช่น\n` +
-          `TKC-690001\n\n` +
+          `TKC-690001 หรือเลขย่อ 69001 (ปี + 3 ตัวท้าย)\n\n` +
           `ระบบจะแจ้งความคืบหน้าให้อัตโนมัติทาง LINE นี้\n` +
           `พิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
       },
@@ -179,6 +179,13 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
+  // เลขย่อ: ปี 2 หลัก + เลข 3 ตัวท้าย (69001 / 69-001 / 69 001)
+  const shortMatch = text.match(/^(\d{2})[-\s]?(\d{3})$/);
+  if (shortMatch) {
+    await handleShortQuery(event.replyToken, userId, shortMatch[1], shortMatch[2]);
+    return;
+  }
+
   // ช่วยเหลือ / welcome
   if (/^(?:ช่วย|help|สวัสดี|hello|hi|เริ่ม|start)$/i.test(text)) {
     await lineReply(event.replyToken, [helpMessage]);
@@ -189,7 +196,7 @@ async function handleEvent(event: LineEvent): Promise<void> {
   await lineReply(event.replyToken, [
     {
       type: 'text',
-      text: `ส่งเลขที่เรื่องมาได้เลยครับ เช่น TKC-690001\nระบบจะแสดงสถานะและแจ้งความคืบหน้าให้อัตโนมัติ\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+      text: `ส่งเลขที่เรื่องมาได้เลยครับ เช่น TKC-690001\nหรือเลขย่อ 69001 (ปี + 3 ตัวท้าย)\nระบบจะแสดงสถานะและแจ้งความคืบหน้าให้อัตโนมัติ\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
     },
   ]);
 }
@@ -260,6 +267,74 @@ async function handleStatusQuery(
     await lineReply(replyToken, buildMessages(formatStatusMessage(safeComplaint), firstImage));
   } catch (err) {
     console.error('[LINE] Status query error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ค้นด้วยเลขย่อ: ปี 2 หลัก + เลข 3 ตัวท้าย (เช่น 69001 → TKC-69xxxx ที่ลงท้าย 001)
+ * เจอเรื่องเดียว → ตอบการ์ดสถานะ; เจอหลายเรื่อง → แสดงรายการให้ส่งเลขเต็มกลับมา
+ */
+async function handleShortQuery(
+  replyToken: string,
+  lineUserId: string | undefined,
+  yy: string,
+  last3: string
+): Promise<void> {
+  try {
+    await dbConnect();
+
+    const matches = await SubmittedReport.find({
+      complaintId: new RegExp(`^TKC-${yy}\\d*${last3}$`),
+    })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select('complaintId category community createdAt')
+      .lean() as unknown as Array<{
+        complaintId: string;
+        category?: string;
+        community?: string;
+        createdAt?: Date;
+      }>;
+
+    if (!matches.length) {
+      await lineReply(replyToken, [
+        {
+          type: 'text',
+          text:
+            `❌ ไม่พบเรื่องร้องเรียนปี ${yy} ที่ลงท้ายด้วย ${last3}\n\n` +
+            `กรุณาตรวจสอบเลขและลองใหม่ หรือส่งเลขเต็ม เช่น TKC-${yy}0${last3}`,
+        },
+      ]);
+      return;
+    }
+
+    if (matches.length === 1) {
+      await handleStatusQuery(replyToken, lineUserId, matches[0].complaintId);
+      return;
+    }
+
+    // เจอหลายเรื่อง — แสดงรายการ (สูงสุด 5) ให้ผู้ใช้ส่งเลขเต็มกลับมา
+    const lines = matches.slice(0, 5).map((m, i) => {
+      const dateStr = m.createdAt
+        ? new Date(m.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+        : '-';
+      const extra = [m.category, m.community].filter(Boolean).join(' · ');
+      return `${i + 1}. ${m.complaintId}\n   ${extra ? extra + ' · ' : ''}${dateStr}`;
+    });
+    await lineReply(replyToken, [
+      {
+        type: 'text',
+        text:
+          `พบ ${matches.length} เรื่องที่ลงท้ายด้วย ${last3} ในปี ${yy}\n\n` +
+          `${lines.join('\n')}\n\n` +
+          `กรุณาส่งเลขเต็มของเรื่องที่ต้องการ เช่น ${matches[0].complaintId}`,
+      },
+    ]);
+  } catch (err) {
+    console.error('[LINE] Short query error:', err);
     await lineReply(replyToken, [
       { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
     ]);
