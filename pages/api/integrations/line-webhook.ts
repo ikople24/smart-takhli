@@ -14,6 +14,8 @@ import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import SubmittedReport from '@/models/SubmittedReport';
 import Assignment from '@/models/Assignment';
+import { toBlurredMediaUrl } from '@/lib/complaintPrivacy';
+import { getAdminGroupId } from '@/lib/lineSettings';
 import {
   lineReply,
   formatStatusMessage,
@@ -155,7 +157,15 @@ async function handleEvent(event: LineEvent): Promise<void> {
 
   if (statusMatch) {
     const complaintId = statusMatch[1].trim().toUpperCase();
-    await handleStatusQuery(event.replyToken, userId, complaintId);
+    // กลุ่มเจ้าหน้าที่ที่ลงทะเบียน (groupId ตรงกับที่ตั้งค่า) เห็นข้อมูลเต็ม
+    // ห้ามผูก lineUserId จากบริบทกลุ่ม — ไม่งั้นเจ้าหน้าที่เช็คเรื่องแล้วแย่งการแจ้งเตือนผู้ร้อง
+    const staffView = isGroupChat && groupOrRoomId === (await getAdminGroupId());
+    await handleStatusQuery(
+      event.replyToken,
+      isGroupChat ? undefined : userId,
+      complaintId,
+      staffView
+    );
     return;
   }
 
@@ -165,6 +175,13 @@ async function handleEvent(event: LineEvent): Promise<void> {
   // คำสั่ง "เรื่องของฉัน" — รายการเรื่องที่ LINE นี้ผูกไว้
   if (/^(?:เรื่องของฉัน|เรื่องฉัน|my)$/i.test(text)) {
     await handleMyCases(event.replyToken, userId);
+    return;
+  }
+
+  // ยืนยันเจ้าของเรื่องด้วยเบอร์ 4 ตัวท้าย: "TKC-690001 6789" — ย้ายการผูกแจ้งเตือน
+  const rebindMatch = text.match(/^(?:สถานะ\s+)?tkc[-\s]?(\d{4,})\s+(\d{4})$/i);
+  if (rebindMatch) {
+    await handleRebind(event.replyToken, userId, `TKC-${rebindMatch[1]}`, rebindMatch[2]);
     return;
   }
 
@@ -224,8 +241,8 @@ async function handleFollow(
         .lean() as { complaintId?: string } | null;
 
       if (latest?.complaintId) {
-        const statusMessages = await buildStatusMessages(latest.complaintId);
-        if (statusMessages) {
+        const result = await buildStatusMessages(latest.complaintId);
+        if (result) {
           await lineReply(replyToken, [
             {
               type: 'text' as const,
@@ -234,7 +251,7 @@ async function handleFollow(
                 `เรื่องล่าสุดที่คุณติดตามไว้ 👇\n` +
                 `(พิมพ์ "เรื่องของฉัน" เพื่อดูเรื่องทั้งหมด)`,
             },
-            ...statusMessages,
+            ...result.messages,
           ].slice(0, 5));
           return;
         }
@@ -314,13 +331,30 @@ async function handleMyCases(
 }
 
 /**
+ * ย่อชื่อสำหรับการ์ดฝั่งประชาชน (PDPA): "ครรชิต คล้ายแจ่ม" → "ครรชิต ค."
+ * เลขเรื่องเป็นเลขรันเดาไล่ได้ — คนอื่นส่งเลขมาถามต้องไม่เห็นชื่อเต็ม
+ * (เว็บสาธารณะ /status ก็ตัด fullName ออกอยู่แล้ว — นโยบายเดียวกัน)
+ */
+function maskDisplayName(name?: string): string | undefined {
+  if (!name) return name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return parts[0];
+  return `${parts[0]} ${parts[1].charAt(0)}.`;
+}
+
+/**
  * สร้าง message array การ์ดสถานะจาก complaintId (การ์ด + รูป)
- * คืน null ถ้าไม่พบเรื่อง — ถ้าส่ง lineUserId มาจะผูกไว้กับเรื่องเพื่อรับ push
+ * คืน null ถ้าไม่พบเรื่อง
+ * - staffView (เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียน): ชื่อเต็ม + รูปต้นฉบับ
+ * - ฝั่งประชาชน: ชื่อย่อ, เรื่องลับเบลอรูป
+ * - bindUserId: ผูกรับ push เฉพาะเมื่อเรื่องยังไม่มีคนผูก (first-come) —
+ *   ถ้ามีคนผูกแล้ว bindRefused=true เพื่อให้ caller แนะนำวิธียืนยันตัวด้วยเบอร์ 4 ตัวท้าย
  */
 async function buildStatusMessages(
   complaintId: string,
-  lineUserId?: string
-): Promise<ReturnType<typeof buildMessages> | null> {
+  opts: { bindUserId?: string; staffView?: boolean } = {}
+): Promise<{ messages: ReturnType<typeof buildMessages>; bindRefused: boolean } | null> {
+  const { bindUserId, staffView = false } = opts;
   await dbConnect();
 
   const complaint = await SubmittedReport.findOne({ complaintId })
@@ -339,12 +373,19 @@ async function buildStatusMessages(
 
   if (!complaint) return null;
 
-  // บันทึก LINE userId ไว้กับเรื่องร้องเรียน (เพื่อส่ง push notification เมื่อสถานะเปลี่ยน)
-  if (lineUserId && complaint.lineUserId !== lineUserId) {
-    SubmittedReport.updateOne(
-      { complaintId },
-      { $set: { lineUserId } }
-    ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
+  // ผูก LINE userId เพื่อรับ push — first-come เท่านั้น กันคนอื่นเอาเลขมาแย่งการแจ้งเตือน
+  let bindRefused = false;
+  if (bindUserId && !staffView) {
+    if (!complaint.lineUserId || complaint.lineUserId === bindUserId) {
+      if (complaint.lineUserId !== bindUserId) {
+        SubmittedReport.updateOne(
+          { complaintId },
+          { $set: { lineUserId: bindUserId } }
+        ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
+      }
+    } else {
+      bindRefused = true;
+    }
   }
 
   // เรื่องที่ปิดงานแล้ว: ใช้รูปผลงานหลังแก้ไข + แสดงรายละเอียดการแก้ไขจาก Assignment ล่าสุด
@@ -364,34 +405,111 @@ async function buildStatusMessages(
     }
   }
 
-  // ซ่อนชื่อสำหรับเรื่องลับ (PDPA)
+  // ชื่อ: เรื่องลับไม่เปิดเผย / ประชาชนเห็นชื่อย่อ / เจ้าหน้าที่ (กลุ่มลงทะเบียน) เห็นเต็ม
+  const displayName = complaint.isConfidential
+    ? 'ไม่เปิดเผย'
+    : staffView
+      ? complaint.fullName
+      : maskDisplayName(complaint.fullName);
+
   const safeComplaint = {
     ...complaint,
-    fullName: complaint.isConfidential ? 'ไม่เปิดเผย' : complaint.fullName,
+    fullName: displayName,
     solution,
     note,
   };
 
   // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
-  const firstImage =
+  // เรื่องลับฝั่งประชาชน: เบลอรูปแบบเดียวกับเว็บสาธารณะ
+  let firstImage =
     solutionImage ?? complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
-  return buildMessages(formatStatusMessage(safeComplaint), firstImage);
+  if (firstImage && complaint.isConfidential && !staffView) {
+    firstImage = toBlurredMediaUrl(firstImage);
+  }
+  return { messages: buildMessages(formatStatusMessage(safeComplaint), firstImage), bindRefused };
 }
 
 async function handleStatusQuery(
   replyToken: string,
-  lineUserId: string | undefined,
-  complaintId: string
+  bindUserId: string | undefined,
+  complaintId: string,
+  staffView = false
 ): Promise<void> {
   try {
-    const messages = await buildStatusMessages(complaintId, lineUserId);
-    if (!messages) {
+    const result = await buildStatusMessages(complaintId, { bindUserId, staffView });
+    if (!result) {
       await lineReply(replyToken, [notFoundMessage(complaintId)]);
       return;
     }
-    await lineReply(replyToken, messages);
+    const messages = [...result.messages];
+    if (result.bindRefused) {
+      messages.push({
+        type: 'text',
+        text:
+          `ℹ️ เรื่องนี้มีผู้รับแจ้งเตือนทาง LINE อยู่แล้ว\n` +
+          `หากคุณเป็นเจ้าของเรื่องและต้องการย้ายการแจ้งเตือนมาที่ LINE นี้\n` +
+          `ส่ง: ${complaintId} ตามด้วยเบอร์โทร 4 ตัวท้าย\n` +
+          `เช่น ${complaintId} 6789`,
+      });
+    }
+    await lineReply(replyToken, messages.slice(0, 5));
   } catch (err) {
     console.error('[LINE] Status query error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ย้ายการผูกแจ้งเตือนด้วยการยืนยันเบอร์โทร 4 ตัวท้าย: "TKC-690001 6789"
+ * ตรงกับเบอร์ในเรื่อง → ผูก LINE นี้แทนที่เดิม (รองรับเปลี่ยนเครื่อง/ญาติติดตาม)
+ */
+async function handleRebind(
+  replyToken: string,
+  userId: string | undefined,
+  complaintId: string,
+  last4: string
+): Promise<void> {
+  try {
+    if (!userId) return;
+    await dbConnect();
+
+    const complaint = await SubmittedReport.findOne({ complaintId })
+      .select('complaintId phone')
+      .lean() as { complaintId: string; phone?: string } | null;
+
+    if (!complaint) {
+      await lineReply(replyToken, [notFoundMessage(complaintId)]);
+      return;
+    }
+
+    const phoneDigits = (complaint.phone || '').replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.slice(-4) !== last4) {
+      await lineReply(replyToken, [
+        {
+          type: 'text',
+          text:
+            `❌ เบอร์โทร 4 ตัวท้ายไม่ตรงกับข้อมูลในเรื่อง ${complaintId}\n\n` +
+            `กรุณาใช้เบอร์เดียวกับที่กรอกตอนแจ้งเรื่อง\n` +
+            `หากไม่แน่ใจ ติดต่อ 056-219-299`,
+        },
+      ]);
+      return;
+    }
+
+    await SubmittedReport.updateOne({ complaintId }, { $set: { lineUserId: userId } });
+
+    const result = await buildStatusMessages(complaintId);
+    await lineReply(replyToken, [
+      {
+        type: 'text' as const,
+        text: `✅ ยืนยันตัวตนสำเร็จ — ย้ายการแจ้งเตือนเรื่อง ${complaintId} มาที่ LINE นี้แล้ว`,
+      },
+      ...(result?.messages ?? []),
+    ].slice(0, 5));
+  } catch (err) {
+    console.error('[LINE] Rebind error:', err);
     await lineReply(replyToken, [
       { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
     ]);
