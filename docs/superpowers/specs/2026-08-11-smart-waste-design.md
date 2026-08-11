@@ -67,11 +67,11 @@
 | 15 | `glass_clear` | ขวดแก้วใส | glass | ✅ |
 | 16 | `glass_amber` | ขวดแก้วแดง | glass | ✅ |
 | 17 | `glass_green` | ขวดแก้วเขียว | glass | |
-| 18 | `metal_tin_can` | กระป๋องสังกะสี | mixed_metal | ✅ |
+| 18 | `metal_tin_can` | กระป๋องสังกะสี | mixedMetal | ✅ |
 | 19 | `aluminum_can` | กระป๋องอลูมิเนียม | aluminum | |
 | 20 | `aluminum_scrap` | เศษอลูมิเนียม | aluminum | |
 | 21 | `steel_scrap` | เหล็ก | steel | |
-| 22 | `food_waste_compost` | ปุ๋ย | food_waste | ✅ |
+| 22 | `food_waste_compost` | ปุ๋ย | foodWaste | ✅ |
 | 23 | `plastic_soft_bag` | ถุงอ่อน | plastic | ✅ ★ |
 | 24 | `kapok` | นุ่น | kapok | |
 
@@ -92,6 +92,17 @@
 - `plastic_soft_bag` (ถุงอ่อน) **นับรวมอยู่ในกลุ่มพลาสติกแล้ว** แถว `เฉพาะถุงอ่อน` ในชีต `รวม`
   ไม่ใช่กลุ่มที่ 9 แต่เป็น subset ที่โชว์ซ้ำเพราะเจ้าหน้าที่สนใจตัวนี้เป็นพิเศษ
 
+### 2.3 กลุ่มใหญ่ 8 กลุ่ม (ลำดับตามชีต `รวม`)
+
+`paper` กระดาษ · `plastic` พลาสติก · `aluminum` อะลูมิเนียม · `steel` เหล็ก ·
+`mixedMetal` โลหะผสม · `glass` แก้ว · `foodWaste` เศษอาหาร · `kapok` นุ่น
+
+`key` ของกลุ่มใช้ **camelCase** ทั้งระบบ เพราะถูกใช้เป็น field name ของ `groupTotals`
+ใน MongoDB โดยตรง (ข้อ 5.2) — จะได้ไม่ต้องแปลงกลับไปกลับมา
+
+กลุ่มเป็น **fixed ในโค้ด** (`lib/smart-waste/wasteGroups.js`) ไม่ให้แอดมินแก้
+เพราะเป็นหัวข้อรายงานที่ส่งหน่วยงานภายนอก — ประเภทย่อยเท่านั้นที่แอดมินจัดการได้
+
 ### 2.4 ธง "สนใจเป็นพิเศษ" (`isHighlighted`)
 
 แทนที่จะ hardcode ถุงอ่อนไว้ในโค้ด ให้เป็น**ธงที่ติดกับประเภทไหนก็ได้**
@@ -103,14 +114,6 @@
 ทำให้ตอนเจ้าหน้าที่สนใจประเภทอื่นเพิ่ม (เช่น ทองแดง ถ้ามีในอนาคต) แค่ติ๊กในหน้าจัดการประเภท
 ไม่ต้องแก้โค้ด
 
-### 2.3 กลุ่มใหญ่ 8 กลุ่ม (ลำดับตามชีต `รวม`)
-
-`paper` กระดาษ · `plastic` พลาสติก · `aluminum` อะลูมิเนียม · `steel` เหล็ก ·
-`mixed_metal` โลหะผสม · `glass` แก้ว · `food_waste` เศษอาหาร · `kapok` นุ่น
-
-กลุ่มเป็น **fixed ในโค้ด** (`lib/smart-waste/wasteGroups.js`) ไม่ให้แอดมินแก้
-เพราะเป็นหัวข้อรายงานที่ส่งหน่วยงานภายนอก — ประเภทย่อยเท่านั้นที่แอดมินจัดการได้
-
 ## 3. ขอบเขต (scope)
 
 **อยู่ในขอบเขต:**
@@ -120,7 +123,7 @@
 3. Dashboard สรุป + กราฟ
 4. Export Excel รูปแบบเดิม
 5. หน้าจัดการประเภทขยะ (แอดมินเพิ่ม/แก้/ปิดเองได้)
-6. Script นำเข้าข้อมูลเก่าจากไฟล์ Excel ทั้ง 2 ปี
+6. นำเข้าข้อมูลเก่าจากไฟล์ Excel ทั้ง 2 ปี (อัปโหลดผ่านหน้าเว็บ)
 
 **ไม่อยู่ในขอบเขต (YAGNI):**
 
@@ -146,20 +149,22 @@ pages/api/smart-waste/
   daily/[date].js          GET วันเดียว · PUT upsert
   summary.js               GET สรุปรายเดือนต่อปีงบ
   export.js                GET ไฟล์ .xlsx
+  import.js                POST อัปโหลด xlsx ข้อมูลเก่า (superadmin)
 components/smart-waste/
   wasteTheme.jsx           re-export token จาก smart-school + token เฉพาะโมดูล
   entry/DailyEntryForm.jsx · entry/TypePickerSheet.jsx · entry/TotalBar.jsx
   admin/MonthTable.jsx · admin/SummaryDashboard.jsx · admin/TypeManagerModal.jsx
 lib/smart-waste/
   wasteGroups.js           8 กลุ่ม fixed + label ไทย + ลำดับ
+  wasteTypesSeed.js        24 ประเภทตั้งต้น (ตารางข้อ 2.2)
   fiscalYear.js            แปลงวันที่ ↔ ปีงบประมาณ
   aggregate.js             ฟังก์ชัน pure คำนวณ groupTotals/totalKg (ใช้ร่วม 3 ที่)
+  importWorkbook.js        อ่าน workbook เก่า → records + ผลตรวจยอด
   exportWorkbook.js        สร้าง workbook หน้าตาเดิม
 models/smart-waste/
   WasteType.js             collection smart_waste_types
   WasteDaily.js            collection smart_waste_daily
 docs/modules/smart-waste.md
-scripts/import-waste-xlsx.js
 scripts/grant-smart-waste-permission.js
 ```
 
@@ -382,24 +387,45 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 → export ใช้ **layout ของ 2569** (แบบใหม่กว่า) กับทุกปีงบ เพื่อให้ไฟล์ที่ระบบออกให้
 มีหน้าตาเดียวกันทุกปี เทียบกันได้
 
-## 9. Script นำเข้าข้อมูลเก่า
+## 9. นำเข้าข้อมูลเก่า — อัปโหลดไฟล์ผ่านหน้าเว็บ (ไม่ใช่ script)
 
-```bash
-node --env-file=.env.local scripts/import-waste-xlsx.js <ไฟล์.xlsx> --fiscal-year 2568 [--dry-run]
+**เปลี่ยนจากแผนเดิมที่จะทำเป็น standalone script** ด้วยเหตุผลทางเทคนิคที่ตรวจพบตอนสำรวจ repo:
+
+- script ทุกตัวใน `scripts/` เป็น **CommonJS** (`require`) และรันด้วย `node` ตรง ๆ
+  ขณะที่ `lib/**/*.js` ทั้งหมดเป็น **ESM** (`export`) และ `package.json` ไม่มี `"type": "module"`
+  → script **import ของจาก `lib/` ไม่ได้เลย** (ตรวจแล้ว: ไม่มี script ตัวไหนใน repo ที่ import จาก `lib/`)
+- ทางออกมีแค่ (ก) เพิ่ม tooling ใหม่ (`tsx`/`vite-node`) (ข) เปลี่ยนนามสกุลเป็น `.mjs`
+  หรือ (ค) **ก๊อป logic ปีงบ + computeTotals ไปไว้ในตัว script**
+- ทางเลือก (ค) คือการ duplicate logic ที่มีความเสี่ยงพลาดสูงที่สุดของงานนี้ (ปีงบเหลื่อม)
+  ไปอีกที่หนึ่ง — ยอมรับไม่ได้ · (ก) และ (ข) แลกมาด้วยการแหวก convention ของ repo
+
+**ทางออกที่เลือก:** ทำเป็น endpoint อัปโหลดในระบบ ซึ่งรันใน Next.js จึงใช้ `lib/` ตัวเดียวกันได้ตรง ๆ
+
+```
+POST /api/smart-waste/import          multipart · field 'file' · ?dryRun=1
 ```
 
-ขั้นตอน:
+- **จำกัดเฉพาะ superadmin** (เข้มกว่า endpoint อื่นในโมดูล เพราะเขียนทับข้อมูลได้ทีละ ~370 วัน)
+- ปุ่มอัปโหลดอยู่ใน modal จัดการประเภทขยะ แท็บ "นำเข้าข้อมูลเก่า"
+- ไม่ต้องส่ง `fiscalYear` — อ่านจากชื่อชีตในไฟล์เอง (ดูขั้นตอนที่ 2)
+- ใช้ `formidable` ตาม pattern `pages/api/upload.js` + `export const config = { api: { bodyParser: false } }`
+- logic ล้วนอยู่ที่ `lib/smart-waste/importWorkbook.js` (รับ workbook → คืน `{ records, verification }`)
+  ทดสอบด้วย vitest ได้โดยไม่ต้องมี HTTP หรือ Mongo
+
+ขั้นตอนที่ `importWorkbook.js` ทำ:
 
 1. อ่าน 12 ชีตรายเดือน · map header ภาษาไทย → `typeKey` ด้วยตารางในข้อ 2.2
    — **header ที่ map ไม่ได้ = หยุดทันที** ไม่ข้ามเงียบ
    · ตาราง map ต้องรับ **alias** ของหัวคอลัมน์ในไฟล์ต้นฉบับด้วย:
    `"สายไฟ"` → `plastic_wire_sheath` (ดูข้อ 2.2) — เก็บ alias ไว้ในไฟล์ import
    ไม่ใช่ใน `WasteType` เพราะเป็นเรื่องของไฟล์เก่าไฟล์เดียว ไม่ใช่ของระบบ
-2. แปลงชื่อชีต + คอลัมน์ `วันที่` → `recordDate`
+2. แปลงชื่อชีต (เช่น `ต.ค.68`) + คอลัมน์ `วันที่` → `recordDate` แบบ ค.ศ.
+   · ปีงบของทั้งไฟล์ได้จากชื่อชีตแรก ไม่ต้องให้ผู้ใช้ระบุ
 3. ข้ามแถว `รวม` และแถวเฉลี่ยท้ายชีต · ข้ามวันที่ที่ไม่มีจริงในเดือนนั้น
-4. `computeTotals()` แล้ว upsert by `recordDate`
-5. **verify:** บวกยอดที่ import ของแต่ละเดือน เทียบกับแถว `รวม` ในชีตต้นฉบับ
-   ไม่ตรง → รายงาน diff และ **ไม่ commit ทั้ง batch**
+4. `computeTotals()` ต่อวัน
+5. **verify:** บวกยอดที่อ่านได้ของแต่ละเดือน เทียบกับแถว `รวม` ในชีตต้นฉบับ
+   ไม่ตรง → คืน `verification.ok = false` พร้อม diff และ **endpoint ไม่เขียนลง Mongo เลยทั้ง batch**
+6. endpoint เขียนด้วย `bulkWrite` upsert ตาม `recordDate` (ทั้งไฟล์ในคำสั่งเดียว)
 
 **จุดที่พลาดง่ายที่สุด — ต้องมี test ครอบ:**
 
@@ -412,7 +438,13 @@ node --env-file=.env.local scripts/import-waste-xlsx.js <ไฟล์.xlsx> --fi
 
 **เกณฑ์ความสำเร็จของการ import:** ยอดรวมปีงบ 2568 = 245,509 กก. และปีงบ 2569 = 42,196 กก.
 
-Script ต้อง **idempotent** — รันซ้ำได้ผลเท่าเดิม (upsert ตาม `recordDate`)
+การ import ต้อง **idempotent** — อัปโหลดไฟล์เดิมซ้ำได้ผลเท่าเดิม (upsert ตาม `recordDate`)
+
+### 9.1 Seed ประเภทขยะเริ่มต้น
+
+ไม่ทำเป็น script เช่นกัน — `pages/api/smart-waste/types/index.js` เรียก
+`ensureWasteTypesSeeded()` ก่อน list ทุกครั้ง ซึ่ง `countDocuments()` แล้ว insert 24 ประเภท
+**เฉพาะตอนที่ collection ยังว่าง** · ไม่มีขั้นตอนที่ต้องรันด้วยมือ และรันซ้ำไม่ทำอะไรเพิ่ม
 
 ## 10. สิทธิ์การเข้าถึง
 
@@ -450,8 +482,11 @@ Script ต้อง **idempotent** — รันซ้ำได้ผลเท�
 |---|---|
 | `lib/smart-waste/fiscalYear.js` | ขอบเขต ก.ย.→ต.ค. · `2025-09-30` → 2568, `2025-10-01` → 2569 · `fiscalMonths(2569)[0].sheetName === 'ต.ค.68'` |
 | `lib/smart-waste/aggregate.js` | ยอดกลุ่มจาก entries จริงของ ต.ค.68 ต้องได้ 18,396 กก. และตรงทุกกลุ่มกับชีต `รวม` |
-| header mapping ใน import | header ทั้ง 24 ตัว (รวม alias `"สายไฟ"`) map ครบ · header แปลกปลอม → throw |
+| `lib/smart-waste/importWorkbook.js` | header ทั้ง 24 ตัว (รวม alias `"สายไฟ"`) map ครบ · header แปลกปลอม → throw · ปีงบจากชื่อชีต · verify ยอดเดือน |
 | `lib/smart-waste/exportWorkbook.js` | ปีงบที่ไม่มีข้อมูลยังได้ 14 ชีต · แถว `เฉพาะ<label>` ขึ้นตามธง `isHighlighted` |
+
+`importWorkbook` ทดสอบกับ **ไฟล์จริงทั้ง 2 ไฟล์** (อ่านจาก path ที่ตั้งใน env
+`SMART_WASTE_FIXTURE_DIR` — ถ้าไม่ตั้ง ให้ `describe.skip` ไปเลย เพื่อไม่ผูก CI กับไฟล์ในเครื่องผู้ใช้)
 
 ทดสอบด้วยมือ (ไม่คุ้มที่จะ automate รอบนี้): ฟอร์มบนมือถือจริง, export เปิดใน Excel/Sheets ได้
 
@@ -459,13 +494,23 @@ Script ต้อง **idempotent** — รันซ้ำได้ผลเท�
 
 ## 13. ลำดับการทำงานที่แนะนำ
 
-1. `lib/smart-waste/*` (groups, fiscalYear, aggregate) + test — เป็นฐานของทุกอย่าง
-2. `models/smart-waste/*` + seed 24 ประเภท
-3. `scripts/import-waste-xlsx.js` + import จริง 2 ปี + verify ยอด
+แบ่งเป็น **2 แผน** เพื่อให้แต่ละแผนจบแล้วได้ของที่ทดสอบได้จริง:
+
+**แผนที่ 1 — backend** (`docs/superpowers/plans/2026-08-11-smart-waste-backend.md`)
+
+1. vitest + `lib/smart-waste/*` (groups, seed, fiscalYear, aggregate) + test — เป็นฐานของทุกอย่าง
+2. `models/smart-waste/*`
+3. `_auth` + API types (พร้อม `ensureWasteTypesSeeded`)
+4. `importWorkbook` + `POST /api/smart-waste/import` → **นำเข้าจริง 2 ปี + verify ยอด**
    → ได้ข้อมูลจริงไว้ทดสอบหน้าจอตั้งแต่ต้น ไม่ต้องกรอก mock
-4. API (`_auth`, types, daily, summary)
-5. หน้า `/admin/smart-waste` + 3 แท็บ + สิทธิ์ 4 จุด
-6. Export + `docs/modules/smart-waste.md` + แถวใน `docs/modules/README.md`
+5. API daily + summary
+6. `exportWorkbook` + `GET /api/smart-waste/export`
+
+**แผนที่ 2 — frontend** (เขียนหลังแผนที่ 1 ผ่าน เพื่อให้อิงรูปร่าง response จริงของ API)
+
+7. `wasteTheme` + 3 แท็บ + modal จัดการประเภท
+8. สิทธิ์ 4 จุด + `scripts/grant-smart-waste-permission.js`
+9. `docs/modules/smart-waste.md` + แถวใน `docs/modules/README.md` + อัปเดต CLAUDE.md
 
 ## 14. คำถามที่ตัดสินใจไปแล้ว
 
@@ -480,4 +525,5 @@ Script ต้อง **idempotent** — รันซ้ำได้ผลเท�
 | "สายไฟ" ในไฟล์เดิม | เป็น **เปลือกสายไฟ** (กลุ่มพลาสติก) ใช้ชื่อนี้ที่เดียวทั้งระบบ · ทองแดงยังไม่เก็บ ถ้าจะเก็บให้แอดมินเพิ่มประเภทเองภายหลัง |
 | ถุงอ่อน | เป็นธง `isHighlighted` ที่ติดประเภทไหนก็ได้ ไม่ hardcode |
 | Test | ติดตั้ง `vitest` ครอบ logic ล้วน (ผู้ใช้ยืนยัน) |
+| นำเข้าข้อมูลเก่า | อัปโหลด xlsx ผ่าน endpoint ในระบบ ไม่ใช่ standalone script (เหตุผลข้อ 9) |
 | Git | ทำงานบน branch `feat/smart-waste` แยกจาก `main` |
