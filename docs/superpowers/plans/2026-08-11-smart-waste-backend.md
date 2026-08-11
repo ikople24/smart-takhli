@@ -779,6 +779,27 @@ describe('computeTotals', () => {
       computeTotals([{ typeKey: 'copper', group: 'copper', kg: 5 }])
     ).toThrow(/copper/);
   });
+
+  it('กลุ่มที่ชื่อพ้องกับ property ของ Object.prototype ก็ต้อง throw', () => {
+    // `group in groupTotals` เดินตาม prototype chain — ชื่อพวกนี้จะหลุดการตรวจ
+    // แล้วน้ำหนักไปโผล่เป็นกลุ่มที่ 9 แบบเงียบ ๆ
+    for (const group of ['toString', 'constructor', 'valueOf', '__proto__']) {
+      expect(() =>
+        computeTotals([{ typeKey: 'bogus', group, kg: 500 }])
+      ).toThrow(/bogus/);
+    }
+  });
+
+  it('ยอดรวมเท่ากับผลบวกของกลุ่มเสมอ แม้ค่านำเข้ามีทศนิยมเกิน 2 ตำแหน่ง', () => {
+    const { groupTotals, totalKg } = computeTotals([
+      { typeKey: 'a', group: 'plastic', kg: 0.005 },
+      { typeKey: 'b', group: 'paper', kg: 0.005 },
+    ]);
+    const sum = round2(
+      Object.values(groupTotals).reduce((acc, value) => acc + value, 0)
+    );
+    expect(totalKg).toBe(sum);
+  });
 });
 
 describe('normalizeEntries', () => {
@@ -878,21 +899,29 @@ export function emptyGroupTotals() {
 // entries: [{ typeKey, group, kg }] → { groupTotals, totalKg }
 export function computeTotals(entries) {
   const groupTotals = emptyGroupTotals();
-  let totalKg = 0;
 
   for (const entry of entries || []) {
     const kg = Number(entry?.kg);
     if (!Number.isFinite(kg) || kg <= 0) continue;
-    if (!(entry.group in groupTotals)) {
+    // ใช้ Object.hasOwn ไม่ใช่ `in` — `in` เดินตาม prototype chain ทำให้กลุ่มชื่อ
+    // 'toString' / 'constructor' / '__proto__' หลุดการตรวจ แล้วน้ำหนักไปโผล่เป็น
+    // กลุ่มที่ 9 แบบเงียบ ๆ
+    if (!Object.hasOwn(groupTotals, entry.group)) {
       throw new Error(
         `computeTotals: ไม่รู้จักกลุ่มขยะ "${entry.group}" (typeKey=${entry.typeKey})`
       );
     }
     groupTotals[entry.group] += kg;
-    totalKg += kg;
   }
 
-  for (const key of WASTE_GROUP_KEYS) groupTotals[key] = round2(groupTotals[key]);
+  // บวกยอดรวมจาก "ยอดกลุ่มที่ปัดแล้ว" ไม่ใช่จากผลดิบคู่ขนาน — ยอดรวมจึงเท่ากับ
+  // ผลบวกของทุกกลุ่มเสมอโดยโครงสร้าง ไม่ว่าค่านำเข้าจะมีทศนิยมกี่ตำแหน่ง
+  let totalKg = 0;
+  for (const key of WASTE_GROUP_KEYS) {
+    groupTotals[key] = round2(groupTotals[key]);
+    totalKg += groupTotals[key];
+  }
+
   return { groupTotals, totalKg: round2(totalKg) };
 }
 
