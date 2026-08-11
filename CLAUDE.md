@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — start Next.js dev server (http://localhost:3000) / รันเซิร์ฟเวอร์โหมดพัฒนา
 - `npm run build` / `npm start` — production build / serve / บิลด์และรันโหมดโปรดักชัน
 - `npm run lint` — `next lint` (ESLint extends `next/core-web-vitals` + `next/typescript`) / ตรวจโค้ดด้วย ESLint
-- **No test runner is configured** / โปรเจกต์นี้ยังไม่มี test runner ติดตั้งไว้
+- `npm test` — `vitest run` (config ที่ `vitest.config.mjs`) · เทสต์อยู่ที่ `lib/**/__tests__/*.test.js` ครอบเฉพาะ logic ล้วน ยังไม่มีเทสต์ฝั่ง React/API / รันเฉพาะบางไฟล์: `npx vitest run <path>`
 - `npm run create-default-activity` และ `npm run migrate-feedback` อ้างถึงไฟล์ใน `scripts/` ที่ไม่มีอยู่จริง — สคริปต์เก่า/ใช้ครั้งเดียว ส่วนสคริปต์ migration ที่มีจริงรันด้วย `node --env-file=.env.local scripts/<file>.js` (เช่น `grant-elderly-school-permission.js`)
 
 ## Stack & conventions / สแตกและธรรมเนียมการเขียน

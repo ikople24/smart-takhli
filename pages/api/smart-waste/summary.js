@@ -57,6 +57,9 @@ async function buildSummary(res, fiscalYear) {
     if (!month) continue; // กันข้อมูลหลุดช่วง (ไม่ควรเกิด แต่ไม่ทำให้พังทั้งหน้า)
     month.recordedDays += 1;
     for (const entry of record.entries) {
+      if (!Object.hasOwn(month.groupTotals, entry.group)) {
+        throw new Error(`summary: ไม่รู้จักกลุ่มขยะ "${entry.group}" ในวันที่ ${record.recordDate}`);
+      }
       month.groupTotals[entry.group] = round2(month.groupTotals[entry.group] + entry.kg);
       month.typeTotals[entry.typeKey] = round2((month.typeTotals[entry.typeKey] || 0) + entry.kg);
       yearGroupTotals[entry.group] = round2(yearGroupTotals[entry.group] + entry.kg);

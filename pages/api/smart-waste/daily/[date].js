@@ -72,10 +72,17 @@ async function routeRequest(req, res, auth, date) {
       return res.status(400).json({ message: "ข้อมูลไม่ถูกรูปแบบ", issues: parsed.error.issues });
     }
 
-    // ต้องเป็นประเภทที่เปิดใช้งานอยู่เท่านั้น — ประเภทที่ปิดแล้วยังอ่านย้อนหลังได้
-    // แต่กรอกใหม่ไม่ได้
-    const activeTypes = await WasteType.find({ active: true }).lean();
-    const typeByKey = new Map(activeTypes.map((type) => [type.key, type]));
+    const before = await WasteDaily.findOne({ recordDate: date }).lean();
+
+    // ประเภทที่ปิดใช้งานแล้ว "กรอกเพิ่มใหม่" ไม่ได้ แต่วันที่เคยมีมันอยู่ต้องยังแก้ได้
+    // ไม่งั้นพอปิดประเภทหนึ่ง วันเก่าทุกวันที่มีประเภทนั้นจะบันทึกไม่ผ่านเลย
+    const existingKeys = new Set((before?.entries || []).map((entry) => entry.typeKey));
+    const allTypes = await WasteType.find().lean();
+    const typeByKey = new Map(
+      allTypes
+        .filter((type) => type.active !== false || existingKeys.has(type.key))
+        .map((type) => [type.key, type])
+    );
 
     let entries;
     try {
@@ -86,7 +93,13 @@ async function routeRequest(req, res, auth, date) {
 
     // ไม่เชื่อยอดที่ client ส่งมา — คำนวณใหม่จาก entries เสมอ
     const { groupTotals, totalKg } = computeTotals(entries);
-    const before = await WasteDaily.findOne({ recordDate: date }).lean();
+
+    // ไม่มีรายการเหลือ = ล้างข้อมูลของวันนั้น ไม่ใช่บันทึกวันที่ยอด 0
+    // (ถ้าเก็บไว้ วันนั้นจะถูกนับเป็น "วันที่บันทึกแล้ว" แล้วไปกดค่าเฉลี่ยต่อวันให้ต่ำผิดจริง)
+    if (entries.length === 0) {
+      if (before) await WasteDaily.deleteOne({ recordDate: date });
+      return res.status(200).json({ record: null, deleted: Boolean(before), warnings: [] });
+    }
 
     await WasteDaily.updateOne(
       { recordDate: date },
@@ -106,7 +119,7 @@ async function routeRequest(req, res, auth, date) {
           createdByName: auth.name,
         },
       },
-      { upsert: true }
+      { upsert: true, runValidators: true }
     );
 
     // log เฉพาะการ "แก้ของเดิม" — การบันทึกวันใหม่เป็นงานปกติ ไม่ต้องมี audit trail

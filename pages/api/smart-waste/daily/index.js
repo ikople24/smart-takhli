@@ -18,6 +18,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "from ต้องไม่เกิน to" });
   }
 
+  // กันคิวรีทั้ง collection ด้วย from=0001-01-01&to=9999-12-31
+  const spanDays = Math.round(
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000
+  );
+  if (spanDays > 400) {
+    return res.status(400).json({ message: "ขอข้อมูลได้ครั้งละไม่เกิน 400 วัน" });
+  }
+
   try {
     await dbConnect();
     // recordDate เป็น string YYYY-MM-DD จึงเทียบด้วย $gte/$lte ตรง ๆ ได้

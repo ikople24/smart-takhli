@@ -1,43 +1,9 @@
 import dbConnect from "@/lib/dbConnect";
 import WasteType from "@/models/smart-waste/WasteType";
 import WasteDaily from "@/models/smart-waste/WasteDaily";
-import { WASTE_TYPES_SEED } from "@/lib/smart-waste/wasteTypesSeed";
 import { isWasteGroupKey } from "@/lib/smart-waste/wasteGroups";
+import { ensureWasteTypesSeeded } from "@/lib/smart-waste/seedTypes";
 import { requireWasteAdmin } from "../_auth";
-
-// seed 24 ประเภทตั้งต้น "เฉพาะตอน collection ยังว่าง"
-// ทำตรงนี้แทน migration script เพราะ script ใน repo นี้เป็น CommonJS และ import
-// ของจาก lib/ (ESM) ไม่ได้ — จะต้อง duplicate ตาราง 24 ประเภทไปอีกที่หนึ่ง
-// รันซ้ำไม่ทำอะไรเพิ่ม และไม่เขียนทับสิ่งที่แอดมินแก้ไว้
-export async function ensureWasteTypesSeeded() {
-  const count = await WasteType.countDocuments();
-  if (count > 0) return { seeded: 0 };
-  try {
-    await WasteType.insertMany(
-      WASTE_TYPES_SEED.map((type) => ({
-        key: type.key,
-        label: type.label,
-        group: type.group,
-        order: type.order,
-        isCommon: Boolean(type.isCommon),
-        isHighlighted: Boolean(type.isHighlighted),
-        active: true,
-      })),
-      // ordered: false — สอง request แรกที่เข้ามาพร้อมกันจะเห็น count = 0 ทั้งคู่
-      // แล้ว insert ชนกัน · unique index บน key กันข้อมูลซ้ำอยู่แล้ว ที่ต้องกันเพิ่ม
-      // คือไม่ให้คนที่แพ้ race เจอ 500 ทั้งที่ระบบทำงานถูกต้อง
-      { ordered: false }
-    );
-  } catch (error) {
-    const writeErrors = error?.writeErrors || [];
-    const allDuplicate =
-      error?.code === 11000 ||
-      (writeErrors.length > 0 &&
-        writeErrors.every((item) => (item.err?.code ?? item.code) === 11000));
-    if (!allDuplicate) throw error;
-  }
-  return { seeded: WASTE_TYPES_SEED.length };
-}
 
 // แปลง label เป็น slug ใช้เป็น key เริ่มต้น — แอดมินแก้ได้ก่อนบันทึก
 function slugify(label) {
