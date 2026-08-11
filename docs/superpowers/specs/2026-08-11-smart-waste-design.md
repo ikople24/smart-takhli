@@ -63,7 +63,7 @@
 | 11 | `plastic_linoleum` | เสื่อน้ำมัน | plastic | |
 | 12 | `plastic_pvc_pipe` | ท่อ PVC | plastic | |
 | 13 | `plastic_boots` | รองเท้าบู้ท | plastic | |
-| 14 | `plastic_wire` | สายไฟ | plastic | |
+| 14 | `plastic_wire_sheath` | เปลือกสายไฟ | plastic | |
 | 15 | `glass_clear` | ขวดแก้วใส | glass | ✅ |
 | 16 | `glass_amber` | ขวดแก้วแดง | glass | ✅ |
 | 17 | `glass_green` | ขวดแก้วเขียว | glass | |
@@ -72,17 +72,36 @@
 | 20 | `aluminum_scrap` | เศษอลูมิเนียม | aluminum | |
 | 21 | `steel_scrap` | เหล็ก | steel | |
 | 22 | `food_waste_compost` | ปุ๋ย | food_waste | ✅ |
-| 23 | `plastic_soft_bag` | ถุงอ่อน | plastic | ✅ |
+| 23 | `plastic_soft_bag` | ถุงอ่อน | plastic | ✅ ★ |
 | 24 | `kapok` | นุ่น | kapok | |
+
+`✅` = `isCommon` (เด้งขึ้นหน้าแรกของฟอร์ม) · `★` = `isHighlighted` (สนใจเป็นพิเศษ — ดูข้อ 2.4)
 
 **ข้อควรระวังจากข้อมูลจริง:**
 
-- `plastic_wire` — ชีตรายวันเขียน "สายไฟ" แต่ชีต `รวมละเอียด` เขียน "เปลือกสายไฟ"
-  → เก็บ `label` = "สายไฟ" และ `detailLabel` = "เปลือกสายไฟ" เพื่อให้ export ทั้งสองชีตตรงต้นฉบับ
+- **`plastic_wire_sheath` — ชีตรายวันเขียนหัวคอลัมน์ว่า "สายไฟ" แต่ที่ถูกคือ "เปลือกสายไฟ"**
+  ตรวจสอบสูตรในไฟล์ต้นฉบับแล้ว: `รวมละเอียด!B15 = ต.ค.68!$O$33` (คอลัมน์ "สายไฟ")
+  และ `รวม` แถวพลาสติก `= SUM(รวมละเอียด!B5:B15, B24)` — คือคอลัมน์นี้**ถูกนับเป็นพลาสติก**
+  ซึ่งเข้ากันได้กับ "เปลือกสายไฟ" (ฉนวนหุ้ม) เท่านั้น ไม่ใช่ "สายไฟ" ที่หมายถึงทองแดง
+  → **ใช้ชื่อ "เปลือกสายไฟ" ที่เดียวทั้งระบบ** รวมถึงหัวคอลัมน์ในไฟล์ export
+  (คอลัมน์นี้เป็น 0 ทั้ง 2 ปี ไม่เคยมีการบันทึก — การแก้ชื่อจึงไม่กระทบตัวเลขย้อนหลังใด ๆ)
+  ถ้าภายหลังต้องการเก็บ **ทองแดง** ให้แอดมินเพิ่มเป็นประเภทใหม่ผ่านหน้าจัดการประเภท
+  (ต้องเลือกกลุ่มที่เป็นโลหะ ไม่ใช่พลาสติก)
 - `food_waste_compost` — คอลัมน์ชื่อ "ปุ๋ย" แต่ในชีต `รวม` นับเป็นกลุ่ม "เศษอาหาร"
   → UI แสดง "ปุ๋ย (เศษอาหาร)" เพื่อลดความสับสน แต่ export ใช้ label เดิม
-- `plastic_soft_bag` (ถุงอ่อน) **นับรวมอยู่ในกลุ่มพลาสติกแล้ว** แต่ชีต `รวม` มีแถว
-  `เฉพาะถุงอ่อน` แยกอีกแถวหนึ่ง (ไม่ใช่กลุ่มที่ 9 — เป็น subset ที่โชว์ซ้ำ)
+- `plastic_soft_bag` (ถุงอ่อน) **นับรวมอยู่ในกลุ่มพลาสติกแล้ว** แถว `เฉพาะถุงอ่อน` ในชีต `รวม`
+  ไม่ใช่กลุ่มที่ 9 แต่เป็น subset ที่โชว์ซ้ำเพราะเจ้าหน้าที่สนใจตัวนี้เป็นพิเศษ
+
+### 2.4 ธง "สนใจเป็นพิเศษ" (`isHighlighted`)
+
+แทนที่จะ hardcode ถุงอ่อนไว้ในโค้ด ให้เป็น**ธงที่ติดกับประเภทไหนก็ได้**
+(ตอนเริ่มระบบติดที่ถุงอ่อนตัวเดียว) ประเภทที่ติดธงจะได้:
+
+- `StatCard` ของตัวเองบน dashboard
+- แถว `เฉพาะ<label>` ในชีต `รวม` ตอน export (แทนแถว `เฉพาะถุงอ่อน` เดิม)
+
+ทำให้ตอนเจ้าหน้าที่สนใจประเภทอื่นเพิ่ม (เช่น ทองแดง ถ้ามีในอนาคต) แค่ติ๊กในหน้าจัดการประเภท
+ไม่ต้องแก้โค้ด
 
 ### 2.3 กลุ่มใหญ่ 8 กลุ่ม (ลำดับตามชีต `รวม`)
 
@@ -164,11 +183,11 @@ scripts/grant-smart-waste-permission.js
 ```js
 {
   key: String,          // unique · slug เช่น 'plastic_pet' — ห้ามเปลี่ยนหลังมีข้อมูลแล้ว
-  label: String,        // 'ขวดพลาสติก PET' — แก้ได้
-  detailLabel: String,  // ชื่อในชีต 'รวมละเอียด' ถ้าต่างจาก label (default = '')
+  label: String,        // 'ขวดพลาสติก PET' — แก้ได้ · ใช้ชื่อเดียวทุกชีตตอน export
   group: String,        // 1 ใน 8 key ของ wasteGroups.js
   order: Number,        // ลำดับคอลัมน์ใน Excel เดิม
   isCommon: Boolean,    // true = เด้งขึ้นหน้าแรกของฟอร์มมือถือ
+  isHighlighted: Boolean, // true = สนใจเป็นพิเศษ → StatCard + แถว 'เฉพาะ<label>' ตอน export
   active: Boolean,      // false = ซ่อนจากฟอร์ม แต่ข้อมูลเก่ายังอยู่
   createdByClerkId, createdByName, updatedByClerkId, updatedByName
 }
@@ -191,7 +210,6 @@ scripts/grant-smart-waste-permission.js
   groupTotals: {        // denormalized — คำนวณตอน save
     paper, plastic, aluminum, steel, mixedMetal, glass, foodWaste, kapok
   },
-  softBagKg: Number,    // ยอด plastic_soft_bag แยก (แถว 'เฉพาะถุงอ่อน' ในชีต รวม)
   totalKg: Number,
   note: String,
   createdByClerkId, createdByName, updatedByClerkId, updatedByName
@@ -212,11 +230,15 @@ scripts/grant-smart-waste-permission.js
 ### 5.3 ฟังก์ชันร่วม `lib/smart-waste/aggregate.js`
 
 ```js
-computeTotals(entries) → { groupTotals, softBagKg, totalKg }
+computeTotals(entries) → { groupTotals, totalKg }
 ```
 
 ฟังก์ชัน pure ตัวเดียว ใช้ร่วมกัน **3 จุด**: ตอนบันทึกผ่าน API, ตอน import จาก Excel,
 ตอนสร้างไฟล์ export — แก้สูตรที่เดียวมีผลทุกที่ ไม่ต้องไล่แก้หลายไฟล์
+
+**ยอดของประเภทที่ติดธง `isHighlighted` ไม่ต้อง denormalize** — endpoint `summary`
+aggregate ยอดรายเดือนแยก 24 ประเภทอยู่แล้ว (เพื่อสร้างชีต `รวมละเอียด`)
+ยอดถุงอ่อนจึงได้มาฟรีจากชุดเดียวกัน · ธงเปลี่ยนเมื่อไหร่ตัวเลขตามทันทีโดยไม่ต้อง migrate
 
 ### 5.4 `lib/smart-waste/fiscalYear.js`
 
@@ -239,7 +261,7 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 |---|---|---|
 | GET | `/api/smart-waste/types` | list ประเภท (`?includeInactive=1` สำหรับหน้าจัดการ) |
 | POST | `/api/smart-waste/types` | เพิ่มประเภทใหม่ (validate `key` ไม่ซ้ำ, `group` ต้องอยู่ใน 8 กลุ่ม) |
-| PATCH | `/api/smart-waste/types/[id]` | แก้ label / order / isCommon / active |
+| PATCH | `/api/smart-waste/types/[id]` | แก้ label / order / isCommon / isHighlighted / active |
 | DELETE | `/api/smart-waste/types/[id]` | soft delete → `active: false` · **ถ้ามี WasteDaily อ้างถึง typeKey นี้ ต้องปฏิเสธการลบจริง** |
 | GET | `/api/smart-waste/daily?from=&to=` | list ช่วงวัน (สำหรับตารางรายเดือน) |
 | GET | `/api/smart-waste/daily/[date]` | โหลด 1 วันมาแก้ (404 = ยังไม่มี → ฟอร์มเปล่า) |
@@ -321,7 +343,8 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 ### 7.4 แท็บ "สรุป"
 
 - `YearPills` เลือกปีงบ (2568 / 2569 / …)
-- `StatCard` 4 ใบ: รวมทั้งปีงบ · เฉลี่ยต่อวัน · เดือนล่าสุด · จำนวนวันที่บันทึกแล้ว
+- `StatCard`: รวมทั้งปีงบ · เฉลี่ยต่อวัน · เดือนล่าสุด · จำนวนวันที่บันทึกแล้ว
+  · **+ 1 ใบต่อประเภทที่ติดธง `isHighlighted`** (เริ่มต้น = ถุงอ่อน)
 - กราฟด้วย `recharts` (มีใน dependencies):
   - แท่งซ้อน 8 กลุ่ม × 12 เดือน
   - เส้นเทียบปีงบต่อปีงบ (2568 vs 2569)
@@ -333,7 +356,7 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 ทำเป็น modal ในหน้าเดิม **ไม่แยกเป็นหน้าใหม่** — เลี่ยงการเพิ่ม permission entry ที่ 2
 และเลี่ยง migration สิทธิ์รอบสอง
 
-- ตารางประเภทเรียงตาม `order` · toggle `isCommon` / `active` · แก้ label
+- ตารางประเภทเรียงตาม `order` · toggle `isCommon` / `isHighlighted` / `active` · แก้ label
 - เพิ่มประเภทใหม่: กรอก label + เลือกกลุ่ม (จาก 8 กลุ่ม) → ระบบ gen `key` เป็น slug
   ให้แก้ได้ก่อนบันทึก แต่**ล็อกถาวรหลังบันทึก**
 - ประเภทที่มีข้อมูลอ้างถึงแล้ว → ปุ่มลบ disabled พร้อม tooltip "มีข้อมูลใช้งานอยู่ ปิดใช้งานแทนได้"
@@ -343,8 +366,9 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 `lib/smart-waste/exportWorkbook.js` ใช้ package `xlsx` (`^0.18.5` มีอยู่แล้ว)
 สร้าง workbook ที่มีชีตครบและเรียงเหมือนต้นฉบับ:
 
-1. `รวม` — 8 กลุ่ม × 12 เดือน + `SUM` + `Avg.` + แถว `รวม` / `เฉลี่ยต่อวัน` / `เฉพาะถุงอ่อน` / `Recheck`
-2. `รวมละเอียด` — 24 ประเภท × 12 เดือน (ใช้ `detailLabel` ถ้ามี)
+1. `รวม` — 8 กลุ่ม × 12 เดือน + `SUM` + `Avg.` + แถว `รวม` / `เฉลี่ยต่อวัน` /
+   **`เฉพาะ<label>` หนึ่งแถวต่อประเภทที่ติดธง `isHighlighted`** (เริ่มต้น = `เฉพาะถุงอ่อน`) / `Recheck`
+2. `รวมละเอียด` — 24 ประเภท × 12 เดือน (ใช้ `label` เดียวกับชีตรายวัน)
 3. 12 ชีตรายเดือน ชื่อ `ต.ค.68` … `ก.ย.69` — แถว = วัน, คอลัมน์ตาม `order`,
    แถวท้าย = `รวม` และแถวเฉลี่ยต่อวัน
 
@@ -352,6 +376,11 @@ fiscalMonths(2569) → [{ key: '2025-10', sheetName: 'ต.ค.68', label: 'ต.�
 ฐานข้อมูล ไม่ใช่ชีต และเป็นสาเหตุที่สูตรในไฟล์เดิมพังเมื่อแทรกแถว
 
 ช่องที่ไม่มีข้อมูลเว้นว่าง (ไม่ใส่ 0) เพื่อให้หน้าตาตรงกับไฟล์เดิม
+
+**หมายเหตุ layout:** ไฟล์ 2568 กับ 2569 วางชีต `รวม` ไม่เหมือนกันเป๊ะ — 2568 มีคอลัมน์
+`รวม` ทั้งปีอยู่**หน้า** 12 เดือน ส่วน 2569 ย้ายไปเป็น `SUM` + `Avg.` **ท้าย** 12 เดือน
+→ export ใช้ **layout ของ 2569** (แบบใหม่กว่า) กับทุกปีงบ เพื่อให้ไฟล์ที่ระบบออกให้
+มีหน้าตาเดียวกันทุกปี เทียบกันได้
 
 ## 9. Script นำเข้าข้อมูลเก่า
 
@@ -363,6 +392,9 @@ node --env-file=.env.local scripts/import-waste-xlsx.js <ไฟล์.xlsx> --fi
 
 1. อ่าน 12 ชีตรายเดือน · map header ภาษาไทย → `typeKey` ด้วยตารางในข้อ 2.2
    — **header ที่ map ไม่ได้ = หยุดทันที** ไม่ข้ามเงียบ
+   · ตาราง map ต้องรับ **alias** ของหัวคอลัมน์ในไฟล์ต้นฉบับด้วย:
+   `"สายไฟ"` → `plastic_wire_sheath` (ดูข้อ 2.2) — เก็บ alias ไว้ในไฟล์ import
+   ไม่ใช่ใน `WasteType` เพราะเป็นเรื่องของไฟล์เก่าไฟล์เดียว ไม่ใช่ของระบบ
 2. แปลงชื่อชีต + คอลัมน์ `วันที่` → `recordDate`
 3. ข้ามแถว `รวม` และแถวเฉลี่ยท้ายชีต · ข้ามวันที่ที่ไม่มีจริงในเดือนนั้น
 4. `computeTotals()` แล้ว upsert by `recordDate`
@@ -410,14 +442,16 @@ Script ต้อง **idempotent** — รันซ้ำได้ผลเท�
 
 ## 12. Testing
 
-โปรเจกต์**ยังไม่มี test runner ติดตั้ง** (ระบุใน CLAUDE.md) — แผนคือติดตั้ง `vitest`
-เฉพาะสำหรับ logic ล้วนของโมดูลนี้ ซึ่งเป็นส่วนที่พังเงียบและตรวจด้วยตาไม่ได้:
+โปรเจกต์**ยังไม่มี test runner ติดตั้ง** (ระบุใน CLAUDE.md) — ผู้ใช้ยืนยันแล้วว่าให้มี test
+→ ติดตั้ง `vitest` เป็น devDependency ใหม่ ใช้กับ logic ล้วนของโมดูลนี้
+ซึ่งเป็นส่วนที่พังเงียบและตรวจด้วยตาไม่ได้ (เพิ่ม script `npm test` ใน `package.json`):
 
 | ไฟล์ | สิ่งที่ต้องครอบ |
 |---|---|
-| `lib/smart-waste/fiscalYear.js` | ขอบเขต ก.ย.→ต.ค. · 2025-09-30 → 2568, 2025-10-01 → 2569 |
+| `lib/smart-waste/fiscalYear.js` | ขอบเขต ก.ย.→ต.ค. · `2025-09-30` → 2568, `2025-10-01` → 2569 · `fiscalMonths(2569)[0].sheetName === 'ต.ค.68'` |
 | `lib/smart-waste/aggregate.js` | ยอดกลุ่มจาก entries จริงของ ต.ค.68 ต้องได้ 18,396 กก. และตรงทุกกลุ่มกับชีต `รวม` |
-| header mapping ใน import | header ทั้ง 24 ตัว map ครบ · header แปลกปลอม → throw |
+| header mapping ใน import | header ทั้ง 24 ตัว (รวม alias `"สายไฟ"`) map ครบ · header แปลกปลอม → throw |
+| `lib/smart-waste/exportWorkbook.js` | ปีงบที่ไม่มีข้อมูลยังได้ 14 ชีต · แถว `เฉพาะ<label>` ขึ้นตามธง `isHighlighted` |
 
 ทดสอบด้วยมือ (ไม่คุ้มที่จะ automate รอบนี้): ฟอร์มบนมือถือจริง, export เปิดใน Excel/Sheets ได้
 
@@ -443,3 +477,7 @@ Script ต้อง **idempotent** — รันซ้ำได้ผลเท�
 | ประเภทขยะ | แอดมินเพิ่ม/แก้/ปิดได้เอง (master data ใน Mongo) · กลุ่มใหญ่ 8 กลุ่ม fixed ในโค้ด |
 | ขอบเขตรอบแรก | ฟอร์มมือถือ + ตารางแก้ไข + dashboard + export ครบทั้ง 4 |
 | UI | ธีมและ token เดียวกับ smart-school |
+| "สายไฟ" ในไฟล์เดิม | เป็น **เปลือกสายไฟ** (กลุ่มพลาสติก) ใช้ชื่อนี้ที่เดียวทั้งระบบ · ทองแดงยังไม่เก็บ ถ้าจะเก็บให้แอดมินเพิ่มประเภทเองภายหลัง |
+| ถุงอ่อน | เป็นธง `isHighlighted` ที่ติดประเภทไหนก็ได้ ไม่ hardcode |
+| Test | ติดตั้ง `vitest` ครอบ logic ล้วน (ผู้ใช้ยืนยัน) |
+| Git | ทำงานบน branch `feat/smart-waste` แยกจาก `main` |
