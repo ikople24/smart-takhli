@@ -52,5 +52,6 @@
 - **ฝั่งประชาชน**: dialog หลังส่งสำเร็จมีปุ่ม "ติดตามเรื่องนี้ผ่าน LINE" เป็น **oaMessage
   deep link** (`https://line.me/R/oaMessage/<basicId>/?สถานะ <เลขเรื่อง>` — parse basicId
   จาก `NEXT_PUBLIC_LINE_OA_URL`) เปิดแชทพร้อมข้อความเตรียมไว้ กดส่งทีเดียวผูกเรื่องเสร็จ
-- `lib/liff.ts` + env `NEXT_PUBLIC_LIFF_ID` **เก็บไว้แต่ไม่มีใคร import** — รอพัฒนาการ
-  เรียก user ผ่าน LINE รอบใหม่
+- LIFF ถอดออกจากโปรเจกต์แล้ว (2026-08-11): ลบ `lib/liff.ts`, dependency `@line/liff`,
+  และ env `NEXT_PUBLIC_LIFF_ID` — flow ปัจจุบันใช้ oaMessage deep link + webhook แทน
+  ถ้าจะทำ LINE login รอบใหม่ค่อยเพิ่ม LIFF กลับ
