@@ -97,7 +97,22 @@ async function routeRequest(req, res, auth, date) {
     // ไม่มีรายการเหลือ = ล้างข้อมูลของวันนั้น ไม่ใช่บันทึกวันที่ยอด 0
     // (ถ้าเก็บไว้ วันนั้นจะถูกนับเป็น "วันที่บันทึกแล้ว" แล้วไปกดค่าเฉลี่ยต่อวันให้ต่ำผิดจริง)
     if (entries.length === 0) {
-      if (before) await WasteDaily.deleteOne({ recordDate: date });
+      if (before) {
+        await WasteDaily.deleteOne({ recordDate: date });
+        // ทางนี้เป็นทางที่ "ทำลายข้อมูล" มากที่สุดของ endpoint นี้ — ต้องมี audit trail
+        // ยิ่งกว่าการแก้ตัวเลขธรรมดาเสียอีก ห้าม return ก่อนบันทึก log
+        await logAuditEvent({
+          actorClerkId: auth.userId,
+          actorName: auth.name,
+          action: "waste_daily_updated",
+          resourceType: "system",
+          resourceId: date,
+          before: { totalKg: before.totalKg, entries: before.entries },
+          after: { totalKg: 0, entries: [] },
+          description: `ล้างข้อมูลขยะรีไซเคิลวันที่ ${date} (เดิม ${before.totalKg} กก.)`,
+          meta: { module: "smart-waste", recordDate: date, deleted: true },
+        });
+      }
       return res.status(200).json({ record: null, deleted: Boolean(before), warnings: [] });
     }
 
