@@ -1540,13 +1540,16 @@ const realFiles = [
 describe.skipIf(!fixtureDir)('importWorkbook — ไฟล์จริง', () => {
   for (const { file, fiscalYear, totalKg } of realFiles) {
     it(`${file} → ปีงบ ${fiscalYear} ยอดรวม ${totalKg} กก. ตรงกับชีต "รวม"`, () => {
-      const workbook = XLSX.readFile(path.join(fixtureDir, file));
+      // ⚠️ ห้ามใช้ XLSX.readFile() ที่นี่ — vitest resolve xlsx ไปที่ ESM build (xlsx.mjs)
+      // ซึ่งไม่ผูก fs ไว้ในตัว จะได้ error "Cannot access file" ทั้งที่ไฟล์มีอยู่จริง
+      // (ตรวจแล้วกับไฟล์จริงในเครื่อง) — อ่าน buffer เองแล้วส่งเข้า XLSX.read แทน
+      const buffer = fs.readFileSync(path.join(fixtureDir, file));
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
       const result = importWorkbook(workbook);
 
       expect(result.fiscalYear).toBe(fiscalYear);
       expect(result.verification.ok).toBe(true);
       expect(result.verification.totalKg).toBe(totalKg);
-      expect(fs.existsSync(path.join(fixtureDir, file))).toBe(true);
     });
   }
 });
