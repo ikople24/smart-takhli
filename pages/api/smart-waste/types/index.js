@@ -12,17 +12,30 @@ import { requireWasteAdmin } from "../_auth";
 export async function ensureWasteTypesSeeded() {
   const count = await WasteType.countDocuments();
   if (count > 0) return { seeded: 0 };
-  await WasteType.insertMany(
-    WASTE_TYPES_SEED.map((type) => ({
-      key: type.key,
-      label: type.label,
-      group: type.group,
-      order: type.order,
-      isCommon: Boolean(type.isCommon),
-      isHighlighted: Boolean(type.isHighlighted),
-      active: true,
-    }))
-  );
+  try {
+    await WasteType.insertMany(
+      WASTE_TYPES_SEED.map((type) => ({
+        key: type.key,
+        label: type.label,
+        group: type.group,
+        order: type.order,
+        isCommon: Boolean(type.isCommon),
+        isHighlighted: Boolean(type.isHighlighted),
+        active: true,
+      })),
+      // ordered: false — สอง request แรกที่เข้ามาพร้อมกันจะเห็น count = 0 ทั้งคู่
+      // แล้ว insert ชนกัน · unique index บน key กันข้อมูลซ้ำอยู่แล้ว ที่ต้องกันเพิ่ม
+      // คือไม่ให้คนที่แพ้ race เจอ 500 ทั้งที่ระบบทำงานถูกต้อง
+      { ordered: false }
+    );
+  } catch (error) {
+    const writeErrors = error?.writeErrors || [];
+    const allDuplicate =
+      error?.code === 11000 ||
+      (writeErrors.length > 0 &&
+        writeErrors.every((item) => (item.err?.code ?? item.code) === 11000));
+    if (!allDuplicate) throw error;
+  }
   return { seeded: WASTE_TYPES_SEED.length };
 }
 
@@ -39,15 +52,29 @@ export default async function handler(req, res) {
   const auth = await requireWasteAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
 
-  await dbConnect();
-
-  if (req.method === "GET") {
+  try {
+    await dbConnect();
+    // seed ก่อนแยก method — ถ้าเรียกเฉพาะใน GET แล้วมี POST เข้ามาก่อนเป็นครั้งแรก
+    // collection จะไม่ว่างอีกต่อไป แล้ว 24 ประเภทตั้งต้นจะไม่ถูก seed เลยตลอดกาล
     await ensureWasteTypesSeeded();
+
+    return await routeRequest(req, res, auth);
+  } catch (error) {
+    console.error("[smart-waste/types]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function routeRequest(req, res, auth) {
+  if (req.method === "GET") {
     const includeInactive = req.query.includeInactive === "1";
     const filter = includeInactive ? {} : { active: true };
-    const types = await WasteType.find(filter).sort({ order: 1 }).lean();
+    // _id เป็นตัวตัดสินลำดับสำรอง — order ซ้ำกันได้ ถ้าไม่มี tiebreaker ลำดับคอลัมน์
+    // ในไฟล์ export จะสลับไปมาระหว่างการเรียกแต่ละครั้ง
+    const types = await WasteType.find(filter).sort({ order: 1, _id: 1 }).lean();
 
     // นับจำนวนวันที่อ้างถึงแต่ละประเภท — UI ใช้ตัดสินว่าลบได้หรือไม่
+    // ($unwind ทั้ง collection ที่สเกลนี้ (~370 เอกสาร/ปี × ~10 entries) เป็นหลักมิลลิวินาที)
     const usage = await WasteDaily.aggregate([
       { $unwind: "$entries" },
       { $group: { _id: "$entries.typeKey", days: { $sum: 1 } } },

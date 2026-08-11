@@ -1,7 +1,7 @@
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import { getAuth, clerkClient } from "@clerk/nextjs/server";
-import { pathMatchesPermission } from "@/lib/permissions";
+import { hasPermission } from "@/lib/permissions";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
 const REQUIRED_PAGE = "/admin/smart-waste";
@@ -33,11 +33,12 @@ export async function requireWasteAdmin(req) {
 
   const client = await clerkClient();
   const clerkUser = await client.users.getUser(userId);
-  const role = clerkUser.publicMetadata?.role || "admin";
+  const clerkRole = clerkUser.publicMetadata?.role || "admin";
   const clerkName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim();
 
-  if (role === "superadmin") {
-    return { ok: true, userId, role, isSuperAdmin: true, name: clerkName };
+  // Clerk publicMetadata คือ "แหล่งความจริงเดียว" ของ superadmin (ตาม CLAUDE.md)
+  if (clerkRole === "superadmin") {
+    return { ok: true, userId, role: clerkRole, isSuperAdmin: true, name: clerkName };
   }
 
   await dbConnect();
@@ -47,24 +48,35 @@ export async function requireWasteAdmin(req) {
   if (!mongoUser) {
     return { ok: false, status: 403, message: "User not registered" };
   }
+  // พนักงานที่ถูกปิดใช้งาน/เก็บเข้ากรุแล้วต้องเข้าไม่ได้ แม้บัญชี Clerk ยังอยู่
+  if (mongoUser.isActive === false || mongoUser.isArchived === true) {
+    return { ok: false, status: 403, message: "Account disabled" };
+  }
   if (!mongoUser.appId || mongoUser.appId !== CURRENT_APP_ID) {
     return { ok: false, status: 403, message: "No app access" };
   }
 
-  const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
-  // allowedPages ว่าง = ใช้ DEFAULT_PERMISSIONS ซึ่งจะรวมหน้านี้ไว้แล้ว (ดูแผนที่ 2)
-  const hasPageAccess =
-    allowed.length === 0 ||
-    allowed.some((permission) => pathMatchesPermission(REQUIRED_PAGE, permission));
+  // มาถึงตรงนี้แปลว่า Clerk ไม่ได้บอกว่าเป็น superadmin — ห้าม role ใน Mongo
+  // ยกระดับตัวเองเป็น superadmin ผ่านการเช็คสิทธิ์
+  const effectiveRole =
+    (mongoUser.role || clerkRole) === "superadmin" ? "admin" : mongoUser.role || clerkRole;
 
-  if (!hasPageAccess) {
+  // ใช้ hasPermission จาก lib/permissions.ts เป็นแหล่งความจริงเดียว —
+  // มันจัดการเคส allowedPages ว่าง (fallback ไป DEFAULT_PERMISSIONS[role]) ให้แล้ว
+  //
+  // ⚠️ ห้ามเขียนเงื่อนไข "allowedPages ว่าง = ผ่าน" เองที่นี่:
+  // /admin/smart-waste ยังไม่อยู่ใน DEFAULT_PERMISSIONS (จะเพิ่มในแผนที่ 2) การเขียนเอง
+  // จะทำให้พนักงานใหม่ที่ allowedPages ว่าง เรียก API ที่ "ลบ/แก้ master data" ได้
+  // ทั้งที่หน้าเว็บกันเขาอยู่ — API หลวมกว่า UI คือช่องโหว่
+  const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
+  if (!hasPermission(effectiveRole, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "No page access" };
   }
 
   return {
     ok: true,
     userId,
-    role: mongoUser.role || role,
+    role: effectiveRole,
     isSuperAdmin: false,
     name: mongoUser.name || clerkName,
   };

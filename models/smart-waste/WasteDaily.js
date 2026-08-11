@@ -8,6 +8,11 @@ for (const key of WASTE_GROUP_KEYS) {
   groupTotalsFields[key] = { type: Number, default: 0 };
 }
 
+// ต้องห่อเป็น Schema ที่ปิด _id — ถ้าใส่ plain object ให้ `type:` ตรง ๆ mongoose
+// จะมองว่าเป็น subdocument แล้วแถม _id ให้ทุกเอกสาร กลายเป็นคีย์ที่ 9 ปลอม ๆ
+// ใน groupTotals ซึ่งจะไปโผล่ตอน Object.entries() ในรายงาน
+const GroupTotalsSchema = new mongoose.Schema(groupTotalsFields, { _id: false });
+
 const WasteEntrySchema = new mongoose.Schema(
   {
     typeKey: { type: String, required: true },
@@ -32,7 +37,7 @@ const WasteDailySchema = new mongoose.Schema(
 
     // denormalized จาก entries ด้วย computeTotals() ตอนบันทึก
     // เพื่อให้ dashboard/export ไม่ต้อง aggregate ใหม่ทุกครั้ง
-    groupTotals: { type: groupTotalsFields, default: () => ({}) },
+    groupTotals: { type: GroupTotalsSchema, default: () => ({}) },
     totalKg: { type: Number, default: 0 },
 
     note: { type: String, default: "" },

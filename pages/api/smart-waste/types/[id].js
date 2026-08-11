@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import WasteType from "@/models/smart-waste/WasteType";
 import WasteDaily from "@/models/smart-waste/WasteDaily";
@@ -7,8 +8,22 @@ export default async function handler(req, res) {
   const auth = await requireWasteAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
 
-  await dbConnect();
   const { id } = req.query;
+  // findById โยน CastError ถ้า id ไม่ใช่ ObjectId → จะกลายเป็น 500 แทนที่จะเป็น 404
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ message: "ไม่พบประเภทขยะนี้" });
+  }
+
+  try {
+    await dbConnect();
+    return await routeRequest(req, res, auth, id);
+  } catch (error) {
+    console.error("[smart-waste/types/[id]]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function routeRequest(req, res, auth, id) {
   const type = await WasteType.findById(id);
   if (!type) return res.status(404).json({ message: "ไม่พบประเภทขยะนี้" });
 
