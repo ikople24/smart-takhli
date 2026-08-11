@@ -2872,3 +2872,506 @@ git commit -m "feat(smart-waste): เพิ่ม API ดาวน์โหล�
 - [ ] ไฟล์ที่ได้จาก `GET /api/smart-waste/export?fiscalYear=2568` เปิดใน Excel/Sheets ได้ และยอดตรงกับต้นฉบับ
 
 จากนั้นเขียนแผนที่ 2 (frontend) โดยอิงรูปร่าง response จริงของ `summary` / `daily` / `types`
+
+---
+
+## Task 15: แก้ผลจาก final review
+
+Final review ของทั้งสาขาเจอปัญหาที่รอบก่อน ๆ ไม่ได้จับ ทาสก์นี้แก้ให้ครบก่อนถือว่าแผนที่ 1 จบ
+
+**Files:**
+- Create: `lib/smart-waste/seedTypes.js`
+- Modify: `lib/smart-waste/importWorkbook.js`, `lib/smart-waste/__tests__/importWorkbook.test.js`
+- Modify: `pages/api/smart-waste/import.js`, `pages/api/smart-waste/types/index.js`
+- Modify: `pages/api/smart-waste/daily/index.js`, `pages/api/smart-waste/daily/[date].js`
+- Modify: `pages/api/smart-waste/summary.js`
+- Modify: `CLAUDE.md`
+
+---
+
+### 15A (Critical) — คอลัมน์ที่มีข้อมูลแต่หัวคอลัมน์ว่าง ถูกข้ามเงียบ ๆ
+
+`mapHeaderRow` ข้ามทุกคอลัมน์ที่หัวว่าง โดยไม่ดูว่าข้างล่างมีตัวเลขอยู่ไหม และ
+`verification` ก็วนตรวจเฉพาะคอลัมน์ที่ map ได้ **ยอดจึงหายได้ทั้งปีโดยที่ระบบขึ้นเขียว**
+ซึ่งขัดกับสเปกข้อ 9 ที่เขียนว่า "header ที่ map ไม่ได้ = หยุดทันที ไม่ข้ามเงียบ"
+
+- [ ] **Step 1: เขียนเทสต์ที่ต้องพัง** — เพิ่ม 3 เคสนี้ต่อท้าย `describe('importWorkbook — workbook สังเคราะห์')` ใน `lib/smart-waste/__tests__/importWorkbook.test.js`
+
+```js
+  it('คอลัมน์หัวว่างแต่มีตัวเลขอยู่ → throw ไม่ข้ามเงียบ', () => {
+    const workbook = makeWorkbook({
+      headers: ['ปุ๋ย', ''],
+      rows: [[1, 10, 500, 510]],
+      totalRow: [10, 500],
+    });
+    expect(() => importWorkbook(workbook)).toThrow(/หัวคอลัมน์ว่าง/);
+  });
+
+  it('คอลัมน์หัวว่างที่ไม่มีข้อมูลเลย ข้ามได้ตามปกติ (ไฟล์จริงมีคอลัมน์ท้ายแบบนี้)', () => {
+    const workbook = makeWorkbook({
+      headers: ['ปุ๋ย', ''],
+      rows: [[1, 10, '', 10]],
+      totalRow: [10, ''],
+    });
+    expect(importWorkbook(workbook).verification.ok).toBe(true);
+  });
+
+  it('ยอดรวมของเดือนไม่ตรงเซลล์ Total ในแถว "รวม" → verification.ok = false', () => {
+    const workbook = makeWorkbook({
+      headers: ['ปุ๋ย'],
+      rows: [[1, 10, 10]],
+      totalRow: [10],
+    });
+    // แก้เฉพาะเซลล์ Total ของแถว "รวม" ให้เพี้ยน — รายคอลัมน์ยังตรงอยู่
+    workbook.Sheets['ต.ค.68'].C3 = { t: 'n', v: 999 };
+    expect(importWorkbook(workbook).verification.ok).toBe(false);
+    expect(importWorkbook(workbook).verification.months[0].totalMismatch).toEqual({
+      expected: 999,
+      actual: 10,
+    });
+  });
+```
+
+- [ ] **Step 2: รันให้เห็นว่าพัง** — `npx vitest run lib/smart-waste/__tests__/importWorkbook.test.js` → 3 เทสต์ใหม่ FAIL
+
+- [ ] **Step 3: แก้ `mapHeaderRow`** ใน `lib/smart-waste/importWorkbook.js` — แทนที่ฟังก์ชันเดิมทั้งตัว
+
+```js
+// รับ rows ทั้งชีต ไม่ใช่แค่แถวหัว เพราะต้องดูด้วยว่าคอลัมน์ที่หัวว่าง "ว่างจริง" ไหม
+function mapHeaderRow(rows, sheetName) {
+  const headerRow = rows[0] || [];
+  const columns = [];
+  let totalColumnIndex = -1;
+
+  for (let index = 1; index < headerRow.length; index += 1) {
+    const raw = String(headerRow[index] ?? '').trim();
+
+    if (raw === 'Total') {
+      totalColumnIndex = index;
+      continue;
+    }
+
+    if (!raw) {
+      // ไฟล์จริงมีคอลัมน์ว่างต่อท้าย Total — ข้ามได้ แต่ต้องว่างจริงเท่านั้น
+      // ถ้ามีตัวเลขอยู่แปลว่าหัวคอลัมน์หาย การข้ามไปเงียบ ๆ = ยอดหายทั้งปี
+      // โดย verification ยังขึ้นเขียว เพราะมันตรวจเฉพาะคอลัมน์ที่ map ได้
+      const hasData = rows
+        .slice(1)
+        .some((row) => Number(row?.[index]) > 0);
+      if (hasData) {
+        throw new Error(
+          `importWorkbook: ชีต "${sheetName}" คอลัมน์ที่ ${index + 1} มีตัวเลขอยู่แต่หัวคอลัมน์ว่าง — ` +
+            'เติมชื่อประเภทในไฟล์ต้นฉบับก่อนนำเข้า'
+        );
+      }
+      continue;
+    }
+
+    const typeKey = HEADER_TO_TYPE_KEY.get(raw);
+    if (!typeKey) {
+      throw new Error(
+        `importWorkbook: ชีต "${sheetName}" มีหัวคอลัมน์ที่ไม่รู้จัก "${raw}" — ` +
+          'เพิ่มประเภทนี้ใน wasteTypesSeed.js หรือ LEGACY_HEADER_ALIASES ก่อนนำเข้า'
+      );
+    }
+    columns.push({ index, typeKey, group: TYPE_BY_KEY.get(typeKey).group });
+  }
+
+  return { columns, totalColumnIndex };
+}
+```
+
+- [ ] **Step 4: แก้จุดเรียกและการตรวจยอด** ใน `importWorkbook()` — เปลี่ยนบรรทัดเรียก
+
+```js
+    const { columns, totalColumnIndex } = mapHeaderRow(rows, sheetName);
+```
+
+แล้วแทนที่บล็อกตรวจยอด (ตั้งแต่ `// ตรวจยอด:` จนจบ `monthChecks.push({...})`) ด้วย
+
+```js
+    // ตรวจยอด: เทียบรายคอลัมน์กับแถว "รวม" ในชีตต้นฉบับ
+    const totalRow = rows.find((row) => String(row[0]).trim() === TOTAL_ROW_LABEL);
+    const diffs = [];
+    for (const column of columns) {
+      const expected = round2(Number(totalRow?.[column.index]) || 0);
+      const actual = round2(readTotals.get(column.typeKey) || 0);
+      if (expected !== actual) {
+        diffs.push({ typeKey: column.typeKey, expected, actual });
+      }
+    }
+
+    // เทียบยอดรวมทั้งเดือนกับเซลล์ Total ของแถว "รวม" อีกชั้น —
+    // ด่านนี้จับ "คอลัมน์หายไปหนึ่งคอลัมน์" ได้ทุกกรณี ไม่ว่าจะหายด้วยสาเหตุอะไร
+    let totalMismatch = null;
+    if (totalRow && totalColumnIndex >= 0) {
+      const expectedTotal = round2(Number(totalRow[totalColumnIndex]) || 0);
+      const actualTotal = round2(
+        [...readTotals.values()].reduce((sum, value) => sum + value, 0)
+      );
+      if (expectedTotal !== actualTotal) {
+        totalMismatch = { expected: expectedTotal, actual: actualTotal };
+      }
+    }
+
+    monthChecks.push({
+      sheetName,
+      hasTotalRow: Boolean(totalRow),
+      ok: Boolean(totalRow) && diffs.length === 0 && !totalMismatch,
+      diffs,
+      totalMismatch,
+    });
+```
+
+- [ ] **Step 5: รันเทสต์** — `SMART_WASTE_FIXTURE_DIR="$HOME/Downloads" npx vitest run lib/smart-waste/__tests__/importWorkbook.test.js`
+Expected: PASS ทุกเคส **รวมเทสต์ไฟล์จริง 2 ไฟล์ที่ต้องยัง `ok: true` และยอด 245509 / 42196 เท่าเดิม**
+(ถ้าไฟล์จริงกลายเป็น fail แปลว่าด่าน Total ใหม่จับอะไรได้จริง — รายงานมา อย่าปิดด่าน)
+
+---
+
+### 15B (Important) — ปิดประเภทขยะแล้ววันเก่าที่มีประเภทนั้นแก้ไม่ได้
+
+`daily/[date].js` สร้าง `typeByKey` จาก `{ active: true }` เท่านั้น พอปิดประเภทหนึ่ง
+วันเก่าทุกวันที่มีประเภทนั้นจะบันทึกไม่ผ่าน (400) หรือถ้า UI ตัดทิ้งเองน้ำหนักก้อนนั้นหายจากรายงาน
+— ขัดกับสเปกข้อ 11 ที่ระบุว่าประเภทที่ปิดแล้วต้องยังอยู่ในข้อมูลย้อนหลัง
+
+- [ ] **Step 6: แก้ `pages/api/smart-waste/daily/[date].js`** — แทนที่บล็อกตั้งแต่ `// ต้องเป็นประเภทที่เปิดใช้งานอยู่เท่านั้น` ถึงบรรทัด `const before = await WasteDaily.findOne({ recordDate: date }).lean();` ด้วย
+
+```js
+    const before = await WasteDaily.findOne({ recordDate: date }).lean();
+
+    // ประเภทที่ปิดใช้งานแล้ว "กรอกเพิ่มใหม่" ไม่ได้ แต่วันที่เคยมีมันอยู่ต้องยังแก้ได้
+    // ไม่งั้นพอปิดประเภทหนึ่ง วันเก่าทุกวันที่มีประเภทนั้นจะบันทึกไม่ผ่านเลย
+    const existingKeys = new Set((before?.entries || []).map((entry) => entry.typeKey));
+    const allTypes = await WasteType.find().lean();
+    const typeByKey = new Map(
+      allTypes
+        .filter((type) => type.active !== false || existingKeys.has(type.key))
+        .map((type) => [type.key, type])
+    );
+
+    let entries;
+    try {
+      entries = normalizeEntries(parsed.data.entries, typeByKey);
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    // ไม่เชื่อยอดที่ client ส่งมา — คำนวณใหม่จาก entries เสมอ
+    const { groupTotals, totalKg } = computeTotals(entries);
+```
+
+(ลบบรรทัด `const before = ...` และบล็อก `computeTotals` เดิมที่อยู่ถัดลงไป เพื่อไม่ให้ซ้ำ)
+
+- [ ] **Step 7: ลบเอกสารทิ้งเมื่อไม่มีรายการเหลือ** — ใน `[date].js` ใส่ก่อน `await WasteDaily.updateOne(...)`
+
+```js
+    // ไม่มีรายการเหลือ = ล้างข้อมูลของวันนั้น ไม่ใช่บันทึกวันที่ยอด 0
+    // (ถ้าเก็บไว้ วันนั้นจะถูกนับเป็น "วันที่บันทึกแล้ว" แล้วไปกดค่าเฉลี่ยต่อวันให้ต่ำผิดจริง)
+    if (entries.length === 0) {
+      if (before) await WasteDaily.deleteOne({ recordDate: date });
+      return res.status(200).json({ record: null, deleted: Boolean(before), warnings: [] });
+    }
+```
+
+- [ ] **Step 8: เปิด validator ตอนเขียน** — schema มี `enum` / `min: 0` / `required` แต่ `updateOne`
+และ `bulkWrite` ไม่รัน validator โดยดีฟอลต์ ทำให้ guard ที่ประกาศไว้เป็นแค่การตกแต่ง
+ใน `[date].js` เติม option ให้ `updateOne`:
+
+```js
+      { upsert: true, runValidators: true }
+```
+
+---
+
+### 15C (Important) — นำเข้าไฟล์: ไม่มี audit trail, ไม่เช็คประเภทกับฐานข้อมูล, ไม่บอกว่าจะทับอะไร
+
+- [ ] **Step 9: ย้าย `ensureWasteTypesSeeded` ออกจาก `pages/api/`** — สร้าง `lib/smart-waste/seedTypes.js`
+
+```js
+// seed 24 ประเภทตั้งต้น "เฉพาะตอน collection ยังว่าง"
+// อยู่ใน lib/ ไม่ใช่ pages/api/ เพราะมีผู้เรียกมากกว่าหนึ่งที่ (types/index.js และ import.js)
+// — import ข้าม endpoint จะลาก handler + Clerk + auth helper ติดมาด้วยโดยไม่จำเป็น
+import WasteType from "@/models/smart-waste/WasteType";
+import { WASTE_TYPES_SEED } from "./wasteTypesSeed";
+
+export async function ensureWasteTypesSeeded() {
+  const count = await WasteType.countDocuments();
+  if (count > 0) return { seeded: 0 };
+  try {
+    await WasteType.insertMany(
+      WASTE_TYPES_SEED.map((type) => ({
+        key: type.key,
+        label: type.label,
+        group: type.group,
+        order: type.order,
+        isCommon: Boolean(type.isCommon),
+        isHighlighted: Boolean(type.isHighlighted),
+        active: true,
+      })),
+      // ordered: false — สอง request แรกที่เข้ามาพร้อมกันจะเห็น count = 0 ทั้งคู่
+      // แล้ว insert ชนกัน · unique index บน key กันข้อมูลซ้ำอยู่แล้ว ที่ต้องกันเพิ่ม
+      // คือไม่ให้คนที่แพ้ race เจอ 500 ทั้งที่ระบบทำงานถูกต้อง
+      { ordered: false }
+    );
+  } catch (error) {
+    const writeErrors = error?.writeErrors || [];
+    const allDuplicate =
+      error?.code === 11000 ||
+      (writeErrors.length > 0 &&
+        writeErrors.every((item) => (item.err?.code ?? item.code) === 11000));
+    if (!allDuplicate) throw error;
+  }
+  return { seeded: WASTE_TYPES_SEED.length };
+}
+```
+
+- [ ] **Step 10: แก้ `pages/api/smart-waste/types/index.js`** — ลบฟังก์ชัน `ensureWasteTypesSeeded`
+ทั้งตัวและ import ของ `WASTE_TYPES_SEED` ออก แล้วเพิ่ม
+
+```js
+import { ensureWasteTypesSeeded } from "@/lib/smart-waste/seedTypes";
+```
+
+โค้ดส่วนอื่นของไฟล์ไม่เปลี่ยน (ยังเรียก `ensureWasteTypesSeeded()` ที่เดิม)
+
+- [ ] **Step 11: แทนที่ `pages/api/smart-waste/import.js` ทั้งไฟล์**
+
+```js
+import fs from "node:fs";
+import formidable from "formidable";
+import * as XLSX from "xlsx";
+import dbConnect from "@/lib/dbConnect";
+import WasteDaily from "@/models/smart-waste/WasteDaily";
+import WasteType from "@/models/smart-waste/WasteType";
+import { importWorkbook } from "@/lib/smart-waste/importWorkbook";
+import { ensureWasteTypesSeeded } from "@/lib/smart-waste/seedTypes";
+import { logAuditEvent } from "@/lib/auditLogger";
+import { requireWasteSuperadmin } from "./_auth";
+
+// formidable ต้องอ่าน stream เอง — ปิด bodyParser ของ Next
+// (pattern เดียวกับ pages/api/upload.js)
+export const config = { api: { bodyParser: false } };
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // ไฟล์จริงราว 850KB — 10MB เผื่อไว้มากพอ
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+export default async function handler(req, res) {
+  // ตรวจสิทธิ์ก่อนเสมอ ให้ลำดับเหมือน endpoint อื่นทั้งโมดูล
+  // เขียนทับข้อมูลได้ทีละ ~370 วัน จึงจำกัดเฉพาะ superadmin
+  const auth = await requireWasteSuperadmin(req);
+  if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
+
+  const dryRun = req.query.dryRun === "1";
+  let uploaded = [];
+
+  try {
+    // maxFiles: 1 — part ที่เกินมาจะถูกเขียนลง temp เหมือนกัน ถ้าไม่จำกัดก็ไม่มีใครลบ
+    const form = formidable({
+      maxFileSize: MAX_FILE_SIZE,
+      maxFiles: 1,
+      allowedMimeTypes: [XLSX_MIME],
+    });
+    const [, files] = await form.parse(req);
+    uploaded = Object.values(files).flat().filter(Boolean);
+
+    const file = files.file?.[0];
+    if (!file) return res.status(400).json({ message: "ไม่พบไฟล์ที่อัปโหลด" });
+
+    const workbook = XLSX.read(fs.readFileSync(file.filepath), { type: "buffer" });
+    const { fiscalYear, records, verification } = importWorkbook(workbook);
+
+    // ยอดไม่ตรงต้นฉบับ = ไม่เขียนอะไรเลยทั้ง batch
+    if (!verification.ok) {
+      return res.status(422).json({
+        message: "ยอดที่อ่านได้ไม่ตรงกับแถว 'รวม' ในไฟล์ — ยังไม่บันทึกข้อมูลใด ๆ",
+        fiscalYear,
+        verification,
+      });
+    }
+
+    await dbConnect();
+    // ไฟล์อาจถูกอัปโหลดก่อนที่ใครจะเปิดหน้าจัดการประเภทขยะสักครั้ง
+    await ensureWasteTypesSeeded();
+
+    // ทุก typeKey ในไฟล์ต้องมีอยู่จริงใน master — ไม่งั้นไฟล์ที่ส่งออกจะมีน้ำหนัก
+    // ที่ไม่มีคอลัมน์รองรับ แล้วยอดในชีตจะบวกไม่ตรงกันเองตอนส่งให้หน่วยงานภายนอก
+    const knownKeys = new Set(
+      (await WasteType.find().select("key").lean()).map((type) => type.key)
+    );
+    const missingKeys = [
+      ...new Set(records.flatMap((record) => record.entries.map((e) => e.typeKey))),
+    ].filter((key) => !knownKeys.has(key));
+    if (missingKeys.length > 0) {
+      return res.status(409).json({
+        message: `มีประเภทขยะในไฟล์ที่ไม่มีในระบบ: ${missingKeys.join(", ")} — เพิ่มประเภทก่อนนำเข้า`,
+        fiscalYear,
+        missingKeys,
+      });
+    }
+
+    // วันที่มีข้อมูลอยู่แล้วและยอดจะเปลี่ยน — ให้ superadmin เห็นก่อนว่ากำลังจะทับอะไร
+    const existing = await WasteDaily.find({
+      recordDate: { $in: records.map((record) => record.recordDate) },
+    })
+      .select("recordDate totalKg")
+      .lean();
+    const existingByDate = new Map(existing.map((doc) => [doc.recordDate, doc.totalKg]));
+    const willOverwrite = records
+      .filter(
+        (record) =>
+          existingByDate.has(record.recordDate) &&
+          existingByDate.get(record.recordDate) !== record.totalKg
+      )
+      .map((record) => ({
+        recordDate: record.recordDate,
+        from: existingByDate.get(record.recordDate),
+        to: record.totalKg,
+      }));
+
+    if (dryRun) {
+      return res.status(200).json({
+        dryRun: true,
+        fiscalYear,
+        verification,
+        existingDays: existing.length,
+        willOverwrite,
+      });
+    }
+
+    const result = await WasteDaily.bulkWrite(
+      records.map((record) => ({
+        updateOne: {
+          filter: { recordDate: record.recordDate },
+          update: {
+            $set: {
+              fiscalYear: record.fiscalYear,
+              entries: record.entries,
+              groupTotals: record.groupTotals,
+              totalKg: record.totalKg,
+              updatedByClerkId: auth.userId,
+              updatedByName: auth.name,
+            },
+            $setOnInsert: {
+              recordDate: record.recordDate,
+              createdByClerkId: auth.userId,
+              createdByName: auth.name,
+            },
+          },
+          upsert: true,
+        },
+      })),
+      { ordered: false, runValidators: true }
+    );
+
+    // การนำเข้าคือการเขียนทับครั้งใหญ่ที่สุดในระบบ — ต้องมีร่องรอยว่าใครทำเมื่อไร ทับอะไรไป
+    await logAuditEvent({
+      actorClerkId: auth.userId,
+      actorName: auth.name,
+      action: "waste_daily_updated",
+      resourceType: "system",
+      resourceId: String(fiscalYear),
+      before: { overwrittenDays: willOverwrite },
+      after: { totalKg: verification.totalKg, recordCount: records.length },
+      description:
+        `นำเข้าไฟล์ Excel ปีงบ ${fiscalYear} — ${records.length} วัน ` +
+        `รวม ${verification.totalKg} กก. (ทับข้อมูลเดิม ${willOverwrite.length} วัน)`,
+      meta: {
+        module: "smart-waste",
+        fiscalYear,
+        inserted: result.upsertedCount,
+        updated: result.modifiedCount,
+      },
+    });
+
+    return res.status(200).json({
+      fiscalYear,
+      verification,
+      inserted: result.upsertedCount,
+      updated: result.modifiedCount,
+      overwritten: willOverwrite.length,
+    });
+  } catch (error) {
+    console.error("[smart-waste/import]", error);
+    // แยกให้ชัด: ปัญหาที่ตัวไฟล์/คำขอ = 400 · ปัญหาฝั่งเซิร์ฟเวอร์ = 500
+    // (ของเดิมตอบ 400 ให้ทุกกรณี ทำให้ Mongo ล่มถูกรายงานว่าเป็นความผิดของผู้ใช้)
+    const isClientError =
+      typeof error?.message === "string" &&
+      (error.message.startsWith("importWorkbook:") ||
+        error.message.startsWith("parseSheetName:") ||
+        Boolean(error?.httpCode));
+    if (isClientError) {
+      return res.status(400).json({ message: error.message || "ไฟล์ไม่ถูกต้อง" });
+    }
+    return res.status(500).json({ message: "นำเข้าไฟล์ไม่สำเร็จที่ฝั่งเซิร์ฟเวอร์" });
+  } finally {
+    // formidable เขียนไฟล์ลง temp — ลบทุกไฟล์ที่รับมา ไม่ใช่แค่ตัวแรก
+    await Promise.all(
+      uploaded.map((item) => fs.promises.unlink(item.filepath).catch(() => {}))
+    );
+  }
+}
+```
+
+---
+
+### 15D (Minor) — จุดเล็กที่แก้ทีเดียวจบ
+
+- [ ] **Step 12: `daily/index.js` — จำกัดช่วงวันที่** ใส่ต่อจากการเช็ค `from > to`
+
+```js
+  // กันคิวรีทั้ง collection ด้วย from=0001-01-01&to=9999-12-31
+  const spanDays = Math.round(
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000
+  );
+  if (spanDays > 400) {
+    return res.status(400).json({ message: "ขอข้อมูลได้ครั้งละไม่เกิน 400 วัน" });
+  }
+```
+
+- [ ] **Step 13: `summary.js` — กันกลุ่มที่ไม่รู้จัก** แทนที่บรรทัดที่บวก `month.groupTotals[entry.group]`
+ด้วยบล็อกนี้ (จุดเดียวในโมดูลที่กลุ่มแปลกปลอมทำให้ได้ `NaN` แทนที่จะ throw)
+
+```js
+      if (!Object.hasOwn(month.groupTotals, entry.group)) {
+        throw new Error(`summary: ไม่รู้จักกลุ่มขยะ "${entry.group}" ในวันที่ ${record.recordDate}`);
+      }
+      month.groupTotals[entry.group] = round2(month.groupTotals[entry.group] + entry.kg);
+```
+
+- [ ] **Step 14: `CLAUDE.md` — แก้ข้อความที่ตอนนี้ผิดแล้ว** บรรทัดที่ขึ้นต้นด้วย
+`- **No test runner is configured**` เปลี่ยนเป็น
+
+```markdown
+- `npm test` — `vitest run` (config ที่ `vitest.config.mjs`) · เทสต์อยู่ที่ `lib/**/__tests__/*.test.js` ครอบเฉพาะ logic ล้วน ยังไม่มีเทสต์ฝั่ง React/API / รันเฉพาะบางไฟล์: `npx vitest run <path>`
+```
+
+---
+
+### 15E — ตรวจรับ
+
+- [ ] **Step 15: รันเทสต์ทั้งหมดกับไฟล์จริง**
+
+Run: `SMART_WASTE_FIXTURE_DIR="$HOME/Downloads" npm test`
+Expected: PASS ทุกไฟล์ · เทสต์ไฟล์จริงยังได้ยอด 245509 / 42196 เท่าเดิม
+
+- [ ] **Step 16: build**
+
+Run: `npm run build`
+Expected: `✓ Compiled successfully` และยังเห็น endpoint ครบ 8 ตัว
+
+- [ ] **Step 17: Commit**
+
+```bash
+git add lib/smart-waste/seedTypes.js lib/smart-waste/importWorkbook.js \
+  lib/smart-waste/__tests__/importWorkbook.test.js \
+  pages/api/smart-waste/import.js pages/api/smart-waste/types/index.js \
+  pages/api/smart-waste/daily/index.js "pages/api/smart-waste/daily/[date].js" \
+  pages/api/smart-waste/summary.js CLAUDE.md
+git commit -m "fix(smart-waste): อุดจุดที่ final review เจอ — คอลัมน์หัวว่าง, ประเภทที่ปิดใช้งาน, audit ของการนำเข้า"
+```
