@@ -14,6 +14,8 @@ import crypto from 'crypto';
 import dbConnect from '@/lib/dbConnect';
 import SubmittedReport from '@/models/SubmittedReport';
 import Assignment from '@/models/Assignment';
+import { toBlurredMediaUrl } from '@/lib/complaintPrivacy';
+import { getAdminGroupId } from '@/lib/lineSettings';
 import {
   lineReply,
   formatStatusMessage,
@@ -131,19 +133,9 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
-  // ผู้ใช้เพิ่มเพื่อน — ทักทาย + สอนวิธีติดตามเรื่อง
+  // ผู้ใช้เพิ่มเพื่อน — ถ้าเคยผูกเรื่องไว้ ตอบเรื่องล่าสุดทันที ไม่งั้นทักทายสอนวิธีใช้
   if (event.type === 'follow') {
-    await lineReply(event.replyToken, [
-      {
-        type: 'text',
-        text:
-          `สวัสดีครับ 🏛️ เทศบาลเมืองตาคลี\n\n` +
-          `ต้องการติดตามเรื่องร้องเรียน ส่งเลขที่เรื่องมาได้เลย เช่น\n` +
-          `TKC-690001\n\n` +
-          `ระบบจะแจ้งความคืบหน้าให้อัตโนมัติทาง LINE นี้\n` +
-          `พิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
-      },
-    ]);
+    await handleFollow(event.replyToken, event.source?.userId);
     return;
   }
 
@@ -165,17 +157,45 @@ async function handleEvent(event: LineEvent): Promise<void> {
 
   if (statusMatch) {
     const complaintId = statusMatch[1].trim().toUpperCase();
-    await handleStatusQuery(event.replyToken, userId, complaintId);
+    // กลุ่มเจ้าหน้าที่ที่ลงทะเบียน (groupId ตรงกับที่ตั้งค่า) เห็นข้อมูลเต็ม
+    // ห้ามผูก lineUserId จากบริบทกลุ่ม — ไม่งั้นเจ้าหน้าที่เช็คเรื่องแล้วแย่งการแจ้งเตือนผู้ร้อง
+    const staffView = isGroupChat && groupOrRoomId === (await getAdminGroupId());
+    await handleStatusQuery(
+      event.replyToken,
+      isGroupChat ? undefined : userId,
+      complaintId,
+      staffView
+    );
     return;
   }
 
   // ในกลุ่ม: ตอบเฉพาะคำสั่งข้างบน — ห้ามตอบ default ไม่งั้นบอทสแปมทุกข้อความที่คุยกัน
   if (isGroupChat) return;
 
+  // คำสั่ง "เรื่องของฉัน" — รายการเรื่องที่ LINE นี้ผูกไว้
+  if (/^(?:เรื่องของฉัน|เรื่องฉัน|my)$/i.test(text)) {
+    await handleMyCases(event.replyToken, userId);
+    return;
+  }
+
+  // ยืนยันเจ้าของเรื่องด้วยเบอร์ 4 ตัวท้าย: "TKC-690001 6789" — ย้ายการผูกแจ้งเตือน
+  const rebindMatch = text.match(/^(?:สถานะ\s+)?tkc[-\s]?(\d{4,})\s+(\d{4})$/i);
+  if (rebindMatch) {
+    await handleRebind(event.replyToken, userId, `TKC-${rebindMatch[1]}`, rebindMatch[2]);
+    return;
+  }
+
   // แชท 1:1 — วางเลขเรื่องเปล่า ๆ ก็ได้ ไม่ต้องมีคำว่า "สถานะ" (รองรับ tkc690001 / TKC 690001)
   const bareMatch = text.match(/^tkc[-\s]?(\d{4,})$/i);
   if (bareMatch) {
     await handleStatusQuery(event.replyToken, userId, `TKC-${bareMatch[1]}`);
+    return;
+  }
+
+  // เลขย่อ: ปี 2 หลัก + เลข 3 ตัวท้าย (69001 / 69-001 / 69 001)
+  const shortMatch = text.match(/^(\d{2})[-\s]?(\d{3})$/);
+  if (shortMatch) {
+    await handleShortQuery(event.replyToken, userId, shortMatch[1], shortMatch[2]);
     return;
   }
 
@@ -189,77 +209,375 @@ async function handleEvent(event: LineEvent): Promise<void> {
   await lineReply(event.replyToken, [
     {
       type: 'text',
-      text: `ส่งเลขที่เรื่องมาได้เลยครับ เช่น TKC-690001\nระบบจะแสดงสถานะและแจ้งความคืบหน้าให้อัตโนมัติ\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+      text: `ส่งเลขที่เรื่องมาได้เลยครับ เช่น TKC-690001\nหรือเลขย่อ 69001 (ปี + 3 ตัวท้าย)\nระบบจะแสดงสถานะและแจ้งความคืบหน้าให้อัตโนมัติ\n\nหรือพิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
     },
   ]);
 }
 
-async function handleStatusQuery(
+const followGreeting = {
+  type: 'text' as const,
+  text:
+    `สวัสดีครับ 🏛️ เทศบาลเมืองตาคลี\n\n` +
+    `ต้องการติดตามเรื่องร้องเรียน ส่งเลขที่เรื่องมาได้เลย เช่น\n` +
+    `TKC-690001 หรือเลขย่อ 69001 (ปี + 3 ตัวท้าย)\n\n` +
+    `ระบบจะแจ้งความคืบหน้าให้อัตโนมัติทาง LINE นี้\n` +
+    `พิมพ์ "ช่วย" เพื่อดูคำสั่งทั้งหมด`,
+};
+
+/**
+ * เพิ่มเพื่อน: ถ้า LINE นี้เคยผูกเรื่องไว้ (เช่น เคย add แล้ว block แล้วกลับมา)
+ * ตอบเรื่องล่าสุดของเขาทันที — ไม่เคยผูกค่อยทักทายแบบปกติ
+ */
+async function handleFollow(
   replyToken: string,
-  lineUserId: string | undefined,
-  complaintId: string
+  userId: string | undefined
 ): Promise<void> {
   try {
+    if (userId) {
+      await dbConnect();
+      const latest = await SubmittedReport.findOne({ lineUserId: userId })
+        .sort({ updatedAt: -1 })
+        .select('complaintId')
+        .lean() as { complaintId?: string } | null;
+
+      if (latest?.complaintId) {
+        const result = await buildStatusMessages(latest.complaintId);
+        if (result) {
+          await lineReply(replyToken, [
+            {
+              type: 'text' as const,
+              text:
+                `ยินดีต้อนรับกลับครับ 🏛️ เทศบาลเมืองตาคลี\n\n` +
+                `เรื่องล่าสุดที่คุณติดตามไว้ 👇\n` +
+                `(พิมพ์ "เรื่องของฉัน" เพื่อดูเรื่องทั้งหมด)`,
+            },
+            ...result.messages,
+          ].slice(0, 5));
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[LINE] Follow lookup error:', err);
+  }
+  await lineReply(replyToken, [followGreeting]);
+}
+
+/**
+ * คำสั่ง "เรื่องของฉัน" — รายการเรื่องที่ผูกกับ LINE userId นี้ (ของตัวเองเท่านั้น)
+ */
+async function handleMyCases(
+  replyToken: string,
+  userId: string | undefined
+): Promise<void> {
+  try {
+    if (!userId) {
+      await lineReply(replyToken, [followGreeting]);
+      return;
+    }
+    await dbConnect();
+
+    const rows = await SubmittedReport.find({ lineUserId: userId })
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .select('complaintId status category createdAt')
+      .lean() as unknown as Array<{
+        complaintId: string;
+        status?: string;
+        category?: string;
+        createdAt?: Date;
+      }>;
+
+    if (!rows.length) {
+      await lineReply(replyToken, [
+        {
+          type: 'text',
+          text:
+            `ยังไม่มีเรื่องที่ผูกกับ LINE นี้ครับ\n\n` +
+            `ส่งเลขที่เรื่องมาก่อน 1 ครั้ง เช่น TKC-690001\n` +
+            `แล้วเรื่องนั้นจะผูกกับ LINE นี้อัตโนมัติ`,
+        },
+      ]);
+      return;
+    }
+
+    if (rows.length === 1) {
+      await handleStatusQuery(replyToken, undefined, rows[0].complaintId);
+      return;
+    }
+
+    const lines = rows.map((r) => {
+      const dateStr = r.createdAt
+        ? new Date(r.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+        : '-';
+      const done = r.status === 'ดำเนินการเสร็จสิ้น' ? '✅' : '🔄';
+      return `${done} ${r.complaintId}\n   ${[r.category, dateStr].filter(Boolean).join(' · ')}`;
+    });
+    await lineReply(replyToken, [
+      {
+        type: 'text',
+        text:
+          `📁 เรื่องที่คุณติดตามไว้ (${rows.length} เรื่องล่าสุด)\n\n` +
+          `${lines.join('\n')}\n\n` +
+          `ส่งเลขเรื่องที่ต้องการเพื่อดูรายละเอียด`,
+      },
+    ]);
+  } catch (err) {
+    console.error('[LINE] My cases error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ย่อชื่อสำหรับการ์ดฝั่งประชาชน (PDPA): "ครรชิต คล้ายแจ่ม" → "ครรชิต ค."
+ * เลขเรื่องเป็นเลขรันเดาไล่ได้ — คนอื่นส่งเลขมาถามต้องไม่เห็นชื่อเต็ม
+ * (เว็บสาธารณะ /status ก็ตัด fullName ออกอยู่แล้ว — นโยบายเดียวกัน)
+ */
+function maskDisplayName(name?: string): string | undefined {
+  if (!name) return name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return parts[0];
+  return `${parts[0]} ${parts[1].charAt(0)}.`;
+}
+
+/**
+ * สร้าง message array การ์ดสถานะจาก complaintId (การ์ด + รูป)
+ * คืน null ถ้าไม่พบเรื่อง
+ * - staffView (เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียน): ชื่อเต็ม + รูปต้นฉบับ
+ * - ฝั่งประชาชน: ชื่อย่อ, เรื่องลับเบลอรูป
+ * - bindUserId: ผูกรับ push เฉพาะเมื่อเรื่องยังไม่มีคนผูก (first-come) —
+ *   ถ้ามีคนผูกแล้ว bindRefused=true เพื่อให้ caller แนะนำวิธียืนยันตัวด้วยเบอร์ 4 ตัวท้าย
+ */
+async function buildStatusMessages(
+  complaintId: string,
+  opts: { bindUserId?: string; staffView?: boolean } = {}
+): Promise<{ messages: ReturnType<typeof buildMessages>; bindRefused: boolean } | null> {
+  const { bindUserId, staffView = false } = opts;
+  await dbConnect();
+
+  const complaint = await SubmittedReport.findOne({ complaintId })
+    .select('complaintId fullName category status updatedAt lineUserId isConfidential images')
+    .lean() as {
+      _id: unknown;
+      complaintId: string;
+      fullName?: string;
+      category?: string;
+      status: string;
+      updatedAt?: Date;
+      lineUserId?: string;
+      isConfidential?: boolean;
+      images?: string[];
+    } | null;
+
+  if (!complaint) return null;
+
+  // ผูก LINE userId เพื่อรับ push — first-come เท่านั้น กันคนอื่นเอาเลขมาแย่งการแจ้งเตือน
+  let bindRefused = false;
+  if (bindUserId && !staffView) {
+    if (!complaint.lineUserId || complaint.lineUserId === bindUserId) {
+      if (complaint.lineUserId !== bindUserId) {
+        SubmittedReport.updateOne(
+          { complaintId },
+          { $set: { lineUserId: bindUserId } }
+        ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
+      }
+    } else {
+      bindRefused = true;
+    }
+  }
+
+  // เรื่องที่ปิดงานแล้ว: ใช้รูปผลงานหลังแก้ไข + แสดงรายละเอียดการแก้ไขจาก Assignment ล่าสุด
+  let solution: string[] | undefined;
+  let note: string | undefined;
+  let solutionImage: string | null = null;
+  if (complaint.status === 'ดำเนินการเสร็จสิ้น') {
+    const assignment = await Assignment.findOne({ complaintId: complaint._id })
+      .sort({ assignedAt: -1 })
+      .select('solution solutionImages note')
+      .lean() as { solution?: string[]; solutionImages?: string[]; note?: string } | null;
+    if (assignment) {
+      solution = assignment.solution;
+      note = assignment.note;
+      solutionImage =
+        assignment.solutionImages?.find((u) => u?.startsWith('https://')) ?? null;
+    }
+  }
+
+  // ชื่อ: เรื่องลับไม่เปิดเผย / ประชาชนเห็นชื่อย่อ / เจ้าหน้าที่ (กลุ่มลงทะเบียน) เห็นเต็ม
+  const displayName = complaint.isConfidential
+    ? 'ไม่เปิดเผย'
+    : staffView
+      ? complaint.fullName
+      : maskDisplayName(complaint.fullName);
+
+  const safeComplaint = {
+    ...complaint,
+    fullName: displayName,
+    solution,
+    note,
+  };
+
+  // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
+  // เรื่องลับฝั่งประชาชน: เบลอรูปแบบเดียวกับเว็บสาธารณะ
+  let firstImage =
+    solutionImage ?? complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
+  if (firstImage && complaint.isConfidential && !staffView) {
+    firstImage = toBlurredMediaUrl(firstImage);
+  }
+  return { messages: buildMessages(formatStatusMessage(safeComplaint), firstImage), bindRefused };
+}
+
+async function handleStatusQuery(
+  replyToken: string,
+  bindUserId: string | undefined,
+  complaintId: string,
+  staffView = false
+): Promise<void> {
+  try {
+    const result = await buildStatusMessages(complaintId, { bindUserId, staffView });
+    if (!result) {
+      await lineReply(replyToken, [notFoundMessage(complaintId)]);
+      return;
+    }
+    const messages = [...result.messages];
+    if (result.bindRefused) {
+      messages.push({
+        type: 'text',
+        text:
+          `ℹ️ เรื่องนี้มีผู้รับแจ้งเตือนทาง LINE อยู่แล้ว\n` +
+          `หากคุณเป็นเจ้าของเรื่องและต้องการย้ายการแจ้งเตือนมาที่ LINE นี้\n` +
+          `ส่ง: ${complaintId} ตามด้วยเบอร์โทร 4 ตัวท้าย\n` +
+          `เช่น ${complaintId} 6789`,
+      });
+    }
+    await lineReply(replyToken, messages.slice(0, 5));
+  } catch (err) {
+    console.error('[LINE] Status query error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ย้ายการผูกแจ้งเตือนด้วยการยืนยันเบอร์โทร 4 ตัวท้าย: "TKC-690001 6789"
+ * ตรงกับเบอร์ในเรื่อง → ผูก LINE นี้แทนที่เดิม (รองรับเปลี่ยนเครื่อง/ญาติติดตาม)
+ */
+async function handleRebind(
+  replyToken: string,
+  userId: string | undefined,
+  complaintId: string,
+  last4: string
+): Promise<void> {
+  try {
+    if (!userId) return;
     await dbConnect();
 
     const complaint = await SubmittedReport.findOne({ complaintId })
-      .select('complaintId fullName category status updatedAt lineUserId isConfidential images')
-      .lean() as {
-        _id: unknown;
-        complaintId: string;
-        fullName?: string;
-        category?: string;
-        status: string;
-        updatedAt?: Date;
-        lineUserId?: string;
-        isConfidential?: boolean;
-        images?: string[];
-      } | null;
+      .select('complaintId phone')
+      .lean() as { complaintId: string; phone?: string } | null;
 
     if (!complaint) {
       await lineReply(replyToken, [notFoundMessage(complaintId)]);
       return;
     }
 
-    // บันทึก LINE userId ไว้กับเรื่องร้องเรียน (เพื่อส่ง push notification เมื่อสถานะเปลี่ยน)
-    if (lineUserId && complaint.lineUserId !== lineUserId) {
-      SubmittedReport.updateOne(
-        { complaintId },
-        { $set: { lineUserId } }
-      ).catch((err) => console.error('[LINE] Failed to save lineUserId:', err));
+    const phoneDigits = (complaint.phone || '').replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.slice(-4) !== last4) {
+      await lineReply(replyToken, [
+        {
+          type: 'text',
+          text:
+            `❌ เบอร์โทร 4 ตัวท้ายไม่ตรงกับข้อมูลในเรื่อง ${complaintId}\n\n` +
+            `กรุณาใช้เบอร์เดียวกับที่กรอกตอนแจ้งเรื่อง\n` +
+            `หากไม่แน่ใจ ติดต่อ 056-219-299`,
+        },
+      ]);
+      return;
     }
 
-    // เรื่องที่ปิดงานแล้ว: ใช้รูปผลงานหลังแก้ไข + แสดงรายละเอียดการแก้ไขจาก Assignment ล่าสุด
-    let solution: string[] | undefined;
-    let note: string | undefined;
-    let solutionImage: string | null = null;
-    if (complaint.status === 'ดำเนินการเสร็จสิ้น') {
-      const assignment = await Assignment.findOne({ complaintId: complaint._id })
-        .sort({ assignedAt: -1 })
-        .select('solution solutionImages note')
-        .lean() as { solution?: string[]; solutionImages?: string[]; note?: string } | null;
-      if (assignment) {
-        solution = assignment.solution;
-        note = assignment.note;
-        solutionImage =
-          assignment.solutionImages?.find((u) => u?.startsWith('https://')) ?? null;
-      }
-    }
+    await SubmittedReport.updateOne({ complaintId }, { $set: { lineUserId: userId } });
 
-    // ซ่อนชื่อสำหรับเรื่องลับ (PDPA)
-    const safeComplaint = {
-      ...complaint,
-      fullName: complaint.isConfidential ? 'ไม่เปิดเผย' : complaint.fullName,
-      solution,
-      note,
-    };
-
-    // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
-    const firstImage =
-      solutionImage ?? complaint.images?.find((u) => u?.startsWith('https://')) ?? null;
-    await lineReply(replyToken, buildMessages(formatStatusMessage(safeComplaint), firstImage));
+    const result = await buildStatusMessages(complaintId);
+    await lineReply(replyToken, [
+      {
+        type: 'text' as const,
+        text: `✅ ยืนยันตัวตนสำเร็จ — ย้ายการแจ้งเตือนเรื่อง ${complaintId} มาที่ LINE นี้แล้ว`,
+      },
+      ...(result?.messages ?? []),
+    ].slice(0, 5));
   } catch (err) {
-    console.error('[LINE] Status query error:', err);
+    console.error('[LINE] Rebind error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ค้นด้วยเลขย่อ: ปี 2 หลัก + เลข 3 ตัวท้าย (เช่น 69001 → TKC-69xxxx ที่ลงท้าย 001)
+ * เจอเรื่องเดียว → ตอบการ์ดสถานะ; เจอหลายเรื่อง → แสดงรายการให้ส่งเลขเต็มกลับมา
+ */
+async function handleShortQuery(
+  replyToken: string,
+  lineUserId: string | undefined,
+  yy: string,
+  last3: string
+): Promise<void> {
+  try {
+    await dbConnect();
+
+    const matches = await SubmittedReport.find({
+      complaintId: new RegExp(`^TKC-${yy}\\d*${last3}$`),
+    })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select('complaintId category community createdAt')
+      .lean() as unknown as Array<{
+        complaintId: string;
+        category?: string;
+        community?: string;
+        createdAt?: Date;
+      }>;
+
+    if (!matches.length) {
+      await lineReply(replyToken, [
+        {
+          type: 'text',
+          text:
+            `❌ ไม่พบเรื่องร้องเรียนปี ${yy} ที่ลงท้ายด้วย ${last3}\n\n` +
+            `กรุณาตรวจสอบเลขและลองใหม่ หรือส่งเลขเต็ม เช่น TKC-${yy}0${last3}`,
+        },
+      ]);
+      return;
+    }
+
+    if (matches.length === 1) {
+      await handleStatusQuery(replyToken, lineUserId, matches[0].complaintId);
+      return;
+    }
+
+    // เจอหลายเรื่อง — แสดงรายการ (สูงสุด 5) ให้ผู้ใช้ส่งเลขเต็มกลับมา
+    const lines = matches.slice(0, 5).map((m, i) => {
+      const dateStr = m.createdAt
+        ? new Date(m.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+        : '-';
+      const extra = [m.category, m.community].filter(Boolean).join(' · ');
+      return `${i + 1}. ${m.complaintId}\n   ${extra ? extra + ' · ' : ''}${dateStr}`;
+    });
+    await lineReply(replyToken, [
+      {
+        type: 'text',
+        text:
+          `พบ ${matches.length} เรื่องที่ลงท้ายด้วย ${last3} ในปี ${yy}\n\n` +
+          `${lines.join('\n')}\n\n` +
+          `กรุณาส่งเลขเต็มของเรื่องที่ต้องการ เช่น ${matches[0].complaintId}`,
+      },
+    ]);
+  } catch (err) {
+    console.error('[LINE] Short query error:', err);
     await lineReply(replyToken, [
       { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
     ]);
