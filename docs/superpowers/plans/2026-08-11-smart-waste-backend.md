@@ -1834,13 +1834,14 @@ export const config = { api: { bodyParser: false } };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // ไฟล์จริงราว 850KB — 10MB เผื่อไว้มากพอ
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-
+  // ตรวจสิทธิ์ก่อนเสมอ ให้ลำดับเหมือน endpoint อื่นทั้งโมดูล
   // เขียนทับข้อมูลได้ทีละ ~370 วัน จึงจำกัดเฉพาะ superadmin
   const auth = await requireWasteSuperadmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
 
   const dryRun = req.query.dryRun === "1";
   let filepath = null;
@@ -2004,25 +2005,30 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "from ต้องไม่เกิน to" });
   }
 
-  await dbConnect();
-  // recordDate เป็น string YYYY-MM-DD จึงเทียบด้วย $gte/$lte ตรง ๆ ได้
-  // (เรียงตามตัวอักษร = เรียงตามเวลา)
-  const records = await WasteDaily.find({ recordDate: { $gte: from, $lte: to } })
-    .sort({ recordDate: 1 })
-    .lean();
+  try {
+    await dbConnect();
+    // recordDate เป็น string YYYY-MM-DD จึงเทียบด้วย $gte/$lte ตรง ๆ ได้
+    // (เรียงตามตัวอักษร = เรียงตามเวลา)
+    const records = await WasteDaily.find({ recordDate: { $gte: from, $lte: to } })
+      .sort({ recordDate: 1 })
+      .lean();
 
-  return res.status(200).json({
-    records: records.map((record) => ({
-      recordDate: record.recordDate,
-      fiscalYear: record.fiscalYear,
-      entries: record.entries,
-      groupTotals: record.groupTotals,
-      totalKg: record.totalKg,
-      note: record.note || "",
-      updatedByName: record.updatedByName || "",
-      updatedAt: record.updatedAt,
-    })),
-  });
+    return res.status(200).json({
+      records: records.map((record) => ({
+        recordDate: record.recordDate,
+        fiscalYear: record.fiscalYear,
+        entries: record.entries,
+        groupTotals: record.groupTotals,
+        totalKg: record.totalKg,
+        note: record.note || "",
+        updatedByName: record.updatedByName || "",
+        updatedAt: record.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("[smart-waste/daily]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
 }
 ```
 
@@ -2063,8 +2069,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: `วันที่ไม่ถูกรูปแบบ "${date}"` });
   }
 
-  await dbConnect();
+  try {
+    await dbConnect();
+    return await routeRequest(req, res, auth, date);
+  } catch (error) {
+    console.error("[smart-waste/daily/[date]]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
 
+async function routeRequest(req, res, auth, date) {
   if (req.method === "GET") {
     const record = await WasteDaily.findOne({ recordDate: date }).lean();
     if (!record) {
@@ -2137,7 +2151,7 @@ export default async function handler(req, res) {
       await logAuditEvent({
         actorClerkId: auth.userId,
         actorName: auth.name,
-        action: "data_exported",
+        action: "waste_daily_updated",
         resourceType: "system",
         resourceId: date,
         before: { totalKg: before.totalKg, entries: before.entries },
@@ -2159,10 +2173,45 @@ export default async function handler(req, res) {
 }
 ```
 
-> **หมายเหตุเรื่อง `action`:** `lib/auditLogger.ts` กำหนด `AuditAction` เป็น union type ปิด
-> ยังไม่มีค่าที่ตรงกับ "แก้ข้อมูลขยะ" — ใช้ `data_exported` ไปก่อนแล้วแยกด้วย `meta.module`
-> การเพิ่มค่าใหม่เข้า union ต้องแตะไฟล์กลางที่โมดูลอื่นใช้ร่วม จึงเก็บไว้ทำตอนที่มี
-> โมดูลที่สองต้องการเช่นกัน (ระบุไว้ใน `docs/modules/smart-waste.md` แผนที่ 2)
+- [ ] **Step 3: ลงทะเบียน audit action ตัวใหม่ — ต้องแก้ครบ 3 ที่**
+
+`action: "waste_daily_updated"` ใน Step 2 จะใช้ไม่ได้จนกว่าจะลงทะเบียน — และถ้าไปยืมค่าเดิม
+อย่าง `data_exported` มาใช้ หน้า `/admin/superadmin/audit-log` จะแสดงการ**แก้ไข**ข้อมูลขยะ
+ทุกครั้งว่า **"ส่งออกข้อมูล"** ซึ่งเป็นการโกหกใน audit trail ของหน่วยงานราชการ
+
+การเพิ่มค่าใหม่ต้องแก้ **3 ไฟล์** ไม่งั้นพังคนละแบบ (ตกข้อ 1 = Mongoose ปฏิเสธตอน save,
+ตกข้อ 2 = TypeScript error, ตกข้อ 3 = หน้า audit log แสดง key ดิบเป็นภาษาอังกฤษ)
+
+**3.1** `models/AuditLog.js` — เพิ่มใน `enum` ของ `action` ต่อจากบล็อก `// Notification`:
+
+```js
+      // Notification
+      'notification_sent',
+      // Smart Waste
+      'waste_daily_updated',
+      // General
+      'data_exported',
+      'login',
+```
+
+**3.2** `lib/auditLogger.ts` — เพิ่มใน union `AuditAction` ต่อจาก `'notification_sent'`:
+
+```ts
+  | 'notification_sent'
+  | 'waste_daily_updated'
+  | 'data_exported'
+```
+
+**3.3** `pages/admin/superadmin/audit-log.tsx` — เพิ่มทั้ง `ACTION_LABELS` และ `ACTION_COLORS`
+ต่อจากบรรทัด `notification_sent`:
+
+```ts
+  waste_daily_updated: 'แก้ไขข้อมูลขยะรีไซเคิล',
+```
+
+```ts
+  waste_daily_updated: 'badge-info',
+```
 
 - [ ] **Step 3: ตรวจว่า build ผ่าน**
 
@@ -2263,13 +2312,23 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "ต้องระบุ fiscalYear เป็นปี พ.ศ." });
   }
 
+  try {
+    return await buildSummary(res, fiscalYear);
+  } catch (error) {
+    console.error("[smart-waste/summary]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function buildSummary(res, fiscalYear) {
   await dbConnect();
   const { start, end } = fiscalYearRange(fiscalYear);
   const [records, types] = await Promise.all([
     WasteDaily.find({ recordDate: { $gte: start, $lte: end } })
       .sort({ recordDate: 1 })
       .lean(),
-    WasteType.find().sort({ order: 1 }).lean(),
+    // _id เป็น tiebreaker เหมือน types/index.js — order ซ้ำกันได้ ลำดับต้องนิ่ง
+    WasteType.find().sort({ order: 1, _id: 1 }).lean(),
   ]);
 
   const months = fiscalMonths(fiscalYear).map((month) => ({
@@ -2735,16 +2794,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "ต้องระบุ fiscalYear เป็นปี พ.ศ." });
   }
 
-  await dbConnect();
-  const { start, end } = fiscalYearRange(fiscalYear);
-  const [records, types] = await Promise.all([
-    WasteDaily.find({ recordDate: { $gte: start, $lte: end } })
-      .sort({ recordDate: 1 })
-      .lean(),
-    // เอาทุกประเภทรวมที่ปิดใช้งานแล้ว — ปีเก่าอาจมีข้อมูลของประเภทที่เลิกใช้ไปแล้ว
-    WasteType.find().sort({ order: 1 }).lean(),
-  ]);
+  try {
+    await dbConnect();
+    const { start, end } = fiscalYearRange(fiscalYear);
+    const [records, types] = await Promise.all([
+      WasteDaily.find({ recordDate: { $gte: start, $lte: end } })
+        .sort({ recordDate: 1 })
+        .lean(),
+      // เอาทุกประเภทรวมที่ปิดใช้งานแล้ว — ปีเก่าอาจมีข้อมูลของประเภทที่เลิกใช้ไปแล้ว
+      // _id เป็น tiebreaker: ถ้า order ซ้ำกันแล้วไม่มีตัวตัดสิน ลำดับคอลัมน์ในไฟล์
+      // ที่ส่งออกจะสลับไปมาระหว่างการดาวน์โหลดแต่ละครั้ง
+      WasteType.find().sort({ order: 1, _id: 1 }).lean(),
+    ]);
 
+    return sendWorkbook(res, fiscalYear, types, records);
+  } catch (error) {
+    console.error("[smart-waste/export]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+function sendWorkbook(res, fiscalYear, types, records) {
   const workbook = buildExportWorkbook({ fiscalYear, types, records });
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 
