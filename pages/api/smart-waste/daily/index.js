@@ -18,23 +18,28 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "from ต้องไม่เกิน to" });
   }
 
-  await dbConnect();
-  // recordDate เป็น string YYYY-MM-DD จึงเทียบด้วย $gte/$lte ตรง ๆ ได้
-  // (เรียงตามตัวอักษร = เรียงตามเวลา)
-  const records = await WasteDaily.find({ recordDate: { $gte: from, $lte: to } })
-    .sort({ recordDate: 1 })
-    .lean();
+  try {
+    await dbConnect();
+    // recordDate เป็น string YYYY-MM-DD จึงเทียบด้วย $gte/$lte ตรง ๆ ได้
+    // (เรียงตามตัวอักษร = เรียงตามเวลา)
+    const records = await WasteDaily.find({ recordDate: { $gte: from, $lte: to } })
+      .sort({ recordDate: 1 })
+      .lean();
 
-  return res.status(200).json({
-    records: records.map((record) => ({
-      recordDate: record.recordDate,
-      fiscalYear: record.fiscalYear,
-      entries: record.entries,
-      groupTotals: record.groupTotals,
-      totalKg: record.totalKg,
-      note: record.note || "",
-      updatedByName: record.updatedByName || "",
-      updatedAt: record.updatedAt,
-    })),
-  });
+    return res.status(200).json({
+      records: records.map((record) => ({
+        recordDate: record.recordDate,
+        fiscalYear: record.fiscalYear,
+        entries: record.entries,
+        groupTotals: record.groupTotals,
+        totalKg: record.totalKg,
+        note: record.note || "",
+        updatedByName: record.updatedByName || "",
+        updatedAt: record.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("[smart-waste/daily]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
 }

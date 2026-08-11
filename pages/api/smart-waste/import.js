@@ -13,13 +13,14 @@ export const config = { api: { bodyParser: false } };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // ไฟล์จริงราว 850KB — 10MB เผื่อไว้มากพอ
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-
+  // ตรวจสิทธิ์ก่อนเสมอ ให้ลำดับเหมือน endpoint อื่นทั้งโมดูล
   // เขียนทับข้อมูลได้ทีละ ~370 วัน จึงจำกัดเฉพาะ superadmin
   const auth = await requireWasteSuperadmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
 
   const dryRun = req.query.dryRun === "1";
   let filepath = null;

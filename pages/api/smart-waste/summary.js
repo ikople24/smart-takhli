@@ -20,13 +20,23 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: "ต้องระบุ fiscalYear เป็นปี พ.ศ." });
   }
 
+  try {
+    return await buildSummary(res, fiscalYear);
+  } catch (error) {
+    console.error("[smart-waste/summary]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function buildSummary(res, fiscalYear) {
   await dbConnect();
   const { start, end } = fiscalYearRange(fiscalYear);
   const [records, types] = await Promise.all([
     WasteDaily.find({ recordDate: { $gte: start, $lte: end } })
       .sort({ recordDate: 1 })
       .lean(),
-    WasteType.find().sort({ order: 1 }).lean(),
+    // _id เป็น tiebreaker เหมือน types/index.js — order ซ้ำกันได้ ลำดับต้องนิ่ง
+    WasteType.find().sort({ order: 1, _id: 1 }).lean(),
   ]);
 
   const months = fiscalMonths(fiscalYear).map((month) => ({

@@ -32,8 +32,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: `วันที่ไม่ถูกรูปแบบ "${date}"` });
   }
 
-  await dbConnect();
+  try {
+    await dbConnect();
+    return await routeRequest(req, res, auth, date);
+  } catch (error) {
+    console.error("[smart-waste/daily/[date]]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
 
+async function routeRequest(req, res, auth, date) {
   if (req.method === "GET") {
     const record = await WasteDaily.findOne({ recordDate: date }).lean();
     if (!record) {
@@ -106,7 +114,7 @@ export default async function handler(req, res) {
       await logAuditEvent({
         actorClerkId: auth.userId,
         actorName: auth.name,
-        action: "data_exported",
+        action: "waste_daily_updated",
         resourceType: "system",
         resourceId: date,
         before: { totalKg: before.totalKg, entries: before.entries },

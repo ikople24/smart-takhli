@@ -42,6 +42,7 @@ const ACTION_LABELS: Record<string, string> = {
   assignment_created: 'สร้างการมอบหมาย',
   assignment_completed: 'งานเสร็จสิ้น',
   notification_sent: 'ส่งการแจ้งเตือน',
+  waste_daily_updated: 'แก้ไขข้อมูลขยะรีไซเคิล',
   data_exported: 'ส่งออกข้อมูล',
   login: 'เข้าสู่ระบบ',
 };
@@ -55,6 +56,7 @@ const ACTION_COLORS: Record<string, string> = {
   assignment_created: 'badge-primary',
   assignment_completed: 'badge-success',
   notification_sent: 'badge-ghost',
+  waste_daily_updated: 'badge-info',
   data_exported: 'badge-neutral',
   login: 'badge-ghost',
 };
