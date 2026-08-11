@@ -1055,6 +1055,11 @@ for (const key of WASTE_GROUP_KEYS) {
   groupTotalsFields[key] = { type: Number, default: 0 };
 }
 
+// ต้องห่อเป็น Schema ที่ปิด _id — ถ้าใส่ plain object ให้ `type:` ตรง ๆ mongoose
+// จะมองว่าเป็น subdocument แล้วแถม _id ให้ทุกเอกสาร กลายเป็นคีย์ที่ 9 ปลอม ๆ
+// ใน groupTotals ซึ่งจะไปโผล่ตอน Object.entries() ในรายงาน
+const GroupTotalsSchema = new mongoose.Schema(groupTotalsFields, { _id: false });
+
 const WasteEntrySchema = new mongoose.Schema(
   {
     typeKey: { type: String, required: true },
@@ -1079,7 +1084,7 @@ const WasteDailySchema = new mongoose.Schema(
 
     // denormalized จาก entries ด้วย computeTotals() ตอนบันทึก
     // เพื่อให้ dashboard/export ไม่ต้อง aggregate ใหม่ทุกครั้ง
-    groupTotals: { type: groupTotalsFields, default: () => ({}) },
+    groupTotals: { type: GroupTotalsSchema, default: () => ({}) },
     totalKg: { type: Number, default: 0 },
 
     note: { type: String, default: "" },
@@ -1128,7 +1133,7 @@ git commit -m "feat(smart-waste): เพิ่ม Mongoose models WasteType แ�
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import { getAuth, clerkClient } from "@clerk/nextjs/server";
-import { pathMatchesPermission } from "@/lib/permissions";
+import { hasPermission } from "@/lib/permissions";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
 const REQUIRED_PAGE = "/admin/smart-waste";
@@ -1160,11 +1165,12 @@ export async function requireWasteAdmin(req) {
 
   const client = await clerkClient();
   const clerkUser = await client.users.getUser(userId);
-  const role = clerkUser.publicMetadata?.role || "admin";
+  const clerkRole = clerkUser.publicMetadata?.role || "admin";
   const clerkName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim();
 
-  if (role === "superadmin") {
-    return { ok: true, userId, role, isSuperAdmin: true, name: clerkName };
+  // Clerk publicMetadata คือ "แหล่งความจริงเดียว" ของ superadmin (ตาม CLAUDE.md)
+  if (clerkRole === "superadmin") {
+    return { ok: true, userId, role: clerkRole, isSuperAdmin: true, name: clerkName };
   }
 
   await dbConnect();
@@ -1174,24 +1180,35 @@ export async function requireWasteAdmin(req) {
   if (!mongoUser) {
     return { ok: false, status: 403, message: "User not registered" };
   }
+  // พนักงานที่ถูกปิดใช้งาน/เก็บเข้ากรุแล้วต้องเข้าไม่ได้ แม้บัญชี Clerk ยังอยู่
+  if (mongoUser.isActive === false || mongoUser.isArchived === true) {
+    return { ok: false, status: 403, message: "Account disabled" };
+  }
   if (!mongoUser.appId || mongoUser.appId !== CURRENT_APP_ID) {
     return { ok: false, status: 403, message: "No app access" };
   }
 
-  const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
-  // allowedPages ว่าง = ใช้ DEFAULT_PERMISSIONS ซึ่งจะรวมหน้านี้ไว้แล้ว (ดูแผนที่ 2)
-  const hasPageAccess =
-    allowed.length === 0 ||
-    allowed.some((permission) => pathMatchesPermission(REQUIRED_PAGE, permission));
+  // มาถึงตรงนี้แปลว่า Clerk ไม่ได้บอกว่าเป็น superadmin — ห้าม role ใน Mongo
+  // ยกระดับตัวเองเป็น superadmin ผ่านการเช็คสิทธิ์
+  const effectiveRole =
+    (mongoUser.role || clerkRole) === "superadmin" ? "admin" : mongoUser.role || clerkRole;
 
-  if (!hasPageAccess) {
+  // ใช้ hasPermission จาก lib/permissions.ts เป็นแหล่งความจริงเดียว —
+  // มันจัดการเคส allowedPages ว่าง (fallback ไป DEFAULT_PERMISSIONS[role]) ให้แล้ว
+  //
+  // ⚠️ ห้ามเขียนเงื่อนไข "allowedPages ว่าง = ผ่าน" เองที่นี่:
+  // /admin/smart-waste ยังไม่อยู่ใน DEFAULT_PERMISSIONS (จะเพิ่มในแผนที่ 2) การเขียนเอง
+  // จะทำให้พนักงานใหม่ที่ allowedPages ว่าง เรียก API ที่ "ลบ/แก้ master data" ได้
+  // ทั้งที่หน้าเว็บกันเขาอยู่ — API หลวมกว่า UI คือช่องโหว่
+  const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
+  if (!hasPermission(effectiveRole, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "No page access" };
   }
 
   return {
     ok: true,
     userId,
-    role: mongoUser.role || role,
+    role: effectiveRole,
     isSuperAdmin: false,
     name: mongoUser.name || clerkName,
   };
@@ -1208,6 +1225,13 @@ export async function requireWasteSuperadmin(req) {
   return auth;
 }
 ```
+
+> **ผลข้างเคียงที่ตั้งใจ:** ตอนนี้ `/admin/smart-waste` ยังไม่อยู่ใน `ALL_PAGES` /
+> `DEFAULT_PERMISSIONS` ของ `lib/permissions.ts` (จะเพิ่มในแผนที่ 2) ดังนั้น
+> `hasPermission()` จะคืน `false` ให้ทุกคนที่ไม่ใช่ superadmin — **API ทั้งโมดูลจึงใช้ได้
+> เฉพาะ superadmin จนกว่าแผนที่ 2 จะลงทะเบียนหน้านี้** นี่คือพฤติกรรมที่ถูกต้อง:
+> ยอมปิดไว้ก่อนดีกว่าเปิดให้คนที่ระบบยังไม่ได้ให้สิทธิ์ · ตอนทดสอบด้วยมือในแผนนี้
+> ให้ล็อกอินเป็น superadmin
 
 - [ ] **Step 2: ตรวจว่า build ผ่าน**
 
@@ -1246,17 +1270,30 @@ import { requireWasteAdmin } from "../_auth";
 export async function ensureWasteTypesSeeded() {
   const count = await WasteType.countDocuments();
   if (count > 0) return { seeded: 0 };
-  await WasteType.insertMany(
-    WASTE_TYPES_SEED.map((type) => ({
-      key: type.key,
-      label: type.label,
-      group: type.group,
-      order: type.order,
-      isCommon: Boolean(type.isCommon),
-      isHighlighted: Boolean(type.isHighlighted),
-      active: true,
-    }))
-  );
+  try {
+    await WasteType.insertMany(
+      WASTE_TYPES_SEED.map((type) => ({
+        key: type.key,
+        label: type.label,
+        group: type.group,
+        order: type.order,
+        isCommon: Boolean(type.isCommon),
+        isHighlighted: Boolean(type.isHighlighted),
+        active: true,
+      })),
+      // ordered: false — สอง request แรกที่เข้ามาพร้อมกันจะเห็น count = 0 ทั้งคู่
+      // แล้ว insert ชนกัน · unique index บน key กันข้อมูลซ้ำอยู่แล้ว ที่ต้องกันเพิ่ม
+      // คือไม่ให้คนที่แพ้ race เจอ 500 ทั้งที่ระบบทำงานถูกต้อง
+      { ordered: false }
+    );
+  } catch (error) {
+    const writeErrors = error?.writeErrors || [];
+    const allDuplicate =
+      error?.code === 11000 ||
+      (writeErrors.length > 0 &&
+        writeErrors.every((item) => (item.err?.code ?? item.code) === 11000));
+    if (!allDuplicate) throw error;
+  }
   return { seeded: WASTE_TYPES_SEED.length };
 }
 
@@ -1273,15 +1310,29 @@ export default async function handler(req, res) {
   const auth = await requireWasteAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
 
-  await dbConnect();
-
-  if (req.method === "GET") {
+  try {
+    await dbConnect();
+    // seed ก่อนแยก method — ถ้าเรียกเฉพาะใน GET แล้วมี POST เข้ามาก่อนเป็นครั้งแรก
+    // collection จะไม่ว่างอีกต่อไป แล้ว 24 ประเภทตั้งต้นจะไม่ถูก seed เลยตลอดกาล
     await ensureWasteTypesSeeded();
+
+    return await routeRequest(req, res, auth);
+  } catch (error) {
+    console.error("[smart-waste/types]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function routeRequest(req, res, auth) {
+  if (req.method === "GET") {
     const includeInactive = req.query.includeInactive === "1";
     const filter = includeInactive ? {} : { active: true };
-    const types = await WasteType.find(filter).sort({ order: 1 }).lean();
+    // _id เป็นตัวตัดสินลำดับสำรอง — order ซ้ำกันได้ ถ้าไม่มี tiebreaker ลำดับคอลัมน์
+    // ในไฟล์ export จะสลับไปมาระหว่างการเรียกแต่ละครั้ง
+    const types = await WasteType.find(filter).sort({ order: 1, _id: 1 }).lean();
 
     // นับจำนวนวันที่อ้างถึงแต่ละประเภท — UI ใช้ตัดสินว่าลบได้หรือไม่
+    // ($unwind ทั้ง collection ที่สเกลนี้ (~370 เอกสาร/ปี × ~10 entries) เป็นหลักมิลลิวินาที)
     const usage = await WasteDaily.aggregate([
       { $unwind: "$entries" },
       { $group: { _id: "$entries.typeKey", days: { $sum: 1 } } },
@@ -1346,6 +1397,7 @@ export default async function handler(req, res) {
 - [ ] **Step 2: สร้าง `pages/api/smart-waste/types/[id].js`**
 
 ```js
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import WasteType from "@/models/smart-waste/WasteType";
 import WasteDaily from "@/models/smart-waste/WasteDaily";
@@ -1355,8 +1407,22 @@ export default async function handler(req, res) {
   const auth = await requireWasteAdmin(req);
   if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
 
-  await dbConnect();
   const { id } = req.query;
+  // findById โยน CastError ถ้า id ไม่ใช่ ObjectId → จะกลายเป็น 500 แทนที่จะเป็น 404
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ message: "ไม่พบประเภทขยะนี้" });
+  }
+
+  try {
+    await dbConnect();
+    return await routeRequest(req, res, auth, id);
+  } catch (error) {
+    console.error("[smart-waste/types/[id]]", error);
+    return res.status(500).json({ message: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" });
+  }
+}
+
+async function routeRequest(req, res, auth, id) {
   const type = await WasteType.findById(id);
   if (!type) return res.status(404).json({ message: "ไม่พบประเภทขยะนี้" });
 
