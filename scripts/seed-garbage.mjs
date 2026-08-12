@@ -5,11 +5,15 @@
  *   node scripts/seed-garbage.mjs --dry-run
  *
  * idempotent: upsert ตาม natural key ไม่สร้างซ้ำ รันกี่ครั้งก็ได้
+ *
+ * คำเตือน: ไฟล์ seed คือ source of truth — การรันซ้ำจะ $set ทับค่า
+ * effectiveTo/active/aliases ที่ถูกแก้ใน DB ภายหลัง
  */
 import { readFileSync } from "node:fs";
 import { MongoClient } from "mongodb";
 
-const FILE = "data/garbage/schedule-seed.json";
+// path เทียบกับตัวสคริปต์เอง รันจาก cwd ไหนก็ได้
+const FILE = new URL("../data/garbage/schedule-seed.json", import.meta.url);
 const dryRun = process.argv.includes("--dry-run");
 const uri = process.env.MONGO_URI;
 
@@ -35,6 +39,8 @@ for (const a of seed.assignments) {
   if (a.routeCode && !routeCodes.has(a.routeCode)) errors.push(`${at}: ไม่รู้จักสาย ${a.routeCode}`);
   if (a.coverForRouteCode && !routeCodes.has(a.coverForRouteCode))
     errors.push(`${at}: ไม่รู้จักสายที่แทนเบอร์ ${a.coverForRouteCode}`);
+  if ((a.startMin == null) !== (a.endMin == null))
+    errors.push(`${at}: startMin กับ endMin ต้องมาคู่กัน (มีอันเดียวไม่ได้ — เช็คเวลาทับกันจะไม่ทำงาน)`);
   if (a.startMin != null && a.endMin != null && a.endMin < a.startMin)
     errors.push(`${at}: เวลาสิ้นสุดก่อนเวลาเริ่ม`);
   const route = seed.routes.find((r) => r.code === a.routeCode);
@@ -125,6 +131,19 @@ console.log(`garbage_trucks +${r1.upsertedCount}/~${r1.modifiedCount}`);
 console.log(`garbage_communities +${r2.upsertedCount}/~${r2.modifiedCount}`);
 console.log(`garbage_routes +${r3.upsertedCount}/~${r3.modifiedCount}`);
 console.log(`garbage_assignments +${r4.upsertedCount}/~${r4.modifiedCount}`);
+console.log("(+ = เพิ่มใหม่, ~ = อัปเดต รวมถึง updatedAt ที่เปลี่ยนทุกครั้ง)");
+
+// เตือนถ้ามีเอกสารใน DB มากกว่าใน seed (seed ไม่ลบของเก่า)
+for (const [colName, arr] of [
+  ["garbage_trucks", seed.trucks],
+  ["garbage_communities", seed.communities],
+  ["garbage_routes", seed.routes],
+  ["garbage_assignments", seed.assignments],
+]) {
+  const count = await db.collection(colName).countDocuments();
+  if (count > arr.length)
+    console.warn(`เตือน: ${colName} มี ${count} เอกสาร มากกว่าใน seed (${arr.length}) — อาจมีรายการค้างจากเวอร์ชันก่อน`);
+}
 
 await client.close();
 console.log("เสร็จเรียบร้อย");
