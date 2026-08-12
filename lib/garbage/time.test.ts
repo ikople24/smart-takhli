@@ -6,6 +6,7 @@ import {
   minutesNowInBangkok,
   weekdayOf,
   todayInBangkok,
+  resolveDateParam,
 } from "./time";
 
 describe("parseThaiTime", () => {
@@ -121,6 +122,35 @@ describe("weekdayOf", () => {
 describe("todayInBangkok", () => {
   it("คืนรูปแบบ YYYY-MM-DD", () => {
     expect(todayInBangkok()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("resolveDateParam", () => {
+  it("วันที่ถูกต้องผ่านตามเดิม", () => {
+    expect(resolveDateParam("2026-08-10")).toBe("2026-08-10");
+    // ปีอธิกสุรทิน — 29 ก.พ. มีจริง
+    expect(resolveDateParam("2024-02-29")).toBe("2024-02-29");
+  });
+
+  it("ไม่ส่งมา (undefined) → วันนี้ตามเวลาไทย", () => {
+    expect(resolveDateParam(undefined)).toBe(todayInBangkok());
+  });
+
+  it("วันที่ไม่มีจริงในปฏิทิน → null", () => {
+    expect(resolveDateParam("2026-02-30")).toBeNull();
+    expect(resolveDateParam("2026-13-01")).toBeNull();
+    expect(resolveDateParam("2026-02-29")).toBeNull(); // 2026 ไม่ใช่ปีอธิกสุรทิน
+  });
+
+  it("รูปแบบผิด → null", () => {
+    expect(resolveDateParam("abc")).toBeNull();
+    expect(resolveDateParam("2026-8-9")).toBeNull();
+    expect(resolveDateParam("")).toBeNull();
+  });
+
+  it("รับ array แล้วใช้ตัวแรก", () => {
+    expect(resolveDateParam(["2026-08-10", "2026-08-11"])).toBe("2026-08-10");
+    expect(resolveDateParam(["abc"])).toBeNull();
   });
 });
 

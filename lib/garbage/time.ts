@@ -67,12 +67,31 @@ export function weekdayOf(input: string | Date): Weekday {
   return toBangkok(d).getUTCDay() as Weekday;
 }
 
+/** จัดรูปแบบ Date เป็น "YYYY-MM-DD" ตามเวลาไทย */
+function formatDateBangkok(d: Date): string {
+  const b = toBangkok(d);
+  const mm = String(b.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(b.getUTCDate()).padStart(2, "0");
+  return `${b.getUTCFullYear()}-${mm}-${dd}`;
+}
+
 /** วันที่ปัจจุบันแบบไทยในรูปแบบ "YYYY-MM-DD" */
 export function todayInBangkok(): string {
-  const d = toBangkok(new Date());
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `${d.getUTCFullYear()}-${mm}-${dd}`;
+  return formatDateBangkok(new Date());
+}
+
+/**
+ * อ่านพารามิเตอร์วันที่จาก query — คืน null เมื่อรูปแบบผิดหรือไม่มีวันนั้นจริงในปฏิทิน
+ * ไม่ส่งมา (undefined) = วันนี้ตามเวลาไทย; ส่งเป็น array เอาตัวแรก
+ */
+export function resolveDateParam(raw: string | string[] | undefined): string | null {
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  if (s == null) return todayInBangkok();
+  if (!DATE_RE.test(s)) return null;
+  const d = new Date(`${s}T00:00:00+07:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  // round-trip กันวันที่ไม่มีจริง เช่น "2026-02-30" — engine บางตัว roll over เป็น 02 มี.ค. แทนที่จะ invalid
+  return formatDateBangkok(d) === s ? s : null;
 }
 
 /** เวลาปัจจุบันแบบไทยเป็นนาทีจากเที่ยงคืน */

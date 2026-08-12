@@ -1,9 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { resolveScheduleForDate } from "@/lib/garbage/resolve";
 import { getLivePosition } from "@/lib/garbage/live";
-import { todayInBangkok, minutesNowInBangkok } from "@/lib/garbage/time";
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/u;
+import { resolveDateParam, minutesNowInBangkok } from "@/lib/garbage/time";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -22,9 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     nowMin = n;
   }
 
-  const rawDate = Array.isArray(req.query.date) ? req.query.date[0] : req.query.date;
-  const date = rawDate ?? todayInBangkok();
-  if (!DATE_RE.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00+07:00`))) {
+  const date = resolveDateParam(req.query.date);
+  if (date == null) {
     return res.status(400).json({ error: "รูปแบบวันที่ไม่ถูกต้อง ต้องเป็น YYYY-MM-DD" });
   }
 

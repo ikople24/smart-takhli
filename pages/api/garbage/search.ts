@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { AssignmentKind } from "@/types/garbage";
 import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
+import { todayInBangkok } from "@/lib/garbage/time";
 
 const WEEKDAY_TH = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
@@ -12,6 +14,8 @@ interface SearchHit {
   weekday: number;
   weekdayName: string;
   truckNumber: number;
+  kind: AssignmentKind;
+  coverForRouteCode: string | null;
   startMin: number | null;
   endMin: number | null;
   atMin: number | null;
@@ -31,15 +35,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const norm = (s: string) =>
     s.normalize("NFC").replace(/^(ถนน|ถ\.\s*|ซอย|ซ\.\s*|ชุมชน)\s*/u, "").replace(/\s/gu, "").toLowerCase();
   const needle = norm(q);
+  // คำที่เหลือแต่คำนำหน้า (เช่น "ซอย", "ถ.") normalize แล้วว่าง — จะ match ทุกอย่าง จึงตีเป็นคำค้นไม่พอ
+  if (needle.length < 1) return res.status(400).json({ error: "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร" });
 
   try {
     const [rCol, aCol] = await Promise.all([routesCol(), assignmentsCol()]);
-    const now = new Date();
+    // ใช้เที่ยงคืนกรุงเทพฯ ของวันนี้ ให้ตรงกับ convention effectiveTo แบบ inclusive ใน resolve.ts
+    // (effectiveTo = เที่ยงคืนของวันสุดท้ายที่ยังใช้ผัง — เทียบด้วยเวลาปัจจุบันจะตัดผังของวันนี้ทิ้งผิด ๆ)
+    const at = new Date(`${todayInBangkok()}T00:00:00+07:00`);
     const [allRoutes, rawAssignments] = await Promise.all([
       rCol.find({ active: true }).toArray(),
       aCol.find({
-        effectiveFrom: { $lte: now },
-        $or: [{ effectiveTo: null }, { effectiveTo: { $gte: now } }],
+        effectiveFrom: { $lte: at },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $gte: at } }],
       }).sort({ effectiveFrom: -1, _id: -1 }).toArray(),
     ]);
 
@@ -66,6 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             routeCode: route.code, routeName: route.name,
             weekday, weekdayName: WEEKDAY_TH[weekday],
             truckNumber: a.truckNumber,
+            kind: a.kind, coverForRouteCode: a.coverForRouteCode,
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
           });
@@ -78,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               routeCode: route.code, routeName: route.name,
               weekday, weekdayName: WEEKDAY_TH[weekday],
               truckNumber: a.truckNumber,
+              kind: a.kind, coverForRouteCode: a.coverForRouteCode,
               startMin: w.startMin, endMin: w.endMin, atMin: null,
             });
           }
