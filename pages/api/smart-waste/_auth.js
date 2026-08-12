@@ -65,9 +65,8 @@ export async function requireWasteAdmin(req) {
   // มันจัดการเคส allowedPages ว่าง (fallback ไป DEFAULT_PERMISSIONS[role]) ให้แล้ว
   //
   // ⚠️ ห้ามเขียนเงื่อนไข "allowedPages ว่าง = ผ่าน" เองที่นี่:
-  // /admin/smart-waste ยังไม่อยู่ใน DEFAULT_PERMISSIONS (จะเพิ่มในแผนที่ 2) การเขียนเอง
-  // จะทำให้พนักงานใหม่ที่ allowedPages ว่าง เรียก API ที่ "ลบ/แก้ master data" ได้
-  // ทั้งที่หน้าเว็บกันเขาอยู่ — API หลวมกว่า UI คือช่องโหว่
+  // ให้ hasPermission ตัดสินจาก DEFAULT_PERMISSIONS ที่เดียว — เขียนเองเมื่อไร
+  // API จะหลวมกว่า UI ทันทีที่นโยบายชุดพื้นฐานเปลี่ยน
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
   if (!hasPermission(effectiveRole, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "No page access" };
