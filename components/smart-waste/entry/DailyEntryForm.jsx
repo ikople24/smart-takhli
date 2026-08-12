@@ -81,7 +81,7 @@ export default function DailyEntryForm({ types, initialDate, onSaved }) {
       } catch { /* draft พัง → ทิ้ง */ }
       if (draft) {
         setValues(draft.values || {});
-        setExtraKeys(draft.extraKeys || nextExtras);
+        setExtraKeys([...new Set([...nextExtras, ...(draft.extraKeys || [])])]);
         setNote(draft.note ?? (record?.note || ''));
         dirtyRef.current = true;
         Swal.fire({
