@@ -1,0 +1,68 @@
+import { z } from "zod";
+
+const minutes = z.number().int().min(0).max(1439);
+
+export const stopSchema = z.object({
+  seq: z.number().int().positive(),
+  name: z.string().min(1).max(200),
+  mode: z.enum(["truck", "walk"]),
+  roadId: z.string().max(50).nullable().optional(),
+}).strict();
+
+export const routeSchema = z.object({
+  code: z.string().regex(/^R\d+$/u, "รหัสสายต้องเป็นรูปแบบ R1, R2, …"),
+  name: z.string().min(1).max(200),
+  defaultTruckNumber: z.number().int().min(1).max(99),
+  stops: z.array(stopSchema).min(1),
+  communityNames: z.array(z.string().min(1)).min(1),
+  source: z.string().optional(),
+  needsVerification: z.boolean().optional(),
+}).strict();
+
+export const stopTimeSchema = z.object({
+  seq: z.number().int().positive(),
+  atMin: minutes,
+}).strict();
+
+export const communityWindowSchema = z.object({
+  communityNames: z.array(z.string().min(1)).min(1),
+  startMin: minutes,
+  endMin: minutes,
+  note: z.string().optional(),
+}).strict();
+
+export const assignmentSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  shiftNo: z.number().int().positive(),
+  truckNumber: z.number().int().min(1).max(99),
+  routeCode: z.string().regex(/^R\d+$/u).nullable(),
+  kind: z.enum(["normal", "substitute", "day_off", "special"]),
+  coverForRouteCode: z.string().regex(/^R\d+$/u).nullable(),
+  startMin: minutes.nullable(),
+  endMin: minutes.nullable(),
+  stopTimes: z.array(stopTimeSchema),
+  communityWindows: z.array(communityWindowSchema),
+  label: z.string().nullable(),
+}).strict()
+  .refine((a) => a.kind !== "day_off" || a.routeCode === null, {
+    message: "วันหยุดต้องไม่มี routeCode",
+  })
+  .refine((a) => a.kind !== "substitute" || a.coverForRouteCode !== null, {
+    message: "การแทนเบอร์ต้องระบุ coverForRouteCode",
+  })
+  .refine((a) => a.kind === "day_off" || (a.startMin !== null && a.endMin !== null), {
+    message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุด",
+  });
+
+export const seedFileSchema = z.object({
+  trucks: z.array(
+    z.object({
+      number: z.number().int().min(1).max(99),
+      color: z.enum(["yellow", "green"]),
+      status: z.enum(["active", "maintenance", "retired"]),
+    }).strict()
+  ),
+  communities: z.array(z.object({ name: z.string().min(1) }).strict()),
+  routes: z.array(routeSchema),
+  assignments: z.array(assignmentSchema),
+}).passthrough(); // ยอมให้มี key ที่ขึ้นต้นด้วย $ สำหรับคำอธิบายในไฟล์
