@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "create-default-activity": "node scripts/create-default-activity.js",
     "migrate-feedback": "node scripts/migrate-existing-feedback.js"
   },
@@ -62,6 +64,7 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.7",
     "tw-animate-css": "^1.3.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

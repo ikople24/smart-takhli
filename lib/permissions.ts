@@ -79,6 +79,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/smart-waste',
+    label: 'ระบบบริหารจัดการขยะ',
+    icon: '♻️',
+    description: 'บันทึกน้ำหนักขยะรีไซเคิลและขยะเปียกรายวัน (กองสาธารณสุข)',
+    category: 'management'
+  },
+  {
     path: '/admin/pm25-settings',
     label: 'จัดการ PM2.5',
     icon: '🌫️',
@@ -209,6 +216,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/my-tasks',
     '/admin/notifications',
     '/admin/smart-light',
+    '/admin/smart-waste',
     '/user/satisfaction',
   ],
   user: [

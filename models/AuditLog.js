@@ -27,6 +27,8 @@ const AuditLogSchema = new mongoose.Schema({
       'assignment_completed',
       // Notification
       'notification_sent',
+      // Smart Waste
+      'waste_daily_updated',
       // General
       'data_exported',
       'login',

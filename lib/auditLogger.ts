@@ -15,6 +15,7 @@ type AuditAction =
   | 'assignment_created'
   | 'assignment_completed'
   | 'notification_sent'
+  | 'waste_daily_updated'
   | 'data_exported'
   | 'login';
 
