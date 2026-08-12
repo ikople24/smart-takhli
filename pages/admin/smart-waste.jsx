@@ -56,7 +56,7 @@ export default function SmartWastePage() {
     <PermissionGuard>
       <div className="max-w-3xl mx-auto space-y-4">
         <div className={cardCls + ' p-4 sm:p-5'}>
-          <DashboardHeader icon="♻️" title="Smart Waste — ขยะรีไซเคิลและขยะเปียก"
+          <DashboardHeader icon="♻️" title="ระบบบริหารจัดการขยะ"
             subtitle="บันทึกน้ำหนักคัดแยกรายวัน · กองสาธารณสุข"
             right={
               <button type="button" onClick={() => setManagerOpen(true)}

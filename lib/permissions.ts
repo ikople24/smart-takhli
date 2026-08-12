@@ -80,7 +80,7 @@ export const ALL_PAGES: PagePermission[] = [
   },
   {
     path: '/admin/smart-waste',
-    label: 'smart-waste (ขยะรีไซเคิล)',
+    label: 'ระบบบริหารจัดการขยะ',
     icon: '♻️',
     description: 'บันทึกน้ำหนักขยะรีไซเคิลและขยะเปียกรายวัน (กองสาธารณสุข)',
     category: 'management'
