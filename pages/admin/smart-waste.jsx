@@ -3,7 +3,8 @@ import { useUser } from '@clerk/nextjs';
 import Swal from 'sweetalert2';
 import PermissionGuard from '@/components/PermissionGuard';
 import DailyEntryForm from '@/components/smart-waste/entry/DailyEntryForm';
-import { DashboardHeader, PillTabs, cardCls } from '@/components/smart-waste/wasteTheme';
+import MonthTable from '@/components/smart-waste/admin/MonthTable';
+import { DashboardHeader, PillTabs, YearPills, cardCls } from '@/components/smart-waste/wasteTheme';
 import { bangkokToday } from '@/lib/smart-waste/fiscalYear';
 import { listFiscalYears } from '@/lib/smart-waste/uiDate';
 
@@ -67,7 +68,11 @@ export default function SmartWastePage() {
               <DailyEntryForm types={types} initialDate={editDate}
                 onSaved={() => setRefreshTick((t) => t + 1)} />
             ) : tab === 'data' ? (
-              <p className="text-center text-[13px] text-[#8A8398] py-10">— แท็บข้อมูล (Task 6) —</p>
+              <div className="space-y-3">
+                <YearPills years={years} value={fiscalYear} onChange={setFiscalYear} />
+                <MonthTable fiscalYear={fiscalYear} types={types}
+                  onEditDate={openEntryAt} refreshTick={refreshTick} />
+              </div>
             ) : (
               <p className="text-center text-[13px] text-[#8A8398] py-10">— แท็บสรุป (Task 7) —</p>
             )}
