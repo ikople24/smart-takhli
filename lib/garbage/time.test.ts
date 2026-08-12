@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseThaiTime } from "./time";
+import { parseThaiTime, formatThaiTime, formatRange, minutesNowInBangkok, weekdayOf } from "./time";
 
 describe("parseThaiTime", () => {
   it("อ่านรูปแบบทางการพร้อม น. ได้", () => {
@@ -42,5 +42,51 @@ describe("parseThaiTime", () => {
     expect(parseThaiTime("25:00")).toBeNull();
     expect(parseThaiTime("10:60")).toBeNull();
     expect(parseThaiTime("4")).toBeNull();
+  });
+});
+
+describe("formatThaiTime", () => {
+  it("จัดรูปแบบตามโปสเตอร์", () => {
+    expect(formatThaiTime(240)).toBe("4.00 น.");
+    expect(formatThaiTime(560)).toBe("9.20 น.");
+  });
+
+  it("ไม่เพี้ยนที่เที่ยงและเย็น", () => {
+    expect(formatThaiTime(720)).toBe("12.00 น.");
+    expect(formatThaiTime(810)).toBe("13.30 น.");
+    expect(formatThaiTime(1200)).toBe("20.00 น.");
+  });
+
+  it("คืนค่าว่างเมื่อ input เป็น null", () => {
+    expect(formatThaiTime(null)).toBe("");
+  });
+
+  it("ไป-กลับกับ parseThaiTime ได้ค่าเดิม", () => {
+    for (const m of [0, 240, 560, 720, 810, 1200, 1439]) {
+      expect(parseThaiTime(formatThaiTime(m))).toBe(m);
+    }
+  });
+});
+
+describe("formatRange", () => {
+  it("แสดงช่วงเวลา", () => {
+    expect(formatRange(240, 560)).toBe("4.00 – 9.20 น.");
+  });
+});
+
+describe("weekdayOf", () => {
+  it("คืนวันในสัปดาห์ตามเวลาไทย", () => {
+    // 2026-08-12 คือวันพุธ
+    expect(weekdayOf("2026-08-12")).toBe(3);
+    // 2026-08-10 คือวันจันทร์
+    expect(weekdayOf("2026-08-10")).toBe(1);
+  });
+});
+
+describe("minutesNowInBangkok", () => {
+  it("คืนค่าอยู่ในช่วง 0–1439", () => {
+    const m = minutesNowInBangkok();
+    expect(m).toBeGreaterThanOrEqual(0);
+    expect(m).toBeLessThanOrEqual(1439);
   });
 });
