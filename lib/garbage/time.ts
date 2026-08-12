@@ -19,60 +19,64 @@ export function parseThaiTime(input: string | null | undefined): Minutes | null 
   return h * 60 + min;
 }
 
-/** 560 → "9.20 น." ให้เป็นจุดตามรูปแบบโปสเตอร์ของเทศบาล */
-export function formatThaiTime(min: Minutes | null | undefined): string {
-  if (min == null || !Number.isFinite(min)) return "";
+/** "ชม.นาที" ไม่มีหน่วย — ใช้ร่วมกันใน formatThaiTime / formatRange; คืน null เมื่อนอกช่วง 0–1439 หรือไม่ใช่จำนวนเต็ม */
+function hhmm(min: Minutes): string | null {
+  if (!Number.isInteger(min) || min < 0 || min > 1439) return null;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return `${h}.${String(m).padStart(2, "0")} น.`;
+  return `${h}.${String(m).padStart(2, "0")}`;
 }
 
-/** 240, 560 → "4.00 – 9.20 น." */
+/** 560 → "9.20 น." ให้เป็นจุดตามรูปแบบโปสเตอร์ของเทศบาล — นอกช่วง 0–1439 คืนค่าว่าง */
+export function formatThaiTime(min: Minutes | null | undefined): string {
+  if (min == null) return "";
+  const s = hhmm(min);
+  return s == null ? "" : `${s} น.`;
+}
+
+/** 240, 560 → "4.00 – 9.20 น." — ฝั่งใดฝั่งหนึ่งไม่ถูกต้องคืนค่าว่าง */
 export function formatRange(startMin: Minutes | null, endMin: Minutes | null): string {
   if (startMin == null || endMin == null) return "";
-  const a = formatThaiTime(startMin).replace(" น.", "");
-  return `${a} – ${formatThaiTime(endMin)}`;
+  const a = hhmm(startMin);
+  const b = hhmm(endMin);
+  if (a == null || b == null) return "";
+  return `${a} – ${b} น.`;
 }
 
-/** แยกส่วนของวันที่ตามโซนเวลาไทย ไม่ขึ้นกับ TZ ของเซิร์ฟเวอร์ */
-function bangkokParts(d: Date): { y: number; m: number; d: number; weekday: Weekday } {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: BANGKOK_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  });
-  const parts = Object.fromEntries(fmt.formatToParts(d).map((p) => [p.type, p.value]));
-  const map: Record<string, Weekday> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return {
-    y: Number(parts.year),
-    m: Number(parts.month),
-    d: Number(parts.day),
-    weekday: map[parts.weekday as string],
-  };
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const BANGKOK_OFFSET_MS = 7 * 3600_000;
+
+/**
+ * เลื่อนเวลา +7 ชม. เพื่ออ่านส่วนประกอบด้วย getUTC* แทน Intl —
+ * กรุงเทพฯ เป็น UTC+7 คงที่ ไม่มี DST จึงไม่ขึ้นกับ TZ/locale ของเซิร์ฟเวอร์
+ */
+function toBangkok(d: Date): Date {
+  return new Date(d.getTime() + BANGKOK_OFFSET_MS);
 }
 
-/** "2026-08-12" | Date → 0..6 ตามเวลาไทย */
+/** "2026-08-12" | Date → 0..6 ตามเวลาไทย — input ไม่ถูกต้องจะโยน error (ไม่คืนค่าอื่นนอก Weekday) */
 export function weekdayOf(input: string | Date): Weekday {
-  const d = typeof input === "string" ? new Date(`${input}T00:00:00+07:00`) : input;
-  return bangkokParts(d).weekday;
+  let d: Date;
+  if (typeof input === "string") {
+    if (!DATE_RE.test(input)) throw new Error("รูปแบบวันที่ไม่ถูกต้อง ต้องเป็น YYYY-MM-DD");
+    d = new Date(`${input}T00:00:00+07:00`);
+  } else {
+    d = input;
+  }
+  if (Number.isNaN(d.getTime())) throw new Error("รูปแบบวันที่ไม่ถูกต้อง ต้องเป็น YYYY-MM-DD");
+  return toBangkok(d).getUTCDay() as Weekday;
 }
 
 /** วันที่ปัจจุบันแบบไทยในรูปแบบ "YYYY-MM-DD" */
 export function todayInBangkok(): string {
-  const p = bangkokParts(new Date());
-  return `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
+  const d = toBangkok(new Date());
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${mm}-${dd}`;
 }
 
 /** เวลาปัจจุบันแบบไทยเป็นนาทีจากเที่ยงคืน */
 export function minutesNowInBangkok(now: Date = new Date()): Minutes {
-  const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: BANGKOK_TZ,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const [h, m] = fmt.format(now).split(":").map(Number);
-  return (h % 24) * 60 + m;
+  const d = toBangkok(now);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
