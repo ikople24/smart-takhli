@@ -29,7 +29,7 @@
     "googleapis": "^171.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.511.0",
-    "mongodb": "^7.5.0",
+    "mongodb": "~6.16.0",
     "mongoose": "^8.15.0",
     "multer": "^2.0.2",
     "next": "^15.5.9",

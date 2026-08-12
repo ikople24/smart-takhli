@@ -1,5 +1,11 @@
 # ระบบตารางเดินรถเก็บขยะ — Implementation Plan (M1–M3)
 
+> **หมายเหตุการปรับใช้ในรีโปนี้ (2026-08-12):**
+> 1. ใช้ env `MONGO_URI` (ตามรีโป) ไม่ใช่ `MONGODB_URI` และห้าม throw ตอน module load — ให้ lazy-init ใน `getDb()`
+> 2. ชื่อ collection ใช้ prefix `garbage_` (`garbage_trucks`, `garbage_routes`, `garbage_communities`, `garbage_assignments`) เพราะ `communities` ชนกับ collection ของโมดูลร้องเรียนที่มีอยู่ และ DB แชร์ข้ามแอป
+> 3. database ใช้ตัวที่ระบุใน URI (`client.db()` ไม่ส่งชื่อ) ไม่ hardcode "smart-takhli"
+> 4. vitest/zod มีอยู่แล้ว — แก้ include ใน `vitest.config.mjs` แทน
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** สร้างแกนกลางของโมดูลตารางรถขยะใน Smart Takhli — ตัวจัดการเวลา โครงสร้างข้อมูล MongoDB ตัว resolve ตารางรายวัน และ API สาธารณะ 3 ตัว ให้พร้อมสำหรับหน้าจอในเฟสถัดไป
