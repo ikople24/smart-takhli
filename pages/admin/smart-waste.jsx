@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Swal from 'sweetalert2';
+import dynamic from 'next/dynamic';
 import PermissionGuard from '@/components/PermissionGuard';
 import DailyEntryForm from '@/components/smart-waste/entry/DailyEntryForm';
 import MonthTable from '@/components/smart-waste/admin/MonthTable';
 import { DashboardHeader, PillTabs, YearPills, cardCls } from '@/components/smart-waste/wasteTheme';
 import { bangkokToday } from '@/lib/smart-waste/fiscalYear';
 import { listFiscalYears } from '@/lib/smart-waste/uiDate';
+
+// recharts หนัก — โหลดเฉพาะฝั่ง client ตอนเปิดแท็บสรุปเท่านั้น
+const SummaryDashboard = dynamic(
+  () => import('@/components/smart-waste/admin/SummaryDashboard'),
+  { ssr: false, loading: () => (
+      <div className="flex justify-center py-16">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
+    ) }
+);
 
 // Smart Waste — บันทึกขยะรีไซเคิลและขยะเปียกรายวัน (กองสาธารณสุข)
 // หน้าเดียว 3 แท็บตามสเปกข้อ 7.1 — จัดการประเภทเป็น modal ไม่แยกหน้า (เลี่ยง permission entry ที่ 2)
@@ -74,7 +85,10 @@ export default function SmartWastePage() {
                   onEditDate={openEntryAt} refreshTick={refreshTick} />
               </div>
             ) : (
-              <p className="text-center text-[13px] text-[#8A8398] py-10">— แท็บสรุป (Task 7) —</p>
+              <div className="space-y-3">
+                <YearPills years={years} value={fiscalYear} onChange={setFiscalYear} />
+                <SummaryDashboard fiscalYear={fiscalYear} refreshTick={refreshTick} />
+              </div>
             )}
           </div>
         </div>
