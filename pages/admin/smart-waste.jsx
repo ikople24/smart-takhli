@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import PermissionGuard from '@/components/PermissionGuard';
 import DailyEntryForm from '@/components/smart-waste/entry/DailyEntryForm';
 import MonthTable from '@/components/smart-waste/admin/MonthTable';
+import TypeManagerModal from '@/components/smart-waste/admin/TypeManagerModal';
 import { DashboardHeader, PillTabs, YearPills, cardCls } from '@/components/smart-waste/wasteTheme';
 import { bangkokToday } from '@/lib/smart-waste/fiscalYear';
 import { listFiscalYears } from '@/lib/smart-waste/uiDate';
@@ -92,6 +93,10 @@ export default function SmartWastePage() {
             )}
           </div>
         </div>
+
+        <TypeManagerModal open={managerOpen} onClose={() => setManagerOpen(false)}
+          isSuperAdmin={isSuperAdmin}
+          onChanged={() => { fetchTypes(); setRefreshTick((t) => t + 1); }} />
       </div>
     </PermissionGuard>
   );
