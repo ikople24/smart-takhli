@@ -78,12 +78,12 @@ export function YearPills({ years, value, onChange }) {
   );
 }
 
-// หัว dashboard — right = node (เช่น <YearPills/>)
-export function DashboardHeader({ title, subtitle, right }) {
+// หัว dashboard — right = node (เช่น <YearPills/>) · icon override ได้ (โมดูลอื่นยืมใช้)
+export function DashboardHeader({ title, subtitle, right, icon = '📚' }) {
   return (
     <div className="flex items-center gap-3.5 mb-5">
       <span className="w-11 h-11 rounded-[14px] bg-[#7C3AED] text-white grid place-items-center text-[22px]"
-        style={{ fontFamily: FONT_DISPLAY }}>📚</span>
+        style={{ fontFamily: FONT_DISPLAY }}>{icon}</span>
       <div>
         <div className="text-[19px] font-bold" style={{ fontFamily: FONT_DISPLAY }}>{title}</div>
         {subtitle && <div className="text-[12px] text-[#8A8398]">{subtitle}</div>}
