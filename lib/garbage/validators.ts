@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-const minutes = z.number().int().min(0).max(1439);
+const minutes = z
+  .number()
+  .int("นาทีต้องเป็นจำนวนเต็ม")
+  .min(0, "นาทีต้องอยู่ระหว่าง 0–1439")
+  .max(1439, "นาทีต้องอยู่ระหว่าง 0–1439");
 
 export const stopSchema = z.object({
   seq: z.number().int().positive(),
@@ -35,9 +39,9 @@ export const assignmentSchema = z.object({
   weekday: z.number().int().min(0).max(6),
   shiftNo: z.number().int().positive(),
   truckNumber: z.number().int().min(1).max(99),
-  routeCode: z.string().regex(/^R\d+$/u).nullable(),
+  routeCode: z.string().regex(/^R\d+$/u, "รหัสสายต้องเป็นรูปแบบ R1, R2, …").nullable(),
   kind: z.enum(["normal", "substitute", "day_off", "special"]),
-  coverForRouteCode: z.string().regex(/^R\d+$/u).nullable(),
+  coverForRouteCode: z.string().regex(/^R\d+$/u, "รหัสสายต้องเป็นรูปแบบ R1, R2, …").nullable(),
   startMin: minutes.nullable(),
   endMin: minutes.nullable(),
   stopTimes: z.array(stopTimeSchema),
@@ -52,8 +56,26 @@ export const assignmentSchema = z.object({
   })
   .refine((a) => a.kind === "day_off" || (a.startMin !== null && a.endMin !== null), {
     message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุด",
+  })
+  // หมายเหตุ: kind "special" อนุญาต routeCode null ได้ (เช่น รถ 7 วิ่งตลาดนัดพิเศษไม่มีสายประจำ)
+  .refine((a) => a.kind !== "normal" || a.routeCode !== null, {
+    message: "งานปกติต้องระบุ routeCode",
+  })
+  .refine((a) => a.kind === "substitute" || a.coverForRouteCode === null, {
+    message: "coverForRouteCode ใช้ได้เฉพาะการแทนเบอร์",
+  })
+  .refine((a) => a.kind !== "day_off" || (a.startMin === null && a.endMin === null), {
+    message: "วันหยุดต้องไม่มีเวลา",
+  })
+  // เวลาเท่ากันถือว่าผ่าน (จุดจอดเดียวเริ่ม-จบพร้อมกัน เช่น 1200/1200 มีในข้อมูลจริง)
+  .refine((a) => a.startMin === null || a.endMin === null || a.endMin >= a.startMin, {
+    message: "เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม",
   });
 
+/** key หลักของไฟล์ seed — key อื่นต้องขึ้นต้นด้วย $ เท่านั้น (กัน typo เช่น "assigments" เงียบหาย) */
+const SEED_KNOWN_KEYS = new Set(["trucks", "communities", "routes", "assignments"]);
+
+// seed script เป็นคนเติม effectiveFrom/effectiveTo/active และ default ของ aliases ตอนเขียนลง DB
 export const seedFileSchema = z.object({
   trucks: z.array(
     z.object({
@@ -62,7 +84,23 @@ export const seedFileSchema = z.object({
       status: z.enum(["active", "maintenance", "retired"]),
     }).strict()
   ),
-  communities: z.array(z.object({ name: z.string().min(1) }).strict()),
+  communities: z.array(
+    z.object({
+      name: z.string().min(1),
+      aliases: z.array(z.string().min(1)).optional(),
+    }).strict()
+  ),
   routes: z.array(routeSchema),
   assignments: z.array(assignmentSchema),
-}).passthrough(); // ยอมให้มี key ที่ขึ้นต้นด้วย $ สำหรับคำอธิบายในไฟล์
+}).passthrough() // ยอมให้มี key ที่ขึ้นต้นด้วย $ สำหรับคำอธิบายในไฟล์
+  .superRefine((obj, ctx) => {
+    for (const key of Object.keys(obj)) {
+      if (!SEED_KNOWN_KEYS.has(key) && !key.startsWith("$")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: `key "${key}" ไม่รู้จัก — key เสริมต้องขึ้นต้นด้วย $`,
+        });
+      }
+    }
+  });
