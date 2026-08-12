@@ -60,6 +60,32 @@ describe("getLivePosition", () => {
     expect(getLivePosition(uneven, 300).currentStop?.name).toBe("เข้า 2");
   });
 
+  it("stops ที่มาไม่เรียงตามเวลา ยังได้จุดปัจจุบัน/ถัดไปถูกต้อง", () => {
+    const shuffled: ResolvedAssignment = {
+      ...ra,
+      stops: [
+        { seq: 2, name: "จุด B", mode: "truck", atMin: 270 },
+        { seq: 1, name: "จุด A", mode: "truck", atMin: 240 },
+        { seq: 3, name: "จุด C", mode: "truck", atMin: 300 },
+      ],
+    };
+    const p = getLivePosition(shuffled, 280);
+    expect(p.currentStop?.name).toBe("จุด B");
+    expect(p.nextStop?.name).toBe("จุด C");
+    expect(p.etaNextMin).toBe(20);
+  });
+
+  it("ณ นาทีแรกของงาน คือ running ที่จุดแรก progress 0", () => {
+    const p = getLivePosition(ra, 240);
+    expect(p.status).toBe("running");
+    expect(p.currentStop?.name).toBe("จุด A");
+    expect(p.progress).toBe(0);
+  });
+
+  it("กลางงานพอดี progress = 0.5", () => {
+    expect(getLivePosition(ra, 270).progress).toBe(0.5);
+  });
+
   it("วันหยุดที่ไม่มีเวลา คือ unknown", () => {
     const off = { ...ra, startMin: null, endMin: null, kind: "day_off" as const, stops: [] };
     expect(getLivePosition(off, 300).status).toBe("unknown");

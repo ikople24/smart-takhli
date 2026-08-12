@@ -27,20 +27,21 @@ export function getLivePosition(a: ResolvedAssignment, nowMin: Minutes): LivePos
   const span = a.endMin - a.startMin;
   const progress = span > 0 ? Math.min((nowMin - a.startMin) / span, 1) : 1;
 
-  const timed = a.stops.filter((s) => s.atMin != null);
-  let currentStop: TimedStop | null = null;
-  let nextStop: TimedStop | null = null;
+  // เรียงตามเวลาจริงเสมอ — อย่าไว้ใจลำดับจากต้นทาง (seq กับเวลาอาจไม่ตรงกัน)
+  const timed = a.stops
+    .filter((s): s is TimedStop & { atMin: Minutes } => s.atMin != null)
+    .sort((x, y) => x.atMin - y.atMin);
 
-  if (timed.length > 0) {
-    // จุดปัจจุบัน = จุดสุดท้ายที่เวลาถึงแล้ว
-    for (const s of timed) {
-      if ((s.atMin as number) <= nowMin) currentStop = s;
-      else if (nextStop === null) nextStop = s;
-    }
-    // ถ้ายังไม่ถึงจุดแรกเลย ให้จุดแรกเป็นจุดถัดไป
-    if (currentStop === null) nextStop = timed[0];
+  let currentStop: (TimedStop & { atMin: Minutes }) | null = null;
+  let nextStop: (TimedStop & { atMin: Minutes }) | null = null;
+
+  // จุดปัจจุบัน = จุดสุดท้ายที่เวลาถึงแล้ว, จุดถัดไป = จุดแรกที่เวลายังมาไม่ถึง
+  for (const s of timed) {
+    if (s.atMin <= nowMin) currentStop = s;
+    else if (nextStop === null) nextStop = s;
   }
 
+  // นาทีที่คาบเกี่ยวสองหน้าต่าง (endMin หน้าต่างแรก = startMin หน้าต่างถัดไป) ให้หน้าต่างแรกชนะ
   const currentWindow =
     a.communityWindows.find((w) => nowMin >= w.startMin && nowMin <= w.endMin) ?? null;
 
@@ -49,7 +50,7 @@ export function getLivePosition(a: ResolvedAssignment, nowMin: Minutes): LivePos
     startsInMin: null,
     currentStop,
     nextStop,
-    etaNextMin: nextStop?.atMin != null ? nextStop.atMin - nowMin : null,
+    etaNextMin: nextStop === null ? null : nextStop.atMin - nowMin,
     currentWindow,
     progress,
   };

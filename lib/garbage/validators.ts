@@ -74,7 +74,15 @@ export const assignmentSchema = z.object({
   // เวลาเท่ากันถือว่าผ่าน (จุดจอดเดียวเริ่ม-จบพร้อมกัน เช่น 1200/1200 มีในข้อมูลจริง)
   .refine((a) => a.startMin === null || a.endMin === null || a.endMin >= a.startMin, {
     message: "เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม",
-  });
+  })
+  // เรียงตาม seq แล้วเวลาต้องไม่ย้อนกลับ (เวลาเท่ากันถือว่าผ่าน — จุดติดกันเวลาเดียวกันมีในข้อมูลจริง)
+  .refine(
+    (a) => {
+      const sorted = [...a.stopTimes].sort((x, y) => x.seq - y.seq);
+      return sorted.every((s, i) => i === 0 || s.atMin >= sorted[i - 1].atMin);
+    },
+    { message: "เวลาใน stopTimes ต้องไม่ย้อนกลับตามลำดับจุด" }
+  );
 
 /** key หลักของไฟล์ seed — key อื่นต้องขึ้นต้นด้วย $ เท่านั้น (กัน typo เช่น "assigments" เงียบหาย) */
 const SEED_KNOWN_KEYS = new Set(["trucks", "communities", "routes", "assignments"]);

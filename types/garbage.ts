@@ -100,8 +100,8 @@ export interface LivePosition {
   status: LiveStatus;
   /** จำนวนนาทีนับจากตอนนี้ก่อนเริ่ม — มีค่าเมื่อ status = "upcoming" */
   startsInMin: number | null;
-  currentStop: RouteStop | null;
-  nextStop: RouteStop | null;
+  currentStop: (RouteStop & { atMin: Minutes | null }) | null;
+  nextStop: (RouteStop & { atMin: Minutes | null }) | null;
   /** นาทีนับจากตอนนี้ถึง nextStop */
   etaNextMin: number | null;
   currentWindow: CommunityWindow | null;
