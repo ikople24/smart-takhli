@@ -54,6 +54,10 @@ export const assignmentSchema = z.object({
   .refine((a) => a.kind !== "substitute" || a.coverForRouteCode !== null, {
     message: "การแทนเบอร์ต้องระบุ coverForRouteCode",
   })
+  // resolver join จุดเก็บผ่าน routeCode เท่านั้น — substitute ที่ไม่มี routeCode จะ render เป็นศูนย์จุดแบบเงียบ ๆ
+  .refine((a) => a.kind !== "substitute" || a.routeCode !== null, {
+    message: "การแทนเบอร์ต้องมี routeCode ของสายที่วิ่งจริง",
+  })
   .refine((a) => a.kind === "day_off" || (a.startMin !== null && a.endMin !== null), {
     message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุด",
   })

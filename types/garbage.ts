@@ -65,6 +65,10 @@ export interface Assignment {
   communityWindows: CommunityWindow[];
   label: string | null;
   effectiveFrom: Date;
+  /**
+   * เที่ยงคืนกรุงเทพฯ ของ "วันสุดท้ายที่ยังใช้ผังนี้" (inclusive) — null = ใช้ตลอดไป
+   * ฝั่งเขียนข้อมูล (admin/seed) ห้ามใช้ convention แบบ exclusive เพราะ resolver คิวรีด้วย $gte
+   */
   effectiveTo: Date | null;
 }
 

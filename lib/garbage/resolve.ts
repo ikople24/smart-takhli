@@ -4,11 +4,15 @@ import type {
 import { assignments as assignmentsCol, routes as routesCol, trucks as trucksCol } from "./db";
 import { weekdayOf } from "./time";
 
-/** เมื่อมีหลายเวอร์ชันของ (รถ, รอบ) เดียวกัน เลือกอันที่ effectiveFrom ใหม่สุด */
+/**
+ * เมื่อมีหลายเวอร์ชันของ (วัน, รถ, รอบ) เดียวกัน เลือกอันที่ effectiveFrom ใหม่สุด
+ * ถ้า effectiveFrom เท่ากัน ตัวแรกในลิสต์ชนะ — ผู้เรียกจึงควร sort มาก่อน
+ * (resolveScheduleForDate sort ด้วย _id: -1 → เอกสารที่สร้างทีหลังชนะ)
+ */
 export function pickLatestVersions(list: Assignment[]): Assignment[] {
   const best = new Map<string, Assignment>();
   for (const a of list) {
-    const key = `${a.truckNumber}-${a.shiftNo}`;
+    const key = `${a.weekday}-${a.truckNumber}-${a.shiftNo}`;
     const cur = best.get(key);
     if (!cur || a.effectiveFrom > cur.effectiveFrom) best.set(key, a);
   }
@@ -29,6 +33,10 @@ export function buildDaySchedule(
   const resolved: ResolvedAssignment[] = list.map((a) => {
     const route = a.routeCode ? routeByCode.get(a.routeCode) ?? null : null;
     const truck = truckByNumber.get(a.truckNumber);
+    if (!truck) {
+      // ข้อมูลไม่ครบ (ตารางอ้างรถที่ไม่มีในทะเบียน) — ยัง render ต่อด้วยสี default แต่เตือนไว้ให้ตามแก้
+      console.warn(`[garbage] ไม่พบรถเบอร์ ${a.truckNumber} ในทะเบียนรถ — ใช้สีเขียวเป็นค่า default`);
+    }
     const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
 
     return {
@@ -71,12 +79,18 @@ export async function resolveScheduleForDate(date: string): Promise<ResolvedDayS
   const [aCol, rCol, tCol] = await Promise.all([assignmentsCol(), routesCol(), trucksCol()]);
   const [rawAssignments, allRoutes, allTrucks] = await Promise.all([
     aCol
+      // effectiveTo เก็บเป็นเที่ยงคืนกรุงเทพฯ ของ "วันสุดท้ายที่ยังใช้ผังนี้" (inclusive) —
+      // จึงใช้ $gte กับเที่ยงคืนของวันที่ขอ; ฝั่ง admin ที่เขียนข้อมูลห้ามใช้ convention แบบ exclusive
       .find({
         weekday,
         effectiveFrom: { $lte: at },
         $or: [{ effectiveTo: null }, { effectiveTo: { $gte: at } }],
       })
+      // เรียงใหม่สุดก่อน + _id ใหม่สุดก่อน เพื่อให้ pickLatestVersions ตัดสิน tie แบบ deterministic
+      .sort({ effectiveFrom: -1, _id: -1 })
       .toArray(),
+    // ดึงเฉพาะสาย active — assignment ที่อ้างสายที่ปิดใช้งานจะ render แบบไม่มีสายโดยตั้งใจ
+    // (routeName เป็น null, stops ว่าง) ไม่ใช่ bug
     rCol.find({ active: true }).toArray(),
     tCol.find({}).toArray(),
   ]);
