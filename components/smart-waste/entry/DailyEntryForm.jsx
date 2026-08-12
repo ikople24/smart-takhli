@@ -39,7 +39,7 @@ export default function DailyEntryForm({ types, initialDate, onSaved }) {
     const extras = extraKeys
       .map((key) => typeByKey.get(key))
       .filter(Boolean)
-      .filter((type) => !type.isCommon);
+      .filter((type) => !(type.isCommon && type.active));
     return [...commonTypes, ...extras];
   }, [commonTypes, extraKeys, typeByKey]);
 
@@ -70,7 +70,7 @@ export default function DailyEntryForm({ types, initialDate, onSaved }) {
       for (const entry of record?.entries || []) {
         nextValues[entry.typeKey] = String(entry.kg);
         const type = typeByKey.get(entry.typeKey);
-        if (!type?.isCommon) nextExtras.push(entry.typeKey);
+        if (!(type?.isCommon && type.active)) nextExtras.push(entry.typeKey);
       }
       setExisting(record);
       setNote(record?.note || '');
