@@ -32,7 +32,7 @@ function stripPrefix(s) {
 }
 
 /** คีย์สำหรับเทียบชื่อ: ตัดคำนำหน้า ช่องว่าง ไม้ทัณฑฆาต และ - ออก */
-export function normalizeName(s) {
+function normalizeName(s) {
   return stripPrefix(String(s ?? "").normalize("NFC").trim())
     .replace(/[\s\-–]/gu, "")
     .replace(/\u0E4C/gu, "") // ์
@@ -144,6 +144,7 @@ function validate(features) {
 async function main() {
   const [, , file, ...flags] = process.argv;
   const dryRun = flags.includes("--dry-run");
+  const forceRetire = flags.includes("--force-retire");
 
   if (!file) {
     console.error("ใช้: node import-roads.mjs <road_takhli.geojson> [--dry-run]");
@@ -213,7 +214,8 @@ async function main() {
     docs.map((d) => ({
       updateOne: {
         filter: { roadId: d.roadId },
-        update: { $set: d, $setOnInsert: { createdAt: now } },
+        // เส้นที่กลับเข้ามาในไฟล์ = active อีกครั้ง — ล้าง retiredAt ค้างด้วย
+        update: { $set: d, $unset: { retiredAt: "" }, $setOnInsert: { createdAt: now } },
         upsert: true,
       },
     })),
@@ -223,11 +225,19 @@ async function main() {
 
   // เส้นที่หายไปจากไฟล์ → ปิดการใช้งาน ไม่ลบ
   const ids = docs.map((d) => d.roadId);
-  const retired = await col.updateMany(
-    { roadId: { $nin: ids }, active: true },
-    { $set: { active: false, retiredAt: now } }
-  );
-  if (retired.modifiedCount) {
+  const wouldRetire = await col.countDocuments({ roadId: { $nin: ids }, active: true });
+  const activeTotal = await col.countDocuments({ active: true });
+  // กันพลาด: ถ้าไฟล์มีเส้นน้อยกว่า 80% ของที่ active อยู่ น่าจะเป็นไฟล์บางส่วน — ไม่ retire ให้เอง
+  if (wouldRetire > 0 && docs.length < activeTotal * 0.8 && !forceRetire) {
+    console.warn(
+      `จะปิดการใช้งาน ${wouldRetire} เส้นที่ไม่อยู่ในไฟล์ (ไฟล์มี ${docs.length}/${activeTotal} เส้นที่ active) — ` +
+        `ถ้าตั้งใจใช้ไฟล์บางส่วน ให้รันด้วย --force-retire · ข้ามขั้นตอน retire`
+    );
+  } else if (wouldRetire > 0) {
+    const retired = await col.updateMany(
+      { roadId: { $nin: ids }, active: true },
+      { $set: { active: false, retiredAt: now } }
+    );
     console.log(`ปิดการใช้งาน ${retired.modifiedCount} เส้นที่ไม่มีในไฟล์แล้ว (ไม่ได้ลบ)`);
   }
 
