@@ -19,8 +19,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const norm = (s: string) =>
     s.normalize("NFC").replace(/^(ถนน|ถ\.\s*|ซอย|ซ\.\s*|ชุมชน)\s*/u, "").replace(/\s/gu, "").toLowerCase();
   const needle = norm(q);
-  // คำที่เหลือแต่คำนำหน้า (เช่น "ซอย", "ถ.") normalize แล้วว่าง — จะ match ทุกอย่าง จึงตีเป็นคำค้นไม่พอ
-  if (needle.length < 1) return res.status(400).json({ error: "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร" });
+  // คำที่เป็นคำนำหน้าล้วน (ถนน/ถ./ซอย/ซ./ชุมชน) normalize แล้วเหลือค่าว่าง — จะ match ทุกอย่าง จึงตีเป็นคำค้นไม่พอ
+  // ต้องใช้ข้อความคนละอันกับเกต 2 ตัวอักษรข้างบน ไม่งั้นคนพิมพ์ "ซอย" (3 ตัวอักษร) จะเห็นว่า "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร"
+  if (needle.length < 1) {
+    return res
+      .status(400)
+      .json({ error: 'กรุณาพิมพ์ชื่อถนนหรือชุมชน ไม่ใช่เฉพาะคำนำหน้า เช่น พิมพ์ "มาลัย" แทน "ซอย"' });
+  }
 
   try {
     const [rCol, aCol] = await Promise.all([routesCol(), assignmentsCol()]);
