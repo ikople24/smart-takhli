@@ -116,3 +116,25 @@ export const seedFileSchema = z.object({
       }
     }
   });
+
+/** ฟอร์มตั้งค่าจากหน้าแอดมิน — ค่าว่างถือเป็น null (ล้างค่า) */
+const optionalTrimmed = (max: number, message: string) =>
+  z
+    .string()
+    .max(max, message)
+    .nullable()
+    .optional()
+    .transform((v) => {
+      const s = typeof v === "string" ? v.trim() : v;
+      return s == null || s === "" ? null : s;
+    });
+
+export const garbageSettingsInputSchema = z
+  .object({
+    contactPhone: optionalTrimmed(30, "เบอร์ติดต่อยาวเกิน 30 ตัวอักษร").refine(
+      (v) => v == null || /^[0-9\s\-()+]{6,30}$/u.test(v),
+      "เบอร์ติดต่อต้องมีแต่ตัวเลข เว้นวรรค ขีด วงเล็บ หรือ + และยาว 6–30 ตัวอักษร"
+    ),
+    contactNote: optionalTrimmed(200, "หมายเหตุยาวเกิน 200 ตัวอักษร"),
+  })
+  .strict();

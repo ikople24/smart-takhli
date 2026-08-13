@@ -110,3 +110,11 @@ export interface LivePosition {
   /** 0–1 */
   progress: number;
 }
+
+/** ค่าตั้งค่าการแสดงผลของโมดูล — singleton doc key = "default" ใน garbage_settings */
+export interface GarbageSettings {
+  key: string;
+  contactPhone: string | null;
+  contactNote: string | null;
+  updatedBy: string | null;
+}
