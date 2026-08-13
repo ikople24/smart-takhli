@@ -100,7 +100,10 @@ await db.collection("garbage_routes").createIndex({ "stops.name": 1 });
 await db.collection("garbage_communities").createIndex({ name: 1 }, { unique: true });
 await db.collection("garbage_communities").createIndex({ name: "text", aliases: "text" }, { default_language: "none" });
 await db.collection("garbage_assignments").createIndex({ weekday: 1, effectiveFrom: -1 });
-await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday: 1, shiftNo: 1 });
+// คีย์ธรรมชาติของงานมอบหมาย — unique เพื่อกันเพิ่มซ้ำจากหน้าแอดมิน (M6)
+await db
+  .collection("garbage_assignments")
+  .createIndex({ weekday: 1, truckNumber: 1, shiftNo: 1 }, { unique: true, name: "natural_key" });
 await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
 await db.collection("garbage_settings").createIndex({ key: 1 }, { unique: true });
 
