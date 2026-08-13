@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { SearchHit } from "@/types/garbage";
+import { normalizePlaceName } from "@/lib/garbage/community";
 import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
 import { WEEKDAY_TH } from "@/lib/garbage/labels";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
@@ -16,9 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (q.length < 2) return res.status(400).json({ error: "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร" });
 
   // ตัดคำนำหน้าและช่องว่างออกเพื่อให้ "ซ.มาลัย" ก็เจอ "มาลัย" และกลับกัน
-  const norm = (s: string) =>
-    s.normalize("NFC").replace(/^(ถนน|ถ\.\s*|ซอย|ซ\.\s*|ชุมชน)\s*/u, "").replace(/\s/gu, "").toLowerCase();
-  const needle = norm(q);
+  // กฎอยู่ที่ lib/garbage/community.ts ที่เดียว — สคริปต์จับคู่ถนนใช้กฎเดียวกันเป๊ะ
+  const needle = normalizePlaceName(q);
   // คำที่เป็นคำนำหน้าล้วน (ถนน/ถ./ซอย/ซ./ชุมชน) normalize แล้วเหลือค่าว่าง — จะ match ทุกอย่าง จึงตีเป็นคำค้นไม่พอ
   // ต้องใช้ข้อความคนละอันกับเกต 2 ตัวอักษรข้างบน ไม่งั้นคนพิมพ์ "ซอย" (3 ตัวอักษร) จะเห็นว่า "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร"
   if (needle.length < 1) {
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
         for (const s of route.stops) {
-          if (!norm(s.name).includes(needle)) continue;
+          if (!normalizePlaceName(s.name).includes(needle)) continue;
           // วันนั้นไม่ได้เก็บจุดนี้ → ไม่ใช่คำตอบของ "วันไหนรถมา" จึงไม่ต้องแสดง
           if (!timeBySeq.has(s.seq)) continue;
           hits.push({
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         for (const w of a.communityWindows) {
           for (const name of w.communityNames) {
-            if (!norm(name).includes(needle)) continue;
+            if (!normalizePlaceName(name).includes(needle)) continue;
             hits.push({
               matchType: "community", matchName: name,
               routeCode: route.code, routeName: route.name,
