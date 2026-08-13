@@ -1,0 +1,1691 @@
+{
+  "$comment": "ข้อมูลตั้งต้นระบบตารางรถขยะ เทศบาลเมืองตาคลี — วันจันทร์และวันอังคารเท่านั้น",
+  "$sources": {
+    "R1-R4": "data/schedule.json ของระบบ prototype เดิม (ข้อมูลจริง)",
+    "R5-R7": "โปสเตอร์แผนปฏิบัติงานวันจันทร์ — ชื่อจุดต้องตรวจทาน",
+    "วันอังคาร": "โปสเตอร์แผนปฏิบัติงานวันอังคาร",
+    "วันพุธ-อาทิตย์": "ยังไม่มีข้อมูล ต้องขอจากกองสาธารณสุข"
+  },
+  "trucks": [
+    {
+      "number": 1,
+      "color": "yellow",
+      "status": "active"
+    },
+    {
+      "number": 2,
+      "color": "green",
+      "status": "active"
+    },
+    {
+      "number": 3,
+      "color": "green",
+      "status": "active"
+    },
+    {
+      "number": 4,
+      "color": "green",
+      "status": "active"
+    },
+    {
+      "number": 5,
+      "color": "green",
+      "status": "active"
+    },
+    {
+      "number": 6,
+      "color": "yellow",
+      "status": "active"
+    },
+    {
+      "number": 7,
+      "color": "green",
+      "status": "active"
+    }
+  ],
+  "communities": [
+    {
+      "name": "ชุมชนจันทร์เทวี"
+    },
+    {
+      "name": "ชุมชนตลาดโพนทอง"
+    },
+    {
+      "name": "ชุมชนตาคลีพัฒนา"
+    },
+    {
+      "name": "ชุมชนตาคลีใหญ่"
+    },
+    {
+      "name": "ชุมชนตีคลี"
+    },
+    {
+      "name": "ชุมชนทิพย์พิมาน"
+    },
+    {
+      "name": "ชุมชนบ้านใหม่โพนทอง"
+    },
+    {
+      "name": "ชุมชนมาลัย"
+    },
+    {
+      "name": "ชุมชนยศวิมล"
+    },
+    {
+      "name": "ชุมชนรจนา"
+    },
+    {
+      "name": "ชุมชนรวมใจ"
+    },
+    {
+      "name": "ชุมชนวิลาวัลย์"
+    },
+    {
+      "name": "ชุมชนศรีสวัสดิ์"
+    },
+    {
+      "name": "ชุมชนศรีเทพ"
+    },
+    {
+      "name": "ชุมชนสว่างวงษ์"
+    },
+    {
+      "name": "ชุมชนสังข์ทอง"
+    },
+    {
+      "name": "ชุมชนสามล"
+    },
+    {
+      "name": "ชุมชนสารภี"
+    },
+    {
+      "name": "ชุมชนหัวเขา"
+    },
+    {
+      "name": "ชุมชนเขาใบไม้"
+    },
+    {
+      "name": "ชุมชนโพธิ์งาม"
+    }
+  ],
+  "routes": [
+    {
+      "code": "R1",
+      "name": "สาย R1",
+      "defaultTruckNumber": 1,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "ถ.ดอกไม้แดง",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซ.ดอกไม้แดง 1,3",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ซ.เจ้าเงาะ 5",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ถ.เจ้าเงาะ",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "หมู่บ้านปาริชาติ",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "หมู่บ้านรจนา",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ซ.เจ้าเงาะ4",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ถ.บ่อทอง",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "ซ.บ่อทอง 2",
+          "mode": "truck"
+        },
+        {
+          "seq": 10,
+          "name": "ซ.บ่อเงิน",
+          "mode": "truck"
+        },
+        {
+          "seq": 11,
+          "name": "ถ.บ่อเงิน",
+          "mode": "truck"
+        },
+        {
+          "seq": 12,
+          "name": "หมู่บ้านวิลล่า",
+          "mode": "truck"
+        },
+        {
+          "seq": 13,
+          "name": "หมู่บ้านรวมใจ",
+          "mode": "truck"
+        },
+        {
+          "seq": 14,
+          "name": "โรงเรียนเทศบาล",
+          "mode": "truck"
+        },
+        {
+          "seq": 15,
+          "name": "ถ.ถาวโร",
+          "mode": "truck"
+        },
+        {
+          "seq": 16,
+          "name": "ซ.ถาวโร 1 - 7",
+          "mode": "truck"
+        },
+        {
+          "seq": 17,
+          "name": "ถ.รจนา",
+          "mode": "truck"
+        },
+        {
+          "seq": 18,
+          "name": "ซ.รจนาทุกซอย",
+          "mode": "truck"
+        },
+        {
+          "seq": 19,
+          "name": "โรงเรียนหัวเขา",
+          "mode": "truck"
+        },
+        {
+          "seq": 20,
+          "name": "ซ.เกศเมือง",
+          "mode": "truck"
+        },
+        {
+          "seq": 21,
+          "name": "ถ.มาลัย",
+          "mode": "truck"
+        },
+        {
+          "seq": 22,
+          "name": "ซ.มาลัย 2",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนเขาใบไม้",
+        "ชุมชนรวมใจ",
+        "ชุมชนรจนา",
+        "ชุมชนมาลัย"
+      ],
+      "source": "data/schedule.json"
+    },
+    {
+      "code": "R2",
+      "name": "สาย R2",
+      "defaultTruckNumber": 2,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "ซ.ศรีสวัสดิ์ 3,5-6",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซ.สำเภาทอง",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ซ.ทวีชัย 2",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "หมู่บ้านเศรษฐี",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "ถ.มัสยา",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "ซ.หลังอำเภอ",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ถ.สารนิธิ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ถ.ศรีเทพ 1 - 2",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "ซ.หรหมนคร 1-2",
+          "mode": "truck"
+        },
+        {
+          "seq": 10,
+          "name": "ซ.โพธิรักษ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 11,
+          "name": "ถ.จันทร์เทวี",
+          "mode": "truck"
+        },
+        {
+          "seq": 12,
+          "name": "ถ.จันทา",
+          "mode": "truck"
+        },
+        {
+          "seq": 13,
+          "name": "โรงเรียนจงซัน",
+          "mode": "truck"
+        },
+        {
+          "seq": 14,
+          "name": "มูลนิธิการกุศลตาคลี",
+          "mode": "truck"
+        },
+        {
+          "seq": 15,
+          "name": "ซ.สระตาเฉื่อย",
+          "mode": "truck"
+        },
+        {
+          "seq": 16,
+          "name": "ซ.ยศวิมล 1",
+          "mode": "truck"
+        },
+        {
+          "seq": 17,
+          "name": "ซ.ทวีชัย 5,7-8",
+          "mode": "truck"
+        },
+        {
+          "seq": 18,
+          "name": "โรงเรียนโพธิ์งาม",
+          "mode": "truck"
+        },
+        {
+          "seq": 19,
+          "name": "ซ.ทวีชัย 9",
+          "mode": "truck"
+        },
+        {
+          "seq": 20,
+          "name": "ซ.สังข์ทอง",
+          "mode": "truck"
+        },
+        {
+          "seq": 21,
+          "name": "ถ.สุวรรณสังข์",
+          "mode": "truck"
+        },
+        {
+          "seq": 22,
+          "name": "ซ.วิลาวัลย์",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนศรีสวัสดิ์",
+        "ชุมชนศรีเทพ",
+        "ชุมชนยศวิมล",
+        "ชุมชนจันทร์เทวี",
+        "ชุมชนโพธิ์งาม",
+        "ชุมชนวิลาวัลย์"
+      ],
+      "source": "data/schedule.json"
+    },
+    {
+      "code": "R3",
+      "name": "สาย R3",
+      "defaultTruckNumber": 3,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "สนง.เทศบาลเก่า",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ที่ทำการไปรษณีย์",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ร้าน D จัง",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ร้านเกียวอันคอนกรีต",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "ร้านธนพลหมูกระทะ",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "ร้านคเณย์แอร์",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ร้านมานิตย์ข้าวต้ม",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ธนาคารออมสิน",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "เอื้อใจเส็ง5",
+          "mode": "truck"
+        },
+        {
+          "seq": 10,
+          "name": "ร้านพรอีสานเก่า",
+          "mode": "truck"
+        },
+        {
+          "seq": 11,
+          "name": "รร.ตาคลีประชาสรรค์",
+          "mode": "truck"
+        },
+        {
+          "seq": 12,
+          "name": "ปั้มน้ำมันPT",
+          "mode": "truck"
+        },
+        {
+          "seq": 13,
+          "name": "ปั้มคาลเท็กซ์เก่า",
+          "mode": "truck"
+        },
+        {
+          "seq": 14,
+          "name": "ร้านเจริญยนต์",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนสังข์ทอง",
+        "ชุมชนสว่างวงษ์",
+        "ชุมชนสามล",
+        "ชุมชนรวมใจ",
+        "ชุมชนมาลัย",
+        "ชุมชนเขาใบไม้",
+        "ชุมชนศรีสวัสดิ์"
+      ],
+      "source": "data/schedule.json"
+    },
+    {
+      "code": "R4",
+      "name": "สาย R4",
+      "defaultTruckNumber": 4,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "ถ.ตีคลี",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซ.ทิพย์พิมาน",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ซ.หกเขย",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ซ.หลังอำเภอ",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "ซ.สารภี",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "ซ.มะลิวัลย์",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ถ.มณฑา",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ถ.ตักศิลา",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนตีคลี",
+        "ชุมชนทิพย์พิมาน",
+        "ชุมชนสว่างวงษ์",
+        "ชุมชนสารภี",
+        "ชุมชนหัวเขา",
+        "ชุมชนสามล"
+      ],
+      "source": "data/schedule.json"
+    },
+    {
+      "code": "R5",
+      "name": "สาย R5",
+      "defaultTruckNumber": 5,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "รร.วัดสว่างวงษ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซ.สาลีไทย 1-2",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ตลาดดวงนิมิตร",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ถ.มิตรสัมพันธ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "ถ.ตาคลีพัฒนา",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "รร.ปรียาโชติ",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ซ.ประชาอุทิศ 3",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "รร.อนุบาลปรียาโชติ",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "ถ.ประชาอุทิศ",
+          "mode": "truck"
+        },
+        {
+          "seq": 10,
+          "name": "ถ.วิษณุกรรม",
+          "mode": "truck"
+        },
+        {
+          "seq": 11,
+          "name": "ซ.สุวรรณอาภรณ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 12,
+          "name": "ซ.สนามคลี",
+          "mode": "truck"
+        },
+        {
+          "seq": 13,
+          "name": "ถ.ตายาย",
+          "mode": "truck"
+        },
+        {
+          "seq": 14,
+          "name": "สระทะเล",
+          "mode": "truck"
+        },
+        {
+          "seq": 15,
+          "name": "สวีทโฮม",
+          "mode": "truck"
+        },
+        {
+          "seq": 16,
+          "name": "ซ.หัสนัย 2,4",
+          "mode": "truck"
+        },
+        {
+          "seq": 17,
+          "name": "หมู่บ้านอุดมสุข",
+          "mode": "truck"
+        },
+        {
+          "seq": 18,
+          "name": "ถ.หัสนัย",
+          "mode": "truck"
+        },
+        {
+          "seq": 19,
+          "name": "ถ.ตาคลีพัฒนา",
+          "mode": "truck"
+        },
+        {
+          "seq": 20,
+          "name": "ถ.มิตรสัมพันธ์",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนสว่างวงษ์",
+        "ชุมชนตาคลีพัฒนา",
+        "ชุมชนตาคลีใหญ่",
+        "ชุมชนทิพย์พิมาน"
+      ],
+      "source": "โปสเตอร์วันจันทร์ — ต้องให้กองสาธารณสุขตรวจทานชื่อจุด",
+      "needsVerification": true
+    },
+    {
+      "code": "R6",
+      "name": "สาย R6",
+      "defaultTruckNumber": 6,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "ซ.มัสยา",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซ.ทวีชัย 1",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ซ.พันธุรัตน์",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ซ.ทวีชัย 4 แยก-โรงปูน",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "ซ.ทวีชัย 3",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "ซ.ทวีชัย 6",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ตลาดโพนทอง",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ถ.ทวีชัย โรงปูน-4 แยกทวีชัย",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "ตลาดศรีเทพ",
+          "mode": "walk"
+        },
+        {
+          "seq": 10,
+          "name": "ซ.พรหมนคร",
+          "mode": "walk"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนศรีเทพ",
+        "ชุมชนศรีสวัสดิ์",
+        "ชุมชนโพธิ์งาม",
+        "ชุมชนตลาดโพนทอง"
+      ],
+      "source": "โปสเตอร์วันจันทร์ — ต้องให้กองสาธารณสุขตรวจทานชื่อจุด",
+      "needsVerification": true
+    },
+    {
+      "code": "R7",
+      "name": "สาย R7",
+      "defaultTruckNumber": 7,
+      "stops": [
+        {
+          "seq": 1,
+          "name": "ตาคลีเซนเตอร์",
+          "mode": "truck"
+        },
+        {
+          "seq": 2,
+          "name": "ซีเจ ซุปเปอร์",
+          "mode": "truck"
+        },
+        {
+          "seq": 3,
+          "name": "ถ.พระสังข์",
+          "mode": "truck"
+        },
+        {
+          "seq": 4,
+          "name": "ถ.ประชาตาคลี",
+          "mode": "truck"
+        },
+        {
+          "seq": 5,
+          "name": "หมู่บ้านเอื้ออารีย์",
+          "mode": "truck"
+        },
+        {
+          "seq": 6,
+          "name": "บ้านพักโรงปูน",
+          "mode": "truck"
+        },
+        {
+          "seq": 7,
+          "name": "ถ.เทพารักษ์",
+          "mode": "truck"
+        },
+        {
+          "seq": 8,
+          "name": "ถ.โพธิ์สุวรรณ",
+          "mode": "truck"
+        },
+        {
+          "seq": 9,
+          "name": "วัดโพนทอง",
+          "mode": "truck"
+        },
+        {
+          "seq": 10,
+          "name": "รร.บ้านโพธิ์ทอง",
+          "mode": "truck"
+        }
+      ],
+      "communityNames": [
+        "ชุมชนสังข์ทอง",
+        "ชุมชนศรีเทพ",
+        "ชุมชนยศวิมล",
+        "ชุมชนวิลาวัลย์",
+        "ชุมชนตาคลีใหญ่",
+        "ชุมชนบ้านใหม่โพนทอง"
+      ],
+      "source": "โปสเตอร์วันจันทร์ — ต้องให้กองสาธารณสุขตรวจทานชื่อจุด",
+      "needsVerification": true
+    }
+  ],
+  "assignments": [
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 1,
+      "routeCode": "R1",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 240,
+      "endMin": 560,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 240
+        },
+        {
+          "seq": 2,
+          "atMin": 255
+        },
+        {
+          "seq": 3,
+          "atMin": 270
+        },
+        {
+          "seq": 4,
+          "atMin": 285
+        },
+        {
+          "seq": 5,
+          "atMin": 300
+        },
+        {
+          "seq": 6,
+          "atMin": 315
+        },
+        {
+          "seq": 7,
+          "atMin": 330
+        },
+        {
+          "seq": 8,
+          "atMin": 345
+        },
+        {
+          "seq": 9,
+          "atMin": 360
+        },
+        {
+          "seq": 10,
+          "atMin": 375
+        },
+        {
+          "seq": 11,
+          "atMin": 390
+        },
+        {
+          "seq": 12,
+          "atMin": 405
+        },
+        {
+          "seq": 13,
+          "atMin": 420
+        },
+        {
+          "seq": 14,
+          "atMin": 435
+        },
+        {
+          "seq": 15,
+          "atMin": 450
+        },
+        {
+          "seq": 16,
+          "atMin": 465
+        },
+        {
+          "seq": 17,
+          "atMin": 480
+        },
+        {
+          "seq": 18,
+          "atMin": 495
+        },
+        {
+          "seq": 19,
+          "atMin": 510
+        },
+        {
+          "seq": 20,
+          "atMin": 525
+        },
+        {
+          "seq": 21,
+          "atMin": 540
+        },
+        {
+          "seq": 22,
+          "atMin": 550
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนเขาใบไม้"
+          ],
+          "startMin": 240,
+          "endMin": 430
+        },
+        {
+          "communityNames": [
+            "ชุมชนรวมใจ"
+          ],
+          "startMin": 430,
+          "endMin": 490
+        },
+        {
+          "communityNames": [
+            "ชุมชนรจนา"
+          ],
+          "startMin": 490,
+          "endMin": 530
+        },
+        {
+          "communityNames": [
+            "ชุมชนมาลัย"
+          ],
+          "startMin": 530,
+          "endMin": 560
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 2,
+      "routeCode": "R2",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 220,
+      "endMin": 500,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 220
+        },
+        {
+          "seq": 2,
+          "atMin": 235
+        },
+        {
+          "seq": 3,
+          "atMin": 250
+        },
+        {
+          "seq": 4,
+          "atMin": 265
+        },
+        {
+          "seq": 5,
+          "atMin": 280
+        },
+        {
+          "seq": 6,
+          "atMin": 295
+        },
+        {
+          "seq": 7,
+          "atMin": 310
+        },
+        {
+          "seq": 8,
+          "atMin": 325
+        },
+        {
+          "seq": 9,
+          "atMin": 340
+        },
+        {
+          "seq": 10,
+          "atMin": 355
+        },
+        {
+          "seq": 11,
+          "atMin": 370
+        },
+        {
+          "seq": 12,
+          "atMin": 385
+        },
+        {
+          "seq": 13,
+          "atMin": 400
+        },
+        {
+          "seq": 14,
+          "atMin": 415
+        },
+        {
+          "seq": 15,
+          "atMin": 430
+        },
+        {
+          "seq": 16,
+          "atMin": 445
+        },
+        {
+          "seq": 17,
+          "atMin": 460
+        },
+        {
+          "seq": 18,
+          "atMin": 475
+        },
+        {
+          "seq": 19,
+          "atMin": 490
+        },
+        {
+          "seq": 20,
+          "atMin": 495
+        },
+        {
+          "seq": 21,
+          "atMin": 498
+        },
+        {
+          "seq": 22,
+          "atMin": 499
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนศรีสวัสดิ์"
+          ],
+          "startMin": 220,
+          "endMin": 260
+        },
+        {
+          "communityNames": [
+            "ชุมชนศรีเทพ"
+          ],
+          "startMin": 260,
+          "endMin": 320
+        },
+        {
+          "communityNames": [
+            "ชุมชนยศวิมล"
+          ],
+          "startMin": 320,
+          "endMin": 360
+        },
+        {
+          "communityNames": [
+            "ชุมชนจันทร์เทวี"
+          ],
+          "startMin": 360,
+          "endMin": 430
+        },
+        {
+          "communityNames": [
+            "ชุมชนโพธิ์งาม"
+          ],
+          "startMin": 430,
+          "endMin": 470
+        },
+        {
+          "communityNames": [
+            "ชุมชนวิลาวัลย์"
+          ],
+          "startMin": 470,
+          "endMin": 500
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 3,
+      "routeCode": "R3",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 270,
+      "endMin": 500,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 270
+        },
+        {
+          "seq": 2,
+          "atMin": 291
+        },
+        {
+          "seq": 3,
+          "atMin": 311
+        },
+        {
+          "seq": 4,
+          "atMin": 326
+        },
+        {
+          "seq": 5,
+          "atMin": 336
+        },
+        {
+          "seq": 6,
+          "atMin": 351
+        },
+        {
+          "seq": 7,
+          "atMin": 361
+        },
+        {
+          "seq": 8,
+          "atMin": 381
+        },
+        {
+          "seq": 9,
+          "atMin": 391
+        },
+        {
+          "seq": 10,
+          "atMin": 411
+        },
+        {
+          "seq": 11,
+          "atMin": 421
+        },
+        {
+          "seq": 12,
+          "atMin": 471
+        },
+        {
+          "seq": 13,
+          "atMin": 481
+        },
+        {
+          "seq": 14,
+          "atMin": 491
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนสังข์ทอง"
+          ],
+          "startMin": 270,
+          "endMin": 290
+        },
+        {
+          "communityNames": [
+            "ชุมชนสว่างวงษ์"
+          ],
+          "startMin": 291,
+          "endMin": 310
+        },
+        {
+          "communityNames": [
+            "ชุมชนสามล"
+          ],
+          "startMin": 171,
+          "endMin": 350
+        },
+        {
+          "communityNames": [
+            "ชุมชนรวมใจ"
+          ],
+          "startMin": 351,
+          "endMin": 380
+        },
+        {
+          "communityNames": [
+            "ชุมชนมาลัย"
+          ],
+          "startMin": 381,
+          "endMin": 410
+        },
+        {
+          "communityNames": [
+            "ชุมชนเขาใบไม้"
+          ],
+          "startMin": 411,
+          "endMin": 420
+        },
+        {
+          "communityNames": [
+            "ชุมชนศรีสวัสดิ์"
+          ],
+          "startMin": 471,
+          "endMin": 480
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 4,
+      "routeCode": "R4",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 240,
+      "endMin": 535,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 240
+        },
+        {
+          "seq": 2,
+          "atMin": 281
+        },
+        {
+          "seq": 3,
+          "atMin": 331
+        },
+        {
+          "seq": 4,
+          "atMin": 371
+        },
+        {
+          "seq": 5,
+          "atMin": 401
+        },
+        {
+          "seq": 6,
+          "atMin": 471
+        },
+        {
+          "seq": 7,
+          "atMin": 501
+        },
+        {
+          "seq": 8,
+          "atMin": 521
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนตีคลี"
+          ],
+          "startMin": 240,
+          "endMin": 280
+        },
+        {
+          "communityNames": [
+            "ชุมชนทิพย์พิมาน"
+          ],
+          "startMin": 281,
+          "endMin": 360
+        },
+        {
+          "communityNames": [
+            "ชุมชนสว่างวงษ์"
+          ],
+          "startMin": 370,
+          "endMin": 400
+        },
+        {
+          "communityNames": [
+            "ชุมชนสารภี"
+          ],
+          "startMin": 401,
+          "endMin": 470
+        },
+        {
+          "communityNames": [
+            "ชุมชนหัวเขา"
+          ],
+          "startMin": 471,
+          "endMin": 500
+        },
+        {
+          "communityNames": [
+            "ชุมชนสามล"
+          ],
+          "startMin": 501,
+          "endMin": 535
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 5,
+      "routeCode": "R5",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 240,
+      "endMin": 810,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 240
+        },
+        {
+          "seq": 2,
+          "atMin": 260
+        },
+        {
+          "seq": 3,
+          "atMin": 280
+        },
+        {
+          "seq": 4,
+          "atMin": 290
+        },
+        {
+          "seq": 5,
+          "atMin": 300
+        },
+        {
+          "seq": 6,
+          "atMin": 320
+        },
+        {
+          "seq": 7,
+          "atMin": 360
+        },
+        {
+          "seq": 8,
+          "atMin": 370
+        },
+        {
+          "seq": 9,
+          "atMin": 390
+        },
+        {
+          "seq": 10,
+          "atMin": 420
+        },
+        {
+          "seq": 11,
+          "atMin": 440
+        },
+        {
+          "seq": 12,
+          "atMin": 460
+        },
+        {
+          "seq": 13,
+          "atMin": 480
+        },
+        {
+          "seq": 14,
+          "atMin": 500
+        },
+        {
+          "seq": 15,
+          "atMin": 520
+        },
+        {
+          "seq": 16,
+          "atMin": 540
+        },
+        {
+          "seq": 17,
+          "atMin": 570
+        },
+        {
+          "seq": 18,
+          "atMin": 600
+        },
+        {
+          "seq": 19,
+          "atMin": 750
+        },
+        {
+          "seq": 20,
+          "atMin": 810
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนสว่างวงษ์"
+          ],
+          "startMin": 240,
+          "endMin": 260
+        },
+        {
+          "communityNames": [
+            "ชุมชนตาคลีพัฒนา"
+          ],
+          "startMin": 260,
+          "endMin": 350
+        },
+        {
+          "communityNames": [
+            "ชุมชนตาคลีใหญ่"
+          ],
+          "startMin": 320,
+          "endMin": 750
+        },
+        {
+          "communityNames": [
+            "ชุมชนทิพย์พิมาน"
+          ],
+          "startMin": 750,
+          "endMin": 810
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 6,
+      "routeCode": "R6",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 180,
+      "endMin": 510,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 180
+        },
+        {
+          "seq": 2,
+          "atMin": 210
+        },
+        {
+          "seq": 3,
+          "atMin": 240
+        },
+        {
+          "seq": 4,
+          "atMin": 250
+        },
+        {
+          "seq": 5,
+          "atMin": 290
+        },
+        {
+          "seq": 6,
+          "atMin": 300
+        },
+        {
+          "seq": 7,
+          "atMin": 360
+        },
+        {
+          "seq": 8,
+          "atMin": 370
+        },
+        {
+          "seq": 9,
+          "atMin": 480
+        },
+        {
+          "seq": 10,
+          "atMin": 510
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนศรีเทพ"
+          ],
+          "startMin": 180,
+          "endMin": 210
+        },
+        {
+          "communityNames": [
+            "ชุมชนศรีสวัสดิ์"
+          ],
+          "startMin": 210,
+          "endMin": 290
+        },
+        {
+          "communityNames": [
+            "ชุมชนโพธิ์งาม"
+          ],
+          "startMin": 290,
+          "endMin": 360
+        },
+        {
+          "communityNames": [
+            "ชุมชนตลาดโพนทอง"
+          ],
+          "startMin": 360,
+          "endMin": 480
+        },
+        {
+          "communityNames": [
+            "ชุมชนศรีเทพ"
+          ],
+          "startMin": 480,
+          "endMin": 510
+        }
+      ],
+      "label": null
+    },
+    {
+      "weekday": 1,
+      "shiftNo": 1,
+      "truckNumber": 7,
+      "routeCode": "R7",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 240,
+      "endMin": 520,
+      "stopTimes": [
+        {
+          "seq": 1,
+          "atMin": 240
+        },
+        {
+          "seq": 2,
+          "atMin": 270
+        },
+        {
+          "seq": 3,
+          "atMin": 330
+        },
+        {
+          "seq": 4,
+          "atMin": 360
+        },
+        {
+          "seq": 5,
+          "atMin": 420
+        },
+        {
+          "seq": 6,
+          "atMin": 440
+        },
+        {
+          "seq": 7,
+          "atMin": 460
+        },
+        {
+          "seq": 8,
+          "atMin": 480
+        },
+        {
+          "seq": 9,
+          "atMin": 500
+        },
+        {
+          "seq": 10,
+          "atMin": 520
+        }
+      ],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนสังข์ทอง"
+          ],
+          "startMin": 240,
+          "endMin": 270
+        },
+        {
+          "communityNames": [
+            "ชุมชนศรีเทพ",
+            "ชุมชนยศวิมล",
+            "ชุมชนวิลาวัลย์"
+          ],
+          "startMin": 270,
+          "endMin": 330
+        },
+        {
+          "communityNames": [
+            "ชุมชนตาคลีใหญ่"
+          ],
+          "startMin": 360,
+          "endMin": 440
+        },
+        {
+          "communityNames": [
+            "ชุมชนบ้านใหม่โพนทอง"
+          ],
+          "startMin": 440,
+          "endMin": 520
+        }
+      ],
+      "label": null
+    },
+    {
+      "truckNumber": 1,
+      "shiftNo": 1,
+      "routeCode": null,
+      "kind": "day_off",
+      "coverForRouteCode": null,
+      "startMin": null,
+      "endMin": null,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "วันหยุด",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 2,
+      "shiftNo": 1,
+      "routeCode": null,
+      "kind": "day_off",
+      "coverForRouteCode": null,
+      "startMin": null,
+      "endMin": null,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "วันหยุด",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 3,
+      "shiftNo": 1,
+      "routeCode": null,
+      "kind": "day_off",
+      "coverForRouteCode": null,
+      "startMin": null,
+      "endMin": null,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "วันหยุด",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 4,
+      "shiftNo": 1,
+      "routeCode": null,
+      "kind": "day_off",
+      "coverForRouteCode": null,
+      "startMin": null,
+      "endMin": null,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "วันหยุด",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 5,
+      "shiftNo": 1,
+      "routeCode": "R1",
+      "kind": "substitute",
+      "coverForRouteCode": "R1",
+      "startMin": 240,
+      "endMin": 310,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "เก็บแทนเบอร์ 1",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 5,
+      "shiftNo": 2,
+      "routeCode": "R5",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 310,
+      "endMin": 810,
+      "stopTimes": [],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนสว่างวงษ์",
+            "ชุมชนตาคลีพัฒนา",
+            "ชุมชนทิพย์พิมาน",
+            "ชุมชนตาคลีใหญ่"
+          ],
+          "startMin": 310,
+          "endMin": 810
+        }
+      ],
+      "label": null,
+      "weekday": 2
+    },
+    {
+      "truckNumber": 6,
+      "shiftNo": 1,
+      "routeCode": "R2",
+      "kind": "substitute",
+      "coverForRouteCode": "R2",
+      "startMin": 180,
+      "endMin": 600,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "เก็บแทนเบอร์ 2",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 7,
+      "shiftNo": 1,
+      "routeCode": "R3",
+      "kind": "substitute",
+      "coverForRouteCode": "R3",
+      "startMin": 180,
+      "endMin": 390,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "เก็บแทนเบอร์ 3",
+      "weekday": 2
+    },
+    {
+      "truckNumber": 7,
+      "shiftNo": 2,
+      "routeCode": "R7",
+      "kind": "normal",
+      "coverForRouteCode": null,
+      "startMin": 390,
+      "endMin": 480,
+      "stopTimes": [],
+      "communityWindows": [
+        {
+          "communityNames": [
+            "ชุมชนสังข์ทอง",
+            "ชุมชนศรีเทพ",
+            "ชุมชนโพธิ์งาม",
+            "ชุมชนตาคลีใหญ่"
+          ],
+          "startMin": 390,
+          "endMin": 480,
+          "note": "ตาคลีใหญ่ เฉพาะริมถนน"
+        }
+      ],
+      "label": null,
+      "weekday": 2
+    },
+    {
+      "truckNumber": 7,
+      "shiftNo": 3,
+      "routeCode": null,
+      "kind": "special",
+      "coverForRouteCode": null,
+      "startMin": 1200,
+      "endMin": 1200,
+      "stopTimes": [],
+      "communityWindows": [],
+      "label": "วันตลาดนัดพิเศษ",
+      "weekday": 2
+    }
+  ]
+}

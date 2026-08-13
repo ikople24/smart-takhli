@@ -1,0 +1,60 @@
+import { MongoClient, type Collection, type Db } from "mongodb";
+import type { Truck, Route, Community, Assignment } from "@/types/garbage";
+
+// ใช้ global cache เพื่อไม่ให้ hot reload ของ Next.js เปิด connection ใหม่ทุกครั้ง
+const globalForMongo = globalThis as unknown as { _garbageMongo?: Promise<MongoClient> };
+
+/** เชื่อมต่อแบบ lazy — ห้าม throw ตอน import เพราะไฟล์นี้ถูก import โดยเทสต์และ build */
+export async function getDb(): Promise<Db> {
+  if (!globalForMongo._garbageMongo) {
+    // ใช้ MONGO_URI ตัวเดียวตามมาตรฐาน repo (ไม่มี fallback — กันสภาพแอปครึ่งใบที่ mongoose ล่มแต่โมดูลนี้รอด)
+    const uri = process.env.MONGO_URI;
+    if (!uri) throw new Error("ต้องตั้งค่า MONGO_URI");
+    // จำกัด pool ให้เล็กเพราะเป็น client ตัวที่สองข้าง ๆ mongoose — default 100/30s กว้างเกินไป
+    globalForMongo._garbageMongo = new MongoClient(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+    })
+      .connect()
+      .catch((err) => {
+        // ลบ cache เมื่อ connect ล้ม — ไม่งั้น promise ที่ reject ค้างตลอดชีวิต process = 500 ถาวร
+        delete globalForMongo._garbageMongo;
+        throw err;
+      });
+  }
+  const client = await globalForMongo._garbageMongo;
+  // ใช้ db ตาม URI (db_takhli) เพื่อให้ตรงกับฝั่ง mongoose; MONGODB_DB มีไว้ override ตอนเทส/สคริปต์เท่านั้น
+  return client.db(process.env.MONGODB_DB || undefined);
+}
+
+export async function trucks(): Promise<Collection<Truck>> {
+  return (await getDb()).collection<Truck>("garbage_trucks");
+}
+
+export async function routes(): Promise<Collection<Route>> {
+  return (await getDb()).collection<Route>("garbage_routes");
+}
+
+export async function communities(): Promise<Collection<Community>> {
+  return (await getDb()).collection<Community>("garbage_communities");
+}
+
+export async function assignments(): Promise<Collection<Assignment>> {
+  return (await getDb()).collection<Assignment>("garbage_assignments");
+}
+
+/** สร้าง index ทั้งหมด — เรียกจาก seed script ปลอดภัยที่จะเรียกซ้ำ */
+export async function ensureIndexes(): Promise<void> {
+  const db = await getDb();
+  await db.collection("garbage_trucks").createIndex({ number: 1 }, { unique: true });
+  await db.collection("garbage_routes").createIndex({ code: 1 }, { unique: true });
+  await db.collection("garbage_routes").createIndex({ "stops.name": 1 });
+  await db.collection("garbage_communities").createIndex({ name: 1 }, { unique: true });
+  // ตั้ง default_language: "none" เพราะ MongoDB ไม่มี stemmer ภาษาไทย
+  await db
+    .collection("garbage_communities")
+    .createIndex({ name: "text", aliases: "text" }, { default_language: "none" });
+  await db.collection("garbage_assignments").createIndex({ weekday: 1, effectiveFrom: -1 });
+  await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday: 1, shiftNo: 1 });
+  await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
+}
