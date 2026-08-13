@@ -2,7 +2,7 @@ import type {
   Assignment, Route, Truck, ResolvedAssignment, ResolvedDaySchedule, Weekday,
 } from "@/types/garbage";
 import { assignments as assignmentsCol, routes as routesCol, trucks as trucksCol } from "./db";
-import { weekdayOf } from "./time";
+import { weekDatesOf, weekdayOf } from "./time";
 
 /**
  * เมื่อมีหลายเวอร์ชันของ (วัน, รถ, รอบ) เดียวกัน เลือกอันที่ effectiveFrom ใหม่สุด
@@ -97,4 +97,53 @@ export async function resolveScheduleForDate(date: string): Promise<ResolvedDayS
   ]);
 
   return buildDaySchedule(date, weekday, pickLatestVersions(rawAssignments), allRoutes, allTrucks);
+}
+
+/** งานมอบหมายนี้มีผลในวันที่อ้างอิงหรือไม่ — effectiveTo คือวันสุดท้ายที่ยังใช้ (inclusive) */
+function isEffectiveOn(a: Assignment, at: Date): boolean {
+  return a.effectiveFrom <= at && (a.effectiveTo == null || a.effectiveTo >= at);
+}
+
+/**
+ * logic บริสุทธิ์ — ไม่แตะฐานข้อมูล เพื่อให้เทสต์ได้
+ * dates เรียงลำดับอย่างไร ผลลัพธ์เรียงอย่างนั้น (ผู้เรียกใช้ weekDatesOf จึงได้อาทิตย์→เสาร์)
+ * วันที่ไม่มีงานยังต้องอยู่ในผลลัพธ์ด้วย assignments ว่าง — ฝั่ง UI ใช้บอกว่าวันไหนรอข้อมูล
+ */
+export function buildWeekSchedule(
+  dates: string[],
+  list: Assignment[],
+  routes: Route[],
+  trucks: Truck[]
+): ResolvedDaySchedule[] {
+  return dates.map((date) => {
+    const weekday = weekdayOf(date);
+    const at = new Date(`${date}T00:00:00+07:00`);
+    const forDay = list.filter((a) => a.weekday === weekday && isEffectiveOn(a, at));
+    return buildDaySchedule(date, weekday, pickLatestVersions(forDay), routes, trucks);
+  });
+}
+
+/**
+ * อ่านฐานข้อมูล "รอบเดียว" แล้วประกอบตารางทั้งสัปดาห์ที่ครอบวันที่ระบุ
+ * คิวรีด้วยกรอบกว้างสุดของสัปดาห์ แล้วกรองช่วงมีผลละเอียดต่อวันใน buildWeekSchedule
+ */
+export async function resolveWeekSchedule(date: string): Promise<ResolvedDaySchedule[]> {
+  const dates = weekDatesOf(date);
+  const weekStart = new Date(`${dates[0]}T00:00:00+07:00`);
+  const weekEnd = new Date(`${dates[6]}T00:00:00+07:00`);
+
+  const [aCol, rCol, tCol] = await Promise.all([assignmentsCol(), routesCol(), trucksCol()]);
+  const [rawAssignments, allRoutes, allTrucks] = await Promise.all([
+    aCol
+      .find({
+        effectiveFrom: { $lte: weekEnd },
+        $or: [{ effectiveTo: null }, { effectiveTo: { $gte: weekStart } }],
+      })
+      .sort({ effectiveFrom: -1, _id: -1 })
+      .toArray(),
+    rCol.find({ active: true }).toArray(),
+    tCol.find({}).toArray(),
+  ]);
+
+  return buildWeekSchedule(dates, rawAssignments, allRoutes, allTrucks);
 }
