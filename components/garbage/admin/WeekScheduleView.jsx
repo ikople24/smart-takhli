@@ -1,10 +1,13 @@
 import { Fragment, useState } from 'react';
 import { formatRange, formatThaiTime } from '@/lib/garbage/time';
 import { KIND_LABEL_TH, weekdayName } from '@/lib/garbage/labels';
-import { PillTabs, tableHeadCls } from '@/components/ui/adminTheme';
+import { PillTabs, tableHeadCls, primaryBtnCls } from '@/components/ui/adminTheme';
 
-/** ตารางงานมอบหมายรายวัน — อ่านอย่างเดียว กดแถว (หรือปุ่มในคอลัมน์ "จุด") เพื่อกางดูจุดเก็บ */
-export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
+/**
+ * ตารางงานมอบหมายรายวัน — กดแถว (หรือปุ่มในคอลัมน์ "จุด") เพื่อกางดูจุดเก็บ
+ * ไม่ส่ง onAdd/onEdit/onDelete มา = ใช้แบบอ่านอย่างเดียว (ปุ่มจัดการทั้งหมดหายไป)
+ */
+export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd, onEdit, onDelete }) {
   const [openKey, setOpenKey] = useState(null);
   const day = days.find((d) => d.date === activeDate) ?? days[0];
   const rows = day?.assignments ?? [];
@@ -30,7 +33,15 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
         onChange={(date) => { onChangeDate(date); setOpenKey(null); }}
       />
 
-      <div className="text-[12px] text-[#8A8398]">{day?.date} · {rows.length} รายการ</div>
+      {/* ปุ่มเพิ่มอยู่นอกเงื่อนไข rows.length เพราะวันที่ยังไม่มีตารางเลยคือวันที่ต้องกดเพิ่มมากที่สุด */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[12px] text-[#8A8398]">{day?.date} · {rows.length} รายการ</div>
+        {onAdd && (
+          <button type="button" className={primaryBtnCls} onClick={() => onAdd(day?.weekday)}>
+            + เพิ่มงาน
+          </button>
+        )}
+      </div>
 
       {rows.length === 0 ? (
         <p className="text-center text-[13px] text-[#8A8398] py-10">
@@ -46,6 +57,7 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
                 <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">สาย</th>
                 <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">ช่วงเวลา</th>
                 <th className="px-3 py-2 text-right border-b border-[#E7E2F2]">จุด</th>
+                {onEdit && <th className="px-3 py-2 text-right border-b border-[#E7E2F2]">จัดการ</th>}
               </tr>
             </thead>
             <tbody>
@@ -97,10 +109,21 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
                           </button>
                         )}
                       </td>
+                      {onEdit && (
+                        // stopPropagation จำเป็น — ทั้งแถวมี onClick กางรายการจุด กดปุ่มแล้วจะกางไปด้วย
+                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <button type="button" className="px-2 text-[#6D28D9]"
+                            aria-label={`แก้งานรถ ${a.truckNumber} รอบ ${a.shiftNo}`}
+                            onClick={(e) => { e.stopPropagation(); onEdit(a); }}>แก้</button>
+                          <button type="button" className="px-2 text-red-500"
+                            aria-label={`ลบงานรถ ${a.truckNumber} รอบ ${a.shiftNo}`}
+                            onClick={(e) => { e.stopPropagation(); onDelete(a); }}>ลบ</button>
+                        </td>
+                      )}
                     </tr>
                     {open && a.stops.length > 0 && (
                       <tr id={`garbage-stops-${key}`} className="bg-[#FAF8FF] border-b border-[#F1ECFB]">
-                        <td colSpan={5} className="px-3 py-2">
+                        <td colSpan={onEdit ? 6 : 5} className="px-3 py-2">
                           <ol className="space-y-0.5">
                             {a.stops.map((s) => (
                               <li key={s.seq} className="flex gap-2 text-[12px]">
