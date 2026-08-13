@@ -70,8 +70,9 @@ export async function requireGarbageAdmin(req: NextApiRequest): Promise<GarbageA
   // ใช้ helper กลางของรีโป — allowedPages ว่างต้องตกไปใช้ DEFAULT_PERMISSIONS[role]
   // ไม่ใช่ "ว่าง = ผ่านทุกหน้า" ตามที่ CLAUDE.md กำหนด (ห้ามเขียนเงื่อนไขนั้นเองที่นี่ —
   // ให้ hasPermission ตัดสินที่เดียว ไม่งั้น API หลวมกว่า UI ทันทีที่นโยบายชุดพื้นฐานเปลี่ยน)
-  // หมายเหตุ: /admin/garbage จะถูกเพิ่มใน ALL_PAGES + DEFAULT_PERMISSIONS.admin ใน task ถัดไป
-  // ระหว่างนี้ admin ที่ allowedPages ว่างจะยังได้ 403 ซึ่งถูกต้อง และจะหายเองหลัง task 14
+  // /admin/garbage ลงทะเบียนใน ALL_PAGES + DEFAULT_PERMISSIONS.admin แล้ว
+  // → admin ที่ allowedPages ว่างผ่านได้ · admin ที่ติ๊กสิทธิ์เองแต่ยังไม่มีหน้านี้จะได้ 403
+  //   (แก้ด้วย scripts/grant-garbage-permission.js --yes หรือติ๊กที่ /admin/superadmin)
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
   if (!hasPermission(role, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "ไม่มีสิทธิ์หน้านี้" };
