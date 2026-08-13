@@ -25,7 +25,8 @@ export const routeSchema = z.object({
 
 export const stopTimeSchema = z.object({
   seq: z.number().int().positive(),
-  atMin: minutes,
+  /** null = เก็บวันนี้แต่ยังไม่ระบุเวลา */
+  atMin: minutes.nullable(),
 }).strict();
 
 export const communityWindowSchema = z.object({
@@ -58,9 +59,15 @@ export const assignmentSchema = z.object({
   .refine((a) => a.kind !== "substitute" || a.routeCode !== null, {
     message: "การแทนเบอร์ต้องมี routeCode ของสายที่วิ่งจริง",
   })
-  .refine((a) => a.kind === "day_off" || (a.startMin !== null && a.endMin !== null), {
-    message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุด",
-  })
+  .refine(
+    (a) =>
+      a.kind === "day_off" ||
+      (a.startMin !== null && a.endMin !== null) ||
+      // งานพิเศษที่ยังไม่ทราบเวลา (เช่น รถยกภาชนะรองรับ) เว้นเวลาไว้ได้ —
+      // แต่ต้องเว้นทั้งคู่ ไม่ใช่ระบุมาครึ่งเดียวซึ่งเป็นสถานะที่ตีความไม่ได้
+      (a.kind === "special" && a.startMin === null && a.endMin === null),
+    { message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุดและงานพิเศษที่ยังไม่ทราบเวลา" }
+  )
   // หมายเหตุ: kind "special" อนุญาต routeCode null ได้ (เช่น รถ 7 วิ่งตลาดนัดพิเศษไม่มีสายประจำ)
   .refine((a) => a.kind !== "normal" || a.routeCode !== null, {
     message: "งานปกติต้องระบุ routeCode",
@@ -78,8 +85,11 @@ export const assignmentSchema = z.object({
   // เรียงตาม seq แล้วเวลาต้องไม่ย้อนกลับ (เวลาเท่ากันถือว่าผ่าน — จุดติดกันเวลาเดียวกันมีในข้อมูลจริง)
   .refine(
     (a) => {
-      const sorted = [...a.stopTimes].sort((x, y) => x.seq - y.seq);
-      return sorted.every((s, i) => i === 0 || s.atMin >= sorted[i - 1].atMin);
+      // เทียบเฉพาะจุดที่ระบุเวลาแล้ว — จุดที่ยังไม่ระบุเวลาไม่ถือว่าย้อนกลับ
+      const timed = [...a.stopTimes]
+        .sort((x, y) => x.seq - y.seq)
+        .filter((s) => s.atMin != null);
+      return timed.every((s, i) => i === 0 || (s.atMin as number) >= (timed[i - 1].atMin as number));
     },
     { message: "เวลาใน stopTimes ต้องไม่ย้อนกลับตามลำดับจุด" }
   );

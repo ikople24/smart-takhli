@@ -47,7 +47,11 @@ export function remapStopTimes(
  * กระจายเวลาให้จุดทั้งหมดเท่า ๆ กันในช่วง startMin–endMin
  * ใช้เป็นตัวช่วยกรอก (สาย R1 มี 22 จุด) แล้วเจ้าหน้าที่ปรับรายตัวได้
  */
-export function distributeStopTimes(count: number, startMin: Minutes, endMin: Minutes): StopTime[] {
+export function distributeStopTimes(
+  count: number,
+  startMin: Minutes,
+  endMin: Minutes
+): Array<StopTime & { atMin: Minutes }> {
   if (!Number.isInteger(count) || count < 1) return [];
   // ช่วงติดลบเป็นข้อมูลเข้าที่ผิด — คืนว่างเหมือนกรณี count ผิด ไม่ใช่กระจายเวลาถอยหลัง
   // ซึ่งจะขัดกฎ "เวลาใน stopTimes ต้องไม่ย้อนกลับ" ของ assignmentSchema เอง

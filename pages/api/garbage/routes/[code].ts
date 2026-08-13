@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import type { Minutes, StopTime } from "@/types/garbage";
 import { assignments as assignmentsCol, routes as routesCol } from "@/lib/garbage/db";
 import { routeUpdateSchema } from "@/lib/garbage/validators";
 import { assignSeq, buildSeqMap, remapStopTimes } from "@/lib/garbage/stopEditing";
@@ -77,7 +78,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // การสลับลำดับจุดทำให้เวลาของงานเรียงย้อนกลับได้ ซึ่งผิดกฎของ assignmentInputSchema เอง
     // (แอดมินจะแก้งานนั้นไม่ผ่านจนกว่าจะไล่เวลาใหม่) — เตือนไว้ แต่ไม่บล็อกการบันทึกสาย
     const warnings = remapped
-      .filter((r) => r.next.some((st, i) => i > 0 && st.atMin < r.next[i - 1].atMin))
+      .filter((r) => {
+        // เทียบเฉพาะจุดที่ระบุเวลาแล้ว ให้ตรงกับกฎ "ไม่ย้อนกลับ" ของ assignmentSchema
+        // (จุดที่ยังไม่ระบุเวลาไม่ถือว่าย้อนกลับ) — r.next เรียงตาม seq มาแล้วจาก remapStopTimes
+        const timed = r.next.filter((st): st is StopTime & { atMin: Minutes } => st.atMin != null);
+        return timed.some((st, i) => i > 0 && st.atMin < timed[i - 1].atMin);
+      })
       .map(
         (r) =>
           `งานรถ ${r.doc.truckNumber} รอบ ${r.doc.shiftNo} มีเวลาเรียงย้อนหลังการสลับจุด ควรตรวจเวลาใหม่`
