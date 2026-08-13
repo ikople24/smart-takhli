@@ -26,10 +26,12 @@ function timeText(h: SearchHit): string {
 
 /** "วันนี้ 9.00 น." · "พรุ่งนี้ 4.00 น." · "วันพุธ 4.00 น. (อีก 2 วัน)" */
 function nextPickupText(hits: SearchHit[]): string | null {
-  const stopHits = hits.filter((h) => h.matchType === "stop");
-  if (stopHits.length === 0) return null;
+  // เดิมกรองเฉพาะ matchType "stop" เพราะผลแบบชุมชนเป็นระดับ "ช่วงเวลา" ที่ไม่มี atMin
+  // ตั้งแต่ M8 ผลแบบชุมชนเป็นระดับจุดและมีเวลาจริงเหมือนกัน จึงนับรวมได้
+  // ถ้ายังกรองอยู่ คนที่ค้นชื่อชุมชนล้วน (เช่น "ตาคลีใหญ่" ที่ไม่มีจุดชื่อนี้เลย) จะไม่เห็นรอบเก็บถัดไป
+  if (hits.length === 0) return null;
   const next = findNextPickup(
-    stopHits.map((h) => ({ weekday: h.weekday, atMin: h.atMin })),
+    hits.map((h) => ({ weekday: h.weekday, atMin: h.atMin })),
     weekdayOf(todayInBangkok()),
     minutesNowInBangkok()
   );
@@ -145,11 +147,20 @@ export default function GarbageSearchPanel() {
                     <li key={`${h.routeCode}-${h.matchName}-${i}`}
                       className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2">
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-sm font-medium text-slate-800">{h.matchName}</span>
+                        <span className="text-sm font-medium text-slate-800">
+                          {h.matchType === "community" ? `ชุมชน${h.matchName}` : h.matchName}
+                        </span>
                         <span className="text-xs text-slate-500 whitespace-nowrap">รถ {h.truckNumber}</span>
                       </div>
                       <div className="text-xs text-slate-600 mt-0.5">{timeText(h)}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
+                        {/* ผลแบบชุมชน: หัวรายการเป็นชื่อชุมชนแล้ว บรรทัดนี้จึงบอก "จุดไหนในชุมชน"
+                            ผลแบบชื่อจุด: หัวรายการเป็นชื่อจุดแล้ว บรรทัดนี้จึงบอกว่าอยู่ชุมชนไหน */}
+                        {h.matchType === "community"
+                          ? `${h.stopName} · `
+                          : h.communityName
+                            ? `ชุมชน${h.communityName} · `
+                            : ""}
                         {h.routeName}
                         {KIND_LABEL_TH[h.kind] && (
                           <span className="ml-1.5 inline-block rounded-full bg-amber-100 text-amber-800 px-2 py-0.5">
