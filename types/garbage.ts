@@ -38,6 +38,11 @@ export interface Route {
   source?: string;
   needsVerification?: boolean;
   active: boolean;
+  /**
+   * เวลาที่บันทึกล่าสุด — ใช้เป็น optimistic lock ของฟอร์มแก้สาย (M6)
+   * optional เพราะเอกสารที่ seed รุ่นแรกเขียนไว้อาจไม่มีฟิลด์นี้
+   */
+  updatedAt?: Date;
 }
 
 export interface StopTime {

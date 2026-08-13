@@ -90,16 +90,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    // ประกอบเป็น object เดียวแล้วใช้ทั้งตอนเขียนและตอนบันทึก audit
+    // — audit จะได้ตรงกับสิ่งที่เขียนลงจริง (รวมฟิลด์ที่เซิร์ฟเวอร์เติมเอง) เหมือนฝั่ง POST
+    const changes = {
+      ...input,
+      weekday, // ทับด้วยค่าที่แคบชนิดแล้ว — ค่าเท่ากับ input.weekday ทุกประการ
+      effectiveFrom: BASELINE_EFFECTIVE_FROM,
+      effectiveTo: null,
+      updatedAt: new Date(),
+    };
+
     try {
-      await aCol.updateOne({ _id } as never, {
-        $set: {
-          ...input,
-          weekday, // ทับด้วยค่าที่แคบชนิดแล้ว — ค่าเท่ากับ input.weekday ทุกประการ
-          effectiveFrom: BASELINE_EFFECTIVE_FROM,
-          effectiveTo: null,
-          updatedAt: new Date(),
-        },
-      });
+      await aCol.updateOne({ _id } as never, { $set: changes });
     } catch (err) {
       if ((err as { code?: number }).code === 11000) {
         return res.status(409).json({
@@ -115,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       resourceType: "garbage_assignment",
       resourceId: rawId,
       before,
-      after: input,
+      after: changes,
       description: `แก้งานรถ ${input.truckNumber} รอบ ${input.shiftNo} วัน ${input.weekday}`,
     });
 

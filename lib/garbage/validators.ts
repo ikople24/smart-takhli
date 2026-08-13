@@ -174,6 +174,15 @@ export const routeUpdateSchema = z
     name: z.string().trim().min(1, "ชื่อสายต้องไม่ว่าง").max(200, "ชื่อสายยาวเกิน 200 ตัวอักษร"),
     needsVerification: z.boolean(),
     stops: z.array(stopDraftSchema).min(1, "สายต้องมีจุดเก็บอย่างน้อย 1 จุด"),
+    /**
+     * ค่า updatedAt ของสายตอนที่ฟอร์มโหลดข้อมูล (ISO string จาก GET /api/garbage/routes)
+     * — optimistic lock กันฟอร์มค้าง: ถ้ามีคนอื่นบันทึกสายนี้ไปก่อน เซิร์ฟเวอร์จะปฏิเสธด้วย 409
+     * จำเป็นเพราะการ "สลับลำดับจุดล้วน" ไม่เปลี่ยนเซตของ seq เลย การตรวจ prevSeq จึงจับไม่ได้
+     * (สายที่ยังไม่มี updatedAt ในฐานข้อมูล ส่งค่าอะไรมาก็ได้ที่ไม่ว่าง — เซิร์ฟเวอร์ข้ามการเทียบ)
+     */
+    updatedAt: z
+      .string({ required_error: "ต้องส่ง updatedAt ของสายที่โหลดมา" })
+      .min(1, "ต้องส่ง updatedAt ของสายที่โหลดมา"),
   })
   .strict()
   .refine(

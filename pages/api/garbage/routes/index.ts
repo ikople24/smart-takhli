@@ -31,6 +31,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         name: r.name,
         defaultTruckNumber: r.defaultTruckNumber,
         needsVerification: r.needsVerification ?? false,
+        // ฟอร์มแก้สายต้องส่งค่านี้กลับมาตอน PUT — เซิร์ฟเวอร์ใช้เทียบว่าข้อมูลเปลี่ยนไประหว่างเปิดฟอร์มไหม
+        // null = เอกสารเก่าที่ยังไม่มี updatedAt (เซิร์ฟเวอร์จะข้ามการเทียบให้)
+        updatedAt: r.updatedAt instanceof Date ? r.updatedAt.toISOString() : null,
         stops: r.stops,
       })),
     });
