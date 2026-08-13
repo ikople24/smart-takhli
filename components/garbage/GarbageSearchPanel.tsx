@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SearchHit } from "@/types/garbage";
 import { formatRange, formatThaiTime, minutesNowInBangkok, todayInBangkok, weekdayOf } from "@/lib/garbage/time";
-import { KIND_LABEL_TH, weekdayName } from "@/lib/garbage/labels";
+import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from "@/lib/garbage/labels";
 import { findNextPickup } from "@/lib/garbage/nextPickup";
 import { useDebounce } from "./useDebounce";
 
@@ -150,7 +150,7 @@ export default function GarbageSearchPanel() {
                         <span className="text-sm font-medium text-slate-800">
                           {h.matchType === "community" ? `ชุมชน${h.matchName}` : h.matchName}
                         </span>
-                        <span className="text-xs text-slate-500 whitespace-nowrap">รถ {h.truckNumber}</span>
+                        <span className="text-xs text-slate-500 whitespace-nowrap">{truckLabel(h.truckNumber)}</span>
                       </div>
                       <div className="text-xs text-slate-600 mt-0.5">{timeText(h)}</div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
@@ -165,7 +165,8 @@ export default function GarbageSearchPanel() {
                         {KIND_LABEL_TH[h.kind] && (
                           <span className="ml-1.5 inline-block rounded-full bg-amber-100 text-amber-800 px-2 py-0.5">
                             {KIND_LABEL_TH[h.kind]}
-                            {h.coverForRouteCode ? ` ${h.coverForRouteCode}` : ""}
+                            {/* "แทน" + "โซน 5" = "แทนโซน 5" — ชาวบ้านไม่เคยเห็นรหัสสาย */}
+                            {zoneLabel(h.coverForRouteCode)}
                           </span>
                         )}
                       </div>

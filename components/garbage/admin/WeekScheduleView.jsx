@@ -1,6 +1,6 @@
 import { Fragment, useState } from 'react';
 import { formatRange, formatThaiTime } from '@/lib/garbage/time';
-import { KIND_LABEL_TH, weekdayName } from '@/lib/garbage/labels';
+import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from '@/lib/garbage/labels';
 import { PillTabs, tableHeadCls, primaryBtnCls } from '@/components/ui/adminTheme';
 
 /**
@@ -52,9 +52,9 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
           <table className="text-[12px] w-full border-collapse">
             <thead>
               <tr className={tableHeadCls}>
-                <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">รถ</th>
+                <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">รถเบอร์</th>
                 <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">รอบ</th>
-                <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">สาย</th>
+                <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">โซน</th>
                 <th className="px-3 py-2 text-left border-b border-[#E7E2F2]">ช่วงเวลา</th>
                 <th className="px-3 py-2 text-right border-b border-[#E7E2F2]">จุด</th>
                 {onEdit && <th className="px-3 py-2 text-right border-b border-[#E7E2F2]">จัดการ</th>}
@@ -78,10 +78,12 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
                       </td>
                       <td className="px-3 py-2">{a.shiftNo}</td>
                       <td className="px-3 py-2">
-                        {a.routeCode ?? '—'}
+                        {/* ชื่อสายคือคำที่ใช้เรียกจริงแล้ว ("โซน 1" · "รถยกภาชนะรองรับ") ค่อย fallback ไปที่รหัส */}
+                        {a.routeName || zoneLabel(a.routeCode) || '—'}
                         {KIND_LABEL_TH[a.kind] && (
                           <span className="ml-1.5 inline-block text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-[#EDE7FD] text-[#6D28D9]">
-                            {KIND_LABEL_TH[a.kind]}{a.coverForRouteCode ? ` ${a.coverForRouteCode}` : ''}
+                            {/* "แทน" + "โซน 5" = "แทนโซน 5" */}
+                            {KIND_LABEL_TH[a.kind]}{zoneLabel(a.coverForRouteCode)}
                           </span>
                         )}
                         {a.routeNeedsVerification && (
@@ -118,10 +120,10 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
                         // stopPropagation จำเป็น — ทั้งแถวมี onClick กางรายการจุด กดปุ่มแล้วจะกางไปด้วย
                         <td className="px-3 py-2 text-right whitespace-nowrap">
                           <button type="button" className="px-2 text-[#6D28D9]"
-                            aria-label={`แก้งานรถ ${a.truckNumber} รอบ ${a.shiftNo}`}
+                            aria-label={`แก้งาน${truckLabel(a.truckNumber)} รอบ ${a.shiftNo}`}
                             onClick={(e) => { e.stopPropagation(); onEdit(a); }}>แก้</button>
                           <button type="button" className="px-2 text-red-500"
-                            aria-label={`ลบงานรถ ${a.truckNumber} รอบ ${a.shiftNo}`}
+                            aria-label={`ลบงาน${truckLabel(a.truckNumber)} รอบ ${a.shiftNo}`}
                             onClick={(e) => { e.stopPropagation(); onDelete(a); }}>ลบ</button>
                         </td>
                       )}

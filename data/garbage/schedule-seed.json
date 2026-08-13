@@ -111,7 +111,7 @@
   "routes": [
     {
       "code": "R1",
-      "name": "สาย R1",
+      "name": "โซน 1",
       "defaultTruckNumber": 1,
       "stops": [
         {
@@ -235,7 +235,7 @@
     },
     {
       "code": "R2",
-      "name": "สาย R2",
+      "name": "โซน 2",
       "defaultTruckNumber": 2,
       "stops": [
         {
@@ -361,7 +361,7 @@
     },
     {
       "code": "R3",
-      "name": "สาย R3",
+      "name": "โซน 3",
       "defaultTruckNumber": 3,
       "stops": [
         {
@@ -448,7 +448,7 @@
     },
     {
       "code": "R4",
-      "name": "สาย R4",
+      "name": "โซน 4",
       "defaultTruckNumber": 4,
       "stops": [
         {
@@ -504,7 +504,7 @@
     },
     {
       "code": "R5",
-      "name": "สาย R5",
+      "name": "โซน 5",
       "defaultTruckNumber": 5,
       "stops": [
         {
@@ -619,7 +619,7 @@
     },
     {
       "code": "R6",
-      "name": "สาย R6",
+      "name": "โซน 6",
       "defaultTruckNumber": 6,
       "stops": [
         {
@@ -684,7 +684,7 @@
     },
     {
       "code": "R7",
-      "name": "สาย R7",
+      "name": "โซน 7",
       "defaultTruckNumber": 7,
       "stops": [
         {

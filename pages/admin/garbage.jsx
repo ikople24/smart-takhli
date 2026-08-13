@@ -5,6 +5,7 @@ import WeekScheduleView from '@/components/garbage/admin/WeekScheduleView';
 import ContactSettingsCard from '@/components/garbage/admin/ContactSettingsCard';
 import AssignmentFormModal from '@/components/garbage/admin/AssignmentFormModal';
 import RouteManagerModal from '@/components/garbage/admin/RouteManagerModal';
+import { truckLabel, zoneLabel } from '@/lib/garbage/labels';
 import { DashboardHeader, cardCls, primaryBtnCls } from '@/components/ui/adminTheme';
 
 // ตารางเดินรถเก็บขยะ — ตั้งแต่ M6 แก้จากหน้านี้ได้ (UI เป็นแหล่งความจริง, seed เหลือเป็น bootstrap ตอน DB ว่าง)
@@ -97,7 +98,8 @@ export default function AdminGarbagePage() {
   const removeAssignment = async (a) => {
     const ok = await Swal.fire({
       icon: 'warning', title: 'ลบงานนี้?',
-      text: `รถ ${a.truckNumber} รอบ ${a.shiftNo}${a.routeCode ? ` สาย ${a.routeCode}` : ''}`,
+      text: `${truckLabel(a.truckNumber)} รอบ ${a.shiftNo}` +
+        (a.routeCode ? ` · ${a.routeName || zoneLabel(a.routeCode)}` : ''),
       showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก',
     });
     if (!ok.isConfirmed) return;

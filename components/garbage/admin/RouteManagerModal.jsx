@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { zoneLabel } from '@/lib/garbage/labels';
 import { inputCls, labelCls, primaryBtnCls, ghostBtnCls } from '@/components/ui/adminTheme';
 
 /**
@@ -93,7 +94,8 @@ export default function RouteManagerModal({ open, routes, communities = [], onCl
         <div>
           <label className={labelCls} htmlFor="rm-code">สาย</label>
           <select id="rm-code" className={inputCls} value={code} onChange={(e) => setCode(e.target.value)}>
-            {routes.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.name}</option>)}
+            {/* ชื่อสายคือคำที่ใช้เรียกจริงแล้ว ("โซน 1" · "รถยกภาชนะรองรับ") — รหัสเป็นแค่คีย์ ไม่ต้องโชว์ */}
+            {routes.map((r) => <option key={r.code} value={r.code}>{r.name || zoneLabel(r.code)}</option>)}
           </select>
         </div>
 

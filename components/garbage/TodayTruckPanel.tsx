@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { LivePosition, TruckColor, AssignmentKind } from "@/types/garbage";
 import { formatThaiTime, minutesNowInBangkok } from "@/lib/garbage/time";
-import { LIVE_STATUS_TH } from "@/lib/garbage/labels";
+import { LIVE_STATUS_TH, truckLabel, zoneLabel } from "@/lib/garbage/labels";
 
 interface LiveTruck {
   truckNumber: number;
@@ -14,6 +14,12 @@ interface LiveTruck {
 }
 
 const POLL_MS = 60_000;
+
+/** "รถเบอร์ 1, 2, 3" — ไม่ซ้ำคำว่า "รถเบอร์" ทุกตัว จึงต่อเลขที่เหลือเข้ากับป้ายของคันแรก */
+function truckListLabel(nums: number[]): string {
+  if (nums.length === 0) return "";
+  return [truckLabel(nums[0]), ...nums.slice(1).map(String)].join(", ");
+}
 
 const STATUS_CLS: Record<string, string> = {
   running: "bg-emerald-100 text-emerald-800",
@@ -88,34 +94,40 @@ export default function TodayTruckPanel() {
         <p className="mt-2 text-sm text-slate-600">วันนี้ยังไม่มีตารางเดินรถในระบบ</p>
       ) : (
         <ul className="mt-3 space-y-2">
-          {working.map((t) => (
-            <li key={`${t.truckNumber}-${t.shiftNo}`}
-              className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span aria-hidden className={"h-2.5 w-2.5 rounded-full " +
-                  (t.truckColor === "yellow" ? "bg-amber-400" : "bg-emerald-500")} />
-                <span className="text-sm font-medium text-slate-800">รถ {t.truckNumber}</span>
-                {t.routeCode && <span className="text-xs text-slate-500">{t.routeCode}</span>}
-                <span className={"ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full " +
-                  (STATUS_CLS[t.live.status] ?? STATUS_CLS.unknown)}>
-                  {LIVE_STATUS_TH[t.live.status] ?? LIVE_STATUS_TH.unknown}
-                  {t.live.status === "upcoming" && t.live.startsInMin != null && ` · อีก ${t.live.startsInMin} นาที`}
-                </span>
-              </div>
-              {t.live.status === "running" && (
-                <div className="text-xs text-slate-600 mt-1">
-                  {t.live.currentStop ? `กำลังอยู่ ${t.live.currentStop.name}` : "กำลังวิ่งตามเส้นทาง"}
-                  {t.live.nextStop && (
-                    <> · ถัดไป {t.live.nextStop.name}
-                      {t.live.etaNextMin != null
-                        ? ` (อีก ${t.live.etaNextMin} นาที)`
-                        : " (ยังไม่ระบุเวลา)"}</>
-                  )}
+          {working.map((t) => {
+            // R13 (รถยกภาชนะรองรับ) ไม่ใช่โซน — zoneLabel คืนรหัสเดิมมา แปลว่าไม่ต้องขึ้นป้ายโซน
+            // (บรรทัด label ด้านล่างบอกอยู่แล้วว่าเป็นรถยกภาชนะ) ไม่งั้นชาวบ้านจะเห็นรหัส "R13" ลอย ๆ
+            const zone = zoneLabel(t.routeCode);
+            const showZone = zone !== "" && zone !== t.routeCode;
+            return (
+              <li key={`${t.truckNumber}-${t.shiftNo}`}
+                className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden className={"h-2.5 w-2.5 rounded-full " +
+                    (t.truckColor === "yellow" ? "bg-amber-400" : "bg-emerald-500")} />
+                  <span className="text-sm font-medium text-slate-800">{truckLabel(t.truckNumber)}</span>
+                  {showZone && <span className="text-xs text-slate-500">{zone}</span>}
+                  <span className={"ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full " +
+                    (STATUS_CLS[t.live.status] ?? STATUS_CLS.unknown)}>
+                    {LIVE_STATUS_TH[t.live.status] ?? LIVE_STATUS_TH.unknown}
+                    {t.live.status === "upcoming" && t.live.startsInMin != null && ` · อีก ${t.live.startsInMin} นาที`}
+                  </span>
                 </div>
-              )}
-              {t.label && <div className="text-[11px] text-slate-500 mt-0.5">{t.label}</div>}
-            </li>
-          ))}
+                {t.live.status === "running" && (
+                  <div className="text-xs text-slate-600 mt-1">
+                    {t.live.currentStop ? `กำลังอยู่ ${t.live.currentStop.name}` : "กำลังวิ่งตามเส้นทาง"}
+                    {t.live.nextStop && (
+                      <> · ถัดไป {t.live.nextStop.name}
+                        {t.live.etaNextMin != null
+                          ? ` (อีก ${t.live.etaNextMin} นาที)`
+                          : " (ยังไม่ระบุเวลา)"}</>
+                    )}
+                  </div>
+                )}
+                {t.label && <div className="text-[11px] text-slate-500 mt-0.5">{t.label}</div>}
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -126,8 +138,8 @@ export default function TodayTruckPanel() {
         <div className="mt-3 rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 p-3">
           <p className="text-sm font-semibold text-amber-900">วันนี้รถหยุดดำเนินการหลายคัน</p>
           <p className="text-xs text-amber-800 mt-0.5">
-            หยุด {dayOffNumbers.length} คัน (รถ {dayOffNumbers.join(", ")})
-            {workingNumbers.length > 0 && ` · ยังมีรถ ${workingNumbers.join(", ")} วิ่งเก็บแทนบางจุด`}
+            หยุด {dayOffNumbers.length} คัน ({truckListLabel(dayOffNumbers)})
+            {workingNumbers.length > 0 && ` · ยังมี${truckListLabel(workingNumbers)} วิ่งเก็บแทนบางจุด`}
           </p>
           <p className="text-xs text-amber-800 mt-1">
             ค้นหาถนนของคุณด้านบนเพื่อดูว่ารอบถัดไปรถจะมาวันไหน
@@ -138,7 +150,7 @@ export default function TodayTruckPanel() {
       {/* ป้ายใหญ่ด้านบนบอกครบแล้ว บรรทัดนี้จึงขึ้นเฉพาะตอนที่รถหยุด 1–2 คัน */}
       {dayOffNumbers.length > 0 && dayOffNumbers.length < 3 && (
         <p className="mt-2.5 text-xs text-slate-500">
-          วันนี้หยุด: รถ {dayOffNumbers.join(", ")}
+          วันนี้หยุด: {truckListLabel(dayOffNumbers)}
         </p>
       )}
     </section>

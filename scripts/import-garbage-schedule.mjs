@@ -40,7 +40,9 @@ function build() {
     truckNumbers.add(t.number);
     routes.push({
       code: `R${t.number}`,
-      name: `สาย R${t.number}`,
+      // รหัส R# เป็นคีย์ในฐานข้อมูล/URL เท่านั้น — ชื่อที่แสดงคือคำที่กองสาธารณสุขใช้เรียกจริง
+      // (ตรงกับ zoneLabel() ใน lib/garbage/labels.ts ห้ามให้สองที่นี้เพี้ยนกัน)
+      name: `โซน ${t.number}`,
       defaultTruckNumber: t.number,
       stops: t.stops.map((s) => ({ seq: s.seq, name: s.name, mode: s.mode, roadId: null })),
       communityNames: [],
@@ -96,7 +98,8 @@ function build() {
   if (data.truck13?.stops?.length) {
     truckNumbers.add(13);
     routes.push({
-      code: "R13", name: "สาย R13 (รถยกภาชนะรองรับ)", defaultTruckNumber: 13,
+      // R13 ไม่ใช่โซน — เป็นรถยกภาชนะรองรับ จึงใช้ชื่อเรียกของตัวเอง
+      code: "R13", name: "รถยกภาชนะรองรับ", defaultTruckNumber: 13,
       stops: data.truck13.stops.map((s) => ({ seq: s.seq, name: s.name, mode: "truck", roadId: null })),
       communityNames: [], source: data.$source, needsVerification: false, active: true,
     });

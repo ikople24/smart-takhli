@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseThaiTime, formatThaiTime } from '@/lib/garbage/time';
-import { KIND_LABEL_TH, weekdayName } from '@/lib/garbage/labels';
+import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from '@/lib/garbage/labels';
 import { inputCls, labelCls, primaryBtnCls, ghostBtnCls } from '@/components/ui/adminTheme';
 import StopTimesEditor from './StopTimesEditor';
 
@@ -133,7 +133,7 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
             <select id="af-truck" className={inputCls} value={truckNumber}
               onChange={(e) => setTruckNumber(e.target.value)}>
               <option value="">เลือกรถ</option>
-              {trucks.map((t) => <option key={t.number} value={t.number}>รถ {t.number}</option>)}
+              {trucks.map((t) => <option key={t.number} value={t.number}>{truckLabel(t.number)}</option>)}
             </select>
           </div>
           <div>
@@ -159,7 +159,8 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
               <select id="af-route" className={inputCls} value={routeCode}
                 onChange={(e) => { setRouteCode(e.target.value); setStopTimes([]); }}>
                 <option value="">ไม่ระบุสาย</option>
-                {routes.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.name}</option>)}
+                {/* ชื่อสายคือคำที่ใช้เรียกจริงแล้ว ("โซน 1" · "รถยกภาชนะรองรับ") — รหัสเป็นแค่คีย์ ไม่ต้องโชว์ */}
+                {routes.map((r) => <option key={r.code} value={r.code}>{r.name || zoneLabel(r.code)}</option>)}
               </select>
               {routes.length === 0 ? (
                 <p className="mt-1 text-[11.5px] text-amber-700">
@@ -178,7 +179,7 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
                 <select id="af-cover" className={inputCls} value={coverForRouteCode}
                   onChange={(e) => setCoverForRouteCode(e.target.value)}>
                   <option value="">เลือกสายที่แทน</option>
-                  {routes.map((r) => <option key={r.code} value={r.code}>{r.code}</option>)}
+                  {routes.map((r) => <option key={r.code} value={r.code}>{r.name || zoneLabel(r.code)}</option>)}
                 </select>
               </div>
             )}
