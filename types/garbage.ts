@@ -36,6 +36,10 @@ export interface RouteStop {
   mode: StopMode;
   /** อ้างถนนในชั้นข้อมูล GIS — ยังไม่ได้ใช้ในเฟสนี้ */
   roadId?: string | null;
+  /** ชื่อชุมชนที่จุดนี้อยู่ — อ้างชื่อจาก geojsonfeatures.name (ห้ามใช้ garbage_communities ที่เลิกใช้แล้ว) */
+  communityName?: string | null;
+  /** "auto" = ระบบเดาจากถนน+polygon ยังไม่มีคนตรวจ · "manual" = เจ้าหน้าที่ยืนยันแล้ว */
+  communitySource?: "auto" | "manual" | null;
 }
 
 export interface Route {
