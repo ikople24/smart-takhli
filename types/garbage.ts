@@ -34,7 +34,7 @@ export interface RouteStop {
   seq: number;
   name: string;
   mode: StopMode;
-  /** อ้างถนนในชั้นข้อมูล GIS — ยังไม่ได้ใช้ในเฟสนี้ */
+  /** อ้างถนนใน collection `roads` — สคริปต์ map-garbage-communities.mjs เติมให้ตอนจับคู่ชื่อจุดกับถนน */
   roadId?: string | null;
   /** ชื่อชุมชนที่จุดนี้อยู่ — อ้างชื่อจาก geojsonfeatures.name (ห้ามใช้ garbage_communities ที่เลิกใช้แล้ว) */
   communityName?: string | null;
