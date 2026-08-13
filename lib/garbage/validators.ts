@@ -151,3 +151,35 @@ export const garbageSettingsInputSchema = z
     contactNote: optionalTrimmed(200, "หมายเหตุยาวเกิน 200 ตัวอักษร"),
   })
   .strict();
+
+/**
+ * ข้อมูลงานมอบหมายที่รับจากฟอร์มแอดมิน
+ * ไม่มี effectiveFrom/effectiveTo — เซิร์ฟเวอร์เติมจาก BASELINE_EFFECTIVE_FROM เอง
+ * กฎภายในเอกสารทั้งหมดใช้ชุดเดียวกับ assignmentSchema (ยืมผ่าน .innerType ไม่ได้เพราะมี refine)
+ */
+export const assignmentInputSchema = assignmentSchema;
+
+/** จุดเก็บที่ส่งมาจากฟอร์มแก้สาย — ไม่รับ seq เพราะเซิร์ฟเวอร์เป็นคนกำหนด */
+export const stopDraftSchema = z
+  .object({
+    prevSeq: z.number().int().positive().nullable(),
+    name: z.string().trim().min(1, "ชื่อจุดเก็บต้องไม่ว่าง").max(200, "ชื่อจุดเก็บยาวเกิน 200 ตัวอักษร"),
+    mode: z.enum(["truck", "walk"]),
+    roadId: z.string().max(50).nullable().optional(),
+  })
+  .strict();
+
+export const routeUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1, "ชื่อสายต้องไม่ว่าง").max(200, "ชื่อสายยาวเกิน 200 ตัวอักษร"),
+    needsVerification: z.boolean(),
+    stops: z.array(stopDraftSchema).min(1, "สายต้องมีจุดเก็บอย่างน้อย 1 จุด"),
+  })
+  .strict()
+  .refine(
+    (r) => {
+      const prev = r.stops.map((s) => s.prevSeq).filter((s): s is number => s != null);
+      return new Set(prev).size === prev.length;
+    },
+    { message: "ส่งจุดเดิมซ้ำกัน (prevSeq ซ้ำ)" }
+  );
