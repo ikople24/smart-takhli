@@ -8,9 +8,13 @@ import { weekDatesOf, weekdayOf } from "./time";
  * เมื่อมีหลายเวอร์ชันของ (วัน, รถ, รอบ) เดียวกัน เลือกอันที่ effectiveFrom ใหม่สุด
  * ถ้า effectiveFrom เท่ากัน ตัวแรกในลิสต์ชนะ — ผู้เรียกจึงควร sort มาก่อน
  * (resolveScheduleForDate sort ด้วย _id: -1 → เอกสารที่สร้างทีหลังชนะ)
+ *
+ * generic เพื่อให้ฟิลด์ส่วนเกินของผู้เรียก (สำคัญคือ `_id` ที่ buildDaySchedule ใช้ทำ `id`)
+ * ไหลผ่านออกไปแบบเห็นได้ใน type — ถ้า return เป็น Assignment[] ตายตัว `_id` จะหายจาก type
+ * ทั้งที่ยังอยู่ตอน runtime แล้วการที่ id ว่างจะกลายเป็นบั๊กเงียบที่ tsc มองไม่เห็น
  */
-export function pickLatestVersions(list: Assignment[]): Assignment[] {
-  const best = new Map<string, Assignment>();
+export function pickLatestVersions<T extends Assignment>(list: T[]): T[] {
+  const best = new Map<string, T>();
   for (const a of list) {
     const key = `${a.weekday}-${a.truckNumber}-${a.shiftNo}`;
     const cur = best.get(key);
@@ -23,7 +27,7 @@ export function pickLatestVersions(list: Assignment[]): Assignment[] {
 export function buildDaySchedule(
   date: string,
   weekday: Weekday,
-  list: Assignment[],
+  list: Array<Assignment & { _id?: unknown; updatedAt?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule {
@@ -40,6 +44,10 @@ export function buildDaySchedule(
     const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
 
     return {
+      id: a._id == null ? "" : String(a._id),
+      // optimistic lock token ของฟอร์มแก้งาน — เทียบกับ instanceof Date เหมือน routes/index.ts
+      // เอกสารที่ไม่มี updatedAt (หรือไม่ได้มาจาก DB) ได้ค่าว่าง ฝั่งเซิร์ฟเวอร์จะข้ามการเทียบให้เอง
+      updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : "",
       truckNumber: a.truckNumber,
       truckColor: truck?.color ?? "green",
       shiftNo: a.shiftNo,
@@ -116,7 +124,7 @@ function isEffectiveOn(a: Assignment, at: Date): boolean {
  */
 export function buildWeekSchedule(
   dates: string[],
-  list: Assignment[],
+  list: Array<Assignment & { _id?: unknown; updatedAt?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule[] {

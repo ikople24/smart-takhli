@@ -151,3 +151,64 @@ export const garbageSettingsInputSchema = z
     contactNote: optionalTrimmed(200, "หมายเหตุยาวเกิน 200 ตัวอักษร"),
   })
   .strict();
+
+/**
+ * ข้อมูลงานมอบหมายที่รับจากฟอร์มแอดมิน
+ * ไม่มี effectiveFrom/effectiveTo — เซิร์ฟเวอร์เติมจาก BASELINE_EFFECTIVE_FROM เอง
+ * กฎภายในเอกสารทั้งหมดใช้ชุดเดียวกับ assignmentSchema (ยืมผ่าน .innerType ไม่ได้เพราะมี refine)
+ */
+export const assignmentInputSchema = assignmentSchema;
+
+/** ข้อความเดียวกันทั้งกรณีไม่ส่งมาและส่งมาเป็นค่าว่าง — ผู้ใช้เห็นอะไรก็ทำแบบเดียวกันคือเปิดฟอร์มใหม่ */
+const assignmentLockToken = z
+  .string({ required_error: "ต้องส่ง updatedAt ของงานที่โหลดมา" })
+  .min(1, "ต้องส่ง updatedAt ของงานที่โหลดมา");
+
+/**
+ * ข้อมูลงานมอบหมายสำหรับ **PUT เท่านั้น** = ข้อมูลงานทั้งชุด + `updatedAt` ที่ฟอร์มโหลดมา (optimistic lock)
+ * POST ไม่ต้องมีเพราะยังไม่มีเอกสารให้ชนกัน
+ *
+ * ต้องแยกคีย์ `updatedAt` ออกก่อนแล้วค่อยส่งที่เหลือให้ `assignmentSchema` —
+ * ใช้ `assignmentSchema.and(...)` ไม่ได้ เพราะ intersection จะ parse ทั้งสองฝั่งด้วย input ก้อนเดียวกัน
+ * แล้วฝั่ง `.strict()` จะตีว่า `updatedAt` เป็นคีย์แปลกปลอม → 400 ทุกครั้งแม้ข้อมูลถูกต้อง (พิสูจน์แล้วด้วย probe)
+ * รูปแบบนี้ `.strict()` ยังทำงานเหมือนเดิม (คีย์แปลกปลอมตัวอื่นยังถูกปฏิเสธ) และข้อความ error ของกฎเดิมไม่เปลี่ยน
+ */
+export const assignmentUpdateSchema = z
+  .object({ updatedAt: assignmentLockToken })
+  .passthrough()
+  .transform(({ updatedAt, ...rest }) => ({ updatedAt, assignment: rest }))
+  .pipe(z.object({ updatedAt: assignmentLockToken, assignment: assignmentSchema }));
+
+/** จุดเก็บที่ส่งมาจากฟอร์มแก้สาย — ไม่รับ seq เพราะเซิร์ฟเวอร์เป็นคนกำหนด */
+export const stopDraftSchema = z
+  .object({
+    prevSeq: z.number().int().positive().nullable(),
+    name: z.string().trim().min(1, "ชื่อจุดเก็บต้องไม่ว่าง").max(200, "ชื่อจุดเก็บยาวเกิน 200 ตัวอักษร"),
+    mode: z.enum(["truck", "walk"]),
+    roadId: z.string().max(50).nullable().optional(),
+  })
+  .strict();
+
+export const routeUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1, "ชื่อสายต้องไม่ว่าง").max(200, "ชื่อสายยาวเกิน 200 ตัวอักษร"),
+    needsVerification: z.boolean(),
+    stops: z.array(stopDraftSchema).min(1, "สายต้องมีจุดเก็บอย่างน้อย 1 จุด"),
+    /**
+     * ค่า updatedAt ของสายตอนที่ฟอร์มโหลดข้อมูล (ISO string จาก GET /api/garbage/routes)
+     * — optimistic lock กันฟอร์มค้าง: ถ้ามีคนอื่นบันทึกสายนี้ไปก่อน เซิร์ฟเวอร์จะปฏิเสธด้วย 409
+     * จำเป็นเพราะการ "สลับลำดับจุดล้วน" ไม่เปลี่ยนเซตของ seq เลย การตรวจ prevSeq จึงจับไม่ได้
+     * (สายที่ยังไม่มี updatedAt ในฐานข้อมูล ส่งค่าอะไรมาก็ได้ที่ไม่ว่าง — เซิร์ฟเวอร์ข้ามการเทียบ)
+     */
+    updatedAt: z
+      .string({ required_error: "ต้องส่ง updatedAt ของสายที่โหลดมา" })
+      .min(1, "ต้องส่ง updatedAt ของสายที่โหลดมา"),
+  })
+  .strict()
+  .refine(
+    (r) => {
+      const prev = r.stops.map((s) => s.prevSeq).filter((s): s is number => s != null);
+      return new Set(prev).size === prev.length;
+    },
+    { message: "ส่งจุดเดิมซ้ำกัน (prevSeq ซ้ำ)" }
+  );

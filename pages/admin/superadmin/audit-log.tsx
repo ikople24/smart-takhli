@@ -43,6 +43,10 @@ const ACTION_LABELS: Record<string, string> = {
   assignment_completed: 'งานเสร็จสิ้น',
   notification_sent: 'ส่งการแจ้งเตือน',
   waste_daily_updated: 'แก้ไขข้อมูลขยะรีไซเคิล',
+  garbage_assignment_created: 'เพิ่มงานเดินรถขยะ',
+  garbage_assignment_updated: 'แก้งานเดินรถขยะ',
+  garbage_assignment_deleted: 'ลบงานเดินรถขยะ',
+  garbage_route_updated: 'แก้สายเดินรถขยะ',
   data_exported: 'ส่งออกข้อมูล',
   login: 'เข้าสู่ระบบ',
 };
@@ -57,6 +61,10 @@ const ACTION_COLORS: Record<string, string> = {
   assignment_completed: 'badge-success',
   notification_sent: 'badge-ghost',
   waste_daily_updated: 'badge-info',
+  garbage_assignment_created: 'badge-primary',
+  garbage_assignment_updated: 'badge-info',
+  garbage_assignment_deleted: 'badge-error',
+  garbage_route_updated: 'badge-warning',
   data_exported: 'badge-neutral',
   login: 'badge-ghost',
 };

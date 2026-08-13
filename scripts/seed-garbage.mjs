@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ
+ * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ + ติดตั้ง index
  *   node --env-file=.env.local scripts/seed-garbage.mjs
  *   node scripts/seed-garbage.mjs --dry-run
  *
- * idempotent: upsert ตาม natural key ไม่สร้างซ้ำ รันกี่ครั้งก็ได้
+ * insert-only: เอกสารที่มีอยู่แล้วจะไม่ถูกแตะ เพราะ **ข้อมูลจริงแก้จาก /admin/garbage**
+ * (ตั้งแต่ M6 UI เป็นแหล่งความจริง ไฟล์ JSON นี้จะ drift จาก DB เป็นเรื่องปกติ)
  *
- * คำเตือน: ไฟล์ seed คือ source of truth — การรันซ้ำจะ $set ทับค่า
- * effectiveTo/active/aliases ที่ถูกแก้ใน DB ภายหลัง
+ * รันบน DB ที่มีข้อมูลอยู่แล้วปลอดภัย — ของเดิมไม่ถูกทับ มีแต่รายการที่ยังไม่มีเท่านั้นที่ถูกเพิ่ม
+ * และนี่คือวิธีติดตั้ง index ชุดใหม่บน deployment ที่ใช้งานอยู่ (createIndex เรียกซ้ำได้)
+ * จะรายงานว่าเพิ่มไปกี่รายการและข้ามไปกี่รายการ
  */
 import { readFileSync } from "node:fs";
 import { MongoClient } from "mongodb";
@@ -92,6 +94,8 @@ const client = new MongoClient(uri);
 await client.connect();
 const db = client.db(process.env.MONGODB_DB || undefined);
 const now = new Date();
+// คัดลอกมาจาก lib/garbage/constants.ts#BASELINE_EFFECTIVE_FROM (.mjs import .ts ไม่ได้)
+// — แก้ที่นี่ต้องแก้ที่นั่นด้วย ไม่งั้นงานที่ seed กับงานที่สร้างจากหน้าแอดมินจะมีวันเริ่มมีผลคนละค่า
 const effectiveFrom = new Date("2026-01-01T00:00:00+07:00");
 
 // index ชุดเดียวกับ lib/garbage/db.ts#ensureIndexes — แก้ที่ไหนต้องแก้อีกที่ด้วย
@@ -101,12 +105,21 @@ await db.collection("garbage_routes").createIndex({ "stops.name": 1 });
 await db.collection("garbage_communities").createIndex({ name: 1 }, { unique: true });
 await db.collection("garbage_communities").createIndex({ name: "text", aliases: "text" }, { default_language: "none" });
 await db.collection("garbage_assignments").createIndex({ weekday: 1, effectiveFrom: -1 });
-await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday: 1, shiftNo: 1 });
+// คีย์ธรรมชาติของงานมอบหมาย — unique เพื่อกันเพิ่มซ้ำจากหน้าแอดมิน (M6)
+await db
+  .collection("garbage_assignments")
+  .createIndex({ weekday: 1, truckNumber: 1, shiftNo: 1 }, { unique: true, name: "natural_key" });
 await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
 await db.collection("garbage_settings").createIndex({ key: 1 }, { unique: true });
 
+// insert-only: ใช้ $setOnInsert ทุกฟิลด์ เอกสารที่มีอยู่แล้วจึงไม่ถูกทับ
+// (ก่อน M6 ใช้ $set ซึ่งจะล้างค่าที่เจ้าหน้าที่แก้จากหน้าแอดมิน)
 const up = (filter, doc) => ({
-  updateOne: { filter, update: { $set: { ...doc, updatedAt: now }, $setOnInsert: { createdAt: now } }, upsert: true },
+  updateOne: {
+    filter,
+    update: { $setOnInsert: { ...doc, createdAt: now, updatedAt: now } },
+    upsert: true,
+  },
 });
 
 const r1 = await db.collection("garbage_trucks").bulkWrite(
@@ -128,11 +141,16 @@ const r4 = await db.collection("garbage_assignments").bulkWrite(
   )
 );
 
-console.log(`garbage_trucks +${r1.upsertedCount}/~${r1.modifiedCount}`);
-console.log(`garbage_communities +${r2.upsertedCount}/~${r2.modifiedCount}`);
-console.log(`garbage_routes +${r3.upsertedCount}/~${r3.modifiedCount}`);
-console.log(`garbage_assignments +${r4.upsertedCount}/~${r4.modifiedCount}`);
-console.log("(+ = เพิ่มใหม่, ~ = อัปเดต รวมถึง updatedAt ที่เปลี่ยนทุกครั้ง)");
+const report = (label, res, total) => {
+  const added = res.upsertedCount;
+  const skipped = total - added;
+  console.log(`${label} +${added} เพิ่มใหม่ · ข้าม ${skipped} (มีอยู่แล้ว ไม่ถูกทับ)`);
+};
+report("garbage_trucks", r1, seed.trucks.length);
+report("garbage_communities", r2, seed.communities.length);
+report("garbage_routes", r3, seed.routes.length);
+report("garbage_assignments", r4, seed.assignments.length);
+console.log("(insert-only — ข้อมูลจริงแก้จาก /admin/garbage)");
 
 // เตือนถ้ามีเอกสารใน DB มากกว่าใน seed (seed ไม่ลบของเก่า)
 for (const [colName, arr] of [
@@ -143,7 +161,7 @@ for (const [colName, arr] of [
 ]) {
   const count = await db.collection(colName).countDocuments();
   if (count > arr.length)
-    console.warn(`เตือน: ${colName} มี ${count} เอกสาร มากกว่าใน seed (${arr.length}) — อาจมีรายการค้างจากเวอร์ชันก่อน`);
+    console.warn(`เตือน: ${colName} มี ${count} เอกสาร มากกว่าใน seed (${arr.length}) — ปกติถ้าเพิ่มงานจากหน้าแอดมิน`);
 }
 
 await client.close();

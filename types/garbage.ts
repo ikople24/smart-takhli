@@ -38,6 +38,11 @@ export interface Route {
   source?: string;
   needsVerification?: boolean;
   active: boolean;
+  /**
+   * เวลาที่บันทึกล่าสุด — ใช้เป็น optimistic lock ของฟอร์มแก้สาย (M6)
+   * optional เพราะเอกสารที่ seed รุ่นแรกเขียนไว้อาจไม่มีฟิลด์นี้
+   */
+  updatedAt?: Date;
 }
 
 export interface StopTime {
@@ -70,10 +75,24 @@ export interface Assignment {
    * ฝั่งเขียนข้อมูล (admin/seed) ห้ามใช้ convention แบบ exclusive เพราะ resolver คิวรีด้วย $gte
    */
   effectiveTo: Date | null;
+  /**
+   * เวลาที่บันทึกล่าสุด — ใช้เป็น optimistic lock ของฟอร์มแก้งาน (M6) เหมือน `Route.updatedAt`
+   * optional เพราะเอกสารที่ seed รุ่นแรกเขียนไว้อาจไม่มีฟิลด์นี้
+   */
+  updatedAt?: Date;
 }
 
 /** ผลลัพธ์หลัง join แล้ว พร้อมส่งให้ UI */
 export interface ResolvedAssignment {
+  /** รหัสเอกสารในรูปสตริง — หน้าแอดมินใช้อ้างตอนแก้/ลบ; ว่างได้เมื่อสร้างจากข้อมูลที่ไม่มาจาก DB */
+  id: string;
+  /**
+   * เวลาที่แก้ล่าสุดในรูป ISO string — ใช้เป็น optimistic lock token: ฟอร์มแก้งานต้องส่งค่านี้
+   * กลับไปกับ PUT เพื่อให้เซิร์ฟเวอร์รู้ว่าฟอร์มค้างอยู่บนข้อมูลเก่าหรือไม่ (ไม่ตรง = 409)
+   * จำเป็นเพราะการสลับลำดับจุดของสายไม่เปลี่ยนเซตของ seq เลย ฟอร์มเก่าจึงผ่านด่านอื่นได้หมด
+   * แล้วเวลาไปติดผิดจุดแบบเงียบ ๆ · ว่างได้เมื่อสร้างจากข้อมูลที่ไม่มาจาก DB
+   */
+  updatedAt: string;
   truckNumber: number;
   truckColor: TruckColor;
   shiftNo: number;

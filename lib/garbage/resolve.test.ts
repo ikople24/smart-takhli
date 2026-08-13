@@ -157,6 +157,44 @@ describe("buildDaySchedule", () => {
     const out = buildDaySchedule("2026-08-11", 2, a, routes, trucks);
     expect(out.assignments[0].routeNeedsVerification).toBe(false);
   });
+
+  it("พา id ของเอกสารออกมาเป็นสตริง", () => {
+    const a = [{
+      ...base, _id: { toString: () => "abc123" }, weekday: 1, shiftNo: 1, truckNumber: 1,
+      routeCode: "R1", kind: "normal" as const, startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a as never, routes, trucks);
+    expect(out.assignments[0].id).toBe("abc123");
+  });
+
+  it("เอกสารที่ไม่มี _id (เช่นในเทส) ได้ id เป็นค่าว่าง ไม่พัง", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal",
+      startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a, routes, trucks);
+    expect(out.assignments[0].id).toBe("");
+  });
+
+  // updatedAt คือ optimistic lock token ที่ฟอร์มแก้งานต้องส่งกลับไปกับ PUT — ถ้าไม่โผล่มาถึง UI
+  // ฟอร์มจะส่งค่าว่างแล้วโดน 400 ทุกครั้ง (หรือแย่กว่า: ปิดล็อกเงียบ ๆ)
+  it("พา updatedAt ของเอกสารออกมาเป็น ISO string", () => {
+    const a: Assignment[] = [{
+      ...base, updatedAt: new Date("2026-08-13T04:05:06.000Z"), weekday: 1, shiftNo: 1,
+      truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a, routes, trucks);
+    expect(out.assignments[0].updatedAt).toBe("2026-08-13T04:05:06.000Z");
+  });
+
+  it("เอกสารที่ไม่มี updatedAt ได้ค่าว่าง ไม่พัง", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal",
+      startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a, routes, trucks);
+    expect(out.assignments[0].updatedAt).toBe("");
+  });
 });
 
 describe("pickLatestVersions", () => {
@@ -219,6 +257,16 @@ describe("buildWeekSchedule", () => {
     expect(out[1].assignments).toHaveLength(1); // จันทร์
     expect(out[3].assignments).toEqual([]); // พุธ — ยังไม่มีข้อมูล ต้องไม่หายไป
     expect(out.filter((d) => d.assignments.length === 0)).toHaveLength(6);
+  });
+
+  // เทส id สองตัวใน describe ของ buildDaySchedule เรียกตรง ๆ จึงข้าม hop ของ pickLatestVersions
+  // ที่ production ใช้จริง — ตัวนี้ยึดว่า _id รอดผ่านการเลือกเวอร์ชันมาถึงผลลัพธ์
+  it("พา id ผ่าน pickLatestVersions มาถึงผลลัพธ์", () => {
+    const a: Array<Assignment & { _id?: unknown }> = [
+      { ...base, _id: "abc123", weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments[0].id).toBe("abc123");
   });
 
   it("แยกงานของแต่ละวันไม่ปนกัน", () => {
