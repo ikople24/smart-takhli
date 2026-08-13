@@ -117,6 +117,10 @@ export interface GarbageSettings {
   contactPhone: string | null;
   contactNote: string | null;
   updatedBy: string | null;
+  /** PUT /api/garbage/settings เขียนให้ทุกครั้งที่บันทึก — optional เพราะ doc เก่าอาจไม่มี */
+  updatedAt?: Date;
+  /** เขียนครั้งเดียวตอน upsert สร้าง doc ($setOnInsert) */
+  createdAt?: Date;
 }
 
 /** ผลค้นหาหนึ่งรายการจาก /api/garbage/search — ใช้ร่วมกันทั้งฝั่ง API และหน้าเว็บ */

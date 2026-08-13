@@ -2,10 +2,17 @@ import type { NextApiRequest } from "next";
 import mongoose from "mongoose";
 import { getAuth, clerkClient } from "@clerk/nextjs/server";
 import dbConnect from "@/lib/dbConnect";
-import { pathMatchesPermission } from "@/lib/permissions";
+import { hasPermission, type Role } from "@/lib/permissions";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
 const REQUIRED_PAGE = "/admin/garbage";
+
+const KNOWN_ROLES: readonly string[] = ["superadmin", "admin", "user", "guest"];
+
+/** role ที่ไม่รู้จัก/ไม่มีค่า ถือเป็น "admin" ตามแบบเดียวกับ pages/api/pm25/_auth.js */
+function asRole(value: unknown): Role {
+  return typeof value === "string" && KNOWN_ROLES.includes(value) ? (value as Role) : "admin";
+}
 
 export type GarbageAdminResult =
   | { ok: true; userId: string; isSuperAdmin: boolean }
@@ -38,6 +45,7 @@ export async function requireGarbageAdmin(req: NextApiRequest): Promise<GarbageA
   const mongoUser = await User.findOne({ clerkId: userId }).lean<{
     appId?: string;
     allowedPages?: string[];
+    role?: string;
   } | null>();
 
   if (!mongoUser) return { ok: false, status: 403, message: "ยังไม่ได้ลงทะเบียนผู้ใช้" };
@@ -45,10 +53,15 @@ export async function requireGarbageAdmin(req: NextApiRequest): Promise<GarbageA
     return { ok: false, status: 403, message: "ไม่มีสิทธิ์เข้าใช้แอปนี้" };
   }
 
+  // ใช้ helper กลางของรีโป — allowedPages ว่างต้องตกไปใช้ DEFAULT_PERMISSIONS[role]
+  // ไม่ใช่ "ว่าง = ผ่านทุกหน้า" ตามที่ CLAUDE.md กำหนด
+  // หมายเหตุ: /admin/garbage จะถูกเพิ่มใน ALL_PAGES + DEFAULT_PERMISSIONS.admin ใน task ถัดไป
+  // ระหว่างนี้ admin ที่ allowedPages ว่างจะยังได้ 403 ซึ่งถูกต้อง และจะหายเองหลัง task 14
+  const role = asRole(mongoUser.role ?? clerkUser.publicMetadata?.role);
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
-  const hasPageAccess =
-    allowed.length === 0 || allowed.some((p) => pathMatchesPermission(REQUIRED_PAGE, p));
-  if (!hasPageAccess) return { ok: false, status: 403, message: "ไม่มีสิทธิ์หน้านี้" };
+  if (!hasPermission(role, allowed, REQUIRED_PAGE)) {
+    return { ok: false, status: 403, message: "ไม่มีสิทธิ์หน้านี้" };
+  }
 
   return { ok: true, userId, isSuperAdmin: false };
 }

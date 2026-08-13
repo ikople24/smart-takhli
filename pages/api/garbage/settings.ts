@@ -7,10 +7,11 @@ const SETTINGS_KEY = "default";
 
 /** GET เปิดสาธารณะ (หน้าประชาชนต้องอ่านเบอร์ไปแสดง) · PUT ต้องล็อกอินและมีสิทธิ์หน้า /admin/garbage */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const col = await settingsCol();
-
+  // เปิดคอนเนกชันในแต่ละ try เท่านั้น — ถ้าเปิดไว้หัว handler แล้ว Mongo ล่ม จะ throw นอก try
+  // ทำให้ตอบ 500 เปล่าของ Next แทน { error } ตามสัญญาของโมดูล และ branch 405 ก็ไม่ต้องแตะ DB เลย
   if (req.method === "GET") {
     try {
+      const col = await settingsCol();
       const doc = await col.findOne({ key: SETTINGS_KEY });
       res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
       return res.status(200).json({
@@ -33,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
+      const col = await settingsCol();
       const now = new Date();
       await col.updateOne(
         { key: SETTINGS_KEY },
