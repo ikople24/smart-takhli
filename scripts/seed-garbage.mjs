@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ
+ * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ — ใช้ตอน DB ว่างเท่านั้น
  *   node --env-file=.env.local scripts/seed-garbage.mjs
  *   node scripts/seed-garbage.mjs --dry-run
  *
- * idempotent: upsert ตาม natural key ไม่สร้างซ้ำ รันกี่ครั้งก็ได้
- *
- * คำเตือน: ไฟล์ seed คือ source of truth — การรันซ้ำจะ $set ทับค่า
- * effectiveTo/active/aliases ที่ถูกแก้ใน DB ภายหลัง
+ * insert-only: เอกสารที่มีอยู่แล้วจะไม่ถูกแตะ เพราะ **ข้อมูลจริงแก้จาก /admin/garbage**
+ * (ตั้งแต่ M6 UI เป็นแหล่งความจริง ไฟล์ JSON นี้จะ drift จาก DB เป็นเรื่องปกติ)
+ * รันซ้ำได้ปลอดภัย — จะรายงานว่าข้ามไปกี่รายการ
  */
 import { readFileSync } from "node:fs";
 import { MongoClient } from "mongodb";
@@ -105,8 +104,14 @@ await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday
 await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
 await db.collection("garbage_settings").createIndex({ key: 1 }, { unique: true });
 
+// insert-only: ใช้ $setOnInsert ทุกฟิลด์ เอกสารที่มีอยู่แล้วจึงไม่ถูกทับ
+// (ก่อน M6 ใช้ $set ซึ่งจะล้างค่าที่เจ้าหน้าที่แก้จากหน้าแอดมิน)
 const up = (filter, doc) => ({
-  updateOne: { filter, update: { $set: { ...doc, updatedAt: now }, $setOnInsert: { createdAt: now } }, upsert: true },
+  updateOne: {
+    filter,
+    update: { $setOnInsert: { ...doc, createdAt: now, updatedAt: now } },
+    upsert: true,
+  },
 });
 
 const r1 = await db.collection("garbage_trucks").bulkWrite(
@@ -128,11 +133,16 @@ const r4 = await db.collection("garbage_assignments").bulkWrite(
   )
 );
 
-console.log(`garbage_trucks +${r1.upsertedCount}/~${r1.modifiedCount}`);
-console.log(`garbage_communities +${r2.upsertedCount}/~${r2.modifiedCount}`);
-console.log(`garbage_routes +${r3.upsertedCount}/~${r3.modifiedCount}`);
-console.log(`garbage_assignments +${r4.upsertedCount}/~${r4.modifiedCount}`);
-console.log("(+ = เพิ่มใหม่, ~ = อัปเดต รวมถึง updatedAt ที่เปลี่ยนทุกครั้ง)");
+const report = (label, res, total) => {
+  const added = res.upsertedCount;
+  const skipped = total - added;
+  console.log(`${label} +${added} เพิ่มใหม่ · ข้าม ${skipped} (มีอยู่แล้ว ไม่ถูกทับ)`);
+};
+report("garbage_trucks", r1, seed.trucks.length);
+report("garbage_communities", r2, seed.communities.length);
+report("garbage_routes", r3, seed.routes.length);
+report("garbage_assignments", r4, seed.assignments.length);
+console.log("(insert-only — ข้อมูลจริงแก้จาก /admin/garbage)");
 
 // เตือนถ้ามีเอกสารใน DB มากกว่าใน seed (seed ไม่ลบของเก่า)
 for (const [colName, arr] of [
@@ -143,7 +153,7 @@ for (const [colName, arr] of [
 ]) {
   const count = await db.collection(colName).countDocuments();
   if (count > arr.length)
-    console.warn(`เตือน: ${colName} มี ${count} เอกสาร มากกว่าใน seed (${arr.length}) — อาจมีรายการค้างจากเวอร์ชันก่อน`);
+    console.warn(`เตือน: ${colName} มี ${count} เอกสาร มากกว่าใน seed (${arr.length}) — ปกติถ้าเพิ่มงานจากหน้าแอดมิน`);
 }
 
 await client.close();
