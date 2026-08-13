@@ -99,3 +99,16 @@ export function minutesNowInBangkok(now: Date = new Date()): Minutes {
   const d = toBangkok(now);
   return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
+
+const DAY_MS = 86_400_000;
+
+/**
+ * "2026-08-12" → 7 วันของสัปดาห์นั้น เรียงอาทิตย์→เสาร์ (index = เลขวันในสัปดาห์ 0..6)
+ * กรุงเทพฯ ไม่มี DST จึงบวกวันด้วยมิลลิวินาทีคงที่ได้ปลอดภัย
+ */
+export function weekDatesOf(date: string): string[] {
+  const weekday = weekdayOf(date); // โยน error เองถ้ารูปแบบผิด
+  const base = new Date(`${date}T00:00:00+07:00`);
+  const sunday = base.getTime() - weekday * DAY_MS;
+  return Array.from({ length: 7 }, (_, i) => formatDateBangkok(new Date(sunday + i * DAY_MS)));
+}

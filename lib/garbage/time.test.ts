@@ -5,6 +5,7 @@ import {
   formatRange,
   minutesNowInBangkok,
   weekdayOf,
+  weekDatesOf,
   todayInBangkok,
   resolveDateParam,
 } from "./time";
@@ -166,5 +167,41 @@ describe("minutesNowInBangkok", () => {
     expect(minutesNowInBangkok(new Date("2026-08-11T17:05:00Z"))).toBe(5);
     // 02:30 UTC = 09:30 เวลาไทย
     expect(minutesNowInBangkok(new Date("2026-08-12T02:30:00Z"))).toBe(570);
+  });
+});
+
+describe("weekDatesOf", () => {
+  it("คืน 7 วันเรียงอาทิตย์→เสาร์", () => {
+    // 2026-08-12 คือวันพุธ สัปดาห์นั้นเริ่มอาทิตย์ 2026-08-09
+    expect(weekDatesOf("2026-08-12")).toEqual([
+      "2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12",
+      "2026-08-13", "2026-08-14", "2026-08-15",
+    ]);
+  });
+
+  it("index ตรงกับเลขวันในสัปดาห์", () => {
+    const days = weekDatesOf("2026-08-12");
+    expect(weekdayOf(days[0])).toBe(0);
+    expect(weekdayOf(days[3])).toBe(3);
+    expect(weekdayOf(days[6])).toBe(6);
+  });
+
+  it("วันไหนในสัปดาห์ก็ได้ชุดเดียวกัน", () => {
+    const fromSunday = weekDatesOf("2026-08-09");
+    expect(weekDatesOf("2026-08-15")).toEqual(fromSunday);
+    expect(weekDatesOf("2026-08-11")).toEqual(fromSunday);
+  });
+
+  it("ข้ามเดือนได้", () => {
+    // 2026-09-01 คือวันอังคาร สัปดาห์เริ่มอาทิตย์ 2026-08-30
+    expect(weekDatesOf("2026-09-01")).toEqual([
+      "2026-08-30", "2026-08-31", "2026-09-01", "2026-09-02",
+      "2026-09-03", "2026-09-04", "2026-09-05",
+    ]);
+  });
+
+  it("รูปแบบวันที่ผิดต้องโยน error", () => {
+    expect(() => weekDatesOf("2026-8-9")).toThrow();
+    expect(() => weekDatesOf("ไม่ใช่วันที่")).toThrow();
   });
 });
