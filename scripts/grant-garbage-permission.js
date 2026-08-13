@@ -43,7 +43,12 @@ async function main() {
 
   // เป้าหมาย: user ที่มี allowedPages ไม่ว่าง (= ถูกตั้งสิทธิ์เอง) และยังไม่มีหน้านี้
   // $exists กัน field หาย · $ne: [] กันอาเรย์ว่าง · $nin กันคนที่มีสิทธิ์แล้ว (ทำให้รันซ้ำนับ 0)
+  //
+  // role clause: ตัดบัญชี role `user` ออก เพราะ /admin/garbage เป็นหน้าแอดมิน และ
+  // DEFAULT_PERMISSIONS.user ไม่มีหน้านี้อยู่แล้ว — ถ้า grant ให้จะกลายเป็นเปิดหน้าแอดมิน
+  // ให้ non-admin (custom allowedPages override ค่า default ของ role)
   const filter = {
+    role: { $in: ["admin", "superadmin"] },
     allowedPages: { $exists: true, $ne: [], $nin: [NEW_PAGE] },
   };
   const targets = await User.find(filter).select("name clerkId role allowedPages").lean();
