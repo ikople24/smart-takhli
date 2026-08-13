@@ -34,8 +34,12 @@ export interface RouteStop {
   seq: number;
   name: string;
   mode: StopMode;
-  /** อ้างถนนในชั้นข้อมูล GIS — ยังไม่ได้ใช้ในเฟสนี้ */
+  /** อ้างถนนใน collection `roads` — สคริปต์ map-garbage-communities.mjs เติมให้ตอนจับคู่ชื่อจุดกับถนน */
   roadId?: string | null;
+  /** ชื่อชุมชนที่จุดนี้อยู่ — อ้างชื่อจาก geojsonfeatures.name (ห้ามใช้ garbage_communities ที่เลิกใช้แล้ว) */
+  communityName?: string | null;
+  /** "auto" = ระบบเดาจากถนน+polygon ยังไม่มีคนตรวจ · "manual" = เจ้าหน้าที่ยืนยันแล้ว */
+  communitySource?: "auto" | "manual" | null;
 }
 
 export interface Route {
@@ -161,6 +165,12 @@ export interface GarbageSettings {
 export interface SearchHit {
   matchType: "stop" | "community";
   matchName: string;
+  /**
+   * ชื่อจุดเก็บจริงของ hit นี้ — สำหรับ matchType "stop" จะเท่ากับ matchName
+   * แต่ matchType "community" ต้องมีด้วย ไม่งั้นผลค้นด้วยชื่อชุมชนจะเป็นแถวชื่อซ้ำกันทั้งหมด
+   * แล้วชาวบ้านแยกไม่ออกว่าแถวไหนคือจุดใกล้บ้านตัวเอง
+   */
+  stopName: string;
   routeCode: string;
   routeName: string;
   weekday: number;
@@ -173,4 +183,6 @@ export interface SearchHit {
   atMin: Minutes | null;
   /** วันนั้นเก็บจุดนี้จริงหรือไม่ — false = ชื่อจุดอยู่ในสาย แต่วันนั้นไม่เข้าเก็บ */
   served: boolean;
+  /** ชื่อชุมชนของจุดนี้ (ถ้าระบุแล้ว) — ใช้แสดงประกอบผลค้นหา */
+  communityName?: string | null;
 }

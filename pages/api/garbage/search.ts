@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { SearchHit } from "@/types/garbage";
+import { normalizePlaceName } from "@/lib/garbage/community";
 import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
 import { WEEKDAY_TH } from "@/lib/garbage/labels";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
@@ -16,9 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (q.length < 2) return res.status(400).json({ error: "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร" });
 
   // ตัดคำนำหน้าและช่องว่างออกเพื่อให้ "ซ.มาลัย" ก็เจอ "มาลัย" และกลับกัน
-  const norm = (s: string) =>
-    s.normalize("NFC").replace(/^(ถนน|ถ\.\s*|ซอย|ซ\.\s*|ชุมชน)\s*/u, "").replace(/\s/gu, "").toLowerCase();
-  const needle = norm(q);
+  // กฎอยู่ที่ lib/garbage/community.ts ที่เดียว — สคริปต์จับคู่ถนนใช้กฎเดียวกันเป๊ะ
+  const needle = normalizePlaceName(q);
   // คำที่เป็นคำนำหน้าล้วน (ถนน/ถ./ซอย/ซ./ชุมชน) normalize แล้วเหลือค่าว่าง — จะ match ทุกอย่าง จึงตีเป็นคำค้นไม่พอ
   // ต้องใช้ข้อความคนละอันกับเกต 2 ตัวอักษรข้างบน ไม่งั้นคนพิมพ์ "ซอย" (3 ตัวอักษร) จะเห็นว่า "ต้องพิมพ์อย่างน้อย 2 ตัวอักษร"
   if (needle.length < 1) {
@@ -56,12 +56,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!route) continue;
 
         const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
+        // จุดที่ตรงด้วย "ชื่อจุด" ไปแล้วในงานนี้ — กันไม่ให้ลูปชุมชนข้างล่างสร้างแถวซ้ำของจุดเดียวกัน
+        // (เช่นค้น "มาลัย" จุด "ถนนมาลัย" ในชุมชนมาลัย จะเข้าเงื่อนไขทั้งสองลูป)
+        const matchedSeqs = new Set<number>();
         for (const s of route.stops) {
-          if (!norm(s.name).includes(needle)) continue;
+          if (!normalizePlaceName(s.name).includes(needle)) continue;
           // วันนั้นไม่ได้เก็บจุดนี้ → ไม่ใช่คำตอบของ "วันไหนรถมา" จึงไม่ต้องแสดง
           if (!timeBySeq.has(s.seq)) continue;
           hits.push({
-            matchType: "stop", matchName: s.name,
+            matchType: "stop", matchName: s.name, stopName: s.name,
             routeCode: route.code, routeName: route.name,
             weekday, weekdayName: WEEKDAY_TH[weekday],
             truckNumber: a.truckNumber,
@@ -69,22 +72,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
             served: true,
+            communityName: s.communityName ?? null,
           });
+          matchedSeqs.add(s.seq);
         }
-        for (const w of a.communityWindows) {
-          for (const name of w.communityNames) {
-            if (!norm(name).includes(needle)) continue;
-            hits.push({
-              matchType: "community", matchName: name,
-              routeCode: route.code, routeName: route.name,
-              weekday, weekdayName: WEEKDAY_TH[weekday],
-              truckNumber: a.truckNumber,
-              kind: a.kind, coverForRouteCode: a.coverForRouteCode,
-              startMin: w.startMin, endMin: w.endMin, atMin: null,
-              // หน้าต่างชุมชนมีอยู่ในงานของวันนั้น = วันนั้นเก็บ
-              served: true,
-            });
-          }
+        // ค้นด้วยชื่อชุมชน — อิงชุมชนของ "จุดเก็บ" (RouteStop.communityName) ไม่ใช่ a.communityWindows
+        // ที่เลิกใช้แล้วและว่างทั้งหมดในข้อมูลจริง · hit จึงเป็นระดับจุด มี atMin จริงของจุดนั้น
+        for (const s of route.stops) {
+          if (!s.communityName) continue;
+          if (!normalizePlaceName(s.communityName).includes(needle)) continue;
+          if (matchedSeqs.has(s.seq)) continue; // แสดงเป็นผลแบบ "ชื่อจุด" ไปแล้ว
+          if (!timeBySeq.has(s.seq)) continue; // วันนั้นไม่ได้เก็บจุดนี้
+          hits.push({
+            matchType: "community", matchName: s.communityName, stopName: s.name,
+            routeCode: route.code, routeName: route.name,
+            weekday, weekdayName: WEEKDAY_TH[weekday],
+            truckNumber: a.truckNumber,
+            kind: a.kind, coverForRouteCode: a.coverForRouteCode,
+            startMin: a.startMin, endMin: a.endMin,
+            atMin: timeBySeq.get(s.seq) ?? null,
+            served: true,
+            communityName: s.communityName,
+          });
         }
       }
     }

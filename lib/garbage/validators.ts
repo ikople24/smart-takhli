@@ -197,6 +197,12 @@ export const stopDraftSchema = z
     name: z.string().trim().min(1, "ชื่อจุดเก็บต้องไม่ว่าง").max(200, "ชื่อจุดเก็บยาวเกิน 200 ตัวอักษร"),
     mode: z.enum(["truck", "walk"]),
     roadId: z.string().max(50).nullable().optional(),
+    communityName: z.string().trim().min(1).max(120).nullable().optional(),
+    /**
+     * **ไม่รับ `communitySource` จาก client** — เซิร์ฟเวอร์ตั้งเป็น "manual" เสมอเมื่อบันทึกจากฟอร์ม
+     * (การกดบันทึกคือการยืนยันของเจ้าหน้าที่) ค่า "auto" มาจากสคริปต์เติมอัตโนมัติเท่านั้น
+     * `.strict()` ด้านล่างจึงปฏิเสธ payload ที่พยายามส่ง communitySource มาเอง
+     */
   })
   .strict();
 

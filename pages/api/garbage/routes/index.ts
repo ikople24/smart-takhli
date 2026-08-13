@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { routes as routesCol } from "@/lib/garbage/db";
+import { zoneOrder } from "@/lib/garbage/labels";
 import { requireGarbageAdmin, type GarbageAdminResult } from "../_auth";
 
 /**
@@ -24,7 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const rCol = await routesCol();
-    const routes = await rCol.find({ active: true }).sort({ code: 1 }).toArray();
+    // เรียงในเครื่อง ไม่ใช่ .sort({ code: 1 }) — รหัสเป็นสตริง มองโกจะได้ R1, R13, R2, ...
+    // ทุก dropdown ในหน้าแอดมินอ่านจากที่นี่ที่เดียว ลำดับจึงต้องเป็น โซน 1 → โซน 7 → รถยกภาชนะรองรับ
+    const routes = (await rCol.find({ active: true }).toArray())
+      .sort((a, b) => zoneOrder(a.code) - zoneOrder(b.code) || a.code.localeCompare(b.code));
     return res.status(200).json({
       routes: routes.map((r) => ({
         code: r.code,

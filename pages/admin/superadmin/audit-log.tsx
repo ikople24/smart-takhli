@@ -48,6 +48,7 @@ const ACTION_LABELS: Record<string, string> = {
   garbage_assignment_deleted: 'ลบงานเดินรถขยะ',
   garbage_route_updated: 'แก้สายเดินรถขยะ',
   garbage_schedule_imported: 'นำเข้าตารางเดินรถขยะ',
+  garbage_communities_mapped: 'ผูกชุมชนให้จุดเก็บ',
   data_exported: 'ส่งออกข้อมูล',
   login: 'เข้าสู่ระบบ',
 };
@@ -67,6 +68,7 @@ const ACTION_COLORS: Record<string, string> = {
   garbage_assignment_deleted: 'badge-error',
   garbage_route_updated: 'badge-warning',
   garbage_schedule_imported: 'badge-warning',
+  garbage_communities_mapped: 'badge-info',
   data_exported: 'badge-neutral',
   login: 'badge-ghost',
 };
