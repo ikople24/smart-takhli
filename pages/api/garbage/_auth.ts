@@ -30,13 +30,16 @@ export async function requireGarbageAdmin(req: NextApiRequest): Promise<GarbageA
   }
 
   await dbConnect();
-  // schema ย่อแบบ inline ตามแบบเดียวกับ pages/api/pm25/_auth.js
+  // schema ย่อแบบ inline ตามแบบเดียวกับ pages/api/smart-waste/_auth.js
+  // (repo นี้ redefine User แบบย่อหลายที่ — เพิ่มฟิลด์ใน User ต้องแก้ทุกที่ ไม่งั้นฟิลด์หายเงียบ)
   const UserSchema = new mongoose.Schema(
     {
       clerkId: String,
       role: String,
       appId: { type: String, default: "" },
       allowedPages: { type: [String], default: [] },
+      isActive: { type: Boolean, default: true },
+      isArchived: { type: Boolean, default: false },
       name: String,
     },
     { collection: "users", timestamps: true }
@@ -46,18 +49,29 @@ export async function requireGarbageAdmin(req: NextApiRequest): Promise<GarbageA
     appId?: string;
     allowedPages?: string[];
     role?: string;
+    isActive?: boolean;
+    isArchived?: boolean;
   } | null>();
 
   if (!mongoUser) return { ok: false, status: 403, message: "ยังไม่ได้ลงทะเบียนผู้ใช้" };
+  // พนักงานที่ถูกปิดใช้งาน/เก็บเข้ากรุแล้วต้องเข้าไม่ได้ แม้บัญชี Clerk ยังอยู่
+  if (mongoUser.isActive === false || mongoUser.isArchived === true) {
+    return { ok: false, status: 403, message: "บัญชีถูกปิดใช้งาน" };
+  }
   if (!mongoUser.appId || mongoUser.appId !== CURRENT_APP_ID) {
     return { ok: false, status: 403, message: "ไม่มีสิทธิ์เข้าใช้แอปนี้" };
   }
 
+  // มาถึงตรงนี้แปลว่า Clerk ไม่ได้บอกว่าเป็น superadmin — ห้าม role ใน Mongo
+  // ยกระดับตัวเองเป็น superadmin ผ่านการเช็คสิทธิ์ (hasPermission คืน true ทุกหน้าให้ superadmin)
+  const rawRole = asRole(mongoUser.role ?? clerkUser.publicMetadata?.role);
+  const role: Role = rawRole === "superadmin" ? "admin" : rawRole;
+
   // ใช้ helper กลางของรีโป — allowedPages ว่างต้องตกไปใช้ DEFAULT_PERMISSIONS[role]
-  // ไม่ใช่ "ว่าง = ผ่านทุกหน้า" ตามที่ CLAUDE.md กำหนด
+  // ไม่ใช่ "ว่าง = ผ่านทุกหน้า" ตามที่ CLAUDE.md กำหนด (ห้ามเขียนเงื่อนไขนั้นเองที่นี่ —
+  // ให้ hasPermission ตัดสินที่เดียว ไม่งั้น API หลวมกว่า UI ทันทีที่นโยบายชุดพื้นฐานเปลี่ยน)
   // หมายเหตุ: /admin/garbage จะถูกเพิ่มใน ALL_PAGES + DEFAULT_PERMISSIONS.admin ใน task ถัดไป
   // ระหว่างนี้ admin ที่ allowedPages ว่างจะยังได้ 403 ซึ่งถูกต้อง และจะหายเองหลัง task 14
-  const role = asRole(mongoUser.role ?? clerkUser.publicMetadata?.role);
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
   if (!hasPermission(role, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "ไม่มีสิทธิ์หน้านี้" };
