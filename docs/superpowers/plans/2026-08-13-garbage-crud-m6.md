@@ -815,6 +815,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // ตรวจคีย์ธรรมชาติซ้ำก่อนเขียน — ไม่พึ่ง unique index อย่างเดียว
+    // เพราะ ensureIndexes() ไม่มีใครเรียก index จึงมีเฉพาะ DB ที่เคยรัน seed script
+    // (DB ใหม่/staging/dump เก่า จะไม่มี แล้ว 11000 ก็จะไม่เกิด = ไม่มีตัวกัน)
+    const dup = await aCol.findOne({
+      weekday: input.weekday,
+      truckNumber: input.truckNumber,
+      shiftNo: input.shiftNo,
+    });
+    if (dup) {
+      return res.status(409).json({
+        error: `มีงานของรถ ${input.truckNumber} รอบ ${input.shiftNo} ในวันนี้อยู่แล้ว — ให้แก้งานเดิมแทนการเพิ่มใหม่`,
+      });
+    }
+
     // กฎข้ามเอกสาร: รถคันเดียวกันในวันเดียวกัน เวลาห้ามทับ
     const siblings = await aCol
       .find({ weekday: input.weekday, truckNumber: input.truckNumber })
@@ -960,6 +974,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ error: `สาย ${input.routeCode} ไม่มีจุดลำดับที่ ${st.seq}` });
         }
       }
+    }
+
+    // คีย์ธรรมชาติซ้ำกับ "งานอื่น" หรือไม่ (ตัวเองไม่นับ) — ไม่พึ่ง unique index อย่างเดียว
+    const dup = await aCol.findOne({
+      weekday: input.weekday,
+      truckNumber: input.truckNumber,
+      shiftNo: input.shiftNo,
+      _id: { $ne: _id },
+    } as never);
+    if (dup) {
+      return res.status(409).json({
+        error: `มีงานของรถ ${input.truckNumber} รอบ ${input.shiftNo} ในวันนี้อยู่แล้ว`,
+      });
     }
 
     const siblings = await aCol
