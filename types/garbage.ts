@@ -47,7 +47,8 @@ export interface Route {
 
 export interface StopTime {
   seq: number;
-  atMin: Minutes;
+  /** เวลาที่รถถึงจุดนี้ — null = เก็บวันนี้แต่ยังไม่ระบุเวลา (เช่น รถยกภาชนะ) */
+  atMin: Minutes | null;
 }
 
 export interface CommunityWindow {
@@ -105,7 +106,12 @@ export interface ResolvedAssignment {
   startMin: Minutes | null;
   endMin: Minutes | null;
   label: string | null;
-  stops: Array<RouteStop & { atMin: Minutes | null }>;
+  /**
+   * จุดทั้งหมดของสาย พร้อมสถานะรายวัน
+   * served = วันนี้เก็บจุดนี้หรือไม่ (มาจากการมีอยู่ใน stopTimes)
+   * atMin = เวลาที่ถึง · null ทั้งที่ served เป็น true แปลว่ายังไม่ระบุเวลา
+   */
+  stops: Array<RouteStop & { served: boolean; atMin: Minutes | null }>;
   communityWindows: CommunityWindow[];
 }
 
