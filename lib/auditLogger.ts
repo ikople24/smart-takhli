@@ -16,10 +16,15 @@ type AuditAction =
   | 'assignment_completed'
   | 'notification_sent'
   | 'waste_daily_updated'
+  // Garbage schedule
+  | 'garbage_assignment_created'
+  | 'garbage_assignment_updated'
+  | 'garbage_assignment_deleted'
+  | 'garbage_route_updated'
   | 'data_exported'
   | 'login';
 
-type ResourceType = 'complaint' | 'assignment' | 'user' | 'notification' | 'system';
+type ResourceType = 'complaint' | 'assignment' | 'user' | 'notification' | 'system' | 'garbage_assignment' | 'garbage_route';
 
 interface AuditParams {
   actorClerkId: string;

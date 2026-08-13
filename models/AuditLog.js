@@ -29,6 +29,11 @@ const AuditLogSchema = new mongoose.Schema({
       'notification_sent',
       // Smart Waste
       'waste_daily_updated',
+      // Garbage schedule
+      'garbage_assignment_created',
+      'garbage_assignment_updated',
+      'garbage_assignment_deleted',
+      'garbage_route_updated',
       // General
       'data_exported',
       'login',
@@ -39,7 +44,7 @@ const AuditLogSchema = new mongoose.Schema({
   /** resource ที่ถูกกระทำ */
   resourceType: {
     type: String,
-    enum: ['complaint', 'assignment', 'user', 'notification', 'system'],
+    enum: ['complaint', 'assignment', 'user', 'notification', 'system', 'garbage_assignment', 'garbage_route'],
     required: true,
   },
   resourceId: { type: String, default: '' },
