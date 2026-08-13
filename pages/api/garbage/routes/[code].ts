@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { assignments as assignmentsCol, routes as routesCol } from "@/lib/garbage/db";
+import type { RouteStop } from "@/types/garbage";
+import { assignments as assignmentsCol, getDb, routes as routesCol } from "@/lib/garbage/db";
 import { routeUpdateSchema } from "@/lib/garbage/validators";
 import { assignSeq, buildSeqMap, remapStopTimes } from "@/lib/garbage/stopEditing";
 import { logAuditEvent } from "@/lib/auditLogger";
@@ -62,7 +63,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const nextStops = assignSeq(input.stops);
+    // ชื่อชุมชนต้องเป็นชื่อจริงจาก geojsonfeatures — พิมพ์ผิดแล้วจะค้นไม่เจอตลอดไป
+    const wanted = [
+      ...new Set(input.stops.map((s) => s.communityName).filter((n): n is string => !!n)),
+    ];
+    if (wanted.length > 0) {
+      const db = await getDb();
+      const found = await db
+        .collection("geojsonfeatures")
+        .find({ active: true, name: { $in: wanted } })
+        .project({ name: 1 })
+        .toArray();
+      const ok = new Set(found.map((f) => String(f.name)));
+      const bad = wanted.filter((w) => !ok.has(w));
+      if (bad.length > 0) {
+        return res.status(400).json({ error: `ไม่รู้จักชุมชน: ${bad.join(", ")}` });
+      }
+    }
+
+    // assignSeq คืนจุดตามลำดับที่ส่งมา ดัชนี i จึงตรงกับ input.stops[i] เสมอ
+    // communitySource ตั้งเป็น "manual" เมื่อมีชื่อชุมชน — การกดบันทึกคือการยืนยันของเจ้าหน้าที่
+    // (client ส่ง communitySource มาเองไม่ได้ เพราะ stopDraftSchema เป็น .strict())
+    const nextStops: RouteStop[] = assignSeq(input.stops).map((s, i) => ({
+      ...s,
+      communityName: input.stops[i].communityName ?? null,
+      communitySource: input.stops[i].communityName ? "manual" : null,
+    }));
     const seqMap = buildSeqMap(input.stops);
 
     // ลำดับสำคัญ: เขียนเวลาของงานก่อน แล้วจึงเขียนรายการจุดของสาย
