@@ -157,6 +157,24 @@ describe("buildDaySchedule", () => {
     const out = buildDaySchedule("2026-08-11", 2, a, routes, trucks);
     expect(out.assignments[0].routeNeedsVerification).toBe(false);
   });
+
+  it("พา id ของเอกสารออกมาเป็นสตริง", () => {
+    const a = [{
+      ...base, _id: { toString: () => "abc123" }, weekday: 1, shiftNo: 1, truckNumber: 1,
+      routeCode: "R1", kind: "normal" as const, startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a as never, routes, trucks);
+    expect(out.assignments[0].id).toBe("abc123");
+  });
+
+  it("เอกสารที่ไม่มี _id (เช่นในเทส) ได้ id เป็นค่าว่าง ไม่พัง", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal",
+      startMin: 240, endMin: 300, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-10", 1, a, routes, trucks);
+    expect(out.assignments[0].id).toBe("");
+  });
 });
 
 describe("pickLatestVersions", () => {

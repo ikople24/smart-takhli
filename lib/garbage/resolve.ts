@@ -23,7 +23,7 @@ export function pickLatestVersions(list: Assignment[]): Assignment[] {
 export function buildDaySchedule(
   date: string,
   weekday: Weekday,
-  list: Assignment[],
+  list: Array<Assignment & { _id?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule {
@@ -40,6 +40,7 @@ export function buildDaySchedule(
     const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
 
     return {
+      id: a._id == null ? "" : String(a._id),
       truckNumber: a.truckNumber,
       truckColor: truck?.color ?? "green",
       shiftNo: a.shiftNo,
@@ -116,7 +117,7 @@ function isEffectiveOn(a: Assignment, at: Date): boolean {
  */
 export function buildWeekSchedule(
   dates: string[],
-  list: Assignment[],
+  list: Array<Assignment & { _id?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule[] {

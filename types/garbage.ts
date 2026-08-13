@@ -74,6 +74,8 @@ export interface Assignment {
 
 /** ผลลัพธ์หลัง join แล้ว พร้อมส่งให้ UI */
 export interface ResolvedAssignment {
+  /** รหัสเอกสารในรูปสตริง — หน้าแอดมินใช้อ้างตอนแก้/ลบ; ว่างได้เมื่อสร้างจากข้อมูลที่ไม่มาจาก DB */
+  id: string;
   truckNumber: number;
   truckColor: TruckColor;
   shiftNo: number;
