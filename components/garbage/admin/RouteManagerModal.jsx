@@ -6,7 +6,7 @@ import { inputCls, labelCls, primaryBtnCls, ghostBtnCls } from '@/components/ui/
  * เตือนก่อนบันทึกว่าการลบหรือสลับจุดกระทบเวลาของงานที่ใช้สายนี้
  * ส่ง prevSeq ไปให้เซิร์ฟเวอร์ย้ายเวลาตามจุดเดิม ไม่ใช่ตามตำแหน่ง
  */
-export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
+export default function RouteManagerModal({ open, routes, communities = [], onClose, onSaved }) {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [verified, setVerified] = useState(false);
@@ -25,7 +25,10 @@ export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
     if (!r) return;
     setName(r.name);
     setVerified(!r.needsVerification);
-    setStops(r.stops.map((s) => ({ prevSeq: s.seq, name: s.name, mode: s.mode, roadId: s.roadId ?? null })));
+    setStops(r.stops.map((s) => ({
+      prevSeq: s.seq, name: s.name, mode: s.mode, roadId: s.roadId ?? null,
+      communityName: s.communityName ?? '', communitySource: s.communitySource ?? null,
+    })));
   }, [code, routes]);
 
   const move = (i, dir) => {
@@ -54,7 +57,12 @@ export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
         body: JSON.stringify({
           name: name.trim(),
           needsVerification: !verified,
-          stops,
+          // ส่งเฉพาะฟิลด์ที่ schema รับ — communitySource ห้ามส่ง (เซิร์ฟเวอร์ตั้งเอง
+          // และ stopDraftSchema เป็น .strict() จะปฏิเสธทั้งคำขอถ้าติดไปด้วย)
+          stops: stops.map((s) => ({
+            prevSeq: s.prevSeq, name: s.name, mode: s.mode, roadId: s.roadId ?? null,
+            communityName: s.communityName || null,
+          })),
           updatedAt: current?.updatedAt ?? 'none',
         }),
       });
@@ -102,6 +110,11 @@ export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
         <div className="rounded-[14px] border border-[#E7E2F2] p-3 space-y-2">
           <div className="flex items-center justify-between">
             <span className={labelCls + ' mb-0'}>จุดเก็บ ({stops.length})</span>
+            <span className="text-[11.5px] text-[#8A8398]">
+              ระบุชุมชนแล้ว {stops.filter((s) => s.communityName).length}/{stops.length}
+              {stops.some((s) => s.communitySource === 'auto') &&
+                ` · รอตรวจ ${stops.filter((s) => s.communitySource === 'auto').length}`}
+            </span>
             <button type="button" className={ghostBtnCls}
               onClick={() => setStops([...stops, { prevSeq: null, name: '', mode: 'truck', roadId: null }])}>
               + เพิ่มจุด
@@ -127,6 +140,23 @@ export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
                   }}>
                   <option value="truck">รถ</option>
                   <option value="walk">เดิน</option>
+                </select>
+                {/* พื้นเหลือง = ระบบเติมให้จากพิกัด ยังไม่มีเจ้าหน้าที่ตรวจ (communitySource === 'auto') */}
+                <select
+                  className={'rounded-[10px] border px-1 py-1 text-[11.5px] max-w-[9rem] ' +
+                    (s.communitySource === 'auto'
+                      ? 'border-amber-300 bg-amber-50'
+                      : 'border-[#E7E2F2]')}
+                  value={s.communityName || ''}
+                  aria-label={`ชุมชนของจุดลำดับที่ ${i + 1}`}
+                  title={s.communitySource === 'auto' ? 'ระบบเติมให้ ยังไม่มีคนตรวจ' : ''}
+                  onChange={(e) => {
+                    const next = [...stops];
+                    next[i] = { ...s, communityName: e.target.value, communitySource: e.target.value ? 'manual' : null };
+                    setStops(next);
+                  }}>
+                  <option value="">— ชุมชน —</option>
+                  {communities.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <button type="button" aria-label={`เลื่อนขึ้น จุดลำดับที่ ${i + 1}`}
                   className="px-1.5 text-[#8A8398] disabled:opacity-30" disabled={i === 0}

@@ -17,6 +17,7 @@ export default function AdminGarbagePage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [routeMgrOpen, setRouteMgrOpen] = useState(false);
+  const [communities, setCommunities] = useState([]);
   const mountedRef = useRef(true);
 
   // ต้องเซ็ต true ใน effect body ด้วย ไม่ใช่แค่ false ใน cleanup —
@@ -64,6 +65,20 @@ export default function AdminGarbagePage() {
   }, []);
 
   useEffect(() => { fetchRoutes(); }, [fetchRoutes]);
+
+  // รายชื่อชุมชนสำหรับ dropdown ต่อจุด — มาจาก geojsonfeatures (แหล่งความจริงของชื่อชุมชน)
+  const fetchCommunities = useCallback(async () => {
+    try {
+      const res = await fetch('/api/garbage/communities');
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error || 'โหลดรายชื่อชุมชนไม่สำเร็จ');
+      if (mountedRef.current) setCommunities(json.communities ?? []);
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'โหลดรายชื่อชุมชนไม่สำเร็จ', text: e.message });
+    }
+  }, []);
+
+  useEffect(() => { fetchCommunities(); }, [fetchCommunities]);
 
   // เบอร์รถที่มีในระบบ — ดึงจากงานที่มีอยู่ (ทะเบียนรถยังแก้ผ่าน seed รอบนี้)
   useEffect(() => {
@@ -135,7 +150,7 @@ export default function AdminGarbagePage() {
           onClose={() => setFormOpen(false)}
           onSaved={() => { setFormOpen(false); fetchWeek(); }} />
 
-        <RouteManagerModal open={routeMgrOpen} routes={routes}
+        <RouteManagerModal open={routeMgrOpen} routes={routes} communities={communities}
           onClose={() => setRouteMgrOpen(false)}
           onSaved={(affected, warnings) => {
             setRouteMgrOpen(false);
