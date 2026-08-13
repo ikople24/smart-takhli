@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { SearchHit } from "@/types/garbage";
-import { formatRange, formatThaiTime } from "@/lib/garbage/time";
-import { KIND_LABEL_TH } from "@/lib/garbage/labels";
+import { formatRange, formatThaiTime, minutesNowInBangkok, todayInBangkok, weekdayOf } from "@/lib/garbage/time";
+import { KIND_LABEL_TH, weekdayName } from "@/lib/garbage/labels";
+import { findNextPickup } from "@/lib/garbage/nextPickup";
 import { useDebounce } from "./useDebounce";
 
 const MIN_CHARS = 2;
@@ -21,6 +22,23 @@ function timeText(h: SearchHit): string {
   if (h.atMin != null) return `รถถึงประมาณ ${formatThaiTime(h.atMin)}`;
   const range = formatRange(h.startMin, h.endMin);
   return range ? `ช่วง ${range}` : "ยังไม่ระบุเวลา";
+}
+
+/** "วันนี้ 9.00 น." · "พรุ่งนี้ 4.00 น." · "วันพุธ 4.00 น. (อีก 2 วัน)" */
+function nextPickupText(hits: SearchHit[]): string | null {
+  const stopHits = hits.filter((h) => h.matchType === "stop");
+  if (stopHits.length === 0) return null;
+  const next = findNextPickup(
+    stopHits.map((h) => ({ weekday: h.weekday, atMin: h.atMin })),
+    weekdayOf(todayInBangkok()),
+    minutesNowInBangkok()
+  );
+  if (next == null) return null;
+  const when =
+    next.daysAhead === 0 ? "วันนี้" : next.daysAhead === 1 ? "พรุ่งนี้" : `วัน${weekdayName(next.weekday)}`;
+  const time = next.atMin == null ? "ยังไม่ระบุเวลา" : formatThaiTime(next.atMin);
+  const tail = next.daysAhead >= 2 ? ` (อีก ${next.daysAhead} วัน)` : "";
+  return `${when} ${time}${tail}`;
 }
 
 export default function GarbageSearchPanel() {
@@ -66,6 +84,8 @@ export default function GarbageSearchPanel() {
   }, [debounced]);
 
   const groups = hits ? groupByWeekday(hits) : [];
+  // คำนวณครั้งเดียวต่อ render — ใช้ทั้งเงื่อนไขแสดงผลและตัวข้อความ
+  const nextText = hits ? nextPickupText(hits) : null;
 
   return (
     <section className="rounded-3xl bg-white/80 ring-1 ring-slate-200 p-4">
@@ -106,6 +126,13 @@ export default function GarbageSearchPanel() {
           <p role="status" className="mt-3 text-sm text-slate-600">
             ไม่พบ &ldquo;{debounced}&rdquo; — ลองพิมพ์ชื่อถนนหรือชุมชนให้สั้นลง เช่น ตัดคำว่า ซอย ออก
           </p>
+        )}
+
+        {!loading && !error && groups.length > 0 && nextText && (
+          <div className="mt-4 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
+            <div className="text-xs text-emerald-800">รอบเก็บถัดไปของจุดที่ค้นเจอ</div>
+            <div className="text-base font-semibold text-emerald-900">{nextText}</div>
+          </div>
         )}
 
         {!loading && !error && groups.length > 0 && (
