@@ -15,35 +15,42 @@ export default function GarbagePage() {
   const [settings, setSettings] = useState<Settings>({ contactPhone: null, contactNote: null });
 
   // ยิงครั้งเดียวตอนเปิด — ใช้รู้ว่าวันไหน "ไม่มีตารางเลย" (จาก /search อย่างเดียวแยกไม่ออก)
+  // สองก้อนนี้ต้องพังแยกกันจริง: settings ล่ม (เช่น proxy คืน HTML 502 ทำให้ .json() reject)
+  // ต้องไม่ทำให้แถบบอกวันที่รอข้อมูลหายไป เพราะกฎของโมดูลคือต้องบอกตรง ๆ ว่าวันไหนยังไม่มีตาราง
   useEffect(() => {
     let alive = true;
-    const run = async () => {
+
+    const loadWeek = async () => {
       try {
-        const [weekRes, settingsRes] = await Promise.all([
-          fetch("/api/garbage/week"),
-          fetch("/api/garbage/settings"),
-        ]);
-        const weekJson = await weekRes.json();
-        const settingsJson = await settingsRes.json();
-        if (!alive) return;
-        if (weekRes.ok && Array.isArray(weekJson?.days)) {
-          setEmptyWeekdays(
-            (weekJson.days as ResolvedDaySchedule[])
-              .filter((d) => d.assignments.length === 0)
-              .map((d) => d.weekday)
-          );
-        }
-        if (settingsRes.ok) {
-          setSettings({
-            contactPhone: settingsJson?.contactPhone ?? null,
-            contactNote: settingsJson?.contactNote ?? null,
-          });
-        }
+        const res = await fetch("/api/garbage/week");
+        const json = await res.json();
+        if (!alive || !res.ok || !Array.isArray(json?.days)) return;
+        setEmptyWeekdays(
+          (json.days as ResolvedDaySchedule[])
+            .filter((d) => d.assignments.length === 0)
+            .map((d) => d.weekday)
+        );
       } catch {
-        // โหลดข้อมูลประกอบไม่ได้ก็ไม่เป็นไร — ช่องค้นหายังใช้งานได้ปกติ
+        // โหลดไม่ได้ก็ไม่แสดงแถบ — ช่องค้นหายังใช้งานได้ปกติ
       }
     };
-    run();
+
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/garbage/settings");
+        const json = await res.json();
+        if (!alive || !res.ok) return;
+        setSettings({
+          contactPhone: json?.contactPhone ?? null,
+          contactNote: json?.contactNote ?? null,
+        });
+      } catch {
+        // ไม่มีเบอร์ก็แสดงแถบได้ตามปกติ
+      }
+    };
+
+    // แต่ละตัวมี try ของตัวเอง จึง reject ไม่ได้ — Promise.all ตรงนี้แค่ยิงขนานกัน
+    Promise.all([loadWeek(), loadSettings()]);
     return () => {
       alive = false;
     };

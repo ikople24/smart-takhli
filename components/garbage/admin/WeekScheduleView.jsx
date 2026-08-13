@@ -1,31 +1,34 @@
 import { Fragment, useState } from 'react';
 import { formatRange, formatThaiTime } from '@/lib/garbage/time';
 import { KIND_LABEL_TH, weekdayName } from '@/lib/garbage/labels';
-import { tableHeadCls } from '@/components/ui/adminTheme';
+import { PillTabs, tableHeadCls } from '@/components/ui/adminTheme';
 
-/** ตารางงานมอบหมายรายวัน — อ่านอย่างเดียว คลิกแถวเพื่อกางดูจุดเก็บ */
+/** ตารางงานมอบหมายรายวัน — อ่านอย่างเดียว กดแถว (หรือปุ่มในคอลัมน์ "จุด") เพื่อกางดูจุดเก็บ */
 export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
   const [openKey, setOpenKey] = useState(null);
   const day = days.find((d) => d.date === activeDate) ?? days[0];
   const rows = day?.assignments ?? [];
 
+  // ใช้ PillTabs กลางจาก components/ui/adminTheme — label รับ node ได้ จึงแนบป้าย "รอข้อมูล" ไปด้วย
+  const tabs = days.map((d) => ({
+    key: d.date,
+    label: (
+      <>
+        {weekdayName(d.weekday)}
+        {d.assignments.length === 0 && (
+          <span className="ml-1 text-[10px] font-normal opacity-70">รอข้อมูล</span>
+        )}
+      </>
+    ),
+  }));
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2 bg-[#F1ECFB] p-1.5 rounded-[14px]">
-        {days.map((d) => {
-          const on = d.date === activeDate;
-          const empty = d.assignments.length === 0;
-          return (
-            <button key={d.date} type="button" onClick={() => { onChangeDate(d.date); setOpenKey(null); }}
-              className={'text-[13px] px-3 py-2 rounded-[10px] font-semibold transition ' +
-                (on ? 'bg-white text-[#7C3AED] shadow-[0_2px_6px_-2px_rgba(124,58,237,0.3)]'
-                    : 'text-[#8A8398] hover:text-[#6D28D9]')}>
-              {weekdayName(d.weekday)}
-              {empty && <span className="ml-1 text-[10px] font-normal opacity-70">รอข้อมูล</span>}
-            </button>
-          );
-        })}
-      </div>
+      <PillTabs
+        tabs={tabs}
+        active={activeDate}
+        onChange={(date) => { onChangeDate(date); setOpenKey(null); }}
+      />
 
       <div className="text-[12px] text-[#8A8398]">{day?.date} · {rows.length} รายการ</div>
 
@@ -74,10 +77,29 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate }) {
                         )}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatRange(a.startMin, a.endMin) || '—'}</td>
-                      <td className="px-3 py-2 text-right">{a.stops.length}</td>
+                      <td className="px-3 py-2 text-right">
+                        {a.stops.length === 0 ? (
+                          <span className="text-[#8A8398]">0</span>
+                        ) : (
+                          // ปุ่มนี้คือตัวควบคุมจริงของการกาง (คีย์บอร์ดโฟกัสได้/Enter ได้)
+                          // stopPropagation กัน onClick ของแถวสลับซ้ำจนกลับมาปิดเอง
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            aria-controls={`garbage-stops-${key}`}
+                            onClick={(e) => { e.stopPropagation(); setOpenKey(open ? null : key); }}
+                            className="inline-flex items-center gap-1 font-semibold text-[#6D28D9] rounded-[8px] px-2 py-1
+                              hover:bg-[#EDE7FD] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
+                          >
+                            {a.stops.length}
+                            <span aria-hidden className="text-[10px]">{open ? '▲' : '▼'}</span>
+                            <span className="sr-only">จุด — {open ? 'ซ่อนรายการจุด' : 'ดูรายการจุด'}</span>
+                          </button>
+                        )}
+                      </td>
                     </tr>
                     {open && a.stops.length > 0 && (
-                      <tr className="bg-[#FAF8FF] border-b border-[#F1ECFB]">
+                      <tr id={`garbage-stops-${key}`} className="bg-[#FAF8FF] border-b border-[#F1ECFB]">
                         <td colSpan={5} className="px-3 py-2">
                           <ol className="space-y-0.5">
                             {a.stops.map((s) => (

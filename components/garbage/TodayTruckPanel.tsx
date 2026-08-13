@@ -36,7 +36,8 @@ export default function TodayTruckPanel() {
         if (!alive) return;
         if (!res.ok) throw new Error(json?.error || "โหลดสถานะไม่สำเร็จ");
         setTrucks(json.trucks ?? []);
-        setUpdatedAt(formatThaiTime(minutesNowInBangkok()));
+        // ใช้ nowMin ที่เซิร์ฟเวอร์คิดมาให้ (เวลาไทย) — นาฬิกาเครื่องผู้ใช้ตั้งเพี้ยนได้ ค่อย fallback มาที่เครื่อง
+        setUpdatedAt(formatThaiTime(typeof json.nowMin === "number" ? json.nowMin : minutesNowInBangkok()));
         setFailed(false);
       } catch {
         if (!alive) return;
@@ -89,7 +90,7 @@ export default function TodayTruckPanel() {
                 {t.routeCode && <span className="text-xs text-slate-500">{t.routeCode}</span>}
                 <span className={"ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full " +
                   (STATUS_CLS[t.live.status] ?? STATUS_CLS.unknown)}>
-                  {LIVE_STATUS_TH[t.live.status]}
+                  {LIVE_STATUS_TH[t.live.status] ?? LIVE_STATUS_TH.unknown}
                   {t.live.status === "upcoming" && t.live.startsInMin != null && ` · อีก ${t.live.startsInMin} นาที`}
                 </span>
               </div>

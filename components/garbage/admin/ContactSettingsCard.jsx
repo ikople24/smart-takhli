@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { inputCls, labelCls, primaryBtnCls } from '@/components/ui/adminTheme';
 
@@ -8,6 +8,14 @@ export default function ContactSettingsCard() {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const mountedRef = useRef(true);
+
+  // ต้องเซ็ต true ใน effect body ด้วย ไม่ใช่แค่ false ใน cleanup —
+  // StrictMode โหมด dev จะ mount→unmount→mount ถ้าไม่เซ็ตกลับจะค้างเป็น false แล้ว setState ตายเงียบทั้งหมด
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -38,13 +46,16 @@ export default function ContactSettingsCard() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'บันทึกไม่สำเร็จ');
+      // ออกจากหน้าไปแล้วไม่ต้องเซ็ต state หรือเด้ง Swal ค้างไว้
+      if (!mountedRef.current) return;
       setPhone(json.contactPhone ?? '');
       setNote(json.contactNote ?? '');
       Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', timer: 1400, showConfirmButton: false });
     } catch (error) {
+      if (!mountedRef.current) return;
       Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: error.message });
     } finally {
-      setSaving(false);
+      if (mountedRef.current) setSaving(false);
     }
   };
 
