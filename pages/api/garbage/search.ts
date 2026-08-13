@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { AssignmentKind } from "@/types/garbage";
 import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
+import { WEEKDAY_TH } from "@/lib/garbage/labels";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
 import { todayInBangkok } from "@/lib/garbage/time";
-
-const WEEKDAY_TH = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
 interface SearchHit {
   matchType: "stop" | "community";
