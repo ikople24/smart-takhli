@@ -581,6 +581,18 @@ git commit -m "feat: หน้าประชาชนบอกรอบเก�
 **Files:**
 - Modify: `components/garbage/admin/StopTimesEditor.jsx`
 - Modify: `components/garbage/admin/WeekScheduleView.jsx`
+- Modify: `components/garbage/admin/AssignmentFormModal.jsx`
+
+- [ ] **Step 0: กันจุดที่ "เก็บแต่ยังไม่ระบุเวลา" หายตอนเปิดฟอร์ม**
+
+`AssignmentFormModal.jsx` ตอนโหลดงานเดิมใช้ `assignment.stops.filter((s) => s.atMin != null)` สร้าง `stopTimes` เริ่มต้น → ภายใต้โมเดลใหม่ จุดที่ `served` เป็น true แต่ไม่มีเวลา (เช่นทุกจุดของรถ 13) จะ**หายไปเงียบ ๆ** แอดมินเปิดงานแล้วกดบันทึกทีเดียว เครื่องหมาย "เก็บวันนี้" หายทั้งหมด ซึ่งตรงข้ามกับสิ่งที่ M7 ทำมา
+
+เปลี่ยนให้ยึด `served` แทน:
+
+```jsx
+      setStopTimes(assignment.stops.filter((s) => s.served).map((s) => ({ seq: s.seq, atMin: s.atMin })));
+```
+
 
 - [ ] **Step 1: `StopTimesEditor` เพิ่มช่องติ๊กต่อจุด**
 
