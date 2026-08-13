@@ -6,14 +6,13 @@
 //   node --env-file=.env.local scripts/grant-garbage-permission.js         (dry-run: แสดงรายชื่อ)
 //   node --env-file=.env.local scripts/grant-garbage-permission.js --yes   (เพิ่มสิทธิ์จริง)
 //
-// รันซ้ำได้ (idempotent) — ใช้ $addToSet
+// รันซ้ำได้ (idempotent) — ใช้ $addToSet และ filter ตัดคนที่มีสิทธิ์แล้วออก (รันซ้ำจะนับ 0 ราย)
 // ถ้าต้องการให้เฉพาะบางคน: ไม่ต้องรัน script — ให้ superadmin ติ๊กรายคนที่ /admin/superadmin
 //
-// ข้อควรรู้: filter อิงสิทธิ์ /admin/smart-waste เป็นตัวชี้ "กลุ่มงานสาธารณสุข" ตามเจตนา
-// แต่ ณ 2026-08-13 มี user เพียง 1 รายที่มีสิทธิ์นั้น (จาก 23 รายที่มี allowedPages กำหนดเอง)
-// เพราะ scripts/grant-smart-waste-permission.js ยังไม่ถูกรันด้วย --yes
-// → ถ้าต้องการให้กว้างกว่านี้ ให้รัน grant-smart-waste-permission.js --yes ก่อน
-//   หรือติ๊กสิทธิ์รายคนที่ /admin/superadmin
+// ทำไมต้องครอบ "ทุกคนที่ตั้งสิทธิ์เอง": /admin/garbage อยู่ใน DEFAULT_PERMISSIONS.admin แล้ว
+// → admin ที่ allowedPages ว่างเห็นหน้านี้อยู่แล้วโดยอัตโนมัติ
+// ถ้าไม่รันสคริปต์นี้ คนที่ superadmin ตั้งสิทธิ์ไว้ละเอียดจะกลับเห็นน้อยกว่าคนที่ไม่ได้ตั้งเลย
+// ซึ่งกลับหัวกลับหางกับเจตนาของระบบสิทธิ์
 
 const mongoose = require("mongoose");
 
@@ -42,8 +41,11 @@ async function main() {
       "users"
     );
 
-  // เป้าหมาย: คนที่เคยติ๊กสิทธิ์เอง (allowedPages ไม่ว่าง) — ใช้หน้าขยะที่มีอยู่เป็นตัวชี้กลุ่มงานสาธารณสุข
-  const filter = { allowedPages: "/admin/smart-waste" };
+  // เป้าหมาย: user ที่มี allowedPages ไม่ว่าง (= ถูกตั้งสิทธิ์เอง) และยังไม่มีหน้านี้
+  // $exists กัน field หาย · $ne: [] กันอาเรย์ว่าง · $nin กันคนที่มีสิทธิ์แล้ว (ทำให้รันซ้ำนับ 0)
+  const filter = {
+    allowedPages: { $exists: true, $ne: [], $nin: [NEW_PAGE] },
+  };
   const targets = await User.find(filter).select("name clerkId role allowedPages").lean();
 
   console.log(`พบ user ที่ต้องเพิ่มสิทธิ์ ${targets.length} ราย`);
