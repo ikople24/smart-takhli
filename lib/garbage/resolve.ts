@@ -108,6 +108,11 @@ function isEffectiveOn(a: Assignment, at: Date): boolean {
  * logic บริสุทธิ์ — ไม่แตะฐานข้อมูล เพื่อให้เทสต์ได้
  * dates เรียงลำดับอย่างไร ผลลัพธ์เรียงอย่างนั้น (ผู้เรียกใช้ weekDatesOf จึงได้อาทิตย์→เสาร์)
  * วันที่ไม่มีงานยังต้องอยู่ในผลลัพธ์ด้วย assignments ว่าง — ฝั่ง UI ใช้บอกว่าวันไหนรอข้อมูล
+ *
+ * **เงื่อนไขที่ผู้เรียกต้องทำมาก่อน:** `list` ต้องเรียงใหม่สุดมาก่อน เพราะ pickLatestVersions
+ * ตัดสิน tie ด้วย "ตัวแรกในลิสต์ชนะ" เมื่อหลายเวอร์ชันของ (วัน, รถ, รอบ) เดียวกันมี effectiveFrom
+ * เท่ากัน — ถ้าส่งลิสต์ที่ไม่ได้เรียง การเลือกเวอร์ชันจะขึ้นกับลำดับที่ไดรเวอร์คืนมา (ไม่ deterministic)
+ * `resolveWeekSchedule` จัดการให้แล้วด้วย .sort({ effectiveFrom: -1, _id: -1 }) — ห้ามลบ
  */
 export function buildWeekSchedule(
   dates: string[],

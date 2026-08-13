@@ -255,4 +255,19 @@ describe("buildWeekSchedule", () => {
     expect(out[1].assignments).toHaveLength(1);
     expect(out[1].assignments[0].startMin).toBe(260);
   });
+
+  // ปักพฤติกรรมที่ผู้เรียกต้องรู้: เมื่อ effectiveFrom เท่ากัน "ตัวแรกในลิสต์ชนะ"
+  // → ผู้เรียกต้องส่งลิสต์ที่เรียงใหม่สุดมาก่อน (resolveWeekSchedule sort ด้วย effectiveFrom:-1, _id:-1)
+  // ถ้าลบ .sort() นั้นออก การเลือกเวอร์ชันจะขึ้นกับลำดับที่ไดรเวอร์คืนมาแบบเงียบ ๆ
+  it("effectiveFrom เท่ากัน → ตัวแรกในลิสต์ชนะ (ผู้เรียกต้อง sort ใหม่สุดมาก่อน)", () => {
+    const sameFrom = new Date("2026-07-01T00:00:00+07:00");
+    const newestFirst: Assignment[] = [
+      { ...base, effectiveFrom: sameFrom, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 260, endMin: 320, stopTimes: [], label: "เวอร์ชันที่สร้างทีหลัง" },
+      { ...base, effectiveFrom: sameFrom, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [], label: "เวอร์ชันที่สร้างก่อน" },
+    ];
+    const out = buildWeekSchedule(week, newestFirst, routes, trucks);
+    expect(out[1].assignments).toHaveLength(1);
+    expect(out[1].assignments[0].label).toBe("เวอร์ชันที่สร้างทีหลัง");
+    expect(out[1].assignments[0].startMin).toBe(260);
+  });
 });
