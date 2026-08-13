@@ -103,6 +103,7 @@ await db.collection("garbage_communities").createIndex({ name: "text", aliases: 
 await db.collection("garbage_assignments").createIndex({ weekday: 1, effectiveFrom: -1 });
 await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday: 1, shiftNo: 1 });
 await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
+await db.collection("garbage_settings").createIndex({ key: 1 }, { unique: true });
 
 const up = (filter, doc) => ({
   updateOne: { filter, update: { $set: { ...doc, updatedAt: now }, $setOnInsert: { createdAt: now } }, upsert: true },

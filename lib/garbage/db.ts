@@ -1,5 +1,5 @@
 import { MongoClient, type Collection, type Db } from "mongodb";
-import type { Truck, Route, Community, Assignment } from "@/types/garbage";
+import type { Truck, Route, Community, Assignment, GarbageSettings } from "@/types/garbage";
 
 // ใช้ global cache เพื่อไม่ให้ hot reload ของ Next.js เปิด connection ใหม่ทุกครั้ง
 const globalForMongo = globalThis as unknown as { _garbageMongo?: Promise<MongoClient> };
@@ -43,6 +43,10 @@ export async function assignments(): Promise<Collection<Assignment>> {
   return (await getDb()).collection<Assignment>("garbage_assignments");
 }
 
+export async function settings(): Promise<Collection<GarbageSettings>> {
+  return (await getDb()).collection<GarbageSettings>("garbage_settings");
+}
+
 /** สร้าง index ทั้งหมด — เรียกจาก seed script ปลอดภัยที่จะเรียกซ้ำ */
 export async function ensureIndexes(): Promise<void> {
   const db = await getDb();
@@ -57,4 +61,5 @@ export async function ensureIndexes(): Promise<void> {
   await db.collection("garbage_assignments").createIndex({ weekday: 1, effectiveFrom: -1 });
   await db.collection("garbage_assignments").createIndex({ truckNumber: 1, weekday: 1, shiftNo: 1 });
   await db.collection("garbage_assignments").createIndex({ routeCode: 1 });
+  await db.collection("garbage_settings").createIndex({ key: 1 }, { unique: true });
 }

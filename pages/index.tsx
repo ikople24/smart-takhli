@@ -18,6 +18,7 @@ import { BookOpen, Download } from "lucide-react";
 
 import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
 import ActivityFeed from "@/components/activities/ActivityFeed";
+import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
 import SiteStatsBar from "@/components/site-stats/SiteStatsBar";
 
 export default function Home() {
@@ -149,6 +150,9 @@ export default function Home() {
                   </div>
                 </button>
               ))}
+            </div>
+            <div className="mt-4">
+              <GarbageHomeCard />
             </div>
             {/* {section 2 smart-health} */}
             <div className="flex flex-col items-center mt-4 mb-2 p-2">

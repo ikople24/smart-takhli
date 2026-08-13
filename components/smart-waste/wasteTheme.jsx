@@ -1,16 +1,12 @@
 // components/smart-waste/wasteTheme.jsx
-// จุด import เดียวของธีม smart-waste — token ทั้งหมดยืมจาก smart-school ตามสเปกข้อ 7
-// (ไม่ fork ค่าสี ม่วง #7C3AED) · ถ้ามีโมดูลที่ 3 มายืมอีก ให้สกัดเป็น components/ui/adminTheme
-// (บันทึกไว้ใน docs/modules/smart-waste.md แล้ว — รอบนี้ YAGNI)
+// จุด import เดียวของธีม smart-waste — token กลางอยู่ที่ components/ui/adminTheme
+// (สกัดออกมาแล้วตอน garbage เป็นโมดูลที่ 3 ที่ยืมใช้ ตามที่คอมเมนต์เดิมสั่งไว้)
 
 export {
   FONT_DISPLAY, FONT_BODY, inputCls, labelCls, chipCls,
   primaryBtnCls, ghostBtnCls, successBtnCls,
-} from '@/components/smart-school/survey/surveyTheme';
-
-export {
   cardCls, tableHeadCls, StatCard, PillTabs, YearPills, DashboardHeader,
-} from '@/components/smart-school/adminTheme';
+} from '@/components/ui/adminTheme';
 
 // สีประจำ 8 กลุ่มขยะ — ตามลำดับ WASTE_GROUPS คงที่ ผ่าน dataviz validator บน #FAF8FF แล้ว
 // (สี aqua/yellow/magenta contrast < 3:1 → แท็บสรุปต้องมีตารางยอดรายเดือนเป็น relief เสมอ)

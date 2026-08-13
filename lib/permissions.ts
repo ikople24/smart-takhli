@@ -86,6 +86,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/garbage',
+    label: 'ตารางเดินรถเก็บขยะ',
+    icon: '🚛',
+    description: 'ตารางเดินรถเก็บขยะรายสัปดาห์ (กองสาธารณสุข)',
+    category: 'management'
+  },
+  {
     path: '/admin/pm25-settings',
     label: 'จัดการ PM2.5',
     icon: '🌫️',
@@ -217,6 +224,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/notifications',
     '/admin/smart-light',
     '/admin/smart-waste',
+    '/admin/garbage',
     '/user/satisfaction',
   ],
   user: [

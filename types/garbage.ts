@@ -80,6 +80,8 @@ export interface ResolvedAssignment {
   kind: AssignmentKind;
   routeCode: string | null;
   routeName: string | null;
+  /** สายนี้ยังต้องให้กองสาธารณสุขตรวจชื่อจุด (R5–R7 ถอดจากโปสเตอร์) — ไม่มีสายถือว่า false */
+  routeNeedsVerification: boolean;
   coverForRouteCode: string | null;
   startMin: Minutes | null;
   endMin: Minutes | null;
@@ -107,4 +109,32 @@ export interface LivePosition {
   currentWindow: CommunityWindow | null;
   /** 0–1 */
   progress: number;
+}
+
+/** ค่าตั้งค่าการแสดงผลของโมดูล — singleton doc key = "default" ใน garbage_settings */
+export interface GarbageSettings {
+  key: string;
+  contactPhone: string | null;
+  contactNote: string | null;
+  updatedBy: string | null;
+  /** PUT /api/garbage/settings เขียนให้ทุกครั้งที่บันทึก — optional เพราะ doc เก่าอาจไม่มี */
+  updatedAt?: Date;
+  /** เขียนครั้งเดียวตอน upsert สร้าง doc ($setOnInsert) */
+  createdAt?: Date;
+}
+
+/** ผลค้นหาหนึ่งรายการจาก /api/garbage/search — ใช้ร่วมกันทั้งฝั่ง API และหน้าเว็บ */
+export interface SearchHit {
+  matchType: "stop" | "community";
+  matchName: string;
+  routeCode: string;
+  routeName: string;
+  weekday: number;
+  weekdayName: string;
+  truckNumber: number;
+  kind: AssignmentKind;
+  coverForRouteCode: string | null;
+  startMin: Minutes | null;
+  endMin: Minutes | null;
+  atMin: Minutes | null;
 }

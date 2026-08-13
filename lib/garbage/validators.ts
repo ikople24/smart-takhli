@@ -116,3 +116,38 @@ export const seedFileSchema = z.object({
       }
     }
   });
+
+/**
+ * ฟอร์มตั้งค่าจากหน้าแอดมิน — ค่าว่างถือเป็น null (ล้างค่า)
+ * trim ก่อน max เพื่อไม่ให้ข้อความที่มีช่องว่าง/ขึ้นบรรทัดต่อท้ายถูกปฏิเสธว่า "ยาวเกิน"
+ */
+const optionalTrimmed = (max: number, message: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, message)
+    .nullable()
+    .optional()
+    .transform((v) => {
+      const s = typeof v === "string" ? v.trim() : v;
+      return s == null || s === "" ? null : s;
+    });
+
+// อักขระที่ยอมให้มีในช่องเบอร์ติดต่อ — ตัวเลข เว้นวรรค - ( ) + , / และอักษรไทย (สำหรับคำว่า "ต่อ")
+// รูปแบบจริงของเทศบาลที่ต้องรับได้: "056-801234 ต่อ 105", "056-801234, 056-801235", "056-801234/5", "1132"
+const PHONE_ALLOWED_RE = /^[0-9+\-()/,\s\u0E00-\u0E7F]+$/u;
+// ต้องมีตัวเลขจริงอย่างน้อย 4 ตัว — กันค่าที่ผ่านคลาสอักขระแต่โทรไม่ได้ เช่น "((((((" หรือ "------"
+// (เบอร์สั้น 4 หลักอย่าง 1132 ต้องผ่าน จึงไม่บังคับความยาวขั้นต่ำ 6 ตัวอักษร)
+const PHONE_MIN_DIGITS = 4;
+
+export const garbageSettingsInputSchema = z
+  .object({
+    contactPhone: optionalTrimmed(30, "เบอร์ติดต่อยาวเกิน 30 ตัวอักษร").refine(
+      (v) =>
+        v == null ||
+        (PHONE_ALLOWED_RE.test(v) && (v.match(/\d/gu) ?? []).length >= PHONE_MIN_DIGITS),
+      "เบอร์ติดต่อต้องมีตัวเลขอย่างน้อย 4 ตัว และใช้ได้เฉพาะตัวเลข เว้นวรรค - ( ) + , / และคำว่า “ต่อ”"
+    ),
+    contactNote: optionalTrimmed(200, "หมายเหตุยาวเกิน 200 ตัวอักษร"),
+  })
+  .strict();

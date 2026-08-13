@@ -14,6 +14,7 @@
 | PM2.5 (DustBoy) | [pm25.md](pm25.md) | `/admin/pm25-settings` |
 | Smart Papar (คุณภาพน้ำประปา) | [smart-papar.md](smart-papar.md) | `/admin/smart-papar/water-quality` |
 | Smart Waste (ขยะรีไซเคิล) | [smart-waste.md](smart-waste.md) | `/admin/smart-waste` |
+| ตารางเดินรถเก็บขยะ (Garbage) | [garbage.md](garbage.md) | `/garbage`, `/admin/garbage` |
 | Superadmin / สิทธิ์ | [superadmin-permissions.md](superadmin-permissions.md) | `/admin/superadmin` |
 | แจ้งเตือน / Audit log | [notifications-audit.md](notifications-audit.md) | `/admin/notifications` |
 | สถิติการเข้าชมเว็บไซต์ | [site-stats.md](site-stats.md) | `/` (การ์ดบนหน้าหลัก) |

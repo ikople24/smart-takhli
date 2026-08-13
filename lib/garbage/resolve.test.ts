@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { buildDaySchedule, pickLatestVersions } from "./resolve";
+import { buildDaySchedule, buildWeekSchedule, pickLatestVersions } from "./resolve";
 import type { Assignment, Route, Truck } from "@/types/garbage";
 
 const trucks: Truck[] = [
@@ -130,6 +130,33 @@ describe("buildDaySchedule", () => {
       warn.mockRestore();
     }
   });
+
+  it("พาสถานะรอตรวจสอบของสายออกมาด้วย", () => {
+    const routesWithFlag: Route[] = [
+      { ...routes[0] },
+      {
+        code: "R5", name: "สาย R5", defaultTruckNumber: 5, active: true,
+        needsVerification: true, communityNames: ["ชุมชนเขาใบไม้"],
+        stops: [{ seq: 1, name: "จุด X", mode: "truck" }],
+      },
+    ];
+    const a: Assignment[] = [
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 5, routeCode: "R5", kind: "normal", startMin: 300, endMin: 400, stopTimes: [] },
+    ];
+    const out = buildDaySchedule("2026-08-10", 1, a, routesWithFlag, trucks);
+    expect(out.assignments[0].routeNeedsVerification).toBe(false); // R1 ไม่ได้ตั้งค่า → false ไม่ใช่ undefined
+    expect(out.assignments[1].routeNeedsVerification).toBe(true);
+  });
+
+  it("วันหยุดที่ไม่มีสาย ถือว่าไม่ต้องตรวจสอบ", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 2, shiftNo: 1, truckNumber: 1, routeCode: null, kind: "day_off",
+      startMin: null, endMin: null, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-11", 2, a, routes, trucks);
+    expect(out.assignments[0].routeNeedsVerification).toBe(false);
+  });
 });
 
 describe("pickLatestVersions", () => {
@@ -168,5 +195,79 @@ describe("pickLatestVersions", () => {
       { ...base, weekday: 2, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 500, stopTimes: [] },
     ];
     expect(pickLatestVersions(a)).toHaveLength(2);
+  });
+});
+
+describe("buildWeekSchedule", () => {
+  const week = [
+    "2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12",
+    "2026-08-13", "2026-08-14", "2026-08-15",
+  ];
+
+  it("คืนครบ 7 วันเรียงตามลำดับที่ส่งเข้ามา", () => {
+    const out = buildWeekSchedule(week, [], routes, trucks);
+    expect(out).toHaveLength(7);
+    expect(out.map((d) => d.date)).toEqual(week);
+    expect(out.map((d) => d.weekday)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it("วันที่ไม่มีข้อมูลต้องมีอยู่ในผลลัพธ์ด้วย assignments ว่าง", () => {
+    const a: Assignment[] = [
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments).toHaveLength(1); // จันทร์
+    expect(out[3].assignments).toEqual([]); // พุธ — ยังไม่มีข้อมูล ต้องไม่หายไป
+    expect(out.filter((d) => d.assignments.length === 0)).toHaveLength(6);
+  });
+
+  it("แยกงานของแต่ละวันไม่ปนกัน", () => {
+    const a: Assignment[] = [
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+      { ...base, weekday: 2, shiftNo: 1, truckNumber: 5, routeCode: "R1", kind: "normal", startMin: 250, endMin: 310, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments.map((x) => x.truckNumber)).toEqual([1]);
+    expect(out[2].assignments.map((x) => x.truckNumber)).toEqual([5]);
+  });
+
+  it("ตัดงานที่ยังไม่มีผลหรือหมดอายุแล้วออกรายวัน", () => {
+    const a: Assignment[] = [
+      // เริ่มมีผลวันอังคาร 2026-08-11 → วันจันทร์ต้องไม่เห็น
+      { ...base, effectiveFrom: new Date("2026-08-11T00:00:00+07:00"), weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments).toEqual([]);
+
+    const b: Assignment[] = [
+      // ใช้ได้ถึงวันจันทร์ 2026-08-10 (inclusive) → วันจันทร์เห็น
+      { ...base, effectiveTo: new Date("2026-08-10T00:00:00+07:00"), weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+    ];
+    expect(buildWeekSchedule(week, b, routes, trucks)[1].assignments).toHaveLength(1);
+  });
+
+  it("เลือกเวอร์ชันล่าสุดแยกกันในแต่ละวัน", () => {
+    const a: Assignment[] = [
+      { ...base, effectiveFrom: new Date("2026-01-01"), weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+      { ...base, effectiveFrom: new Date("2026-07-01"), weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 260, endMin: 320, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments).toHaveLength(1);
+    expect(out[1].assignments[0].startMin).toBe(260);
+  });
+
+  // ปักพฤติกรรมที่ผู้เรียกต้องรู้: เมื่อ effectiveFrom เท่ากัน "ตัวแรกในลิสต์ชนะ"
+  // → ผู้เรียกต้องส่งลิสต์ที่เรียงใหม่สุดมาก่อน (resolveWeekSchedule sort ด้วย effectiveFrom:-1, _id:-1)
+  // ถ้าลบ .sort() นั้นออก การเลือกเวอร์ชันจะขึ้นกับลำดับที่ไดรเวอร์คืนมาแบบเงียบ ๆ
+  it("effectiveFrom เท่ากัน → ตัวแรกในลิสต์ชนะ (ผู้เรียกต้อง sort ใหม่สุดมาก่อน)", () => {
+    const sameFrom = new Date("2026-07-01T00:00:00+07:00");
+    const newestFirst: Assignment[] = [
+      { ...base, effectiveFrom: sameFrom, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 260, endMin: 320, stopTimes: [], label: "เวอร์ชันที่สร้างทีหลัง" },
+      { ...base, effectiveFrom: sameFrom, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [], label: "เวอร์ชันที่สร้างก่อน" },
+    ];
+    const out = buildWeekSchedule(week, newestFirst, routes, trucks);
+    expect(out[1].assignments).toHaveLength(1);
+    expect(out[1].assignments[0].label).toBe("เวอร์ชันที่สร้างทีหลัง");
+    expect(out[1].assignments[0].startMin).toBe(260);
   });
 });
