@@ -118,3 +118,19 @@ export interface GarbageSettings {
   contactNote: string | null;
   updatedBy: string | null;
 }
+
+/** ผลค้นหาหนึ่งรายการจาก /api/garbage/search — ใช้ร่วมกันทั้งฝั่ง API และหน้าเว็บ */
+export interface SearchHit {
+  matchType: "stop" | "community";
+  matchName: string;
+  routeCode: string;
+  routeName: string;
+  weekday: number;
+  weekdayName: string;
+  truckNumber: number;
+  kind: AssignmentKind;
+  coverForRouteCode: string | null;
+  startMin: Minutes | null;
+  endMin: Minutes | null;
+  atMin: Minutes | null;
+}

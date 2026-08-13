@@ -1,24 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { AssignmentKind } from "@/types/garbage";
+import type { SearchHit } from "@/types/garbage";
 import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
 import { WEEKDAY_TH } from "@/lib/garbage/labels";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
 import { todayInBangkok } from "@/lib/garbage/time";
-
-interface SearchHit {
-  matchType: "stop" | "community";
-  matchName: string;
-  routeCode: string;
-  routeName: string;
-  weekday: number;
-  weekdayName: string;
-  truckNumber: number;
-  kind: AssignmentKind;
-  coverForRouteCode: string | null;
-  startMin: number | null;
-  endMin: number | null;
-  atMin: number | null;
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
