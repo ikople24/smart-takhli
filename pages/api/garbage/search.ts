@@ -58,6 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
         for (const s of route.stops) {
           if (!norm(s.name).includes(needle)) continue;
+          // วันนั้นไม่ได้เก็บจุดนี้ → ไม่ใช่คำตอบของ "วันไหนรถมา" จึงไม่ต้องแสดง
+          if (!timeBySeq.has(s.seq)) continue;
           hits.push({
             matchType: "stop", matchName: s.name,
             routeCode: route.code, routeName: route.name,
@@ -66,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             kind: a.kind, coverForRouteCode: a.coverForRouteCode,
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
+            served: true,
           });
         }
         for (const w of a.communityWindows) {
@@ -78,6 +81,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               truckNumber: a.truckNumber,
               kind: a.kind, coverForRouteCode: a.coverForRouteCode,
               startMin: w.startMin, endMin: w.endMin, atMin: null,
+              // หน้าต่างชุมชนมีอยู่ในงานของวันนั้น = วันนั้นเก็บ
+              served: true,
             });
           }
         }

@@ -162,4 +162,6 @@ export interface SearchHit {
   startMin: Minutes | null;
   endMin: Minutes | null;
   atMin: Minutes | null;
+  /** วันนั้นเก็บจุดนี้จริงหรือไม่ — false = ชื่อจุดอยู่ในสาย แต่วันนั้นไม่เข้าเก็บ */
+  served: boolean;
 }
