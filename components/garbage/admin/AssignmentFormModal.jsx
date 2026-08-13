@@ -158,6 +158,15 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
                 <option value="">ไม่ระบุสาย</option>
                 {routes.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.name}</option>)}
               </select>
+              {routes.length === 0 ? (
+                <p className="mt-1 text-[11.5px] text-amber-700">
+                  โหลดรายการสายไม่ได้ — ปิดหน้าต่างนี้แล้วรีเฟรชหน้า ถ้ายังไม่ได้แปลว่ายังไม่มีสิทธิ์หน้านี้
+                </p>
+              ) : (
+                <p className="mt-1 text-[11.5px] text-[#8A8398]">
+                  เลือกสายก่อน แล้วช่องตั้งเวลาถึงแต่ละจุดจะขึ้นด้านล่าง
+                </p>
+              )}
             </div>
 
             {kind === 'substitute' && (
