@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
- * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ — ใช้ตอน DB ว่างเท่านั้น
+ * นำเข้าข้อมูลตั้งต้นของตารางรถขยะ + ติดตั้ง index
  *   node --env-file=.env.local scripts/seed-garbage.mjs
  *   node scripts/seed-garbage.mjs --dry-run
  *
  * insert-only: เอกสารที่มีอยู่แล้วจะไม่ถูกแตะ เพราะ **ข้อมูลจริงแก้จาก /admin/garbage**
  * (ตั้งแต่ M6 UI เป็นแหล่งความจริง ไฟล์ JSON นี้จะ drift จาก DB เป็นเรื่องปกติ)
- * รันซ้ำได้ปลอดภัย — จะรายงานว่าข้ามไปกี่รายการ
+ *
+ * รันบน DB ที่มีข้อมูลอยู่แล้วปลอดภัย — ของเดิมไม่ถูกทับ มีแต่รายการที่ยังไม่มีเท่านั้นที่ถูกเพิ่ม
+ * และนี่คือวิธีติดตั้ง index ชุดใหม่บน deployment ที่ใช้งานอยู่ (createIndex เรียกซ้ำได้)
+ * จะรายงานว่าเพิ่มไปกี่รายการและข้ามไปกี่รายการ
  */
 import { readFileSync } from "node:fs";
 import { MongoClient } from "mongodb";
@@ -91,6 +94,8 @@ const client = new MongoClient(uri);
 await client.connect();
 const db = client.db(process.env.MONGODB_DB || undefined);
 const now = new Date();
+// คัดลอกมาจาก lib/garbage/constants.ts#BASELINE_EFFECTIVE_FROM (.mjs import .ts ไม่ได้)
+// — แก้ที่นี่ต้องแก้ที่นั่นด้วย ไม่งั้นงานที่ seed กับงานที่สร้างจากหน้าแอดมินจะมีวันเริ่มมีผลคนละค่า
 const effectiveFrom = new Date("2026-01-01T00:00:00+07:00");
 
 // index ชุดเดียวกับ lib/garbage/db.ts#ensureIndexes — แก้ที่ไหนต้องแก้อีกที่ด้วย

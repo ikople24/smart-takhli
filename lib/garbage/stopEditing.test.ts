@@ -107,4 +107,63 @@ describe("distributeStopTimes", () => {
     expect(distributeStopTimes(0, 240, 300)).toEqual([]);
     expect(distributeStopTimes(-1, 240, 300)).toEqual([]);
   });
+
+  it("ช่วงเวลาติดลบ (จบก่อนเริ่ม) ได้อาเรย์ว่าง ไม่ใช่เวลาถอยหลัง", () => {
+    expect(distributeStopTimes(3, 300, 240)).toEqual([]);
+    expect(distributeStopTimes(1, 300, 240)).toEqual([]);
+  });
+});
+
+/**
+ * เทสประกอบร่าง — assignSeq, buildSeqMap, remapStopTimes ต่างพึ่งสมมติฐาน "ตำแหน่งที่ i ได้ seq i+1"
+ * ตัวเดียวกัน แต่เทสรายฟังก์ชันข้างบนใช้ map ที่เขียนมือ จึงไม่มีอะไรยึดสองฝั่งให้ตรงกัน
+ * เทสนี้รันทั้งสามต่อกันบน drafts ชุดเดียว แล้วยึดว่า "จุดเดิมต้องถือเวลาเดิมไปที่ตำแหน่งใหม่ของมัน"
+ * — นี่คือ path ที่กันประชาชนเห็นเวลาผิดหลังเจ้าหน้าที่สลับลำดับจุด
+ */
+describe("assignSeq + buildSeqMap + remapStopTimes ทำงานร่วมกัน", () => {
+  // สายเดิม: 1=ก(04:00) 2=ข(04:20) 3=ค(05:00)
+  const prevStopTimes = [
+    { seq: 1, atMin: 240 },
+    { seq: 2, atMin: 260 },
+    { seq: 3, atMin: 300 },
+  ];
+  // แก้จากฟอร์ม: เอา ค มาไว้หน้า, ลบ ข, เพิ่ม "ใหม่" ต่อท้าย
+  const drafts = [
+    { prevSeq: 3, name: "ค", mode: "truck" as const },
+    { prevSeq: 1, name: "ก", mode: "truck" as const },
+    { prevSeq: null, name: "ใหม่", mode: "walk" as const },
+  ];
+
+  const stops = assignSeq(drafts);
+  const times = remapStopTimes(buildSeqMap(drafts), prevStopTimes);
+  const atMinOf = (name: string) => {
+    const stop = stops.find((s) => s.name === name);
+    return times.find((t) => t.seq === stop?.seq)?.atMin ?? null;
+  };
+
+  it("จุด ก ที่เคยมีเวลา 04:00 ยังถือเวลา 04:00 ที่ตำแหน่งใหม่", () => {
+    expect(stops.find((s) => s.name === "ก")?.seq).toBe(2); // ย้ายจากที่ 1 ไปที่ 2
+    expect(atMinOf("ก")).toBe(240);
+  });
+
+  it("จุด ค ที่ถูกเลื่อนมาหน้าสุด พาเวลา 05:00 ของตัวเองมาด้วย", () => {
+    expect(stops.find((s) => s.name === "ค")?.seq).toBe(1);
+    expect(atMinOf("ค")).toBe(300);
+  });
+
+  it("จุดที่เพิ่มใหม่ยังไม่มีเวลา และเวลาของจุดที่ถูกลบหายไปด้วย", () => {
+    expect(stops.find((s) => s.name === "ใหม่")?.seq).toBe(3);
+    expect(atMinOf("ใหม่")).toBeNull();
+    expect(times).toHaveLength(2); // เวลาของ ข ที่ถูกลบไม่เหลือค้าง
+  });
+
+  it("seq ของ stops กับ stopTimes อ้างถึงจุดเดียวกัน (ไม่มีเวลาลอยไปจุดผิด)", () => {
+    // เวลาที่ออกมาต้องชี้ไปยัง seq ที่มีอยู่จริงในสายใหม่เสมอ
+    const validSeqs = new Set(stops.map((s) => s.seq));
+    expect(times.every((t) => validSeqs.has(t.seq))).toBe(true);
+    expect(times).toEqual([
+      { seq: 1, atMin: 300 }, // ค
+      { seq: 2, atMin: 240 }, // ก
+    ]);
+  });
 });

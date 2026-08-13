@@ -8,9 +8,13 @@ import { weekDatesOf, weekdayOf } from "./time";
  * เมื่อมีหลายเวอร์ชันของ (วัน, รถ, รอบ) เดียวกัน เลือกอันที่ effectiveFrom ใหม่สุด
  * ถ้า effectiveFrom เท่ากัน ตัวแรกในลิสต์ชนะ — ผู้เรียกจึงควร sort มาก่อน
  * (resolveScheduleForDate sort ด้วย _id: -1 → เอกสารที่สร้างทีหลังชนะ)
+ *
+ * generic เพื่อให้ฟิลด์ส่วนเกินของผู้เรียก (สำคัญคือ `_id` ที่ buildDaySchedule ใช้ทำ `id`)
+ * ไหลผ่านออกไปแบบเห็นได้ใน type — ถ้า return เป็น Assignment[] ตายตัว `_id` จะหายจาก type
+ * ทั้งที่ยังอยู่ตอน runtime แล้วการที่ id ว่างจะกลายเป็นบั๊กเงียบที่ tsc มองไม่เห็น
  */
-export function pickLatestVersions(list: Assignment[]): Assignment[] {
-  const best = new Map<string, Assignment>();
+export function pickLatestVersions<T extends Assignment>(list: T[]): T[] {
+  const best = new Map<string, T>();
   for (const a of list) {
     const key = `${a.weekday}-${a.truckNumber}-${a.shiftNo}`;
     const cur = best.get(key);

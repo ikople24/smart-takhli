@@ -239,6 +239,16 @@ describe("buildWeekSchedule", () => {
     expect(out.filter((d) => d.assignments.length === 0)).toHaveLength(6);
   });
 
+  // เทส id สองตัวใน describe ของ buildDaySchedule เรียกตรง ๆ จึงข้าม hop ของ pickLatestVersions
+  // ที่ production ใช้จริง — ตัวนี้ยึดว่า _id รอดผ่านการเลือกเวอร์ชันมาถึงผลลัพธ์
+  it("พา id ผ่าน pickLatestVersions มาถึงผลลัพธ์", () => {
+    const a: Array<Assignment & { _id?: unknown }> = [
+      { ...base, _id: "abc123", weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+    ];
+    const out = buildWeekSchedule(week, a, routes, trucks);
+    expect(out[1].assignments[0].id).toBe("abc123");
+  });
+
   it("แยกงานของแต่ละวันไม่ปนกัน", () => {
     const a: Assignment[] = [
       { ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },

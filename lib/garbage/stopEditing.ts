@@ -49,6 +49,9 @@ export function remapStopTimes(
  */
 export function distributeStopTimes(count: number, startMin: Minutes, endMin: Minutes): StopTime[] {
   if (!Number.isInteger(count) || count < 1) return [];
+  // ช่วงติดลบเป็นข้อมูลเข้าที่ผิด — คืนว่างเหมือนกรณี count ผิด ไม่ใช่กระจายเวลาถอยหลัง
+  // ซึ่งจะขัดกฎ "เวลาใน stopTimes ต้องไม่ย้อนกลับ" ของ assignmentSchema เอง
+  if (endMin < startMin) return [];
   if (count === 1) return [{ seq: 1, atMin: startMin }];
   const span = endMin - startMin;
   return Array.from({ length: count }, (_, i) => ({

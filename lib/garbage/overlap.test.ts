@@ -57,6 +57,15 @@ describe("findOverlap", () => {
     expect(findOverlap([row({ _id: "old" })], row({ _id: "new", startMin: null, endMin: null }))).toBeNull();
   });
 
+  it("candidate ที่ยังไม่มี _id (path สร้างงานใหม่) ตรวจเจอการทับตามปกติ", () => {
+    const existing = [row({ _id: "old", shiftNo: 1, startMin: 240, endMin: 300 })];
+    // ตอน POST สร้างงานใหม่ ข้อมูลจากฟอร์มยังไม่มี _id — ต้องไม่ข้ามการตรวจ
+    const hit = findOverlap(existing, {
+      weekday: 1, truckNumber: 1, shiftNo: 2, startMin: 290, endMin: 400,
+    });
+    expect(hit?._id).toBe("old");
+  });
+
   it("ทับหลายตัว คืนตัวที่เวลาเริ่มก่อนสุด", () => {
     const existing = [
       row({ _id: "late", shiftNo: 2, startMin: 400, endMin: 500 }),
