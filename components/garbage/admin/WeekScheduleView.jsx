@@ -64,6 +64,8 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
               {rows.map((a) => {
                 const key = `${a.truckNumber}-${a.shiftNo}`;
                 const open = openKey === key;
+                // นับเฉพาะจุดที่วันนั้นเก็บจริง — จุดที่เหลือของสายยังกางดูได้ในลิสต์ข้างล่าง
+                const servedCount = a.stops.filter((s) => s.served).length;
                 return (
                   // ต้องใช้ Fragment ที่มี key ไม่ใช่ <> เพราะ map คืนสองแถว — ไม่งั้น React เตือนเรื่อง key
                   <Fragment key={key}>
@@ -103,9 +105,12 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
                             className="inline-flex items-center gap-1 font-semibold text-[#6D28D9] rounded-[8px] px-2 py-1
                               hover:bg-[#EDE7FD] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED]"
                           >
-                            {a.stops.length}
+                            {servedCount}
                             <span aria-hidden className="text-[10px]">{open ? '▲' : '▼'}</span>
-                            <span className="sr-only">จุด — {open ? 'ซ่อนรายการจุด' : 'ดูรายการจุด'}</span>
+                            <span className="sr-only">
+                              จุดที่เก็บวันนี้ จากทั้งหมด {a.stops.length} จุดของสาย —{' '}
+                              {open ? 'ซ่อนรายการจุด' : 'ดูรายการจุด'}
+                            </span>
                           </button>
                         )}
                       </td>
@@ -130,7 +135,9 @@ export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd
                                 <span className="text-[#8A8398] w-6 text-right">{s.seq}.</span>
                                 <span className="flex-1">{s.name}</span>
                                 {s.mode === 'walk' && <span className="text-[10.5px] text-[#8A8398]">เดินเก็บ</span>}
-                                <span className="text-[#57506A] whitespace-nowrap">{formatThaiTime(s.atMin) || '—'}</span>
+                                {s.served
+                                  ? <span className="text-[#57506A] whitespace-nowrap">{formatThaiTime(s.atMin) || 'ยังไม่ระบุเวลา'}</span>
+                                  : <span className="text-[#B9B3C7] whitespace-nowrap">ไม่เก็บวันนี้</span>}
                               </li>
                             ))}
                           </ol>

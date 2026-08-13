@@ -41,7 +41,10 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
       setStartText(assignment.startMin == null ? '' : formatThaiTime(assignment.startMin).replace(' น.', ''));
       setEndText(assignment.endMin == null ? '' : formatThaiTime(assignment.endMin).replace(' น.', ''));
       setLabel(assignment.label ?? '');
-      setStopTimes(assignment.stops.filter((s) => s.atMin != null).map((s) => ({ seq: s.seq, atMin: s.atMin })));
+      // ยึด served ไม่ใช่ atMin — จุดที่ "เก็บวันนี้แต่ยังไม่ระบุเวลา" (เช่นทุกจุดของรถ 13)
+      // มี atMin เป็น null ถ้ากรองด้วย atMin จุดพวกนี้จะหายเงียบ ๆ แล้วการกดบันทึกครั้งเดียว
+      // จะลบเครื่องหมาย "เก็บวันนี้" ทิ้งทั้งหมดโดยที่แอดมินไม่รู้ตัว
+      setStopTimes(assignment.stops.filter((s) => s.served).map((s) => ({ seq: s.seq, atMin: s.atMin })));
     } else {
       setTruckNumber('');
       setShiftNo('1');
