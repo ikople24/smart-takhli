@@ -159,6 +159,26 @@ export const garbageSettingsInputSchema = z
  */
 export const assignmentInputSchema = assignmentSchema;
 
+/** ข้อความเดียวกันทั้งกรณีไม่ส่งมาและส่งมาเป็นค่าว่าง — ผู้ใช้เห็นอะไรก็ทำแบบเดียวกันคือเปิดฟอร์มใหม่ */
+const assignmentLockToken = z
+  .string({ required_error: "ต้องส่ง updatedAt ของงานที่โหลดมา" })
+  .min(1, "ต้องส่ง updatedAt ของงานที่โหลดมา");
+
+/**
+ * ข้อมูลงานมอบหมายสำหรับ **PUT เท่านั้น** = ข้อมูลงานทั้งชุด + `updatedAt` ที่ฟอร์มโหลดมา (optimistic lock)
+ * POST ไม่ต้องมีเพราะยังไม่มีเอกสารให้ชนกัน
+ *
+ * ต้องแยกคีย์ `updatedAt` ออกก่อนแล้วค่อยส่งที่เหลือให้ `assignmentSchema` —
+ * ใช้ `assignmentSchema.and(...)` ไม่ได้ เพราะ intersection จะ parse ทั้งสองฝั่งด้วย input ก้อนเดียวกัน
+ * แล้วฝั่ง `.strict()` จะตีว่า `updatedAt` เป็นคีย์แปลกปลอม → 400 ทุกครั้งแม้ข้อมูลถูกต้อง (พิสูจน์แล้วด้วย probe)
+ * รูปแบบนี้ `.strict()` ยังทำงานเหมือนเดิม (คีย์แปลกปลอมตัวอื่นยังถูกปฏิเสธ) และข้อความ error ของกฎเดิมไม่เปลี่ยน
+ */
+export const assignmentUpdateSchema = z
+  .object({ updatedAt: assignmentLockToken })
+  .passthrough()
+  .transform(({ updatedAt, ...rest }) => ({ updatedAt, assignment: rest }))
+  .pipe(z.object({ updatedAt: assignmentLockToken, assignment: assignmentSchema }));
+
 /** จุดเก็บที่ส่งมาจากฟอร์มแก้สาย — ไม่รับ seq เพราะเซิร์ฟเวอร์เป็นคนกำหนด */
 export const stopDraftSchema = z
   .object({

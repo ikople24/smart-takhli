@@ -80,6 +80,10 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
       communityWindows: assignment?.communityWindows ?? [],
       label: label.trim() === '' ? null : label.trim(),
     };
+    // PUT เท่านั้นที่ต้องส่ง updatedAt — เซิร์ฟเวอร์ใช้กันฟอร์มค้างเขียนทับ (POST ยังไม่มีเอกสารให้ชน)
+    // งานเก่าที่ยังไม่มี updatedAt ใน DB จะได้ค่าว่างมาจาก /week — ต้องส่งค่าที่ "ไม่ว่าง"
+    // เพราะ schema บังคับ min(1) ส่วนเซิร์ฟเวอร์จะข้ามการเทียบให้เองเมื่อฝั่ง DB ไม่ใช่ Date
+    if (assignment) body.updatedAt = assignment.updatedAt || 'none';
 
     setSaving(true);
     try {
@@ -92,6 +96,10 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => null);
+      if (res.status === 409) {
+        // ทั้งชนคีย์ธรรมชาติและฟอร์มค้าง (สายถูกสลับลำดับจุดไปแล้ว) มาทางนี้ — ข้อความจากเซิร์ฟเวอร์บอกเองว่าเคสไหน
+        throw new Error(json?.error || 'ข้อมูลเปลี่ยนไปแล้ว — ปิดหน้าต่างนี้แล้วเปิดใหม่');
+      }
       if (!res.ok) throw new Error(json?.error || 'บันทึกไม่สำเร็จ');
       onSaved();
     } catch (e) {

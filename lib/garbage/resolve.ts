@@ -27,7 +27,7 @@ export function pickLatestVersions<T extends Assignment>(list: T[]): T[] {
 export function buildDaySchedule(
   date: string,
   weekday: Weekday,
-  list: Array<Assignment & { _id?: unknown }>,
+  list: Array<Assignment & { _id?: unknown; updatedAt?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule {
@@ -45,6 +45,9 @@ export function buildDaySchedule(
 
     return {
       id: a._id == null ? "" : String(a._id),
+      // optimistic lock token ของฟอร์มแก้งาน — เทียบกับ instanceof Date เหมือน routes/index.ts
+      // เอกสารที่ไม่มี updatedAt (หรือไม่ได้มาจาก DB) ได้ค่าว่าง ฝั่งเซิร์ฟเวอร์จะข้ามการเทียบให้เอง
+      updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : "",
       truckNumber: a.truckNumber,
       truckColor: truck?.color ?? "green",
       shiftNo: a.shiftNo,
@@ -121,7 +124,7 @@ function isEffectiveOn(a: Assignment, at: Date): boolean {
  */
 export function buildWeekSchedule(
   dates: string[],
-  list: Array<Assignment & { _id?: unknown }>,
+  list: Array<Assignment & { _id?: unknown; updatedAt?: unknown }>,
   routes: Route[],
   trucks: Truck[]
 ): ResolvedDaySchedule[] {

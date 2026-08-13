@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { ObjectId } from "mongodb";
 import type { Weekday } from "@/types/garbage";
 import { assignments as assignmentsCol, routes as routesCol } from "@/lib/garbage/db";
-import { assignmentInputSchema } from "@/lib/garbage/validators";
+import { assignmentUpdateSchema } from "@/lib/garbage/validators";
 import { findOverlap } from "@/lib/garbage/overlap";
 import { BASELINE_EFFECTIVE_FROM } from "@/lib/garbage/constants";
 import { formatRange } from "@/lib/garbage/time";
@@ -48,11 +48,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ deleted: true });
     }
 
-    const parsed = assignmentInputSchema.safeParse(req.body ?? {});
+    const parsed = assignmentUpdateSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" });
     }
-    const input = parsed.data;
+    const input = parsed.data.assignment;
+
+    // optimistic lock — กันฟอร์มที่โหลดค้างไว้เขียนทับงานของคนที่บันทึกไปก่อน (คู่กับ routes/[code].ts)
+    // เคสที่ด่านอื่นจับไม่ได้: แอดมินอีกคน "สลับลำดับจุดล้วน" ของสายสำเร็จระหว่างที่ฟอร์มนี้เปิดค้าง
+    // เซตของ seq ไม่เปลี่ยนเลย การตรวจว่า seq มีอยู่จริงในสายจึงผ่านหมด แล้วเวลาไปติดผิดจุดแบบเงียบ ๆ
+    // เอกสารเก่าที่ยังไม่มี updatedAt ให้ผ่านไปได้ ไม่งั้นจะแก้งานนั้นไม่ได้เลยตลอดกาล
+    const beforeUpdatedAt = before.updatedAt instanceof Date ? before.updatedAt.getTime() : null;
+    if (beforeUpdatedAt != null) {
+      const sentUpdatedAt = new Date(parsed.data.updatedAt).getTime();
+      if (!Number.isFinite(sentUpdatedAt) || sentUpdatedAt !== beforeUpdatedAt) {
+        return res.status(409).json({
+          error: "ข้อมูลงานเปลี่ยนไปแล้วระหว่างที่เปิดฟอร์มอยู่ — ปิดแล้วเปิดใหม่เพื่อโหลดข้อมูลล่าสุด",
+        });
+      }
+    }
     // แคบชนิดที่ขอบทางเข้าเหมือน POST — zod การันตี 0–6 แต่ชนิดที่ได้กว้างกว่า Weekday
     const weekday: Weekday = input.weekday as Weekday;
 
