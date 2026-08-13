@@ -1616,14 +1616,25 @@ export default function RouteManagerModal({ open, routes, onClose, onSaved }) {
     setError('');
     setSaving(true);
     try {
+      // ต้องส่ง updatedAt ที่โหลดมากลับไปด้วย — เซิร์ฟเวอร์ใช้กันฟอร์มค้างเขียนทับ
+      // (สลับลำดับจุดจากฟอร์มเก่าจะทำให้เวลาไปติดผิดจุดทุกจุดโดยไม่มีร่องรอย)
+      const current = routes.find((r) => r.code === code);
       const res = await fetch(`/api/garbage/routes/${code}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), needsVerification: !verified, stops }),
+        body: JSON.stringify({
+          name: name.trim(),
+          needsVerification: !verified,
+          stops,
+          updatedAt: current?.updatedAt ?? '',
+        }),
       });
       const json = await res.json().catch(() => null);
+      if (res.status === 409) {
+        throw new Error(json?.error || 'ข้อมูลสายเปลี่ยนไปแล้ว — ปิดหน้าต่างนี้แล้วเปิดใหม่');
+      }
       if (!res.ok) throw new Error(json?.error || 'บันทึกไม่สำเร็จ');
-      onSaved(json?.affectedAssignments ?? 0);
+      onSaved(json?.affectedAssignments ?? 0, json?.warnings ?? []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1867,13 +1878,19 @@ import RouteManagerModal from '@/components/garbage/admin/RouteManagerModal';
 
         <RouteManagerModal open={routeMgrOpen} routes={routes}
           onClose={() => setRouteMgrOpen(false)}
-          onSaved={(affected) => {
+          onSaved={(affected, warnings) => {
             setRouteMgrOpen(false);
             fetchRoutes();
             fetchWeek();
-            Swal.fire({ icon: 'success', title: 'บันทึกแล้ว',
-              text: affected > 0 ? `ปรับเวลาของ ${affected} งานให้ตรงกับจุดใหม่แล้ว` : '',
-              timer: 2000, showConfirmButton: false });
+            const base = affected > 0 ? `ปรับเวลาของ ${affected} งานให้ตรงกับจุดใหม่แล้ว` : '';
+            if (warnings?.length) {
+              // เตือนแบบไม่หายเอง — งานที่เวลาเรียงย้อนต้องให้เจ้าหน้าที่ไปแก้เวลาเอง
+              Swal.fire({ icon: 'warning', title: 'บันทึกแล้ว แต่ต้องตรวจเวลา',
+                html: [base, ...warnings].filter(Boolean).join('<br>') });
+            } else {
+              Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', text: base,
+                timer: 2000, showConfirmButton: false });
+            }
           }} />
 ```
 
