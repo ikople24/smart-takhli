@@ -25,7 +25,8 @@ export const routeSchema = z.object({
 
 export const stopTimeSchema = z.object({
   seq: z.number().int().positive(),
-  atMin: minutes,
+  /** null = เก็บวันนี้แต่ยังไม่ระบุเวลา */
+  atMin: minutes.nullable(),
 }).strict();
 
 export const communityWindowSchema = z.object({
@@ -58,15 +59,29 @@ export const assignmentSchema = z.object({
   .refine((a) => a.kind !== "substitute" || a.routeCode !== null, {
     message: "การแทนเบอร์ต้องมี routeCode ของสายที่วิ่งจริง",
   })
-  .refine((a) => a.kind === "day_off" || (a.startMin !== null && a.endMin !== null), {
-    message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุด",
-  })
+  .refine(
+    (a) =>
+      a.kind === "day_off" ||
+      (a.startMin !== null && a.endMin !== null) ||
+      // งานพิเศษที่ยังไม่ทราบเวลา (เช่น รถยกภาชนะรองรับ) เว้นเวลาไว้ได้ —
+      // แต่ต้องเว้นทั้งคู่ ไม่ใช่ระบุมาครึ่งเดียวซึ่งเป็นสถานะที่ตีความไม่ได้
+      (a.kind === "special" && a.startMin === null && a.endMin === null),
+    { message: "ต้องระบุเวลาเริ่มและสิ้นสุด ยกเว้นวันหยุดและงานพิเศษที่ยังไม่ทราบเวลา" }
+  )
   // หมายเหตุ: kind "special" อนุญาต routeCode null ได้ (เช่น รถ 7 วิ่งตลาดนัดพิเศษไม่มีสายประจำ)
   .refine((a) => a.kind !== "normal" || a.routeCode !== null, {
     message: "งานปกติต้องระบุ routeCode",
   })
-  .refine((a) => a.kind === "substitute" || a.coverForRouteCode === null, {
-    message: "coverForRouteCode ใช้ได้เฉพาะการแทนเบอร์",
+  /**
+   * เดิมกฎคือ "coverForRouteCode ใช้ได้เฉพาะ kind = substitute" ซึ่งผิดกับตารางจริง:
+   * รถคันหนึ่งในหนึ่งวันออกทริปเดียว แล้วเก็บจุดของสายตัวเอง**สลับกับ**จุดของสายที่ไปเก็บแทน
+   * จึงเป็นงาน normal ที่มี coverForRouteCode ติดมาด้วยได้ (kind = substitute เก็บไว้ใช้กับ
+   * วันที่ไม่มีจุดของตัวเองเลย เช่น รถ 6 วันอังคารที่เก็บแทนเบอร์ 2 ล้วน)
+   * เหลือแค่กฎว่าถ้าระบุว่าไปเก็บแทนสายไหน ต้องรู้ด้วยว่าตัวเองวิ่งสายอะไร —
+   * ไม่งั้น resolver ที่ join จุดผ่าน routeCode จะได้ศูนย์จุดแบบเงียบ ๆ
+   */
+  .refine((a) => a.coverForRouteCode === null || a.routeCode !== null, {
+    message: "งานที่ระบุ coverForRouteCode ต้องมี routeCode ของสายที่วิ่งจริง",
   })
   .refine((a) => a.kind !== "day_off" || (a.startMin === null && a.endMin === null), {
     message: "วันหยุดต้องไม่มีเวลา",
@@ -74,15 +89,11 @@ export const assignmentSchema = z.object({
   // เวลาเท่ากันถือว่าผ่าน (จุดจอดเดียวเริ่ม-จบพร้อมกัน เช่น 1200/1200 มีในข้อมูลจริง)
   .refine((a) => a.startMin === null || a.endMin === null || a.endMin >= a.startMin, {
     message: "เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม",
-  })
-  // เรียงตาม seq แล้วเวลาต้องไม่ย้อนกลับ (เวลาเท่ากันถือว่าผ่าน — จุดติดกันเวลาเดียวกันมีในข้อมูลจริง)
-  .refine(
-    (a) => {
-      const sorted = [...a.stopTimes].sort((x, y) => x.seq - y.seq);
-      return sorted.every((s, i) => i === 0 || s.atMin >= sorted[i - 1].atMin);
-    },
-    { message: "เวลาใน stopTimes ต้องไม่ย้อนกลับตามลำดับจุด" }
-  );
+  });
+// **ไม่มีกฎ "เวลาต้องเรียงตาม seq"** — เคยมีแล้วถอดออกใน M7 เพราะตั้งไว้ผิดตั้งแต่แรก:
+// `seq` คือเลขแถวในรายชื่อสถานที่ของสาย ไม่ใช่ลำดับที่รถวิ่ง และรถวิ่งคนละเส้นทางในแต่ละวัน
+// จุดที่ 11 จึงถูกเก็บก่อนจุดที่ 7 ได้ตามปกติ (มีจริงในตารางของกองสาธารณสุข)
+// ลำดับการวิ่งถูกกำหนดด้วยเวลา ไม่ใช่ seq — `lib/garbage/live.ts` เรียงจุดด้วย atMin อยู่แล้ว
 
 /** key หลักของไฟล์ seed — key อื่นต้องขึ้นต้นด้วย $ เท่านั้น (กัน typo เช่น "assigments" เงียบหาย) */
 const SEED_KNOWN_KEYS = new Set(["trucks", "communities", "routes", "assignments"]);

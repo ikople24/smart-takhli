@@ -65,6 +65,14 @@ export default function TodayTruckPanel() {
   const working = trucks.filter((t) => t.kind !== "day_off");
   const dayOff = trucks.filter((t) => t.kind === "day_off");
 
+  // นับเป็น "คัน" ไม่ใช่ "รอบ" — รถคันเดียววิ่งได้หลายรอบต่อวัน (รอบตัวเอง + รอบวิ่งแทนคันที่หยุด)
+  // ถ้านับรอบ วันอังคารจะกลายเป็นหยุด 4 แถว ต่อวิ่ง 7–8 แถว ทั้งที่ความจริงคือหยุด 4 คันจาก 7–8 คัน
+  const uniqueNumbers = (list: LiveTruck[]) =>
+    [...new Set(list.map((t) => t.truckNumber))].sort((a, b) => a - b);
+  const workingNumbers = uniqueNumbers(working);
+  // คันที่มีทั้งงานหยุดและงานวิ่งในวันเดียวกัน ไม่ถือว่าหยุด — ไม่งั้นจะขึ้นชื่อรถซ้ำสองฝั่ง
+  const dayOffNumbers = uniqueNumbers(dayOff).filter((n) => !workingNumbers.includes(n));
+
   return (
     <section className="rounded-3xl bg-white/80 ring-1 ring-slate-200 p-4">
       <div className="flex items-baseline justify-between gap-2">
@@ -99,7 +107,9 @@ export default function TodayTruckPanel() {
                   {t.live.currentStop ? `กำลังอยู่ ${t.live.currentStop.name}` : "กำลังวิ่งตามเส้นทาง"}
                   {t.live.nextStop && (
                     <> · ถัดไป {t.live.nextStop.name}
-                      {t.live.etaNextMin != null && ` (อีก ${t.live.etaNextMin} นาที)`}</>
+                      {t.live.etaNextMin != null
+                        ? ` (อีก ${t.live.etaNextMin} นาที)`
+                        : " (ยังไม่ระบุเวลา)"}</>
                   )}
                 </div>
               )}
@@ -109,9 +119,26 @@ export default function TodayTruckPanel() {
         </ul>
       )}
 
-      {dayOff.length > 0 && (
+      {/* เกณฑ์ "หยุดตั้งแต่ 3 คัน" มาจากรูปแบบจริงของตาราง ไม่ใช่เลขสุ่ม —
+          วันอังคารรถ 1–4 หยุด (4 คัน) วันศุกร์รถ 5–7 หยุด (3 คัน) ทั้งสองวันต้องขึ้นป้าย
+          ส่วนวันอาทิตย์ที่หยุดแค่รถ 13 คันเดียวไม่ต้องขึ้น พอบอกด้วยบรรทัดเล็กข้างล่าง */}
+      {dayOffNumbers.length >= 3 && (
+        <div className="mt-3 rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 p-3">
+          <p className="text-sm font-semibold text-amber-900">วันนี้รถหยุดดำเนินการหลายคัน</p>
+          <p className="text-xs text-amber-800 mt-0.5">
+            หยุด {dayOffNumbers.length} คัน (รถ {dayOffNumbers.join(", ")})
+            {workingNumbers.length > 0 && ` · ยังมีรถ ${workingNumbers.join(", ")} วิ่งเก็บแทนบางจุด`}
+          </p>
+          <p className="text-xs text-amber-800 mt-1">
+            ค้นหาถนนของคุณด้านบนเพื่อดูว่ารอบถัดไปรถจะมาวันไหน
+          </p>
+        </div>
+      )}
+
+      {/* ป้ายใหญ่ด้านบนบอกครบแล้ว บรรทัดนี้จึงขึ้นเฉพาะตอนที่รถหยุด 1–2 คัน */}
+      {dayOffNumbers.length > 0 && dayOffNumbers.length < 3 && (
         <p className="mt-2.5 text-xs text-slate-500">
-          วันนี้หยุด: รถ {dayOff.map((t) => t.truckNumber).join(", ")}
+          วันนี้หยุด: รถ {dayOffNumbers.join(", ")}
         </p>
       )}
     </section>

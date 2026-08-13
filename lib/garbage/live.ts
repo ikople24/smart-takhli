@@ -28,8 +28,9 @@ export function getLivePosition(a: ResolvedAssignment, nowMin: Minutes): LivePos
   const progress = span > 0 ? Math.min((nowMin - a.startMin) / span, 1) : 1;
 
   // เรียงตามเวลาจริงเสมอ — อย่าไว้ใจลำดับจากต้นทาง (seq กับเวลาอาจไม่ตรงกัน)
+  // จุดที่วันนี้ไม่เก็บต้องไม่ถูกนับ แม้จะมีเวลาค้างอยู่ในข้อมูล
   const timed = a.stops
-    .filter((s): s is TimedStop & { atMin: Minutes } => s.atMin != null)
+    .filter((s): s is TimedStop & { atMin: Minutes } => s.served && s.atMin != null)
     .sort((x, y) => x.atMin - y.atMin);
 
   let currentStop: (TimedStop & { atMin: Minutes }) | null = null;

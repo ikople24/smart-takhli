@@ -43,3 +43,7 @@ next-env.d.ts
 # claude code local config
 .claude/settings.local.json
 .claude/launch.json
+
+# ต้นฉบับตารางรถขยะ + ข้อมูลคนขับ — repo นี้ public ห้าม commit (PDPA)
+data/garbage/*.numbers
+data/garbage/*.local.json

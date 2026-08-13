@@ -60,7 +60,12 @@ export function buildDaySchedule(
       endMin: a.endMin,
       label: a.label,
       stops: route
-        ? route.stops.map((s) => ({ ...s, atMin: timeBySeq.get(s.seq) ?? null }))
+        ? route.stops.map((s) => ({
+            ...s,
+            // อยู่ใน stopTimes = วันนี้เก็บจุดนี้ · ไม่อยู่ = วันนี้ไม่เก็บ
+            served: timeBySeq.has(s.seq),
+            atMin: timeBySeq.get(s.seq) ?? null,
+          }))
         : [],
       communityWindows: a.communityWindows,
     };

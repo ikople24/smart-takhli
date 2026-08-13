@@ -21,6 +21,7 @@ type AuditAction =
   | 'garbage_assignment_updated'
   | 'garbage_assignment_deleted'
   | 'garbage_route_updated'
+  | 'garbage_schedule_imported'
   | 'data_exported'
   | 'login';
 

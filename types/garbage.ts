@@ -14,6 +14,15 @@ export interface Truck {
   color: TruckColor;
   plate?: string | null;
   status: TruckStatus;
+  /**
+   * ชื่อพนักงานขับรถ — ข้อมูลพนักงาน **ห้ามส่งออก API สาธารณะ**
+   * ตอนนี้เอกสาร Truck ไม่เคยถูก serialize ออกทาง API เลย: resolve.ts อ่านมาใช้แค่ `color`
+   * แล้วส่งต่อเป็น ResolvedAssignment.truckColor เท่านั้น — ถ้าจะเพิ่มจุดที่ส่ง Truck ออก
+   * ต้องเลือกฟิลด์เองทีละตัว อย่าส่งทั้งก้อน
+   */
+  driverName?: string | null;
+  /** เช่น "รถขยะอัดท้าย", "รถยกภาชนะรองรับ" */
+  truckType?: string | null;
 }
 
 export interface Community {
@@ -47,7 +56,8 @@ export interface Route {
 
 export interface StopTime {
   seq: number;
-  atMin: Minutes;
+  /** เวลาที่รถถึงจุดนี้ — null = เก็บวันนี้แต่ยังไม่ระบุเวลา (เช่น รถยกภาชนะ) */
+  atMin: Minutes | null;
 }
 
 export interface CommunityWindow {
@@ -105,7 +115,12 @@ export interface ResolvedAssignment {
   startMin: Minutes | null;
   endMin: Minutes | null;
   label: string | null;
-  stops: Array<RouteStop & { atMin: Minutes | null }>;
+  /**
+   * จุดทั้งหมดของสาย พร้อมสถานะรายวัน
+   * served = วันนี้เก็บจุดนี้หรือไม่ (มาจากการมีอยู่ใน stopTimes)
+   * atMin = เวลาที่ถึง · null ทั้งที่ served เป็น true แปลว่ายังไม่ระบุเวลา
+   */
+  stops: Array<RouteStop & { served: boolean; atMin: Minutes | null }>;
   communityWindows: CommunityWindow[];
 }
 
@@ -156,4 +171,6 @@ export interface SearchHit {
   startMin: Minutes | null;
   endMin: Minutes | null;
   atMin: Minutes | null;
+  /** วันนั้นเก็บจุดนี้จริงหรือไม่ — false = ชื่อจุดอยู่ในสาย แต่วันนั้นไม่เข้าเก็บ */
+  served: boolean;
 }

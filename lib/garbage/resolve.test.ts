@@ -110,8 +110,9 @@ describe("buildDaySchedule", () => {
     }];
     const out = buildDaySchedule("2026-08-11", 2, a, routes, trucks);
     expect(out.assignments[0].stops).toEqual([
-      { seq: 1, name: "ซ.ตรอกใต้แนว", mode: "truck", atMin: 240 },
-      { seq: 2, name: "ซ.เขาเงาะ 5", mode: "truck", atMin: null },
+      { seq: 1, name: "ซ.ตรอกใต้แนว", mode: "truck", served: true, atMin: 240 },
+      // ไม่อยู่ใน stopTimes ของงานแทนเบอร์นี้ = วันนั้นไม่ได้เข้าเก็บ
+      { seq: 2, name: "ซ.เขาเงาะ 5", mode: "truck", served: false, atMin: null },
     ]);
   });
 
@@ -194,6 +195,36 @@ describe("buildDaySchedule", () => {
     }];
     const out = buildDaySchedule("2026-08-10", 1, a, routes, trucks);
     expect(out.assignments[0].updatedAt).toBe("");
+  });
+
+  it("แยกสามสถานะของจุดในแต่ละวัน", () => {
+    const routesWith3: Route[] = [{
+      code: "R1", name: "สาย R1", defaultTruckNumber: 1, active: true,
+      communityNames: ["ชุมชนเขาใบไม้"],
+      stops: [
+        { seq: 1, name: "จุดมีเวลา", mode: "truck" },
+        { seq: 2, name: "จุดไม่เก็บวันนี้", mode: "truck" },
+        { seq: 3, name: "จุดรอระบุเวลา", mode: "truck" },
+      ],
+    }];
+    const a: Assignment[] = [{
+      ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal",
+      startMin: 240, endMin: 300,
+      // จุด 2 ไม่อยู่ในลิสต์ = วันนี้ไม่เก็บ · จุด 3 อยู่แต่ไม่มีเวลา = รอระบุเวลา
+      stopTimes: [{ seq: 1, atMin: 240 }, { seq: 3, atMin: null }],
+    }];
+    const stops = buildDaySchedule("2026-08-10", 1, a, routesWith3, trucks).assignments[0].stops;
+    expect(stops[0]).toMatchObject({ name: "จุดมีเวลา", served: true, atMin: 240 });
+    expect(stops[1]).toMatchObject({ name: "จุดไม่เก็บวันนี้", served: false, atMin: null });
+    expect(stops[2]).toMatchObject({ name: "จุดรอระบุเวลา", served: true, atMin: null });
+  });
+
+  it("งานที่ไม่มีสาย ได้ stops ว่างเหมือนเดิม", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 2, shiftNo: 1, truckNumber: 1, routeCode: null, kind: "day_off",
+      startMin: null, endMin: null, stopTimes: [],
+    }];
+    expect(buildDaySchedule("2026-08-11", 2, a, routes, trucks).assignments[0].stops).toEqual([]);
   });
 });
 

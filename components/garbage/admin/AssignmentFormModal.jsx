@@ -41,7 +41,10 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
       setStartText(assignment.startMin == null ? '' : formatThaiTime(assignment.startMin).replace(' น.', ''));
       setEndText(assignment.endMin == null ? '' : formatThaiTime(assignment.endMin).replace(' น.', ''));
       setLabel(assignment.label ?? '');
-      setStopTimes(assignment.stops.filter((s) => s.atMin != null).map((s) => ({ seq: s.seq, atMin: s.atMin })));
+      // ยึด served ไม่ใช่ atMin — จุดที่ "เก็บวันนี้แต่ยังไม่ระบุเวลา" (เช่นทุกจุดของรถ 13)
+      // มี atMin เป็น null ถ้ากรองด้วย atMin จุดพวกนี้จะหายเงียบ ๆ แล้วการกดบันทึกครั้งเดียว
+      // จะลบเครื่องหมาย "เก็บวันนี้" ทิ้งทั้งหมดโดยที่แอดมินไม่รู้ตัว
+      setStopTimes(assignment.stops.filter((s) => s.served).map((s) => ({ seq: s.seq, atMin: s.atMin })));
     } else {
       setTruckNumber('');
       setShiftNo('1');
@@ -158,6 +161,15 @@ export default function AssignmentFormModal({ open, weekday, assignment, trucks,
                 <option value="">ไม่ระบุสาย</option>
                 {routes.map((r) => <option key={r.code} value={r.code}>{r.code} · {r.name}</option>)}
               </select>
+              {routes.length === 0 ? (
+                <p className="mt-1 text-[11.5px] text-amber-700">
+                  โหลดรายการสายไม่ได้ — ปิดหน้าต่างนี้แล้วรีเฟรชหน้า ถ้ายังไม่ได้แปลว่ายังไม่มีสิทธิ์หน้านี้
+                </p>
+              ) : (
+                <p className="mt-1 text-[11.5px] text-[#8A8398]">
+                  เลือกสายก่อน แล้วช่องตั้งเวลาถึงแต่ละจุดจะขึ้นด้านล่าง
+                </p>
+              )}
             </div>
 
             {kind === 'substitute' && (
