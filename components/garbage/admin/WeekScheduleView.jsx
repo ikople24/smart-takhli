@@ -10,7 +10,12 @@ import { PillTabs, tableHeadCls, primaryBtnCls } from '@/components/ui/adminThem
 export default function WeekScheduleView({ days, activeDate, onChangeDate, onAdd, onEdit, onDelete }) {
   const [openKey, setOpenKey] = useState(null);
   const day = days.find((d) => d.date === activeDate) ?? days[0];
-  const rows = day?.assignments ?? [];
+  // หน้าแอดมินเรียงตามโซน 1 → 7 → รถยกภาชนะรองรับ ให้ตรงกับตารางกระดาษของกองสาธารณสุข
+  // (API เรียงตามเวลาเริ่มไว้สำหรับหน้าประชาชน ที่นั่นต้องรู้ว่ารถคันไหนออกก่อน)
+  // ใช้เบอร์รถเป็นคีย์เพราะรถเบอร์ N ประจำโซน N — งานวันหยุดไม่ผูกสายเลย ถ้าเรียงด้วยรหัสสาย
+  // แถววันหยุดจะหลุดไปกองท้ายตาราง แทนที่จะอยู่ตำแหน่งของโซนตัวเอง
+  const rows = [...(day?.assignments ?? [])]
+    .sort((a, b) => a.truckNumber - b.truckNumber || a.shiftNo - b.shiftNo);
 
   // ใช้ PillTabs กลางจาก components/ui/adminTheme — label รับ node ได้ จึงแนบป้าย "รอข้อมูล" ไปด้วย
   const tabs = days.map((d) => ({

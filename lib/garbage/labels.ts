@@ -31,6 +31,22 @@ export function zoneLabel(routeCode: string | null | undefined): string {
   return m ? `โซน ${m[1]}` : routeCode;
 }
 
+/** รหัสสายรูปแบบ R + ตัวเลข ใช้จัดลำดับสายที่ไม่ใช่โซน (R13) ให้คงที่ */
+const NUMBERED_CODE_RE = /^R(\d+)$/u;
+
+/**
+ * คีย์สำหรับเรียงสาย: โซน 1–7 มาก่อนตามเลขโซน แล้วค่อยสายที่ไม่ใช่โซน (R13 รถยกภาชนะรองรับ)
+ * เรียงตามรหัสตรง ๆ ไม่ได้ เพราะเป็นสตริง — "R13" จะแทรกระหว่าง "R1" กับ "R2"
+ * งานที่ไม่ผูกสาย (วันหยุด) ไม่มีรหัส จึงไปท้ายสุด
+ */
+export function zoneOrder(routeCode: string | null | undefined): number {
+  if (!routeCode) return 900;
+  const zone = ZONE_CODE_RE.exec(routeCode);
+  if (zone) return Number(zone[1]);
+  const numbered = NUMBERED_CODE_RE.exec(routeCode);
+  return numbered ? 100 + Number(numbered[1]) : 800;
+}
+
 /** 1 → "รถเบอร์ 1" — คำที่กองสาธารณสุขใช้เรียกรถแต่ละคัน */
 export function truckLabel(truckNumber: number | null | undefined): string {
   if (truckNumber == null) return "";
