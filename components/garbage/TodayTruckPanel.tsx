@@ -119,11 +119,12 @@ export default function TodayTruckPanel() {
         </ul>
       )}
 
-      {/* วันที่รถหยุดกันเกินครึ่ง (เช่นวันอังคารที่รถ 1–4 หยุด) ต้องบอกให้ชัด
-          ไม่ใช่ปล่อยให้ชาวบ้านเข้าใจว่าระบบไม่มีข้อมูล */}
-      {dayOffNumbers.length > 0 && dayOffNumbers.length >= workingNumbers.length && (
+      {/* เกณฑ์ "หยุดตั้งแต่ 3 คัน" มาจากรูปแบบจริงของตาราง ไม่ใช่เลขสุ่ม —
+          วันอังคารรถ 1–4 หยุด (4 คัน) วันศุกร์รถ 5–7 หยุด (3 คัน) ทั้งสองวันต้องขึ้นป้าย
+          ส่วนวันอาทิตย์ที่หยุดแค่รถ 13 คันเดียวไม่ต้องขึ้น พอบอกด้วยบรรทัดเล็กข้างล่าง */}
+      {dayOffNumbers.length >= 3 && (
         <div className="mt-3 rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 p-3">
-          <p className="text-sm font-semibold text-amber-900">วันนี้รถหยุดดำเนินการเป็นส่วนใหญ่</p>
+          <p className="text-sm font-semibold text-amber-900">วันนี้รถหยุดดำเนินการหลายคัน</p>
           <p className="text-xs text-amber-800 mt-0.5">
             หยุด {dayOffNumbers.length} คัน (รถ {dayOffNumbers.join(", ")})
             {workingNumbers.length > 0 && ` · ยังมีรถ ${workingNumbers.join(", ")} วิ่งเก็บแทนบางจุด`}
@@ -134,8 +135,8 @@ export default function TodayTruckPanel() {
         </div>
       )}
 
-      {/* ป้ายใหญ่ด้านบนบอกครบแล้ว บรรทัดนี้จึงขึ้นเฉพาะตอนที่รถหยุดไม่กี่คัน */}
-      {dayOffNumbers.length > 0 && dayOffNumbers.length < workingNumbers.length && (
+      {/* ป้ายใหญ่ด้านบนบอกครบแล้ว บรรทัดนี้จึงขึ้นเฉพาะตอนที่รถหยุด 1–2 คัน */}
+      {dayOffNumbers.length > 0 && dayOffNumbers.length < 3 && (
         <p className="mt-2.5 text-xs text-slate-500">
           วันนี้หยุด: รถ {dayOffNumbers.join(", ")}
         </p>
