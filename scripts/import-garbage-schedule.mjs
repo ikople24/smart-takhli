@@ -49,6 +49,9 @@ function build() {
       active: true,
     });
 
+    // หนึ่งรถ หนึ่งวัน = หนึ่งงาน — รถออกทริปเดียว เก็บจุดของสายตัวเอง "สลับกับ" จุดที่ไปเก็บแทน
+    // การแยกเป็นสองงาน (ของตัวเอง / ที่เก็บแทน) แล้วคิดช่วงเวลาจาก min–max ของแต่ละกลุ่ม
+    // จะสร้างช่วงเวลาที่คาบเกี่ยวกันเองแบบปลอม ๆ แล้วไปชนกฎห้ามเวลาทับใน lib/garbage/overlap.ts
     for (let wd = 0; wd < 7; wd++) {
       const key = String(wd);
       const own = t.stops.filter((s) => key in s.times && !/เก็บแทนเบอร์/u.test(s.note ?? ""));
@@ -62,28 +65,30 @@ function build() {
         });
         continue;
       }
-      if (own.length > 0) {
-        const times = own.map((s) => s.times[key]);
-        assignments.push({
-          weekday: wd, shiftNo: 1, truckNumber: t.number, routeCode: `R${t.number}`,
-          kind: "normal", coverForRouteCode: null,
-          startMin: Math.min(...times), endMin: Math.max(...times),
-          stopTimes: own.map((s) => ({ seq: s.seq, atMin: s.times[key] })).sort((a, b) => a.seq - b.seq),
-          communityWindows: [], label: null,
-        });
+
+      // สายที่ไปเก็บแทนในวันนั้น — ข้อมูลจริงมีได้ไม่เกินหนึ่งสายต่อวัน
+      // ถ้าวันไหนมีมากกว่านั้นแปลว่า model นี้ไม่พอ ต้องหยุดให้คนมาดู ไม่ใช่หยิบตัวแรกเงียบ ๆ
+      const coveredNums = [...new Set(sub.map((s) => (s.note.match(/เก็บแทนเบอร์\s*(\d+)/u) ?? [])[1]).filter(Boolean))];
+      if (coveredNums.length > 1) {
+        throw new Error(
+          `รถ ${t.number} วัน ${wd} เก็บแทนหลายสายในวันเดียว (${coveredNums.join(", ")}) — ` +
+          `โครงสร้าง "หนึ่งงานต่อรถต่อวัน" รองรับได้สายเดียว ต้องทบทวนก่อนนำเข้า`
+        );
       }
-      if (sub.length > 0) {
-        const covered = (sub[0].note.match(/เก็บแทนเบอร์\s*(\d+)/u) ?? [])[1];
-        const times = sub.map((s) => s.times[key]);
-        assignments.push({
-          weekday: wd, shiftNo: own.length > 0 ? 2 : 1, truckNumber: t.number,
-          routeCode: `R${t.number}`, kind: "substitute",
-          coverForRouteCode: covered ? `R${covered}` : null,
-          startMin: Math.min(...times), endMin: Math.max(...times),
-          stopTimes: sub.map((s) => ({ seq: s.seq, atMin: s.times[key] })).sort((a, b) => a.seq - b.seq),
-          communityWindows: [], label: covered ? `เก็บแทนเบอร์ ${covered}` : null,
-        });
-      }
+      const covered = coveredNums[0];
+
+      const all = [...own, ...sub].sort((a, b) => a.seq - b.seq);
+      const times = all.map((s) => s.times[key]);
+      assignments.push({
+        weekday: wd, shiftNo: 1, truckNumber: t.number, routeCode: `R${t.number}`,
+        // เป็น substitute เฉพาะวันที่ไม่มีจุดของตัวเองเลย (เช่นรถ 6 วันอังคาร เก็บแทนเบอร์ 2 ล้วน)
+        // วันที่มีทั้งสองอย่างคืองานปกติที่พ่วง coverForRouteCode ไว้
+        kind: own.length === 0 ? "substitute" : "normal",
+        coverForRouteCode: covered ? `R${covered}` : null,
+        startMin: Math.min(...times), endMin: Math.max(...times),
+        stopTimes: all.map((s) => ({ seq: s.seq, atMin: s.times[key] })),
+        communityWindows: [], label: covered ? `เก็บแทนเบอร์ ${covered}` : null,
+      });
     }
   }
 
@@ -124,6 +129,14 @@ function build() {
 }
 
 const { routes, assignments, trucks } = build();
+
+// --json = พ่นเอกสารที่จะเขียนออกมาเป็น JSON เพื่อเอาไปตรวจกับ assignmentSchema / findOverlap
+// ก่อนเขียนจริง (ตรวจของจริงที่จะเขียน ไม่ใช่ logic ที่ลอกไปไว้อีกที่แล้ว drift)
+// **ไม่รวม trucks** เพราะมี driverName — ห้ามพ่นชื่อพนักงานออก stdout/ไฟล์ชั่วคราว
+if (process.argv.includes("--json")) {
+  console.log(JSON.stringify({ routes, assignments }));
+  process.exit(0);
+}
 
 console.log(`จะนำเข้า: สาย ${routes.length} · งาน ${assignments.length} · รถ ${trucks.length}`);
 for (const r of routes) console.log(`  ${r.code}: ${r.stops.length} จุด`);

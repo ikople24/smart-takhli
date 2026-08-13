@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import type { Minutes, StopTime } from "@/types/garbage";
 import { assignments as assignmentsCol, routes as routesCol } from "@/lib/garbage/db";
 import { routeUpdateSchema } from "@/lib/garbage/validators";
 import { assignSeq, buildSeqMap, remapStopTimes } from "@/lib/garbage/stopEditing";
@@ -75,19 +74,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (r) => JSON.stringify(r.next) !== JSON.stringify(r.doc.stopTimes)
     );
 
-    // การสลับลำดับจุดทำให้เวลาของงานเรียงย้อนกลับได้ ซึ่งผิดกฎของ assignmentInputSchema เอง
-    // (แอดมินจะแก้งานนั้นไม่ผ่านจนกว่าจะไล่เวลาใหม่) — เตือนไว้ แต่ไม่บล็อกการบันทึกสาย
-    const warnings = remapped
-      .filter((r) => {
-        // เทียบเฉพาะจุดที่ระบุเวลาแล้ว ให้ตรงกับกฎ "ไม่ย้อนกลับ" ของ assignmentSchema
-        // (จุดที่ยังไม่ระบุเวลาไม่ถือว่าย้อนกลับ) — r.next เรียงตาม seq มาแล้วจาก remapStopTimes
-        const timed = r.next.filter((st): st is StopTime & { atMin: Minutes } => st.atMin != null);
-        return timed.some((st, i) => i > 0 && st.atMin < timed[i - 1].atMin);
-      })
-      .map(
-        (r) =>
-          `งานรถ ${r.doc.truckNumber} รอบ ${r.doc.shiftNo} มีเวลาเรียงย้อนหลังการสลับจุด ควรตรวจเวลาใหม่`
-      );
+    // เดิมที่นี่คำนวณคำเตือน "เวลาเรียงย้อนหลังการสลับจุด" — ถอดออกใน M7 พร้อมกับกฎใน
+    // assignmentSchema เพราะ seq เป็นเลขรายการ ไม่ใช่ลำดับวิ่ง เวลาย้อนตาม seq จึงเป็นเรื่องปกติ
+    // (ถ้าปล่อยไว้จะเตือนแทบทุกครั้งกับตารางจริง จนคำเตือนหมดความหมาย)
+    // **คงคีย์ warnings ไว้ในผลลัพธ์** เพราะ RouteManagerModal อ่านค่านี้อยู่ — และเผื่อคำเตือนอื่นในอนาคต
+    const warnings: string[] = [];
 
     if (timeChanges.length > 0) {
       await aCol.bulkWrite(
