@@ -56,12 +56,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!route) continue;
 
         const timeBySeq = new Map(a.stopTimes.map((s) => [s.seq, s.atMin]));
+        // จุดที่ตรงด้วย "ชื่อจุด" ไปแล้วในงานนี้ — กันไม่ให้ลูปชุมชนข้างล่างสร้างแถวซ้ำของจุดเดียวกัน
+        // (เช่นค้น "มาลัย" จุด "ถนนมาลัย" ในชุมชนมาลัย จะเข้าเงื่อนไขทั้งสองลูป)
+        const matchedSeqs = new Set<number>();
         for (const s of route.stops) {
           if (!normalizePlaceName(s.name).includes(needle)) continue;
           // วันนั้นไม่ได้เก็บจุดนี้ → ไม่ใช่คำตอบของ "วันไหนรถมา" จึงไม่ต้องแสดง
           if (!timeBySeq.has(s.seq)) continue;
           hits.push({
-            matchType: "stop", matchName: s.name,
+            matchType: "stop", matchName: s.name, stopName: s.name,
             routeCode: route.code, routeName: route.name,
             weekday, weekdayName: WEEKDAY_TH[weekday],
             truckNumber: a.truckNumber,
@@ -69,22 +72,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
             served: true,
+            communityName: s.communityName ?? null,
           });
+          matchedSeqs.add(s.seq);
         }
-        for (const w of a.communityWindows) {
-          for (const name of w.communityNames) {
-            if (!normalizePlaceName(name).includes(needle)) continue;
-            hits.push({
-              matchType: "community", matchName: name,
-              routeCode: route.code, routeName: route.name,
-              weekday, weekdayName: WEEKDAY_TH[weekday],
-              truckNumber: a.truckNumber,
-              kind: a.kind, coverForRouteCode: a.coverForRouteCode,
-              startMin: w.startMin, endMin: w.endMin, atMin: null,
-              // หน้าต่างชุมชนมีอยู่ในงานของวันนั้น = วันนั้นเก็บ
-              served: true,
-            });
-          }
+        // ค้นด้วยชื่อชุมชน — อิงชุมชนของ "จุดเก็บ" (RouteStop.communityName) ไม่ใช่ a.communityWindows
+        // ที่เลิกใช้แล้วและว่างทั้งหมดในข้อมูลจริง · hit จึงเป็นระดับจุด มี atMin จริงของจุดนั้น
+        for (const s of route.stops) {
+          if (!s.communityName) continue;
+          if (!normalizePlaceName(s.communityName).includes(needle)) continue;
+          if (matchedSeqs.has(s.seq)) continue; // แสดงเป็นผลแบบ "ชื่อจุด" ไปแล้ว
+          if (!timeBySeq.has(s.seq)) continue; // วันนั้นไม่ได้เก็บจุดนี้
+          hits.push({
+            matchType: "community", matchName: s.communityName, stopName: s.name,
+            routeCode: route.code, routeName: route.name,
+            weekday, weekdayName: WEEKDAY_TH[weekday],
+            truckNumber: a.truckNumber,
+            kind: a.kind, coverForRouteCode: a.coverForRouteCode,
+            startMin: a.startMin, endMin: a.endMin,
+            atMin: timeBySeq.get(s.seq) ?? null,
+            served: true,
+            communityName: s.communityName,
+          });
         }
       }
     }
