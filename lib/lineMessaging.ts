@@ -48,6 +48,28 @@ export type LineMessage = TextMessage | FlexMessage | ImageMessage;
 // ---------- Helpers ----------
 
 /**
+ * ฟอร์แมตวันเวลาเป็น "เวลาไทย" เสมอ (Asia/Bangkok)
+ *
+ * สำคัญ: ข้อความ LINE ถูกสร้างฝั่งเซิร์ฟเวอร์ ซึ่งโปรดักชัน (Railway) รันเป็น UTC
+ * ถ้าไม่ระบุ timeZone จะได้เวลาช้ากว่าไทย 7 ชม. (บนเครื่อง dev ที่เป็น Asia/Bangkok
+ * จะดูปกติ เลยไม่เจอตอนเทส) — อย่าเรียก toLocale*String ตรง ๆ ในไฟล์นี้
+ */
+function formatThaiDateTime(
+  value: Date | string | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }
+): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', ...options });
+}
+
+/**
  * สร้าง ImageMessage จาก URL
  * LINE ต้องการ HTTPS เท่านั้น — ตรวจก่อนใส่
  */
@@ -251,15 +273,13 @@ export function formatStatusMessage(complaint: {
   const color = statusColor(status);
   const emoji = statusEmoji(status);
 
-  const updatedStr = updatedAt
-    ? new Date(updatedAt).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '-';
+  const updatedStr = formatThaiDateTime(updatedAt, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   // ส่วน "การแก้ไข" — แสดงเมื่อมีข้อมูล solution/note (เรื่องที่ปิดงานแล้ว)
   const solutionItems = (solution ?? []).filter(Boolean);
@@ -365,14 +385,7 @@ export function formatNewComplaintMessage(complaint: {
   const { complaintId, fullName, phone, category, problems, detail, community, location, createdAt } =
     complaint;
 
-  const createdStr = createdAt
-    ? new Date(createdAt).toLocaleDateString('th-TH', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '-';
+  const createdStr = formatThaiDateTime(createdAt);
 
   const problemsStr = (problems ?? []).filter(Boolean).join(', ');
   const mapUrl =
@@ -483,14 +496,7 @@ export function formatClosedMessage(opts: {
 }): FlexMessage {
   const { complaintId, community, fullName, officerName, closedAt } = opts;
 
-  const closedStr = closedAt
-    ? new Date(closedAt).toLocaleDateString('th-TH', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '-';
+  const closedStr = formatThaiDateTime(closedAt);
 
   return {
     type: 'flex',
