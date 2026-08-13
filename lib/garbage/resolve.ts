@@ -46,6 +46,7 @@ export function buildDaySchedule(
       kind: a.kind,
       routeCode: a.routeCode,
       routeName: route?.name ?? null,
+      routeNeedsVerification: route?.needsVerification ?? false,
       coverForRouteCode: a.coverForRouteCode,
       startMin: a.startMin,
       endMin: a.endMin,

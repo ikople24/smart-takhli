@@ -80,6 +80,8 @@ export interface ResolvedAssignment {
   kind: AssignmentKind;
   routeCode: string | null;
   routeName: string | null;
+  /** สายนี้ยังต้องให้กองสาธารณสุขตรวจชื่อจุด (R5–R7 ถอดจากโปสเตอร์) — ไม่มีสายถือว่า false */
+  routeNeedsVerification: boolean;
   coverForRouteCode: string | null;
   startMin: Minutes | null;
   endMin: Minutes | null;

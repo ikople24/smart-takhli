@@ -4,7 +4,7 @@ import type { ResolvedAssignment } from "@/types/garbage";
 
 const ra: ResolvedAssignment = {
   truckNumber: 1, truckColor: "yellow", shiftNo: 1, kind: "normal",
-  routeCode: "R1", routeName: "สาย R1", coverForRouteCode: null,
+  routeCode: "R1", routeName: "สาย R1", routeNeedsVerification: false, coverForRouteCode: null,
   startMin: 240, endMin: 300, label: null,
   stops: [
     { seq: 1, name: "จุด A", mode: "truck", atMin: 240 },

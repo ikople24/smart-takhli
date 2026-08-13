@@ -130,6 +130,33 @@ describe("buildDaySchedule", () => {
       warn.mockRestore();
     }
   });
+
+  it("พาสถานะรอตรวจสอบของสายออกมาด้วย", () => {
+    const routesWithFlag: Route[] = [
+      { ...routes[0] },
+      {
+        code: "R5", name: "สาย R5", defaultTruckNumber: 5, active: true,
+        needsVerification: true, communityNames: ["ชุมชนเขาใบไม้"],
+        stops: [{ seq: 1, name: "จุด X", mode: "truck" }],
+      },
+    ];
+    const a: Assignment[] = [
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 1, routeCode: "R1", kind: "normal", startMin: 240, endMin: 300, stopTimes: [] },
+      { ...base, weekday: 1, shiftNo: 1, truckNumber: 5, routeCode: "R5", kind: "normal", startMin: 300, endMin: 400, stopTimes: [] },
+    ];
+    const out = buildDaySchedule("2026-08-10", 1, a, routesWithFlag, trucks);
+    expect(out.assignments[0].routeNeedsVerification).toBe(false); // R1 ไม่ได้ตั้งค่า → false ไม่ใช่ undefined
+    expect(out.assignments[1].routeNeedsVerification).toBe(true);
+  });
+
+  it("วันหยุดที่ไม่มีสาย ถือว่าไม่ต้องตรวจสอบ", () => {
+    const a: Assignment[] = [{
+      ...base, weekday: 2, shiftNo: 1, truckNumber: 1, routeCode: null, kind: "day_off",
+      startMin: null, endMin: null, stopTimes: [],
+    }];
+    const out = buildDaySchedule("2026-08-11", 2, a, routes, trucks);
+    expect(out.assignments[0].routeNeedsVerification).toBe(false);
+  });
 });
 
 describe("pickLatestVersions", () => {
