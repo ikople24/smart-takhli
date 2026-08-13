@@ -7,7 +7,7 @@
  *   node --env-file=.env.local scripts/import-garbage-schedule.mjs --yes --force
  *
  * นี่คือการ re-baseline ทับข้อมูลเดิม ไม่ใช่ upsert เงียบ ๆ
- * ถ้าพบงานที่เคยถูกแก้จากหน้าแอดมิน (updatedAt ห่างจาก createdAt เกิน 1 วินาที)
+ * ถ้าพบร่องรอยว่ามีคนแก้งานจากหน้าแอดมิน (audit log ของงานมอบหมาย หรือ updatedAt หลายชุด)
  * จะไม่เขียนทับจนกว่าจะใส่ --force
  */
 import { readFileSync } from "node:fs";
@@ -156,16 +156,36 @@ const client = new MongoClient(uri);
 await client.connect();
 const db = client.db(process.env.MONGODB_DB || undefined);
 
-// กันทับงานที่เจ้าหน้าที่แก้จากหน้าแอดมินไปแล้ว
-const edited = await db.collection("garbage_assignments").countDocuments({
-  $expr: { $gt: [{ $subtract: ["$updatedAt", "$createdAt"] }, 1000] },
+/**
+ * กันทับงานที่เจ้าหน้าที่แก้จากหน้าแอดมินไปแล้ว
+ *
+ * เดิมใช้เกณฑ์ "updatedAt ห่างจาก createdAt เกิน 1 วินาที" ซึ่ง **หลอกได้ง่าย**:
+ * การเขียน bulk ครั้งเดียว (เช่น backfill ฟิลด์ใหม่ทั้ง collection) ก็ทำให้ช่องว่างนั้นเกิด
+ * ทั้งที่ไม่มีใครแตะจากหน้าจอเลย — เกิดขึ้นจริงมาแล้วกับชุด seed ที่ถูกตีว่า "แก้แล้ว" ทั้ง 17 รายการ
+ * จึงเปลี่ยนมาดูสัญญาณที่เป็นหลักฐานของการแก้จริงแทน สองทาง:
+ *
+ *   1. audit log — ทุก mutation จากหน้าแอดมินเรียก logAuditEvent เสมอ (action ขึ้นต้น
+ *      ด้วย garbage_assignment_) ถ้ามีแม้แต่รายการเดียวแปลว่ามีคนแก้จริง
+ *   2. จำนวนชุดของ updatedAt — การแก้ทีละงานจากหน้าจอทำให้ updatedAt ต่างกันไปเรื่อย ๆ
+ *      ถ้าทั้ง collection มี updatedAt ชุดเดียวแปลว่ามาจากการเขียนครั้งเดียว ไม่ใช่การแก้ทีละตัว
+ */
+const auditEdits = await db.collection("auditlogs").countDocuments({
+  action: { $regex: "^garbage_assignment_" },
 });
-if (edited > 0 && !force) {
-  console.error(`\nพบงาน ${edited} รายการที่เคยถูกแก้จากหน้าแอดมิน — ยกเลิก`);
+const updatedStamps = await db.collection("garbage_assignments").distinct("updatedAt");
+const looksEdited = auditEdits > 0 || updatedStamps.length > 1;
+
+if (looksEdited && !force) {
+  console.error("\nพบสัญญาณว่างานเคยถูกแก้จากหน้าแอดมิน — ยกเลิก");
+  console.error(`  · audit log ของงานมอบหมาย: ${auditEdits} รายการ (มากกว่า 0 = มีคนแก้จริง)`);
+  console.error(`  · ชุดเวลา updatedAt ที่ไม่ซ้ำกัน: ${updatedStamps.length} ชุด (มากกว่า 1 = แก้ทีละงาน)`);
   console.error("ถ้าตั้งใจจะทับข้อมูลเหล่านั้นจริง ให้รันซ้ำด้วย --force");
   await client.close();
   process.exit(1);
 }
+console.log(
+  `\nตรวจร่องรอยการแก้จากหน้าแอดมิน: audit ${auditEdits} รายการ · updatedAt ${updatedStamps.length} ชุด — ผ่าน`
+);
 
 const now = new Date();
 await db.collection("garbage_assignments").deleteMany({});
