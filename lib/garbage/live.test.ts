@@ -7,9 +7,9 @@ const ra: ResolvedAssignment = {
   routeCode: "R1", routeName: "สาย R1", routeNeedsVerification: false, coverForRouteCode: null,
   startMin: 240, endMin: 300, label: null,
   stops: [
-    { seq: 1, name: "จุด A", mode: "truck", atMin: 240 },
-    { seq: 2, name: "จุด B", mode: "truck", atMin: 270 },
-    { seq: 3, name: "จุด C", mode: "truck", atMin: 300 },
+    { seq: 1, name: "จุด A", mode: "truck", served: true, atMin: 240 },
+    { seq: 2, name: "จุด B", mode: "truck", served: true, atMin: 270 },
+    { seq: 3, name: "จุด C", mode: "truck", served: true, atMin: 300 },
   ],
   communityWindows: [
     { communityNames: ["ชุมชน ก"], startMin: 240, endMin: 270 },
@@ -49,9 +49,9 @@ describe("getLivePosition", () => {
     const uneven: ResolvedAssignment = {
       ...ra, startMin: 240, endMin: 840,
       stops: [
-        { seq: 1, name: "เข้า 1", mode: "truck", atMin: 240 },
-        { seq: 2, name: "เข้า 2", mode: "truck", atMin: 260 },
-        { seq: 3, name: "สาย", mode: "truck", atMin: 840 },
+        { seq: 1, name: "เข้า 1", mode: "truck", served: true, atMin: 240 },
+        { seq: 2, name: "เข้า 2", mode: "truck", served: true, atMin: 260 },
+        { seq: 3, name: "สาย", mode: "truck", served: true, atMin: 840 },
       ],
       communityWindows: [],
     };
@@ -64,9 +64,9 @@ describe("getLivePosition", () => {
     const shuffled: ResolvedAssignment = {
       ...ra,
       stops: [
-        { seq: 2, name: "จุด B", mode: "truck", atMin: 270 },
-        { seq: 1, name: "จุด A", mode: "truck", atMin: 240 },
-        { seq: 3, name: "จุด C", mode: "truck", atMin: 300 },
+        { seq: 2, name: "จุด B", mode: "truck", served: true, atMin: 270 },
+        { seq: 1, name: "จุด A", mode: "truck", served: true, atMin: 240 },
+        { seq: 3, name: "จุด C", mode: "truck", served: true, atMin: 300 },
       ],
     };
     const p = getLivePosition(shuffled, 280);
@@ -89,6 +89,20 @@ describe("getLivePosition", () => {
   it("วันหยุดที่ไม่มีเวลา คือ unknown", () => {
     const off = { ...ra, startMin: null, endMin: null, kind: "day_off" as const, stops: [] };
     expect(getLivePosition(off, 300).status).toBe("unknown");
+  });
+
+  it("ข้ามจุดที่วันนี้ไม่เก็บ", () => {
+    const withSkipped: ResolvedAssignment = {
+      ...ra,
+      stops: [
+        { seq: 1, name: "จุด A", mode: "truck", served: true, atMin: 240 },
+        { seq: 2, name: "จุดข้าม", mode: "truck", served: false, atMin: 260 },
+        { seq: 3, name: "จุด C", mode: "truck", served: true, atMin: 300 },
+      ],
+    };
+    const p = getLivePosition(withSkipped, 270);
+    expect(p.currentStop?.name).toBe("จุด A");
+    expect(p.nextStop?.name).toBe("จุด C");
   });
 
   it("ไม่มี stopTimes เลย ยังบอกสถานะได้", () => {
