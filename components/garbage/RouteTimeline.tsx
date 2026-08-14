@@ -102,11 +102,14 @@ export default function RouteTimeline({
         </span>
       </div>
 
-      {/* บอกสถานะของสายตรง ๆ — ตอนกำลังวิ่งไม่ต้องบอก เพราะการ์ด "รถกำลังอยู่จุดนี้" บอกอยู่แล้ว */}
+      {/* บอกสถานะของสายตรง ๆ — ตอนกำลังวิ่งไม่ต้องบอก เพราะการ์ด "รถกำลังอยู่จุดนี้" บอกอยู่แล้ว
+          รูปรถมาจอดที่แถบนี้ด้วย: แบบวาดรถไว้ในการ์ดตำแหน่งรถที่เดียว พอไม่มีการ์ดนั้น
+          รถจะหายไปจากไทม์ไลน์ทั้งใบ ทั้งที่หัวเว็บกับการ์ดหน้าแรกยังมีรถอยู่ · จอดนิ่งไม่กระเพื่อม
+          เพราะ bob คือท่า "จอดเก็บขยะอยู่" ซึ่งไม่จริงในสถานะพวกนี้ */}
       {status !== "running" && (
-        <p
+        <div
           className={
-            "mt-2 rounded-xl px-3 py-2 text-[12px] font-semibold " +
+            "mt-2 flex items-center justify-between gap-2 rounded-xl pl-3 pr-1 py-1.5 text-[12px] font-semibold " +
             (finished
               ? "bg-slate-100 text-slate-600"
               : status === "upcoming"
@@ -114,12 +117,17 @@ export default function RouteTimeline({
                 : "bg-amber-50 text-amber-800")
           }
         >
-          {finished
-            ? "วันนี้รถเก็บครบทุกจุดแล้ว"
-            : status === "upcoming"
-              ? `วันนี้รถยังไม่ออกวิ่ง${run.startMin == null ? "" : ` · เริ่ม ${formatThaiTime(run.startMin)}`}`
-              : "สายนี้ยังไม่ระบุเวลา รอกองสาธารณสุขกรอกเพิ่ม"}
-        </p>
+          <span>
+            {finished
+              ? "วันนี้รถเก็บครบทุกจุดแล้ว"
+              : status === "upcoming"
+                ? `วันนี้รถยังไม่ออกวิ่ง${run.startMin == null ? "" : ` · เริ่ม ${formatThaiTime(run.startMin)}`}`
+                : "สายนี้ยังไม่ระบุเวลา รอกองสาธารณสุขกรอกเพิ่ม"}
+          </span>
+          <span className="-my-2 flex-none">
+            <TruckSprite number={run.truckNumber} color={run.truckColor} size={52} bob={false} />
+          </span>
+        </div>
       )}
 
       {runs.length > 1 && (
