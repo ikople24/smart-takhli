@@ -1,5 +1,4 @@
 import type { TruckColor } from "@/types/garbage";
-import { weekdayShort } from "@/lib/garbage/labels";
 import { formatEta, formatThaiTime } from "@/lib/garbage/time";
 import type { TrackedStop } from "@/lib/garbage/trackedStop";
 import TruckSprite from "./TruckSprite";
@@ -38,7 +37,7 @@ export default function GarbageHero({
 
   return (
     <section className="relative overflow-hidden rounded-[24px] bg-[#065f46] text-emerald-50 shadow-[0_10px_24px_rgba(6,95,70,.28)]">
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-5 pt-4 pb-2">
         <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[.1em] text-emerald-300">
           <span
             aria-hidden
@@ -90,26 +89,26 @@ export default function GarbageHero({
         )}
       </div>
 
-      {/* แถบ 7 วัน — ข้อมูลครบทุกวันแล้ว แถบนี้จึงบอกว่า "วันนี้คือวันไหน" ไม่ใช่วันไหนมีข้อมูล */}
-      <ul className="flex gap-1.5 px-4" aria-hidden>
+      {/* แถบ 7 วัน — ข้อมูลครบทุกวันแล้ว แถบนี้จึงบอกว่า "วันนี้คือวันไหน" ไม่ใช่วันไหนมีข้อมูล
+          ไม่ใส่ตัวอักษรวันตามแบบ — การ์ดเส้นทางด้านล่างขึ้นชื่อวันเต็มอยู่แล้ว ("เส้นทางวันศุกร์") */}
+      <ul className="flex gap-1.5 px-5" aria-hidden>
         {[0, 1, 2, 3, 4, 5, 6].map((w) => (
-          <li key={w} className="flex flex-1 flex-col items-center gap-1">
-            <span className={"text-[9px] " + (w === weekdayToday ? "font-bold text-amber-300" : "text-emerald-200/70")}>
-              {weekdayShort(w)}
-            </span>
-            <span className={"h-[5px] w-full rounded-[3px] " + (w === weekdayToday ? "bg-amber-400" : "bg-white/25")} />
-          </li>
+          <li
+            key={w}
+            className={"h-[5px] flex-1 rounded-[3px] " + (w === weekdayToday ? "bg-amber-400" : "bg-white/25")}
+          />
         ))}
       </ul>
 
-      <div className="relative mt-1 h-[70px]">
-        <div className="garbage-road absolute inset-x-0 bottom-4 h-1" />
+      {/* สูงเท่ารูปรถพอดี ไม่ให้ล้นไปทับแถบ 7 วัน · เส้นถนนอยู่ระดับล้อ (ดูคำอธิบายใน GarbageHomeCard) */}
+      <div className="relative mt-1 h-[84px]">
+        <div className="garbage-road absolute inset-x-0 bottom-[19px] h-1" />
         {hasSchedule && spriteTruck && (
-          <div className="animate-truck-drive absolute bottom-1.5">
+          <div className="animate-truck-drive absolute bottom-0 left-3">
             <TruckSprite number={spriteTruck.truckNumber} color={spriteTruck.truckColor} size={84} bob={false} />
           </div>
         )}
-        <span className="absolute bottom-5 right-3.5 text-[10px] text-emerald-200">
+        <span className="absolute bottom-[25px] right-4 text-[10px] text-emerald-200">
           {hasSchedule ? "แตะจุดในเส้นทางเพื่อติดตาม" : "วันนี้ยังไม่มีตารางในระบบ"}
         </span>
       </div>

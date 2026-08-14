@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { zoneLabel, truckLabel, zoneOrder, weekdayShort } from "./labels";
+import { zoneLabel, truckLabel, zoneOrder } from "./labels";
 
 describe("zoneLabel", () => {
   it("รหัสสายของโซน 1–7 แปลงเป็นคำที่กองสาธารณสุขใช้เรียก", () => {
@@ -21,21 +21,6 @@ describe("zoneLabel", () => {
     expect(zoneLabel("XYZ")).toBe("XYZ");
     expect(zoneLabel("R0")).toBe("R0");
     expect(zoneLabel("R8")).toBe("R8");
-  });
-});
-
-describe("weekdayShort", () => {
-  it("ครบ 7 วันเรียงอาทิตย์→เสาร์ ตรงกับ Date.getDay()", () => {
-    expect([0, 1, 2, 3, 4, 5, 6].map(weekdayShort)).toEqual(["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]);
-  });
-
-  it("พุธกับพฤหัสต้องไม่ซ้ำกัน ไม่งั้นแถบ 7 วันอ่านไม่ออก", () => {
-    expect(weekdayShort(3)).not.toBe(weekdayShort(4));
-  });
-
-  it("เลขวันนอกช่วงคืนค่าว่าง", () => {
-    expect(weekdayShort(7)).toBe("");
-    expect(weekdayShort(-1)).toBe("");
   });
 });
 
