@@ -6,7 +6,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import { WASTE_GROUPS } from '@/lib/smart-waste/wasteGroups';
-import { FIRST_FISCAL_YEAR } from '@/lib/smart-waste/uiDate';
 import {
   StatCard, ghostBtnCls, tableHeadCls, formatKg,
   WASTE_GROUP_COLORS, YEAR_LINE_COLORS,
@@ -31,7 +30,10 @@ export default function SummaryDashboard({ fiscalYear, refreshTick }) {
           if (!res.ok) throw new Error((await res.json()).message || 'โหลดสรุปไม่สำเร็จ');
           return res.json();
         };
-        const hasPrev = fiscalYear - 1 >= FIRST_FISCAL_YEAR;
+        // ดึงปีก่อนหน้าเสมอ — ข้อมูลย้อนหลังคีย์เพิ่มได้ทุกปี (เช่น 2566)
+        // ปีที่ว่างเปล่า summary คืน recordedDays 0 แล้วกราฟเทียบถูกข้ามเอง
+        // (2500 คือขอบล่างที่ API ยอมรับ)
+        const hasPrev = fiscalYear - 1 >= 2500;
         const [current, previous] = await Promise.all([
           fetchYear(fiscalYear),
           hasPrev ? fetchYear(fiscalYear - 1) : Promise.resolve(null),
