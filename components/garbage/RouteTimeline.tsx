@@ -1,7 +1,14 @@
 import { useMemo, useState } from "react";
 import type { TruckColor } from "@/types/garbage";
 import { formatEta, formatThaiTime } from "@/lib/garbage/time";
-import { currentStopIndex, visibleStops, type TimelineRun, type TimelineStop } from "@/lib/garbage/timeline";
+import {
+  currentStopIndex,
+  lastTimedStopIndex,
+  runStatus,
+  visibleStops,
+  type TimelineRun,
+  type TimelineStop,
+} from "@/lib/garbage/timeline";
 import TruckSprite from "./TruckSprite";
 
 /** สีของสาย = สีรถที่วิ่งสายนั้น ตามคอนเวนชันจุดสีเดิมของโมดูล (เหลือง #fbbf24 · เขียว #10b981) */
@@ -35,13 +42,39 @@ export default function RouteTimeline({
   // runs เปลี่ยนความยาวได้ระหว่างโหลด (null → มีข้อมูล) จึงหนีบดัชนีไว้ไม่ให้ชี้เกินลิสต์
   const run = runs.length > 0 ? runs[Math.min(i, runs.length - 1)] : null;
 
-  const { curIdx, trackedIdx, visible, idxBySeq } = useMemo(() => {
-    if (!run) return { curIdx: -1, trackedIdx: -1, visible: [] as TimelineStop[], idxBySeq: new Map<number, number>() };
+  const { status, curIdx, trackedIdx, visible, idxBySeq, passedCount } = useMemo(() => {
+    if (!run) {
+      return {
+        status: "unknown" as const, curIdx: -1, trackedIdx: -1,
+        visible: [] as TimelineStop[], idxBySeq: new Map<number, number>(), passedCount: 0,
+      };
+    }
     const map = new Map(run.stops.map((s, idx) => [s.seq, idx]));
-    const cur = currentStopIndex(run.stops, nowMin);
+    const st = runStatus(run, nowMin);
+    // ตำแหน่งรถมีความหมายเฉพาะตอนกำลังวิ่ง — เลิกงานแล้ว currentStopIndex จะค้างชี้จุดสุดท้าย
+    const cur = st === "running" ? currentStopIndex(run.stops, nowMin) : -1;
+    // จุดที่ยึดเป็นศูนย์กลางตอนย่อ: กำลังวิ่งยึดตัวรถ · เลิกงานแล้วยึดจุดที่รถไปถึงช้าสุด
+    // (ไม่ใช่ท้ายลิสต์ — โซน 3 ท้ายลิสต์เก็บ 6.00 แต่รถเลิกงาน 11.15) · ยังไม่ออกยึดต้นสาย
+    const lastTimed = lastTimedStopIndex(run.stops);
+    const anchor =
+      st === "running" ? cur : st === "finished" ? (lastTimed >= 0 ? lastTimed : run.stops.length - 1) : -1;
     const tracked =
       trackedSeq && trackedSeq.routeCode === run.routeCode ? map.get(trackedSeq.seq) ?? -1 : -1;
-    return { curIdx: cur, trackedIdx: tracked, visible: visibleStops(run.stops, cur, tracked, expanded), idxBySeq: map };
+    return {
+      status: st,
+      curIdx: cur,
+      trackedIdx: tracked,
+      // เลิกงานแล้วไม่มีจุดถัดไป — ขอเฉพาะจุดก่อนหน้าให้จบที่จุดสุดท้ายของวัน
+      visible: visibleStops(
+        run.stops,
+        anchor,
+        tracked,
+        expanded,
+        st === "finished" ? { behind: 5, ahead: 0 } : { behind: 2, ahead: 3 }
+      ),
+      idxBySeq: map,
+      passedCount: st === "finished" ? run.stops.length : Math.max(0, cur + 1),
+    };
   }, [run, nowMin, trackedSeq, expanded]);
 
   if (!run) {
@@ -56,7 +89,7 @@ export default function RouteTimeline({
   const c = palette(run.truckColor);
   const prev = runs[(i - 1 + runs.length) % runs.length];
   const next = runs[(i + 1) % runs.length];
-  const passed = Math.max(0, curIdx + 1);
+  const finished = status === "finished";
 
   return (
     <section className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
@@ -65,9 +98,29 @@ export default function RouteTimeline({
           เส้นทางวัน{dayName} · {run.zoneLabel}
         </h2>
         <span className="text-[11px] text-slate-500">
-          {passed} จาก {run.stops.length} จุด
+          {passedCount} จาก {run.stops.length} จุด
         </span>
       </div>
+
+      {/* บอกสถานะของสายตรง ๆ — ตอนกำลังวิ่งไม่ต้องบอก เพราะการ์ด "รถกำลังอยู่จุดนี้" บอกอยู่แล้ว */}
+      {status !== "running" && (
+        <p
+          className={
+            "mt-2 rounded-xl px-3 py-2 text-[12px] font-semibold " +
+            (finished
+              ? "bg-slate-100 text-slate-600"
+              : status === "upcoming"
+                ? "bg-sky-50 text-sky-800"
+                : "bg-amber-50 text-amber-800")
+          }
+        >
+          {finished
+            ? "วันนี้รถเก็บครบทุกจุดแล้ว"
+            : status === "upcoming"
+              ? `วันนี้รถยังไม่ออกวิ่ง${run.startMin == null ? "" : ` · เริ่ม ${formatThaiTime(run.startMin)}`}`
+              : "สายนี้ยังไม่ระบุเวลา รอกองสาธารณสุขกรอกเพิ่ม"}
+        </p>
+      )}
 
       {runs.length > 1 && (
         <div className="mt-2.5 flex items-center gap-1.5">
@@ -104,7 +157,8 @@ export default function RouteTimeline({
           const idx = idxBySeq.get(st.seq) ?? -1;
           const isCurrent = idx === curIdx;
           const isTracked = idx === trackedIdx && !isCurrent;
-          const isPast = idx < curIdx && !isTracked;
+          // เลิกงานแล้วทุกจุดคือ "ผ่านแล้ว" ไม่ใช่ปล่อยให้ดูเหมือนยังรอรถอยู่
+          const isPast = (finished || idx < curIdx) && !isTracked;
           const time = st.atMin == null ? "–" : formatThaiTime(st.atMin).replace(" น.", "");
           const eta = st.atMin == null ? null : st.atMin - nowMin;
 
