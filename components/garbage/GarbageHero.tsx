@@ -4,8 +4,10 @@ import type { TrackedStop } from "@/lib/garbage/trackedStop";
 import TruckSprite from "./TruckSprite";
 
 interface Props {
-  /** จำนวนรถที่กำลังวิ่งอยู่ตอนนี้ (นับเป็นคัน) · null = ยังโหลดสถานะไม่เสร็จ */
-  runningCount: number | null;
+  /** ข้อความสถานะรถของวันนี้ — มาจาก summarizeLive() เพื่อให้พูดตรงกับการ์ดหน้าแรก */
+  statusText: string;
+  /** มีรถวิ่งจริงตอนนี้ไหม — คุมทั้งจุดกะพริบ ตัวรถวิ่ง และเส้นถนนไหล */
+  moving: boolean;
   weekdayToday: number;
   tracked: TrackedStop | null;
   /** นาทีก่อนรถถึงจุดที่ติดตาม — คิดจากตารางของวันนี้จริง ไม่ใช่จากค่าที่เก็บไว้ */
@@ -23,7 +25,8 @@ interface Props {
  * ของสดที่คนเปิดหน้านี้มาดู: รถกำลังวิ่งกี่คัน + อีกกี่นาทีรถถึงจุดที่ตัวเองติดตามไว้
  */
 export default function GarbageHero({
-  runningCount,
+  statusText,
+  moving,
   weekdayToday,
   tracked,
   etaMin,
@@ -41,13 +44,9 @@ export default function GarbageHero({
         <span className="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[.1em] text-emerald-300">
           <span
             aria-hidden
-            className={"h-1.5 w-1.5 rounded-full bg-emerald-300" + (runningCount ? " animate-pulse" : "")}
+            className={"h-1.5 w-1.5 rounded-full bg-emerald-300" + (moving ? " animate-pulse" : "")}
           />
-          {runningCount == null
-            ? "กำลังโหลดสถานะรถ"
-            : runningCount > 0
-              ? `รถกำลังวิ่ง ${runningCount} คัน`
-              : "ตอนนี้ไม่มีรถกำลังวิ่ง"}
+          {statusText}
         </span>
 
         {counting && tracked ? (
@@ -102,9 +101,9 @@ export default function GarbageHero({
 
       {/* สูงเท่ารูปรถพอดี ไม่ให้ล้นไปทับแถบ 7 วัน · เส้นถนนอยู่ระดับล้อ (ดูคำอธิบายใน GarbageHomeCard) */}
       <div className="relative mt-1 h-[84px]">
-        <div className="garbage-road absolute inset-x-0 bottom-[19px] h-1" />
+        <div className={"garbage-road absolute inset-x-0 bottom-[19px] h-1" + (moving ? " garbage-road-moving" : "")} />
         {hasSchedule && spriteTruck && (
-          <div className="animate-truck-drive absolute bottom-0 left-3">
+          <div className={"absolute bottom-0 left-3" + (moving ? " animate-truck-drive" : "")}>
             <TruckSprite number={spriteTruck.truckNumber} color={spriteTruck.truckColor} size={84} bob={false} />
           </div>
         )}

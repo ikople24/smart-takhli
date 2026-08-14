@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
-import type { LivePosition, ResolvedDaySchedule, TruckColor } from "@/types/garbage";
+import type { ResolvedDaySchedule } from "@/types/garbage";
 import GarbageHero from "@/components/garbage/GarbageHero";
 import GarbageSearchPanel from "@/components/garbage/GarbageSearchPanel";
 import DayOffNotice from "@/components/garbage/DayOffNotice";
@@ -10,6 +10,7 @@ import CoverageNote from "@/components/garbage/CoverageNote";
 import { minutesNowInBangkok, todayInBangkok, weekdayOf } from "@/lib/garbage/time";
 import { weekdayName } from "@/lib/garbage/labels";
 import { buildRuns, type TimelineRun, type TimelineStop } from "@/lib/garbage/timeline";
+import { summarizeLive, type LiveTruckLite } from "@/lib/garbage/liveSummary";
 import {
   parseTrackedStop,
   serializeTrackedStop,
@@ -22,19 +23,12 @@ interface Settings {
   contactNote: string | null;
 }
 
-interface LiveTruck {
-  truckNumber: number;
-  truckColor: TruckColor;
-  kind: string;
-  live: LivePosition;
-}
-
 const LIVE_POLL_MS = 60_000;
 
 export default function GarbagePage() {
   const [days, setDays] = useState<ResolvedDaySchedule[] | null>(null);
   const [settings, setSettings] = useState<Settings>({ contactPhone: null, contactNote: null });
-  const [liveTrucks, setLiveTrucks] = useState<LiveTruck[] | null>(null);
+  const [liveTrucks, setLiveTrucks] = useState<LiveTruckLite[] | null>(null);
   const [nowMin, setNowMin] = useState<number>(() => minutesNowInBangkok());
   const [tracked, setTracked] = useState<TrackedStop | null>(null);
 
@@ -127,14 +121,12 @@ export default function GarbagePage() {
   }, [tracked, runs]);
   const etaMin = trackedToday?.atMin != null ? trackedToday.atMin - nowMin : null;
 
-  const runningTrucks = (liveTrucks ?? []).filter((t) => t.live?.status === "running");
+  // สถานะรถ + คันที่โชว์รูป + ให้ภาพวิ่งไหม คิดที่ lib ตัวเดียวกับการ์ดหน้าแรก
+  const live = summarizeLive(liveTrucks);
   const spriteTruck = tracked
     ? { truckNumber: tracked.truckNumber, truckColor: tracked.truckColor }
-    : runningTrucks[0]
-      ? { truckNumber: runningTrucks[0].truckNumber, truckColor: runningTrucks[0].truckColor }
-      : runs[0]
-        ? { truckNumber: runs[0].truckNumber, truckColor: runs[0].truckColor }
-        : null;
+    : (live.spriteTruck ??
+      (runs[0] ? { truckNumber: runs[0].truckNumber, truckColor: runs[0].truckColor } : null));
 
   const writeTracked = useCallback((next: TrackedStop | null) => {
     setTracked(next);
@@ -176,7 +168,8 @@ export default function GarbagePage() {
 
       <div className="mx-auto w-full max-w-screen-sm space-y-4">
         <GarbageHero
-          runningCount={liveTrucks == null ? null : runningTrucks.length}
+          statusText={live.statusText}
+          moving={live.moving}
           weekdayToday={weekdayToday}
           tracked={tracked}
           etaMin={etaMin}

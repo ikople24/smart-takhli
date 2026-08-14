@@ -11,7 +11,7 @@
 | หน้าแอดมิน | `pages/admin/garbage.jsx` + `components/garbage/admin/{WeekScheduleView,ContactSettingsCard,AssignmentFormModal,StopTimesEditor,RouteManagerModal}.jsx` |
 | API สาธารณะ | `pages/api/garbage/{schedule,week,search,live}.ts` + `settings.ts` (GET) |
 | API ต้องล็อกอิน | `settings.ts` (PUT) · `assignments/index.ts` (POST) · `assignments/[id].ts` (PUT/DELETE) · `routes/index.ts` (GET) · `routes/[code].ts` (PUT) — ทุกเส้นผ่าน `pages/api/garbage/_auth.ts` |
-| Logic | `lib/garbage/{time,resolve,live,validators,labels,db,constants,overlap,stopEditing,community,nextPickup,timeline,trackedStop,dayOff}.ts` |
+| Logic | `lib/garbage/{time,resolve,live,validators,labels,db,constants,overlap,stopEditing,community,nextPickup,timeline,trackedStop,dayOff,liveSummary}.ts` |
 | Types | `types/garbage.ts` |
 | ข้อมูลตั้งต้น | `data/garbage/schedule-2569.json` + `scripts/import-garbage-schedule.mjs` (ดูหัวข้อ "ข้อมูลตั้งต้น") |
 | ถนน (GIS) | `public/road_takhli.geojson` + `scripts/import-roads.mjs` → collection `roads` |
@@ -98,8 +98,11 @@
 - **จุดที่ติดตาม** เก็บใน `localStorage` คีย์ `garbage.trackedStop` (`lib/garbage/trackedStop.ts`) — เป็นข้อมูลฝั่งผู้ใช้ **อ่านมาแล้วต้องตรวจชนิดทุกฟิลด์** เจอค่าเพี้ยนคืน `null` ห้ามโยน error เพราะการ์ดบนหน้าแรกอ่านคีย์นี้ · แตะจุดเดิมซ้ำ = เลิกติดตาม
 - **นับถอยหลังคิดจากตารางของวันนี้จริง** (`trackedToday`) ไม่ใช่ `atMin` ที่เก็บไว้ตอนกด — จุดเดียวกันคนละวันรถถึงไม่ตรงกัน (ถนนรจนาเก็บ 6 วัน คนละเวลาทุกวัน) · การ์ดหน้าแรกยิงแค่ `/live` จึงนับได้เฉพาะวันเดียวกับที่กดติดตาม (`trackedEta`) วันอื่นถอยไปเป็นข้อความชวนกด
 - **`formatEta()`** ใช้ทุกที่ที่นับถอยหลัง — เกิน 60 นาทีต้องเป็น "อีก 5 ชม. 20 นาที" ไม่ใช่ "อีก 320 นาที" (ชาวบ้านไม่หารเอง)
-- **animation อยู่ใน `styles/globals.css`** — `.animate-truck-bob` (จอดเก็บ) · `.animate-truck-drive` (ขับผ่านหัวการ์ด) · `.garbage-road` (เส้นถนนวิ่ง) ทั้งสามตัวถูกปิดใต้ `@media (prefers-reduced-motion: reduce)` **อย่าลบ guard นี้** · คลาสต้องอยู่ที่กรอบที่ครอบทั้งรูปและเลขคันรถ ไม่ใช่ที่ `<img>` ไม่งั้นเลขไม่ขยับตามรถ
-- **วันที่ไม่มีรถวิ่งต้องซ่อนรูปรถในหัวหน้า** (`hasSchedule`) ไม่ใช่ปล่อยรถวิ่งบนจอทั้งที่ไม่มีคันไหนออก
+- **animation อยู่ใน `styles/globals.css`** — `.animate-truck-bob` (จอดเก็บ) · `.animate-truck-drive` (ขับผ่านหัวการ์ด) · `.garbage-road` **เป็นเส้นประเฉย ๆ ไม่มี animation** ส่วน `.garbage-road-moving` คือตัวที่ทำให้เส้นไหล — แยกกันเพราะถนนต้องหยุดพร้อมรถ · ทั้งสามตัวถูกปิดใต้ `@media (prefers-reduced-motion: reduce)` **อย่าลบ guard นี้** · คลาสต้องอยู่ที่กรอบที่ครอบทั้งรูปและเลขคันรถ ไม่ใช่ที่ `<img>` ไม่งั้นเลขไม่ขยับตามรถ
+- **ภาพต้องตรงกับสถานะจริง** — `summarizeLive()` (`lib/garbage/liveSummary.ts`) เป็นตัวตัดสินทั้ง `statusText` `moving` และคันที่เอาไปโชว์รูป ใช้ร่วมกันทั้งการ์ดหน้าแรกและหัวหน้า `/garbage` ให้พูดตรงกัน · **`moving` จริงเฉพาะตอนมีรถ `running`** เก็บเสร็จแล้วรถต้องจอดนิ่งและถนนต้องหยุด ไม่ใช่ปล่อยรถวิ่งทั้งที่ป้ายบอกว่า "วันนี้รถเก็บครบแล้ว"
+- **รถ 13 ไม่มีเวลาในระบบจึงได้สถานะ `unknown` ตลอดวัน** — ตอนสรุปว่า "เก็บครบแล้ว" จึงตัดสินจากคันที่มีเวลาแล้วเท่านั้น ถ้าบังคับว่าทุกคันต้อง `finished` การ์ดจะไม่มีวันขึ้นว่าเก็บครบเลย
+- **วันที่ไม่มีรถวิ่งต้องซ่อนรูปรถในหัวหน้า** (`hasSchedule`) ไม่ใช่ปล่อยรถวิ่งบนจอทั้งที่ไม่มีคันไหนออก · การ์ดหน้าแรกโชว์รถเสมอถ้าวันนี้มีรถออก (ไล่ จุดที่ติดตาม → คันที่วิ่ง → คันแรกที่มีงาน) ไม่งั้นช่วงบ่ายการ์ดจะเหลือพื้นเขียวว่างครึ่งใบ
+- **แถบ 7 วันไม่มีตัวอักษรวันตามแบบ** — บรรทัดเล็กมุมขวาล่างของการ์ดหน้าแรกบอก "วันนี้วัน X" แทน ส่วนหน้า `/garbage` มีหัวข้อ "เส้นทางวันศุกร์" อยู่ใต้ลงมาแล้ว
 - `TodayTruckPanel` **ถูกลบ** ตอนเปลี่ยนเป็นไทม์ไลน์ · ป้าย "วันนี้รถหยุดดำเนินการหลายคัน" ย้ายไป `DayOffNotice` + `lib/garbage/dayOff.ts` เพราะไทม์ไลน์โชว์แต่คันที่วิ่ง ถ้าไม่มีป้ายนี้วันอังคารจะดูเหมือนมีรถแค่ 4 คันโดยไม่บอกว่าอีก 4 คันหยุด
 - **`CoverageNote` แยกสองเงื่อนไข** — วันที่ยังไม่มีตาราง (ถ้ามี) กับเบอร์ติดต่อ (ถ้าตั้งไว้) · เดิมคืน `null` ทันทีเมื่อไม่มีวันขาดข้อมูล ทำให้พอตารางครบ 7 วันแล้ว **เบอร์ติดต่อหายไปจากหน้าเว็บทั้งหมด**
 
