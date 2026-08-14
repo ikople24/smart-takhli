@@ -9,6 +9,13 @@ export function weekdayName(weekday: Weekday | number): string {
   return WEEKDAY_TH[weekday] ?? "";
 }
 
+/** ชื่อวันแบบสั้นสำหรับแถบ 7 วันบนมือถือ — "พฤ" สองตัวอักษรเพราะ "พ" ชนกับวันพุธ */
+export const WEEKDAY_TH_SHORT: string[] = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+
+export function weekdayShort(weekday: Weekday | number): string {
+  return WEEKDAY_TH_SHORT[weekday] ?? "";
+}
+
 /** ป้ายชนิดงานมอบหมาย — "normal" ไม่ต้องแสดงป้าย จึงคืนค่าว่าง */
 export const KIND_LABEL_TH: Record<AssignmentKind, string> = {
   normal: "",

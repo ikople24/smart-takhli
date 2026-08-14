@@ -1,22 +1,56 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
-import type { ResolvedDaySchedule } from "@/types/garbage";
+import type { LivePosition, ResolvedDaySchedule, TruckColor } from "@/types/garbage";
+import GarbageHero from "@/components/garbage/GarbageHero";
 import GarbageSearchPanel from "@/components/garbage/GarbageSearchPanel";
-import TodayTruckPanel from "@/components/garbage/TodayTruckPanel";
+import DayOffNotice from "@/components/garbage/DayOffNotice";
+import RouteTimeline from "@/components/garbage/RouteTimeline";
+import PrepChecklist from "@/components/garbage/PrepChecklist";
 import CoverageNote from "@/components/garbage/CoverageNote";
+import { minutesNowInBangkok, todayInBangkok, weekdayOf } from "@/lib/garbage/time";
+import { weekdayName } from "@/lib/garbage/labels";
+import { buildRuns, type TimelineRun, type TimelineStop } from "@/lib/garbage/timeline";
+import {
+  parseTrackedStop,
+  serializeTrackedStop,
+  TRACKED_STOP_KEY,
+  type TrackedStop,
+} from "@/lib/garbage/trackedStop";
 
 interface Settings {
   contactPhone: string | null;
   contactNote: string | null;
 }
 
-export default function GarbagePage() {
-  const [emptyWeekdays, setEmptyWeekdays] = useState<number[]>([]);
-  const [settings, setSettings] = useState<Settings>({ contactPhone: null, contactNote: null });
+interface LiveTruck {
+  truckNumber: number;
+  truckColor: TruckColor;
+  kind: string;
+  live: LivePosition;
+}
 
-  // ยิงครั้งเดียวตอนเปิด — ใช้รู้ว่าวันไหน "ไม่มีตารางเลย" (จาก /search อย่างเดียวแยกไม่ออก)
+const LIVE_POLL_MS = 60_000;
+
+export default function GarbagePage() {
+  const [days, setDays] = useState<ResolvedDaySchedule[] | null>(null);
+  const [settings, setSettings] = useState<Settings>({ contactPhone: null, contactNote: null });
+  const [liveTrucks, setLiveTrucks] = useState<LiveTruck[] | null>(null);
+  const [nowMin, setNowMin] = useState<number>(() => minutesNowInBangkok());
+  const [tracked, setTracked] = useState<TrackedStop | null>(null);
+
+  const today = todayInBangkok();
+  const weekdayToday = weekdayOf(today);
+
+  useEffect(() => {
+    try {
+      setTracked(parseTrackedStop(window.localStorage.getItem(TRACKED_STOP_KEY)));
+    } catch {
+      /* อ่าน localStorage ไม่ได้ (โหมดส่วนตัว) — ถือว่ายังไม่ได้ติดตามจุดไหน */
+    }
+  }, []);
+
   // สองก้อนนี้ต้องพังแยกกันจริง: settings ล่ม (เช่น proxy คืน HTML 502 ทำให้ .json() reject)
-  // ต้องไม่ทำให้แถบบอกวันที่รอข้อมูลหายไป เพราะกฎของโมดูลคือต้องบอกตรง ๆ ว่าวันไหนยังไม่มีตาราง
+  // ต้องไม่ทำให้เส้นทางของวันนี้หายไปด้วย
   useEffect(() => {
     let alive = true;
 
@@ -24,14 +58,11 @@ export default function GarbagePage() {
       try {
         const res = await fetch("/api/garbage/week");
         const json = await res.json();
+        // API ชุดนี้คืน { error } ไม่ใช่ { success, message }
         if (!alive || !res.ok || !Array.isArray(json?.days)) return;
-        setEmptyWeekdays(
-          (json.days as ResolvedDaySchedule[])
-            .filter((d) => d.assignments.length === 0)
-            .map((d) => d.weekday)
-        );
+        setDays(json.days as ResolvedDaySchedule[]);
       } catch {
-        // โหลดไม่ได้ก็ไม่แสดงแถบ — ช่องค้นหายังใช้งานได้ปกติ
+        /* โหลดไม่ได้ก็ยังค้นหาได้ ช่องค้นหายิง API ของตัวเอง */
       }
     };
 
@@ -45,16 +76,96 @@ export default function GarbagePage() {
           contactNote: json?.contactNote ?? null,
         });
       } catch {
-        // ไม่มีเบอร์ก็แสดงแถบได้ตามปกติ
+        /* ไม่มีเบอร์ก็แสดงหน้าได้ตามปกติ */
       }
     };
 
-    // แต่ละตัวมี try ของตัวเอง จึง reject ไม่ได้ — Promise.all ตรงนี้แค่ยิงขนานกัน
     Promise.all([loadWeek(), loadSettings()]);
     return () => {
       alive = false;
     };
   }, []);
+
+  // สถานะรถต้องสดกว่าตาราง — ยิงซ้ำทุกนาทีเพื่อให้ตำแหน่งรถบนไทม์ไลน์ขยับตามจริง
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      try {
+        const res = await fetch("/api/garbage/live");
+        const json = await res.json();
+        if (!alive || !res.ok) return;
+        setLiveTrucks(json?.trucks ?? []);
+        if (typeof json?.nowMin === "number") setNowMin(json.nowMin);
+      } catch {
+        // คงค่าเดิมไว้ แล้วเดินนาฬิกาต่อจากเครื่องผู้ใช้ — ไทม์ไลน์ต้องไม่ค้าง
+        if (alive) setNowMin(minutesNowInBangkok());
+      }
+    };
+    run();
+    const t = setInterval(run, LIVE_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const dayToday = useMemo(() => days?.find((d) => d.date === today) ?? null, [days, today]);
+  const runs = useMemo(() => (dayToday ? buildRuns(dayToday) : []), [dayToday]);
+  const emptyWeekdays = useMemo(
+    () => (days ?? []).filter((d) => d.assignments.length === 0).map((d) => d.weekday),
+    [days]
+  );
+
+  /**
+   * นับถอยหลังคิดจากตารางของ "วันนี้" จริง ไม่ใช่จาก atMin ที่เก็บไว้ตอนกดติดตาม
+   * จุดเดียวกันคนละวันรถถึงไม่ตรงกัน (ถนนรจนาเก็บ 6 วัน คนละเวลาทุกวัน)
+   */
+  const trackedToday = useMemo(() => {
+    if (!tracked) return null;
+    const run = runs.find((r) => r.routeCode === tracked.routeCode);
+    return run?.stops.find((s) => s.seq === tracked.seq) ?? null;
+  }, [tracked, runs]);
+  const etaMin = trackedToday?.atMin != null ? trackedToday.atMin - nowMin : null;
+
+  const runningTrucks = (liveTrucks ?? []).filter((t) => t.live?.status === "running");
+  const spriteTruck = tracked
+    ? { truckNumber: tracked.truckNumber, truckColor: tracked.truckColor }
+    : runningTrucks[0]
+      ? { truckNumber: runningTrucks[0].truckNumber, truckColor: runningTrucks[0].truckColor }
+      : runs[0]
+        ? { truckNumber: runs[0].truckNumber, truckColor: runs[0].truckColor }
+        : null;
+
+  const writeTracked = useCallback((next: TrackedStop | null) => {
+    setTracked(next);
+    try {
+      if (next) window.localStorage.setItem(TRACKED_STOP_KEY, serializeTrackedStop(next));
+      else window.localStorage.removeItem(TRACKED_STOP_KEY);
+    } catch {
+      /* เขียนไม่ได้ก็ยังใช้ได้ในหน้านี้ แค่ไม่ถูกจำไว้รอบหน้า */
+    }
+  }, []);
+
+  // แตะจุดเดิมอีกครั้ง = เลิกติดตาม (ไม่มีปุ่มลบแยก ผู้ใช้เดาได้จากจุดที่ไฮไลต์อยู่)
+  const selectStop = useCallback(
+    (run: TimelineRun, stop: TimelineStop) => {
+      if (tracked && tracked.routeCode === run.routeCode && tracked.seq === stop.seq) {
+        writeTracked(null);
+        return;
+      }
+      writeTracked({
+        routeCode: run.routeCode,
+        seq: stop.seq,
+        stopName: stop.name,
+        zoneLabel: run.zoneLabel,
+        truckNumber: run.truckNumber,
+        truckColor: run.truckColor,
+        atMin: stop.atMin,
+        weekday: weekdayToday,
+      });
+    },
+    [tracked, weekdayToday, writeTracked]
+  );
 
   return (
     <>
@@ -63,14 +174,38 @@ export default function GarbagePage() {
         <meta name="description" content="ค้นหาว่ารถเก็บขยะเข้าถนนหรือชุมชนของคุณวันไหน เวลาไหน" />
       </Head>
 
-      <div className="max-w-screen-sm mx-auto w-full space-y-4">
-        <div>
-          <h1 className="text-lg font-bold text-slate-800">ตารางรถเก็บขยะ</h1>
-          <p className="text-xs text-slate-500 mt-0.5">เทศบาลเมืองตาคลี · กองสาธารณสุขและสิ่งแวดล้อม</p>
-        </div>
+      <div className="mx-auto w-full max-w-screen-sm space-y-4">
+        <GarbageHero
+          runningCount={liveTrucks == null ? null : runningTrucks.length}
+          weekdayToday={weekdayToday}
+          tracked={tracked}
+          etaMin={etaMin}
+          arriveAtMin={trackedToday?.atMin ?? null}
+          hasSchedule={runs.length > 0}
+          spriteTruck={spriteTruck}
+          onClearTracked={() => writeTracked(null)}
+        />
 
         <GarbageSearchPanel />
-        <TodayTruckPanel />
+
+        {dayToday && <DayOffNotice assignments={dayToday.assignments} />}
+
+        {days == null ? (
+          <section className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+            <p className="text-sm text-slate-500">กำลังโหลดเส้นทางของวันนี้...</p>
+          </section>
+        ) : (
+          <RouteTimeline
+            runs={runs}
+            nowMin={nowMin}
+            dayName={weekdayName(weekdayToday)}
+            trackedSeq={tracked ? { routeCode: tracked.routeCode, seq: tracked.seq } : null}
+            onSelectStop={selectStop}
+          />
+        )}
+
+        <PrepChecklist />
+
         <CoverageNote
           emptyWeekdays={emptyWeekdays}
           contactPhone={settings.contactPhone}

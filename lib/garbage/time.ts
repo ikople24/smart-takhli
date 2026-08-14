@@ -43,6 +43,20 @@ export function formatRange(startMin: Minutes | null, endMin: Minutes | null): s
   return `${a} – ${b} น.`;
 }
 
+/**
+ * นาทีที่เหลือ → คำที่อ่านรู้เรื่อง: 12 → "อีก 12 นาที" · 300 → "อีก 5 ชม." · 320 → "อีก 5 ชม. 20 นาที"
+ * เกิน 60 นาทีต้องแปลงเป็นชั่วโมง ไม่งั้นชาวบ้านต้องหารเอง ("อีก 300 นาที" ไม่มีใครอ่านออกว่า 5 ชั่วโมง)
+ * 0 หรือติดลบ = รถผ่านไปแล้ว คืนค่าว่างให้ผู้เรียกเลือกข้อความเอง (แต่ละที่พูดไม่เหมือนกัน)
+ */
+export function formatEta(min: number | null | undefined): string {
+  if (min == null || !Number.isFinite(min) || min <= 0) return "";
+  const m = Math.round(min);
+  if (m < 60) return `อีก ${m} นาที`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest === 0 ? `อีก ${h} ชม.` : `อีก ${h} ชม. ${rest} นาที`;
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const BANGKOK_OFFSET_MS = 7 * 3600_000;
 

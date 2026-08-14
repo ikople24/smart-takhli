@@ -1,0 +1,201 @@
+import { useMemo, useState } from "react";
+import type { TruckColor } from "@/types/garbage";
+import { formatEta, formatThaiTime } from "@/lib/garbage/time";
+import { currentStopIndex, visibleStops, type TimelineRun, type TimelineStop } from "@/lib/garbage/timeline";
+import TruckSprite from "./TruckSprite";
+
+/** สีของสาย = สีรถที่วิ่งสายนั้น ตามคอนเวนชันจุดสีเดิมของโมดูล (เหลือง #fbbf24 · เขียว #10b981) */
+function palette(color: TruckColor) {
+  return color === "yellow"
+    ? { line: "#fbbf24", accent: "#b45309", cardBg: "#fffbeb", cardBorder: "#fde68a", title: "#78350f", sub: "#92400e" }
+    : { line: "#10b981", accent: "#047857", cardBg: "#ecfdf5", cardBorder: "#a7f3d0", title: "#064e3b", sub: "#065f46" };
+}
+
+/**
+ * เส้นทางแบบสายรถไฟฟ้า: จุดที่ผ่านแล้ว → จุดที่รถกำลังอยู่ → จุดถัดไป
+ * - ย่อไว้เฉพาะช่วงรอบตัวรถ (และจุดที่ติดตามไว้) กดขยายดูทั้งสายได้
+ * - หลายสายในวันเดียว กดปุ่มก่อนหน้า/ถัดไปเพื่อวนดู
+ * - กดแถวจุดใดก็ได้เพื่อติดตาม/เลิกติดตามจุดนั้น (ตัวตัดสินใจอยู่ที่หน้าเรียก)
+ */
+export default function RouteTimeline({
+  runs,
+  nowMin,
+  dayName,
+  trackedSeq,
+  onSelectStop,
+}: {
+  runs: TimelineRun[];
+  nowMin: number;
+  dayName: string;
+  trackedSeq?: { routeCode: string; seq: number } | null;
+  onSelectStop?: (run: TimelineRun, stop: TimelineStop) => void;
+}) {
+  const [i, setI] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  // runs เปลี่ยนความยาวได้ระหว่างโหลด (null → มีข้อมูล) จึงหนีบดัชนีไว้ไม่ให้ชี้เกินลิสต์
+  const run = runs.length > 0 ? runs[Math.min(i, runs.length - 1)] : null;
+
+  const { curIdx, trackedIdx, visible, idxBySeq } = useMemo(() => {
+    if (!run) return { curIdx: -1, trackedIdx: -1, visible: [] as TimelineStop[], idxBySeq: new Map<number, number>() };
+    const map = new Map(run.stops.map((s, idx) => [s.seq, idx]));
+    const cur = currentStopIndex(run.stops, nowMin);
+    const tracked =
+      trackedSeq && trackedSeq.routeCode === run.routeCode ? map.get(trackedSeq.seq) ?? -1 : -1;
+    return { curIdx: cur, trackedIdx: tracked, visible: visibleStops(run.stops, cur, tracked, expanded), idxBySeq: map };
+  }, [run, nowMin, trackedSeq, expanded]);
+
+  if (!run) {
+    return (
+      <section className="rounded-3xl bg-sky-50 p-4 ring-1 ring-sky-200">
+        <p className="text-sm font-medium text-sky-900">วัน{dayName}ยังไม่มีตารางในระบบ</p>
+        <p className="mt-1 text-xs text-sky-900/80">กองสาธารณสุขและสิ่งแวดล้อมกำลังจัดทำเพิ่ม</p>
+      </section>
+    );
+  }
+
+  const c = palette(run.truckColor);
+  const prev = runs[(i - 1 + runs.length) % runs.length];
+  const next = runs[(i + 1) % runs.length];
+  const passed = Math.max(0, curIdx + 1);
+
+  return (
+    <section className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-slate-800">
+          เส้นทางวัน{dayName} · {run.zoneLabel}
+        </h2>
+        <span className="text-[11px] text-slate-500">
+          {passed} จาก {run.stops.length} จุด
+        </span>
+      </div>
+
+      {runs.length > 1 && (
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => { setI((n) => (n - 1 + runs.length) % runs.length); setExpanded(false); }}
+            className="flex min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 hover:bg-slate-100"
+          >
+            <span aria-hidden className="leading-none text-teal-700">‹</span>
+            <span className="flex min-w-0 flex-col items-start">
+              <span className="text-[9px] text-slate-400">ก่อนหน้า</span>
+              <span className="whitespace-nowrap text-xs font-semibold text-slate-700">{prev.zoneLabel}</span>
+            </span>
+          </button>
+          <span className="whitespace-nowrap px-0.5 text-[10px] text-slate-400">
+            {i + 1}/{runs.length} สาย
+          </span>
+          <button
+            type="button"
+            onClick={() => { setI((n) => (n + 1) % runs.length); setExpanded(false); }}
+            className="flex min-w-0 flex-1 items-center justify-end gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 hover:bg-slate-100"
+          >
+            <span className="flex min-w-0 flex-col items-end">
+              <span className="text-[9px] text-slate-400">ถัดไป</span>
+              <span className="whitespace-nowrap text-xs font-semibold text-slate-700">{next.zoneLabel}</span>
+            </span>
+            <span aria-hidden className="leading-none text-teal-700">›</span>
+          </button>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-col">
+        {visible.map((st) => {
+          const idx = idxBySeq.get(st.seq) ?? -1;
+          const isCurrent = idx === curIdx;
+          const isTracked = idx === trackedIdx && !isCurrent;
+          const isPast = idx < curIdx && !isTracked;
+          const time = st.atMin == null ? "–" : formatThaiTime(st.atMin).replace(" น.", "");
+          const eta = st.atMin == null ? null : st.atMin - nowMin;
+
+          return (
+            <button
+              type="button"
+              key={run.routeCode + "-" + st.seq}
+              onClick={() => onSelectStop?.(run, st)}
+              aria-label={
+                (idx === trackedIdx ? "เลิกติดตาม" : "ติดตาม") +
+                `จุด ${st.name}` +
+                (st.atMin == null ? " (ยังไม่ระบุเวลา)" : ` รถถึงประมาณ ${formatThaiTime(st.atMin)}`)
+              }
+              className="grid w-full items-center gap-x-2.5 rounded-xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+              style={{ gridTemplateColumns: "50px 26px 1fr", minHeight: isCurrent ? 60 : isTracked ? 46 : 38 }}
+            >
+              <span
+                className="text-right font-mono text-xs"
+                style={{
+                  color: isCurrent || isTracked ? c.accent : isPast ? "#94a3b8" : "#64748b",
+                  fontWeight: isCurrent ? 600 : 400,
+                }}
+              >
+                {time}
+              </span>
+
+              <span aria-hidden className="relative flex h-full w-[26px] items-center justify-center justify-self-center">
+                <span
+                  className="absolute inset-y-0 w-1"
+                  style={{
+                    background: isCurrent
+                      ? `linear-gradient(${c.line} 52%, #e2e8f0 52%)`
+                      : isPast
+                        ? c.line
+                        : "#e2e8f0",
+                  }}
+                />
+                {isCurrent ? (
+                  <span className="relative h-[18px] w-[18px] rounded-full border-[5px] bg-white" style={{ borderColor: c.line }} />
+                ) : isTracked ? (
+                  <span className="relative h-[15px] w-[15px] rounded-full border-4 bg-white" style={{ borderColor: c.line }} />
+                ) : isPast ? (
+                  <span className="relative h-[11px] w-[11px] rounded-full" style={{ background: c.line }} />
+                ) : (
+                  <span className="relative h-[11px] w-[11px] rounded-full border-[3px] border-slate-300 bg-white" />
+                )}
+              </span>
+
+              {isCurrent ? (
+                <span
+                  className="flex items-center justify-between gap-2 rounded-2xl px-3 py-2"
+                  style={{ background: c.cardBg, border: `1px solid ${c.cardBorder}` }}
+                >
+                  <span className="flex flex-col">
+                    <span className="text-sm font-bold" style={{ color: c.title }}>{st.name}</span>
+                    <span className="text-[11px]" style={{ color: c.sub }}>
+                      รถกำลังอยู่จุดนี้{idx === trackedIdx ? " · จุดที่คุณติดตาม" : ""}
+                    </span>
+                  </span>
+                  <span className="-my-3.5 -mr-1">
+                    <TruckSprite number={run.truckNumber} color={run.truckColor} size={62} />
+                  </span>
+                </span>
+              ) : isTracked ? (
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-800">{st.name}</span>
+                  <span className="whitespace-nowrap text-[11px] font-semibold" style={{ color: c.accent }}>
+                    จุดของคุณ · {eta == null ? "ยังไม่ระบุเวลา" : eta > 0 ? formatEta(eta) : "รถผ่านแล้ว"}
+                  </span>
+                </span>
+              ) : (
+                <span className={"text-[13px] " + (isPast ? "text-slate-400 line-through" : "text-slate-600")}>
+                  {st.name}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="mt-2 w-full rounded-xl bg-teal-50 py-2.5 text-xs font-bold text-teal-700 hover:bg-teal-100"
+      >
+        {expanded ? "ย่อกลับเฉพาะช่วงที่รถอยู่" : `ดูทั้ง ${run.stops.length} จุด`}
+      </button>
+
+      <p className="mt-2 text-center text-[11px] text-slate-400">
+        แตะจุดที่ผ่านหน้าบ้านคุณเพื่อติดตาม แล้วหน้าแรกจะนับถอยหลังให้
+      </p>
+    </section>
+  );
+}
