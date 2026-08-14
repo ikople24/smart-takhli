@@ -25,6 +25,7 @@ const HEADERS = [
   'สถานะ',
   'เงินทุน',
   'ลิงก์แผนที่',
+  'หมายเหตุ',
 ];
 
 function csvCell(value) {
@@ -55,6 +56,7 @@ function rowCells(row) {
     row.status || '',
     row.scholarshipAmount ?? '',
     mapsLink(row.location),
+    row.note || '',
   ];
 }
 
