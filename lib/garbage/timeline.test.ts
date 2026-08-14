@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import type { ResolvedAssignment, ResolvedDaySchedule } from "@/types/garbage";
-import { buildRuns, currentStopIndex, visibleStops } from "./timeline";
+import {
+  buildRuns,
+  currentStopIndex,
+  lastTimedStopIndex,
+  runStatus,
+  visibleStops,
+  type TimelineRun,
+} from "./timeline";
 
 /** งานหนึ่งรายการแบบย่อ — ใส่เฉพาะฟิลด์ที่ buildRuns ใช้ ที่เหลือเป็นค่ากลาง ๆ */
 function assignment(over: Partial<ResolvedAssignment>): ResolvedAssignment {
@@ -94,6 +101,14 @@ describe("buildRuns", () => {
     expect(runs.map((r) => r.zoneLabel)).toEqual(["โซน 2", "รถยกภาชนะรองรับ"]);
   });
 
+  it("ต้องพ่วงเวลาเริ่ม–สิ้นสุดของงานมาด้วย ไม่งั้นไทม์ไลน์ไม่รู้ว่าเลิกงานหรือยัง", () => {
+    const runs = buildRuns(
+      day([assignment({ startMin: 240, endMin: 720, stops: [stop(1, "ก", true, 240)] })])
+    );
+    expect(runs[0].startMin).toBe(240);
+    expect(runs[0].endMin).toBe(720);
+  });
+
   it("คงลำดับที่ API ส่งมา (หน้าประชาชนเรียงตามเวลาออกวิ่ง)", () => {
     const runs = buildRuns(
       day([
@@ -102,6 +117,53 @@ describe("buildRuns", () => {
       ])
     );
     expect(runs.map((r) => r.truckNumber)).toEqual([6, 1]);
+  });
+});
+
+describe("runStatus", () => {
+  const run = (over: Partial<TimelineRun> = {}): TimelineRun => ({
+    routeCode: "R1",
+    zoneLabel: "โซน 1",
+    truckNumber: 1,
+    truckColor: "yellow",
+    startMin: 240,
+    endMin: 720,
+    stops: [
+      { seq: 1, name: "ก", atMin: 240 },
+      { seq: 2, name: "ข", atMin: 720 },
+    ],
+    ...over,
+  });
+
+  it("เลยเวลาเลิกงานแล้ว = เก็บครบแล้ว — ห้ามค้างว่ารถยังอยู่จุดสุดท้ายทั้งเย็น", () => {
+    expect(runStatus(run(), 915)).toBe("finished");
+  });
+
+  it("ยังไม่ถึงเวลาออก = ยังไม่เริ่ม", () => {
+    expect(runStatus(run(), 120)).toBe("upcoming");
+  });
+
+  it("อยู่ในช่วงเวลาทำงาน = กำลังวิ่ง (นาทีสุดท้ายยังนับว่าวิ่งอยู่)", () => {
+    expect(runStatus(run(), 240)).toBe("running");
+    expect(runStatus(run(), 500)).toBe("running");
+    expect(runStatus(run(), 720)).toBe("running");
+    expect(runStatus(run(), 721)).toBe("finished");
+  });
+
+  it("ไม่มีเวลาเริ่ม/สิ้นสุด แต่มีเวลารายจุด ให้อนุมานจากจุดแรกกับจุดสุดท้าย", () => {
+    const r = run({ startMin: null, endMin: null });
+    expect(runStatus(r, 120)).toBe("upcoming");
+    expect(runStatus(r, 500)).toBe("running");
+    expect(runStatus(r, 915)).toBe("finished");
+  });
+
+  it("ไม่มีเวลาเลย (รถยกภาชนะที่ยังไม่กรอกเวลา) = ไม่รู้สถานะ ไม่ใช่เดาว่าเสร็จแล้ว", () => {
+    const r = run({
+      startMin: null,
+      endMin: null,
+      stops: [{ seq: 1, name: "รพ.ตาคลี", atMin: null }],
+    });
+    expect(runStatus(r, 915)).toBe("unknown");
   });
 });
 
@@ -143,6 +205,38 @@ describe("currentStopIndex", () => {
   });
 });
 
+describe("lastTimedStopIndex", () => {
+  it("จุดที่รถไปถึงช้าสุด ไม่ใช่จุดท้ายลิสต์ — ของจริงโซน 3 ท้ายลิสต์เก็บ 6.00 แต่เลิกงาน 11.15", () => {
+    const stops = [
+      { seq: 1, name: "ก", atMin: 270 },
+      { seq: 2, name: "ข", atMin: 675 },
+      { seq: 3, name: "ค", atMin: 360 },
+    ];
+    expect(lastTimedStopIndex(stops)).toBe(1);
+  });
+
+  it("เวลาเท่ากันเอาตัวที่อยู่หลังในลิสต์", () => {
+    const stops = [
+      { seq: 1, name: "ก", atMin: 300 },
+      { seq: 2, name: "ข", atMin: 300 },
+    ];
+    expect(lastTimedStopIndex(stops)).toBe(1);
+  });
+
+  it("ข้ามจุดที่ไม่มีเวลา", () => {
+    const stops = [
+      { seq: 1, name: "ก", atMin: 300 },
+      { seq: 2, name: "ข", atMin: null },
+    ];
+    expect(lastTimedStopIndex(stops)).toBe(0);
+  });
+
+  it("ไม่มีจุดไหนมีเวลาเลย = -1", () => {
+    expect(lastTimedStopIndex([{ seq: 1, name: "ก", atMin: null }])).toBe(-1);
+    expect(lastTimedStopIndex([])).toBe(-1);
+  });
+});
+
 describe("visibleStops", () => {
   const stops = Array.from({ length: 12 }, (_, i) => ({ seq: i + 1, name: `จุด ${i + 1}`, atMin: 240 + i * 10 }));
 
@@ -156,6 +250,11 @@ describe("visibleStops", () => {
     expect(vis.map((s) => s.seq)).toContain(11);
     // ต้องไม่สลับลำดับ — จุดที่ติดตามอยู่ท้ายสายก็ต้องอยู่ท้ายลิสต์
     expect(vis.map((s) => s.seq)).toEqual([1, 2, 3, 4, 5, 6, 11]);
+  });
+
+  it("ปรับช่วงได้ — สายที่เลิกงานแล้วไม่มีจุดถัดไป จึงขอเฉพาะจุดก่อนหน้า", () => {
+    const vis = visibleStops(stops, 7, -1, false, { behind: 5, ahead: 0 });
+    expect(vis.map((s) => s.seq)).toEqual([3, 4, 5, 6, 7, 8]);
   });
 
   it("กางแล้วเห็นทั้งสาย", () => {
