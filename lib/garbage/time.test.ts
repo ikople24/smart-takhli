@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  formatEta,
   parseThaiTime,
   formatThaiTime,
   formatRange,
@@ -203,5 +204,32 @@ describe("weekDatesOf", () => {
   it("รูปแบบวันที่ผิดต้องโยน error", () => {
     expect(() => weekDatesOf("2026-8-9")).toThrow();
     expect(() => weekDatesOf("ไม่ใช่วันที่")).toThrow();
+  });
+});
+
+describe("formatEta", () => {
+  it("ต่ำกว่าชั่วโมงบอกเป็นนาที", () => {
+    expect(formatEta(1)).toBe("อีก 1 นาที");
+    expect(formatEta(12)).toBe("อีก 12 นาที");
+    expect(formatEta(59)).toBe("อีก 59 นาที");
+  });
+
+  it("เกินชั่วโมงต้องแปลงเป็นชั่วโมง — 'อีก 300 นาที' ไม่มีใครอ่านออกว่า 5 ชั่วโมง", () => {
+    expect(formatEta(60)).toBe("อีก 1 ชม.");
+    expect(formatEta(300)).toBe("อีก 5 ชม.");
+    expect(formatEta(320)).toBe("อีก 5 ชม. 20 นาที");
+  });
+
+  it("รถผ่านไปแล้วหรือไม่มีค่า คืนค่าว่างให้ผู้เรียกเลือกข้อความเอง", () => {
+    expect(formatEta(0)).toBe("");
+    expect(formatEta(-5)).toBe("");
+    expect(formatEta(null)).toBe("");
+    expect(formatEta(undefined)).toBe("");
+    expect(formatEta(Number.NaN)).toBe("");
+  });
+
+  it("เศษวินาทีปัดเป็นนาทีเต็ม ไม่โชว์ทศนิยม", () => {
+    expect(formatEta(12.4)).toBe("อีก 12 นาที");
+    expect(formatEta(59.6)).toBe("อีก 1 ชม.");
   });
 });

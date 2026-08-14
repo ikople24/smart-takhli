@@ -8,7 +8,7 @@
 | ชั้น | ไฟล์ |
 |---|---|
 | หน้า | `pages/admin/smart-waste.jsx` — หน้าเดียว 3 แท็บ (บันทึก · ข้อมูล · สรุป) + modal จัดการประเภท |
-| API | `pages/api/smart-waste/` — `_auth.js` (requireWasteAdmin/Superadmin) · `types/` · `daily/` · `summary` · `export` · `import` |
+| API | `pages/api/smart-waste/` — `_auth.js` (requireWasteAdmin/Superadmin) · `types/` · `daily/` · `summary` · `years` (ปีงบที่มีข้อมูล — ป้อน YearPills) · `export` · `import` |
 | Components | `components/smart-waste/` — `wasteTheme.jsx` · `entry/` (DailyEntryForm, TypePickerSheet, TotalBar) · `admin/` (MonthTable, SummaryDashboard, TypeManagerModal) |
 | Logic | `lib/smart-waste/` — wasteGroups (8 กลุ่ม fixed) · wasteTypesSeed (24 ประเภท) · fiscalYear · aggregate (computeTotals ที่เดียว) · importWorkbook · exportWorkbook · uiDate · เทสต์ vitest ใน `__tests__/` |
 | Models | `models/smart-waste/WasteType.js` (`smart_waste_types`) · `WasteDaily.js` (`smart_waste_daily` — 1 doc = 1 วัน, unique `recordDate` แบบ 'YYYY-MM-DD') |

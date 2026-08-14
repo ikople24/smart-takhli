@@ -8,7 +8,7 @@ import MonthTable from '@/components/smart-waste/admin/MonthTable';
 import TypeManagerModal from '@/components/smart-waste/admin/TypeManagerModal';
 import { DashboardHeader, PillTabs, YearPills, cardCls } from '@/components/smart-waste/wasteTheme';
 import { bangkokToday } from '@/lib/smart-waste/fiscalYear';
-import { listFiscalYears } from '@/lib/smart-waste/uiDate';
+import { listFiscalYears, mergeFiscalYears } from '@/lib/smart-waste/uiDate';
 
 // recharts หนัก — โหลดเฉพาะฝั่ง client ตอนเปิดแท็บสรุปเท่านั้น
 const SummaryDashboard = dynamic(
@@ -32,8 +32,10 @@ export default function SmartWastePage() {
   const [managerOpen, setManagerOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0); // บันทึกสำเร็จ → บังคับแท็บอื่นโหลดใหม่
 
-  const years = listFiscalYears(bangkokToday());
-  const [fiscalYear, setFiscalYear] = useState(years[0]);
+  // เริ่มด้วยช่วงมาตรฐาน (ปีปัจจุบัน→2568) แล้วเติมปีที่มีข้อมูลจริงจาก API ทับ
+  // — พนักงานคีย์ย้อนหลังปีเก่ากว่านั้นได้ (เช่น 2566) pills ต้องตามข้อมูลจริง
+  const [years, setYears] = useState(() => listFiscalYears(bangkokToday()));
+  const [fiscalYear, setFiscalYear] = useState(() => listFiscalYears(bangkokToday())[0]);
 
   const fetchTypes = useCallback(async () => {
     try {
@@ -45,7 +47,19 @@ export default function SmartWastePage() {
     }
   }, []);
 
+  // โหลดปีที่มีข้อมูล — fail แล้วเงียบได้ (pills ยังมีช่วงมาตรฐานให้ใช้)
+  const fetchYears = useCallback(async () => {
+    try {
+      const res = await fetch('/api/smart-waste/years');
+      if (!res.ok) return;
+      const { years: dataYears } = await res.json();
+      setYears(mergeFiscalYears(dataYears, bangkokToday()));
+    } catch { /* ใช้ช่วงมาตรฐานต่อ */ }
+  }, []);
+
   useEffect(() => { fetchTypes(); }, [fetchTypes]);
+  // refreshTick ด้วย — บันทึก/นำเข้าข้อมูลปีใหม่แล้ว pill ปีนั้นต้องโผล่ทันที
+  useEffect(() => { fetchYears(); }, [fetchYears, refreshTick]);
 
   const openEntryAt = (recordDate) => {
     setEditDate(recordDate);

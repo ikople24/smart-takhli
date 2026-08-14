@@ -1022,3 +1022,38 @@ body.survey-form-open .app-bottom-nav {
   width: auto !important;
   line-height: 1.2;
 }
+
+/* ===== ลูกเล่นหน้าตารางรถขยะ (/garbage) =====
+   ตัวรถกระเพื่อมเบา ๆ ตอนจอดเก็บ · ขับผ่านจอในหัวการ์ด · เส้นถนนวิ่งสวนทางให้รู้สึกว่ารถเคลื่อนที่
+   animation ต้องอยู่ที่กรอบที่ครอบทั้งรูปและเลขคันรถ ไม่ใช่ที่ <img> ไม่งั้นเลขไม่ขยับตามรถ */
+@keyframes truck-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes truck-drive {
+  0% { transform: translateX(-14%); }
+  100% { transform: translateX(104%); }
+}
+@keyframes garbage-road {
+  to { background-position-x: -30px; }
+}
+
+.animate-truck-bob { animation: truck-bob 2.4s ease-in-out infinite; }
+.animate-truck-drive { animation: truck-drive 12s linear infinite; }
+
+/* ถนนแยกสองคลาส: เส้นประอยู่ตลอด แต่ "วิ่ง" เฉพาะตอนที่มีรถวิ่งจริง
+   ถนนไหลตอนรถเก็บเสร็จแล้วจะขัดกับป้ายที่บอกว่า "วันนี้รถเก็บครบแล้ว" */
+.garbage-road {
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.4) 0 18px, rgba(255,255,255,0) 18px 30px);
+  background-size: 30px 4px;
+}
+.garbage-road-moving { animation: garbage-road 1.2s linear infinite; }
+
+/* เคารพการตั้งค่าเครื่องของผู้ใช้ — คนที่เวียนหัวกับภาพเคลื่อนไหวต้องได้หน้านิ่ง */
+@media (prefers-reduced-motion: reduce) {
+  .animate-truck-bob,
+  .animate-truck-drive,
+  .garbage-road-moving {
+    animation: none;
+  }
+}
