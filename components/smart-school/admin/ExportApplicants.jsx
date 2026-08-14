@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SCHOLARSHIP_LEVELS, levelBucket, bucketInfo } from '@/lib/smart-school/scholarshipLevels';
 import { renewalStatus } from '@/lib/smart-school/takhliScholarship';
+import { GRADE_LEVELS } from '@/lib/smart-school/gradeLevels';
 
 // ปุ่ม export ผู้สมัคร → CSV ไฟล์เดียว จัดกลุ่มตาม 5 กลุ่มทุน (scholarshipLevels.js)
 // รูปแบบ CSV/BOM ยึดแพตเทิร์นเดียวกับ components/complaints/ExportComplaints.js (เปิดใน Excel ไทยไม่เพี้ยน)
@@ -9,6 +10,19 @@ import { renewalStatus } from '@/lib/smart-school/takhliScholarship';
 const UNKNOWN_KEY = '__unknown__';
 
 const RENEWAL_LABEL = { old: 'เก่า', new: 'ใหม่', unknown: 'ไม่ระบุ' };
+
+// ลำดับชั้นมาตรฐานเรียงเล็ก→ใหญ่ (อ.1 … ปี 5) — ใช้จัดเรียงในกลุ่ม ให้ ม.4 มาก่อน ปวช.1 ในบัคเก็ตเดียวกัน
+const GRADE_ORDER = Object.values(GRADE_LEVELS).flat();
+const gradeIndex = (g) => {
+  const i = GRADE_ORDER.indexOf(String(g || '').trim());
+  return i === -1 ? Infinity : i; // ไม่กรอก / ค่าเก่านอกมาตรฐาน = ไว้ท้ายกลุ่ม
+};
+
+// ช่องว่าง/ไม่กรอก → "-" (ตามที่ขอ ให้เห็นชัดว่าไม่มีข้อมูล ไม่ใช่ช่องว่าง)
+const dash = (v) => {
+  const s = v == null ? '' : String(v).trim();
+  return s === '' ? '-' : s;
+};
 
 const HEADERS = [
   'ลำดับจัดสรร',
@@ -47,8 +61,8 @@ function rowCells(row) {
     `${row.prefix || ''}${row.name || ''}`.trim(),
     row.phone || '',
     row.schoolName || '',
-    row.gradeLevel || '',
-    row.gpa ?? '',
+    dash(row.gradeLevel),
+    dash(row.gpa),
     row.address || '',
     row.annualIncome ?? '',
     row.householdMembers ?? '',
@@ -60,13 +74,15 @@ function rowCells(row) {
   ];
 }
 
-// เรียงในกลุ่ม: มีลำดับจัดสรรก่อน (น้อย→มาก) แล้วค่อยตัวที่ยังไม่ให้ลำดับ (เรียงตามชื่อ)
+// เรียงในกลุ่ม: ตามระดับชั้น (อ.1→อ.2→…) ก่อน แล้วรายได้น้อย→มากในระดับเดียวกัน แล้วชื่อ
+// (ไม่เรียงตามเกรด/ลำดับจัดสรร — เป็นข้อมูลในคอลัมน์เฉย ๆ)
 function sortInGroup(a, b) {
-  const ra = a.scholarshipRank;
-  const rb = b.scholarshipRank;
-  if (ra != null && rb != null) return ra - rb;
-  if (ra != null) return -1;
-  if (rb != null) return 1;
+  const ga = gradeIndex(a.gradeLevel);
+  const gb = gradeIndex(b.gradeLevel);
+  if (ga !== gb) return ga - gb;
+  const ia = Number(a.annualIncome) || 0;
+  const ib = Number(b.annualIncome) || 0;
+  if (ia !== ib) return ia - ib;
   return `${a.name || ''}`.localeCompare(`${b.name || ''}`, 'th');
 }
 
