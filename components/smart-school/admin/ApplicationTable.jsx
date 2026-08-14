@@ -16,10 +16,12 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
   const [renewalFilter, setRenewalFilter] = useState('all'); // all | renewal | new
   const [levelTab, setLevelTab] = useState('all');
   const [citizenFilter, setCitizenFilter] = useState('all'); // all | has | none
+  // default = รายได้น้อย→มาก: เปิดหน้ามาให้คนรายได้น้อยขึ้นก่อน (ตรงกับงานจัดสรรทุน)
+  const [sortBy, setSortBy] = useState('income-asc'); // income-asc | income-desc | default
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
+    const out = rows.filter((r) => {
       if (levelTab !== 'all' && levelBucket(r.educationLevel) !== levelTab) return false;
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       // กรองตามสถานะที่ badge แสดงจริง (รวมคำแจ้งของผู้กรอก) ไม่ใช่ isRenewal ดิบ
@@ -30,7 +32,12 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
       return [r.name, r.applicationId, r.phone, r.address, r.schoolName]
         .some((v) => (v || '').toLowerCase().includes(q));
     });
-  }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter]);
+    // เรียงหลังกรอง — รายได้ว่าง/ไม่มี = 0 · sort() ของ V8 stable ค่าเท่ากันคงลำดับเดิม
+    const inc = (r) => Number(r.annualIncome) || 0;
+    if (sortBy === 'income-asc') out.sort((a, b) => inc(a) - inc(b));
+    else if (sortBy === 'income-desc') out.sort((a, b) => inc(b) - inc(a));
+    return out;
+  }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter, sortBy]);
 
   return (
     <div className={cardCls + ' p-4 space-y-3'}>
@@ -72,6 +79,12 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
           <option value="all">เลขบัตร: ทั้งหมด</option>
           <option value="has">มีเลขบัตรแล้ว</option>
           <option value="none">ยังไม่มีเลขบัตร</option>
+        </select>
+        <select className="select select-bordered select-sm" value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}>
+          <option value="income-asc">เรียง: รายได้ น้อย→มาก</option>
+          <option value="income-desc">เรียง: รายได้ มาก→น้อย</option>
+          <option value="default">เรียง: ล่าสุด</option>
         </select>
         <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
       </div>

@@ -10,6 +10,12 @@ const UNKNOWN_KEY = '__unknown__';
 
 const RENEWAL_LABEL = { old: 'เก่า', new: 'ใหม่', unknown: 'ไม่ระบุ' };
 
+// ช่องว่าง/ไม่กรอก → "-" (ตามที่ขอ ให้เห็นชัดว่าไม่มีข้อมูล ไม่ใช่ช่องว่าง)
+const dash = (v) => {
+  const s = v == null ? '' : String(v).trim();
+  return s === '' ? '-' : s;
+};
+
 const HEADERS = [
   'ลำดับจัดสรร',
   'รหัสใบสมัคร',
@@ -25,6 +31,7 @@ const HEADERS = [
   'สถานะ',
   'เงินทุน',
   'ลิงก์แผนที่',
+  'หมายเหตุ',
 ];
 
 function csvCell(value) {
@@ -46,8 +53,8 @@ function rowCells(row) {
     `${row.prefix || ''}${row.name || ''}`.trim(),
     row.phone || '',
     row.schoolName || '',
-    row.gradeLevel || '',
-    row.gpa ?? '',
+    dash(row.gradeLevel),
+    dash(row.gpa),
     row.address || '',
     row.annualIncome ?? '',
     row.householdMembers ?? '',
@@ -55,16 +62,15 @@ function rowCells(row) {
     row.status || '',
     row.scholarshipAmount ?? '',
     mapsLink(row.location),
+    row.note || '',
   ];
 }
 
-// เรียงในกลุ่ม: มีลำดับจัดสรรก่อน (น้อย→มาก) แล้วค่อยตัวที่ยังไม่ให้ลำดับ (เรียงตามชื่อ)
+// เรียงในกลุ่ม: รายได้น้อย→มาก แล้วชื่อ (ไม่เรียงตามระดับชั้น/เกรด — เป็นข้อมูลในคอลัมน์เฉย ๆ)
 function sortInGroup(a, b) {
-  const ra = a.scholarshipRank;
-  const rb = b.scholarshipRank;
-  if (ra != null && rb != null) return ra - rb;
-  if (ra != null) return -1;
-  if (rb != null) return 1;
+  const ia = Number(a.annualIncome) || 0;
+  const ib = Number(b.annualIncome) || 0;
+  if (ia !== ib) return ia - ib;
   return `${a.name || ''}`.localeCompare(`${b.name || ''}`, 'th');
 }
 
