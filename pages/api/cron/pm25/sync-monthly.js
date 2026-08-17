@@ -11,10 +11,8 @@ export default async function handler(req, res) {
     return res.status(sec.status).json({ success: false, message: sec.message });
   }
 
-  const force = req.query?.force === "1" || req.query?.force === "true";
-
   try {
-    const result = await syncPm25Monthly({ force });
+    const result = await syncPm25Monthly();
     const status = result.success ? 200 : 502;
     return res.status(status).json({ success: result.success, job: "monthly", ...result });
   } catch (error) {
