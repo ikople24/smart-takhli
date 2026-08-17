@@ -15,7 +15,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const satisfaction = await Satisfaction.findOne({ complaintId }).lean();
+    // เอนด์พอยต์นี้ไม่มี auth — select เฉพาะฟิลด์ที่ปลอดภัยต่อการเปิดสาธารณะ
+    // (ห้ามคืนทั้ง document เพราะแถว source: 'line' มี lineUserId ของประชาชนติดไปด้วย)
+    const satisfaction = await Satisfaction.findOne({ complaintId })
+      .select("rating comment createdAt")
+      .lean();
     
     if (!satisfaction) {
       return res.status(200).json({ success: true, data: null });

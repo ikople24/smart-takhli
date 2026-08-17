@@ -131,7 +131,7 @@ export function formatRatingThanks(score: number, updated = false): TextMessage 
     type: 'text',
     text: updated
       ? `อัปเดตเป็น ${starText(score)} แล้วครับ`
-      : `ขอบคุณครับ ${starText(score)}\nอยากเล่าเพิ่มพิมพ์มาได้เลยตอนนี้ ถ้าไม่สะดวกข้ามได้ครับ`,
+      : `ขอบคุณครับ ${starText(score)}\nอยากเล่าเพิ่มพิมพ์มาได้เลยตอนนี้ (ความเห็นอาจแสดงบนเว็บของเทศบาล) ถ้าไม่สะดวกข้ามได้ครับ`,
   };
 }
 

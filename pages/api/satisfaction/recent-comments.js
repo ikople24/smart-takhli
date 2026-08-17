@@ -19,9 +19,16 @@ export default async function handler(req, res) {
       .limit(limit)
       .lean();
 
+    // เอนด์พอยต์นี้ไม่มี auth — ห้ามแนบทั้ง document ของเรื่องร้องเรียน
+    // (มี fullName / phone / lineUserId ของผู้แจ้ง) select เฉพาะฟิลด์ที่ UI เรนเดอร์จริง:
+    // SatisfactionCommentsPanel ใช้ detail + category ทำหัวข้อ แล้วส่ง object เดิมต่อให้
+    // CardModalDetail ซึ่งใช้ complaintId, category, problems, community, status, images,
+    // createdAt, updatedAt, detail
     const complaintIds = [...new Set(comments.map((c) => c.complaintId?.toString()).filter(Boolean))];
     const complaints = complaintIds.length
-      ? await SubmittedReport.find({ _id: { $in: complaintIds } }).lean()
+      ? await SubmittedReport.find({ _id: { $in: complaintIds } })
+          .select("complaintId detail category problems community status images createdAt updatedAt")
+          .lean()
       : [];
 
     const complaintMap = Object.fromEntries(

@@ -13,7 +13,11 @@
 - `pages/api/satisfaction/*` (รวม `[id].js`) — `count.js` และ `stats.js` รับ/คืนค่าแยกตาม `source`
 - `models/Satisfaction.js` — `source: 'public' | 'line'`, `lineUserId`
 - `lib/satisfaction/lineRating.js` — logic ล้วนของ postback (มีเทส)
-- `lib/satisfaction/record.js` — **จุดเดียว**ที่เขียน/อ่าน collection `satisfactions`
+- `lib/satisfaction/record.js` — **จุดเดียว**ที่เขียน collection `satisfactions`
+  ⚠️ การ**อ่าน**ยังไม่ได้รวมศูนย์ — อ่านตรงจาก model อยู่ที่ `pages/api/satisfaction/{count,stats,[id],by-complaint,recent-comments}.js`,
+  `pages/api/analytics/satisfaction.ts`, `pages/api/analytics/summary.ts`, `pages/api/tasks/pending.ts`
+  เอนด์พอยต์ที่หน้าสาธารณะเรียกต้อง `.select()` เฉพาะฟิลด์ที่ใช้เสมอ — คืนทั้ง document = ปล่อย `lineUserId` ของประชาชนออกเว็บ
+  (`by-complaint.js` ไม่มี caller ในโค้ดแล้ว แต่ยัง deploy อยู่)
 
 ## ช่องทางให้คะแนน
 

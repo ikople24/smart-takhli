@@ -110,10 +110,17 @@ export default async function handler(req, res) {
                 ? {
                     solution: closingAssignment?.solution,
                     note: closingAssignment?.note,
-                    rating: {
-                      complaintCode: updated.complaintId || String(complaintId),
-                      current: existingRating?.rating ?? null,
-                    },
+                    // แถบดาวรับเฉพาะเลขเรื่องรูปแบบ TKC-xxxx — ถ้า fallback เป็น ObjectId
+                    // parseRatingPostback จะตีกลับ คนกดดาวแล้วบอทเงียบสนิท
+                    // ไม่มีเลขเรื่องก็ไม่ต้องแนบแถบดาว (การ์ดยังส่งได้ตามปกติ)
+                    ...(updated.complaintId
+                      ? {
+                          rating: {
+                            complaintCode: updated.complaintId,
+                            current: existingRating?.rating ?? null,
+                          },
+                        }
+                      : {}),
                   }
                 : {}),
             }),
