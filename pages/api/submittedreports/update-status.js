@@ -11,6 +11,7 @@ import {
   formatClosedMessage,
   buildMessages,
 } from "@/lib/lineMessaging";
+import { findLineRating } from "@/lib/satisfaction/record";
 import { getAuth } from "@clerk/nextjs/server";
 
 // สถานะที่ถือว่า "ปิดงาน" — ตรงกับปุ่มปิดเรื่องใน manage-complaints.jsx
@@ -80,6 +81,20 @@ export default async function handler(req, res) {
           ? (existing.images.find((u) => u?.startsWith("https://")) ?? null)
           : null;
 
+        // เคยให้คะแนนไว้แล้วหรือยัง — เคยแล้วการ์ดจะโชว์คะแนนเดิมแทนปุ่ม
+        // ปิดงานสำเร็จไปแล้วตอนนี้ ห้ามให้การอ่านคะแนนพลาดแล้วทำให้ทั้ง request 500
+        // (หน้าแอดมินจะขึ้น "เกิดข้อผิดพลาดในการปิดเรื่อง" ทั้งที่ปิดสำเร็จ)
+        const existingRating =
+          status === CLOSED_STATUS
+            ? await findLineRating({
+                complaintObjectId: existing._id,
+                lineUserId: existing.lineUserId,
+              }).catch((err) => {
+                console.error("[LINE] findLineRating failed:", err);
+                return null;
+              })
+            : null;
+
         linePush(
           existing.lineUserId,
           buildMessages(
@@ -92,7 +107,21 @@ export default async function handler(req, res) {
               status,
               updatedAt: updated.updatedAt,
               ...(status === CLOSED_STATUS
-                ? { solution: closingAssignment?.solution, note: closingAssignment?.note }
+                ? {
+                    solution: closingAssignment?.solution,
+                    note: closingAssignment?.note,
+                    // แถบดาวรับเฉพาะเลขเรื่องรูปแบบ TKC-xxxx — ถ้า fallback เป็น ObjectId
+                    // parseRatingPostback จะตีกลับ คนกดดาวแล้วบอทเงียบสนิท
+                    // ไม่มีเลขเรื่องก็ไม่ต้องแนบแถบดาว (การ์ดยังส่งได้ตามปกติ)
+                    ...(updated.complaintId
+                      ? {
+                          rating: {
+                            complaintCode: updated.complaintId,
+                            current: existingRating?.rating ?? null,
+                          },
+                        }
+                      : {}),
+                  }
                 : {}),
             }),
             solutionImage ?? complaintImage

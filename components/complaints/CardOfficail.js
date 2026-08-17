@@ -164,7 +164,7 @@ export default function CardOfficail(props) {
     const fetchSatisfactionCount = async () => {
       try {
         if (props.probId) {
-          const res = await fetch(`/api/satisfaction/count?complaintId=${props.probId}`);
+          const res = await fetch(`/api/satisfaction/count?complaintId=${props.probId}&source=public`);
           const data = await res.json();
           if (data.success) {
             setSatisfactionCount(data.count || 0);

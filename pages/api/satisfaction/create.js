@@ -1,10 +1,6 @@
-import dbConnect from "@/lib/dbConnect";
-import Satisfaction from "@/models/Satisfaction";
-import { n8n } from "@/lib/n8nWebhook";
+import { recordPublicRating } from "@/lib/satisfaction/record";
 
 export default async function handler(req, res) {
-  await dbConnect();
-
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -16,15 +12,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const newSatisfaction = await Satisfaction.create({
-      complaintId,
-      rating,
-      comment,
-    });
-
-    // แจ้งเตือน n8n (fire-and-forget)
-    n8n.satisfactionSubmitted({ complaintId: String(complaintId), rating, comment });
-
+    const newSatisfaction = await recordPublicRating({ complaintId, rating, comment });
     return res.status(201).json({ success: true, data: newSatisfaction });
   } catch (error) {
     console.error("Error saving satisfaction:", error);

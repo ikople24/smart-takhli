@@ -19,11 +19,19 @@ import { getAdminGroupId } from '@/lib/lineSettings';
 import {
   lineReply,
   formatStatusMessage,
+  formatRatingThanks,
   formatThaiDateTime,
   notFoundMessage,
   helpMessage,
   buildMessages,
 } from '@/lib/lineMessaging';
+import type { RatingRequest } from '@/lib/lineMessaging';
+import { parseRatingPostback } from '@/lib/satisfaction/lineRating';
+import {
+  attachPendingComment,
+  findLineRating,
+  recordLineRating,
+} from '@/lib/satisfaction/record';
 
 // Next.js ต้อง parse raw body เพื่อ verify signature
 export const config = {
@@ -60,11 +68,16 @@ interface LineTextContent {
   text: string;
 }
 
+interface LinePostback {
+  data: string;
+}
+
 interface LineEvent {
   type: string;
   replyToken?: string;
   source: LineEventSource;
   message?: LineTextContent;
+  postback?: LinePostback;
   timestamp: number;
 }
 
@@ -140,6 +153,15 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
+  // กดดาวให้คะแนนความพึงพอใจจากการ์ดในแชท — เฉพาะแชท 1:1
+  // (ในกลุ่มเจ้าหน้าที่ไม่แนบปุ่มอยู่แล้ว แต่กันไว้อีกชั้นไม่ให้คะแนนหลุดจากบริบทกลุ่ม)
+  if (event.type === 'postback') {
+    if (!isGroupChat) {
+      await handleRatingPostback(event.replyToken, event.source?.userId, event.postback?.data);
+    }
+    return;
+  }
+
   if (event.type !== 'message' || event.message?.type !== 'text') return;
 
   const userId = event.source?.userId;
@@ -206,6 +228,24 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
+  // ความเห็นต่อท้ายคะแนนที่เพิ่งกด (ภายใน 10 นาที)
+  // ต้องอยู่ "หลัง pattern คำสั่งทั้งหมด" เพื่อไม่แย่งข้อความค้นหาเลขเรื่อง/คำสั่งอื่น
+  // DB ล่มต้องไม่ทำให้ผู้ใช้ไม่ได้รับคำตอบเลย — log แล้วปล่อยตกไปที่ข้อความช่วยเหลือด้านล่าง
+  let commentSaved = false;
+  if (userId) {
+    try {
+      commentSaved = await attachPendingComment({ lineUserId: userId, text });
+    } catch (err) {
+      console.error('[LINE] Pending comment error:', err);
+    }
+  }
+  if (commentSaved) {
+    await lineReply(event.replyToken, [
+      { type: 'text', text: 'รับความเห็นแล้ว ขอบคุณที่ช่วยให้เราทำงานดีขึ้นครับ' },
+    ]);
+    return;
+  }
+
   // default: แนะนำวิธีใช้
   await lineReply(event.replyToken, [
     {
@@ -242,7 +282,7 @@ async function handleFollow(
         .lean() as { complaintId?: string } | null;
 
       if (latest?.complaintId) {
-        const result = await buildStatusMessages(latest.complaintId);
+        const result = await buildStatusMessages(latest.complaintId, { bindUserId: userId });
         if (result) {
           await lineReply(replyToken, [
             {
@@ -303,7 +343,7 @@ async function handleMyCases(
     }
 
     if (rows.length === 1) {
-      await handleStatusQuery(replyToken, undefined, rows[0].complaintId);
+      await handleStatusQuery(replyToken, userId, rows[0].complaintId);
       return;
     }
 
@@ -329,6 +369,39 @@ async function handleMyCases(
     console.error('[LINE] My cases error:', err);
     await lineReply(replyToken, [
       { type: 'text', text: '❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
+ * ผู้ใช้กดปุ่มดาวในการ์ด — บันทึกคะแนนแล้วชวนพิมพ์ความเห็นต่อ
+ * payload ที่แกะไม่ผ่าน (ปลอม/เพี้ยน) ให้เงียบไปเลย ไม่ตอบอะไร
+ */
+async function handleRatingPostback(
+  replyToken: string,
+  userId: string | undefined,
+  data: string | undefined
+): Promise<void> {
+  const parsed = parseRatingPostback(data);
+  if (!parsed || !userId) return;
+
+  try {
+    const result = await recordLineRating({
+      complaintCode: parsed.complaintCode,
+      lineUserId: userId,
+      score: parsed.score,
+    });
+
+    if (!result.ok) {
+      await lineReply(replyToken, [notFoundMessage(parsed.complaintCode)]);
+      return;
+    }
+
+    await lineReply(replyToken, [formatRatingThanks(parsed.score, result.updated)]);
+  } catch (err) {
+    console.error('[LINE] Rating postback error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ บันทึกคะแนนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
     ]);
   }
 }
@@ -406,11 +479,28 @@ async function buildStatusMessages(
       : complaint.fullName
     : undefined;
 
+  // แถบให้คะแนน: เฉพาะเรื่องที่ปิดงานแล้ว ฝั่งประชาชน และรู้ว่าปลายทางเป็น LINE คนไหน
+  // bindRefused = เรื่องนี้ผูกกับ LINE คนอื่นอยู่แล้ว → ห้ามแนบปุ่ม เพราะเลขเรื่องไล่เดาได้
+  // คนแปลกหน้าที่เดาเลขเจอจะกดดาวให้เรื่องที่ไม่ใช่ของตัวเองได้ (แถวละ 1 คน ข้ามโควตา 4 ครั้ง
+  // ของฝั่งเว็บ) ทำให้ตัวเลข "จากเจ้าของเรื่องผ่าน LINE" บนแดชบอร์ดเพี้ยน
+  // เจ้าของตัวจริงยืนยันเบอร์ 4 ตัวท้ายผ่าน handleRebind ได้ปุ่มตามปกติ (ตอนนั้น bindRefused=false)
+  let rating: RatingRequest | undefined;
+  if (!staffView && bindUserId && !bindRefused && complaint.status === 'ดำเนินการเสร็จสิ้น') {
+    // findOne().lean() ของ model ที่ไม่ได้ประกาศ type คืน union doc|doc[] — assert รูปทรงจริง
+    // แบบเดียวกับ .lean() ที่อื่นในไฟล์นี้ (findOne ไม่มีทางคืน array ตอนรัน)
+    const existingRating = (await findLineRating({
+      complaintObjectId: complaint._id,
+      lineUserId: bindUserId,
+    })) as { rating?: number } | null;
+    rating = { complaintCode: complaint.complaintId, current: existingRating?.rating ?? null };
+  }
+
   const safeComplaint = {
     ...complaint,
     fullName: displayName,
     solution,
     note,
+    rating,
   };
 
   // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
@@ -494,7 +584,7 @@ async function handleRebind(
 
     await SubmittedReport.updateOne({ complaintId }, { $set: { lineUserId: userId } });
 
-    const result = await buildStatusMessages(complaintId);
+    const result = await buildStatusMessages(complaintId, { bindUserId: userId });
     await lineReply(replyToken, [
       {
         type: 'text' as const,
