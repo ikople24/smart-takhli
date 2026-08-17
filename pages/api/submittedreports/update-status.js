@@ -82,11 +82,16 @@ export default async function handler(req, res) {
           : null;
 
         // เคยให้คะแนนไว้แล้วหรือยัง — เคยแล้วการ์ดจะโชว์คะแนนเดิมแทนปุ่ม
+        // ปิดงานสำเร็จไปแล้วตอนนี้ ห้ามให้การอ่านคะแนนพลาดแล้วทำให้ทั้ง request 500
+        // (หน้าแอดมินจะขึ้น "เกิดข้อผิดพลาดในการปิดเรื่อง" ทั้งที่ปิดสำเร็จ)
         const existingRating =
           status === CLOSED_STATUS
             ? await findLineRating({
                 complaintObjectId: existing._id,
                 lineUserId: existing.lineUserId,
+              }).catch((err) => {
+                console.error("[LINE] findLineRating failed:", err);
+                return null;
               })
             : null;
 
