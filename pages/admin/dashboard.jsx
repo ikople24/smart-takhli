@@ -758,6 +758,7 @@ export default function AdminDashboard() {
       completed: 0,
       overdue: 0,
       satisfaction: satisfactionData.averageRating || 0,
+      satisfactionByLine: satisfactionData.bySource?.line || { count: 0, average: 0 },
       byCategory: {},
       byCommunity: {},
       byProcessingTime: {},
@@ -1342,6 +1343,12 @@ export default function AdminDashboard() {
             </div>
             <p className="text-amber-100 text-sm mb-1">ความพึงพอใจ</p>
             <p className="text-4xl font-bold tracking-tight counter-number">{satisfactionPercent.toFixed(1)}<span className="text-lg font-normal opacity-60">%</span></p>
+            {stats.satisfactionByLine?.count > 0 && (
+              <p className="text-amber-100/80 text-xs mt-1">
+                จากเจ้าของเรื่องผ่าน LINE {stats.satisfactionByLine.count} รายการ
+                {' '}(เฉลี่ย {stats.satisfactionByLine.average.toFixed(1)})
+              </p>
+            )}
           </div>
         </div>
 
