@@ -118,9 +118,9 @@ export default function SummaryDashboard({ fiscalYear, refreshTick }) {
 
       <div className="flex justify-end">{exportBtn}</div>
 
-      {/* ── แท่งซ้อน 8 กลุ่ม × 12 เดือน ── */}
+      {/* ── แท่งซ้อนรายกลุ่ม × 12 เดือน ── */}
       <div>
-        <p className="text-[13px] font-bold text-[#57506A] mb-2">น้ำหนักรายเดือนแยก 8 กลุ่ม</p>
+        <p className="text-[13px] font-bold text-[#57506A] mb-2">น้ำหนักรายเดือนแยก {WASTE_GROUPS.length} กลุ่ม</p>
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={stackedData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#EEE9F8" vertical={false} />
@@ -140,7 +140,7 @@ export default function SummaryDashboard({ fiscalYear, refreshTick }) {
       {/* ── ตาราง relief — บังคับโดยผล validator (3 สี contrast < 3:1) ห้ามตัดออก ── */}
       <details className="border border-[#E7E2F2] rounded-[16px] px-4 py-3">
         <summary className="text-[13px] font-bold text-[#57506A] cursor-pointer select-none">
-          ตารางยอดรายเดือน 8 กลุ่ม (กก.)
+          ตารางยอดรายเดือน {WASTE_GROUPS.length} กลุ่ม (กก.)
         </summary>
         <div className="overflow-x-auto mt-3">
           <table className="text-[12px] whitespace-nowrap min-w-full">
@@ -192,7 +192,7 @@ export default function SummaryDashboard({ fiscalYear, refreshTick }) {
         </div>
       )}
 
-      {/* ── โดนัทสัดส่วน 8 กลุ่มทั้งปี ── */}
+      {/* ── โดนัทสัดส่วนรายกลุ่มทั้งปี ── */}
       <div>
         <p className="text-[13px] font-bold text-[#57506A] mb-2">สัดส่วนทั้งปีงบแยกกลุ่ม</p>
         <div className="flex flex-col sm:flex-row items-center gap-4">

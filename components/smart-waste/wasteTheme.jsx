@@ -8,7 +8,7 @@ export {
   cardCls, tableHeadCls, StatCard, PillTabs, YearPills, DashboardHeader,
 } from '@/components/ui/adminTheme';
 
-// สีประจำ 8 กลุ่มขยะ — ตามลำดับ WASTE_GROUPS คงที่ ผ่าน dataviz validator บน #FAF8FF แล้ว
+// สีประจำกลุ่มขยะ — ตามลำดับ WASTE_GROUPS คงที่ ผ่าน dataviz validator บน #FAF8FF แล้ว
 // (สี aqua/yellow/magenta contrast < 3:1 → แท็บสรุปต้องมีตารางยอดรายเดือนเป็น relief เสมอ)
 // ห้ามเปลี่ยนสี/สลับลำดับโดยไม่รัน validator ใหม่
 export const WASTE_GROUP_COLORS = {
@@ -20,6 +20,9 @@ export const WASTE_GROUP_COLORS = {
   glass: '#008300',
   foodWaste: '#4a3aa7',
   kapok: '#e34948',
+  // เพิ่ม 2026-08 พร้อมกลุ่ม electronic — validate แล้วทั้งลำดับ 9 สี (ติด kapok)
+  // และคู่ wrap ในโดนัท (ติด paper) ผ่านทุกข้อ ไม่มี WARN ใหม่
+  electronic: '#8a4a0d',
 };
 
 // เส้นเทียบปีงบต่อปีงบ — ห้ามใช้เทา (fail chroma floor ของ validator)

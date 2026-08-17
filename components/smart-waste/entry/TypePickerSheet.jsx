@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { WASTE_GROUPS } from '@/lib/smart-waste/wasteGroups';
 import { inputCls } from '../wasteTheme';
 
-// bottom sheet เลือกประเภทที่ไม่ใช่ "กรอกบ่อย" เข้าฟอร์ม — จัดกลุ่มตาม 8 กลุ่มใหญ่
+// bottom sheet เลือกประเภทที่ไม่ใช่ "กรอกบ่อย" เข้าฟอร์ม — จัดกลุ่มตามกลุ่มใหญ่
 export default function TypePickerSheet({ open, types, selectedKeys, onPick, onClose }) {
   const [query, setQuery] = useState('');
 

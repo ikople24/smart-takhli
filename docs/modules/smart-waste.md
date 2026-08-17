@@ -10,7 +10,7 @@
 | หน้า | `pages/admin/smart-waste.jsx` — หน้าเดียว 3 แท็บ (บันทึก · ข้อมูล · สรุป) + modal จัดการประเภท |
 | API | `pages/api/smart-waste/` — `_auth.js` (requireWasteAdmin/Superadmin) · `types/` · `daily/` · `summary` · `years` (ปีงบที่มีข้อมูล — ป้อน YearPills) · `export` · `import` |
 | Components | `components/smart-waste/` — `wasteTheme.jsx` · `entry/` (DailyEntryForm, TypePickerSheet, TotalBar) · `admin/` (MonthTable, SummaryDashboard, TypeManagerModal) |
-| Logic | `lib/smart-waste/` — wasteGroups (8 กลุ่ม fixed) · wasteTypesSeed (24 ประเภท) · fiscalYear · aggregate (computeTotals ที่เดียว) · importWorkbook · exportWorkbook · uiDate · เทสต์ vitest ใน `__tests__/` |
+| Logic | `lib/smart-waste/` — wasteGroups (9 กลุ่ม fixed — 8 กลุ่มเดิมจาก Excel + `electronic` เพิ่ม 2026-08 ต่อท้าย) · wasteTypesSeed (24 ประเภท) · fiscalYear · aggregate (computeTotals ที่เดียว) · importWorkbook · exportWorkbook · uiDate · เทสต์ vitest ใน `__tests__/` |
 | Models | `models/smart-waste/WasteType.js` (`smart_waste_types`) · `WasteDaily.js` (`smart_waste_daily` — 1 doc = 1 วัน, unique `recordDate` แบบ 'YYYY-MM-DD') |
 
 ## กติกาสำคัญ
@@ -19,7 +19,9 @@
   `lib/smart-waste/fiscalYear.js` ที่เดียว
 - ยอดรวม (`groupTotals`/`totalKg`) denormalize ตอนบันทึก คำนวณด้วย `computeTotals()`
   ที่เดียว 3 จุดใช้ร่วม (API daily / import / export) — **ห้ามเชื่อ totals จาก client**
-- 8 กลุ่มใหญ่ fixed ในโค้ด (หัวข้อรายงานส่งหน่วยงานภายนอก) · 24 ประเภทย่อยเป็น master data
+- กลุ่มใหญ่ fixed ในโค้ด (หัวข้อรายงานส่งหน่วยงานภายนอก — ปัจจุบัน 9 กลุ่ม: 8 กลุ่มเดิม +
+  `electronic` "ขยะอิเล็กทรอนิกส์") · **กลุ่มใหม่ต้องต่อท้ายเสมอ ห้ามแทรกกลาง** ไม่งั้น
+  แถวรายงานปีเก่าขยับ · 24 ประเภทย่อยเป็น master data
   แอดมินแก้ได้ผ่าน modal ในหน้า (ไม่มีหน้าแยก — ไม่มี permission entry ที่ 2)
 - ประเภทลบได้เฉพาะเมื่อไม่มีข้อมูลอ้างถึง (API ตอบ 409) — ปิดใช้งาน (`active: false`) แทน
 - ธง `isHighlighted` (เริ่มต้น = ถุงอ่อน): StatCard ของตัวเอง + แถว `เฉพาะ<label>` ใน Excel export
@@ -32,7 +34,7 @@
 - Token ยืมจาก smart-school ผ่าน `components/smart-waste/wasteTheme.jsx` — **ห้าม import
   จาก `components/smart-school/` ตรง ๆ ในไฟล์อื่นของโมดูลนี้** · ถ้ามีโมดูลที่ 3 มายืมอีก
   ให้สกัดเป็น `components/ui/adminTheme` (กติกาข้อ 4 ของ skill adding-feature-module)
-- สีกราฟ 8 กลุ่มใน `WASTE_GROUP_COLORS` ผ่าน dataviz validator แล้ว (ลำดับคงที่ตาม
+- สีกราฟรายกลุ่มใน `WASTE_GROUP_COLORS` ผ่าน dataviz validator แล้ว (ลำดับคงที่ตาม
   `WASTE_GROUPS`) — เปลี่ยนสีต้องรัน validator ใหม่ และแท็บสรุปต้องคงตารางรายเดือน
   (relief ของ 3 สีที่ contrast < 3:1)
 
