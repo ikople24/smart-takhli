@@ -1,13 +1,22 @@
 import dbConnect from '@/lib/dbConnect';
 import Satisfaction from '@/models/Satisfaction';
 import SubmittedReport from '@/models/SubmittedReport';
+import { isComplaintStaffFromRequest } from '@/lib/complaintPrivacy';
 
 export default async function handler(req, res) {
-  await dbConnect();
-
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
+
+  // เฉพาะเจ้าหน้าที่ (role admin/superadmin) — ชุดข้อมูลนี้มีรายละเอียดเรื่องร้องเรียน
+  // รวมเรื่องลับ/PDPA ที่หน้าเว็บสาธารณะไม่แสดง และไม่ได้ผ่าน lib/complaintPrivacy.js
+  // ผู้ใช้จริงมีแค่แผงความเห็นในหน้า /admin/manage-complaints
+  const isStaff = await isComplaintStaffFromRequest(req);
+  if (!isStaff) {
+    return res.status(403).json({ success: false, error: 'Forbidden' });
+  }
+
+  await dbConnect();
 
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 8, 20);
@@ -19,7 +28,7 @@ export default async function handler(req, res) {
       .limit(limit)
       .lean();
 
-    // เอนด์พอยต์นี้ไม่มี auth — ห้ามแนบทั้ง document ของเรื่องร้องเรียน
+    // ต่อให้กันด้วย auth แล้ว ก็ยังไม่แนบทั้ง document ของเรื่องร้องเรียน
     // (มี fullName / phone / lineUserId ของผู้แจ้ง) select เฉพาะฟิลด์ที่ UI เรนเดอร์จริง:
     // SatisfactionCommentsPanel ใช้ detail + category ทำหัวข้อ แล้วส่ง object เดิมต่อให้
     // CardModalDetail ซึ่งใช้ complaintId, category, problems, community, status, images,
