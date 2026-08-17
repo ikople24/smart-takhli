@@ -5,7 +5,8 @@
 ## หน้า
 
 - `/user/satisfaction` (hideFromMenu — เข้าผ่าน internal link)
-- หน้าวิเคราะห์: `/admin/feedback-analysis` (⚠️ ยังพัง — hideFromMenu ไว้)
+- สถิติคะแนนแสดงที่ `/admin/dashboard` (การ์ด "ความพึงพอใจ" + แผง `SatisfactionCommentsPanel`) — ไม่มีหน้า analysis แยกของโมดูลนี้
+- `/admin/feedback-analysis` **ไม่ใช่**ของโมดูลนี้ — เป็นของความเห็นนักเรียน (`StudentFeedback`, ดูโมดูล Smart School) และยังพัง (⚠️ hideFromMenu ไว้ใน `lib/permissions.ts`)
 
 ## API / Model
 
