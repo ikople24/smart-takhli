@@ -11,6 +11,7 @@ import {
   formatClosedMessage,
   buildMessages,
 } from "@/lib/lineMessaging";
+import { findLineRating } from "@/lib/satisfaction/record";
 import { getAuth } from "@clerk/nextjs/server";
 
 // สถานะที่ถือว่า "ปิดงาน" — ตรงกับปุ่มปิดเรื่องใน manage-complaints.jsx
@@ -80,6 +81,15 @@ export default async function handler(req, res) {
           ? (existing.images.find((u) => u?.startsWith("https://")) ?? null)
           : null;
 
+        // เคยให้คะแนนไว้แล้วหรือยัง — เคยแล้วการ์ดจะโชว์คะแนนเดิมแทนปุ่ม
+        const existingRating =
+          status === CLOSED_STATUS
+            ? await findLineRating({
+                complaintObjectId: existing._id,
+                lineUserId: existing.lineUserId,
+              })
+            : null;
+
         linePush(
           existing.lineUserId,
           buildMessages(
@@ -92,7 +102,14 @@ export default async function handler(req, res) {
               status,
               updatedAt: updated.updatedAt,
               ...(status === CLOSED_STATUS
-                ? { solution: closingAssignment?.solution, note: closingAssignment?.note }
+                ? {
+                    solution: closingAssignment?.solution,
+                    note: closingAssignment?.note,
+                    rating: {
+                      complaintCode: updated.complaintId || String(complaintId),
+                      current: existingRating?.rating ?? null,
+                    },
+                  }
                 : {}),
             }),
             solutionImage ?? complaintImage
