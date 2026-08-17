@@ -230,7 +230,16 @@ async function handleEvent(event: LineEvent): Promise<void> {
 
   // ความเห็นต่อท้ายคะแนนที่เพิ่งกด (ภายใน 10 นาที)
   // ต้องอยู่ "หลัง pattern คำสั่งทั้งหมด" เพื่อไม่แย่งข้อความค้นหาเลขเรื่อง/คำสั่งอื่น
-  if (userId && (await attachPendingComment({ lineUserId: userId, text }))) {
+  // DB ล่มต้องไม่ทำให้ผู้ใช้ไม่ได้รับคำตอบเลย — log แล้วปล่อยตกไปที่ข้อความช่วยเหลือด้านล่าง
+  let commentSaved = false;
+  if (userId) {
+    try {
+      commentSaved = await attachPendingComment({ lineUserId: userId, text });
+    } catch (err) {
+      console.error('[LINE] Pending comment error:', err);
+    }
+  }
+  if (commentSaved) {
     await lineReply(event.replyToken, [
       { type: 'text', text: 'รับความเห็นแล้ว ขอบคุณที่ช่วยให้เราทำงานดีขึ้นครับ' },
     ]);
@@ -471,8 +480,12 @@ async function buildStatusMessages(
     : undefined;
 
   // แถบให้คะแนน: เฉพาะเรื่องที่ปิดงานแล้ว ฝั่งประชาชน และรู้ว่าปลายทางเป็น LINE คนไหน
+  // bindRefused = เรื่องนี้ผูกกับ LINE คนอื่นอยู่แล้ว → ห้ามแนบปุ่ม เพราะเลขเรื่องไล่เดาได้
+  // คนแปลกหน้าที่เดาเลขเจอจะกดดาวให้เรื่องที่ไม่ใช่ของตัวเองได้ (แถวละ 1 คน ข้ามโควตา 4 ครั้ง
+  // ของฝั่งเว็บ) ทำให้ตัวเลข "จากเจ้าของเรื่องผ่าน LINE" บนแดชบอร์ดเพี้ยน
+  // เจ้าของตัวจริงยืนยันเบอร์ 4 ตัวท้ายผ่าน handleRebind ได้ปุ่มตามปกติ (ตอนนั้น bindRefused=false)
   let rating: RatingRequest | undefined;
-  if (!staffView && bindUserId && complaint.status === 'ดำเนินการเสร็จสิ้น') {
+  if (!staffView && bindUserId && !bindRefused && complaint.status === 'ดำเนินการเสร็จสิ้น') {
     // findOne().lean() ของ model ที่ไม่ได้ประกาศ type คืน union doc|doc[] — assert รูปทรงจริง
     // แบบเดียวกับ .lean() ที่อื่นในไฟล์นี้ (findOne ไม่มีทางคืน array ตอนรัน)
     const existingRating = (await findLineRating({
