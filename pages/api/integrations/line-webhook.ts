@@ -19,11 +19,19 @@ import { getAdminGroupId } from '@/lib/lineSettings';
 import {
   lineReply,
   formatStatusMessage,
+  formatRatingThanks,
   formatThaiDateTime,
   notFoundMessage,
   helpMessage,
   buildMessages,
 } from '@/lib/lineMessaging';
+import type { RatingRequest } from '@/lib/lineMessaging';
+import { parseRatingPostback } from '@/lib/satisfaction/lineRating';
+import {
+  attachPendingComment,
+  findLineRating,
+  recordLineRating,
+} from '@/lib/satisfaction/record';
 
 // Next.js ต้อง parse raw body เพื่อ verify signature
 export const config = {
@@ -60,11 +68,16 @@ interface LineTextContent {
   text: string;
 }
 
+interface LinePostback {
+  data: string;
+}
+
 interface LineEvent {
   type: string;
   replyToken?: string;
   source: LineEventSource;
   message?: LineTextContent;
+  postback?: LinePostback;
   timestamp: number;
 }
 
@@ -140,6 +153,15 @@ async function handleEvent(event: LineEvent): Promise<void> {
     return;
   }
 
+  // กดดาวให้คะแนนความพึงพอใจจากการ์ดในแชท — เฉพาะแชท 1:1
+  // (ในกลุ่มเจ้าหน้าที่ไม่แนบปุ่มอยู่แล้ว แต่กันไว้อีกชั้นไม่ให้คะแนนหลุดจากบริบทกลุ่ม)
+  if (event.type === 'postback') {
+    if (!isGroupChat) {
+      await handleRatingPostback(event.replyToken, event.source?.userId, event.postback?.data);
+    }
+    return;
+  }
+
   if (event.type !== 'message' || event.message?.type !== 'text') return;
 
   const userId = event.source?.userId;
@@ -203,6 +225,15 @@ async function handleEvent(event: LineEvent): Promise<void> {
   // ช่วยเหลือ / welcome
   if (/^(?:ช่วย|help|สวัสดี|hello|hi|เริ่ม|start)$/i.test(text)) {
     await lineReply(event.replyToken, [helpMessage]);
+    return;
+  }
+
+  // ความเห็นต่อท้ายคะแนนที่เพิ่งกด (ภายใน 10 นาที)
+  // ต้องอยู่ "หลัง pattern คำสั่งทั้งหมด" เพื่อไม่แย่งข้อความค้นหาเลขเรื่อง/คำสั่งอื่น
+  if (userId && (await attachPendingComment({ lineUserId: userId, text }))) {
+    await lineReply(event.replyToken, [
+      { type: 'text', text: 'รับความเห็นแล้ว ขอบคุณที่ช่วยให้เราทำงานดีขึ้นครับ' },
+    ]);
     return;
   }
 
@@ -334,6 +365,39 @@ async function handleMyCases(
 }
 
 /**
+ * ผู้ใช้กดปุ่มดาวในการ์ด — บันทึกคะแนนแล้วชวนพิมพ์ความเห็นต่อ
+ * payload ที่แกะไม่ผ่าน (ปลอม/เพี้ยน) ให้เงียบไปเลย ไม่ตอบอะไร
+ */
+async function handleRatingPostback(
+  replyToken: string,
+  userId: string | undefined,
+  data: string | undefined
+): Promise<void> {
+  const parsed = parseRatingPostback(data);
+  if (!parsed || !userId) return;
+
+  try {
+    const result = await recordLineRating({
+      complaintCode: parsed.complaintCode,
+      lineUserId: userId,
+      score: parsed.score,
+    });
+
+    if (!result.ok) {
+      await lineReply(replyToken, [notFoundMessage(parsed.complaintCode)]);
+      return;
+    }
+
+    await lineReply(replyToken, [formatRatingThanks(parsed.score, result.updated)]);
+  } catch (err) {
+    console.error('[LINE] Rating postback error:', err);
+    await lineReply(replyToken, [
+      { type: 'text', text: '❌ บันทึกคะแนนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+    ]);
+  }
+}
+
+/**
  * สร้าง message array การ์ดสถานะจาก complaintId (การ์ด + รูป)
  * คืน null ถ้าไม่พบเรื่อง
  * - staffView (เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียน): ชื่อผู้แจ้ง + รูปต้นฉบับ
@@ -406,11 +470,24 @@ async function buildStatusMessages(
       : complaint.fullName
     : undefined;
 
+  // แถบให้คะแนน: เฉพาะเรื่องที่ปิดงานแล้ว ฝั่งประชาชน และรู้ว่าปลายทางเป็น LINE คนไหน
+  let rating: RatingRequest | undefined;
+  if (!staffView && bindUserId && complaint.status === 'ดำเนินการเสร็จสิ้น') {
+    // findOne().lean() ของ model ที่ไม่ได้ประกาศ type คืน union doc|doc[] — assert รูปทรงจริง
+    // แบบเดียวกับ .lean() ที่อื่นในไฟล์นี้ (findOne ไม่มีทางคืน array ตอนรัน)
+    const existingRating = (await findLineRating({
+      complaintObjectId: complaint._id,
+      lineUserId: bindUserId,
+    })) as { rating?: number } | null;
+    rating = { complaintCode: complaint.complaintId, current: existingRating?.rating ?? null };
+  }
+
   const safeComplaint = {
     ...complaint,
     fullName: displayName,
     solution,
     note,
+    rating,
   };
 
   // รูปประกอบ: เรื่องปิดแล้วใช้รูปผลงาน, ไม่มีค่อย fallback รูปตอนแจ้ง
@@ -494,7 +571,7 @@ async function handleRebind(
 
     await SubmittedReport.updateOne({ complaintId }, { $set: { lineUserId: userId } });
 
-    const result = await buildStatusMessages(complaintId);
+    const result = await buildStatusMessages(complaintId, { bindUserId: userId });
     await lineReply(replyToken, [
       {
         type: 'text' as const,
