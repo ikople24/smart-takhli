@@ -54,7 +54,7 @@ export type LineMessage = TextMessage | FlexMessage | ImageMessage;
  * ถ้าไม่ระบุ timeZone จะได้เวลาช้ากว่าไทย 7 ชม. (บนเครื่อง dev ที่เป็น Asia/Bangkok
  * จะดูปกติ เลยไม่เจอตอนเทส) — อย่าเรียก toLocale*String ตรง ๆ ในไฟล์นี้
  */
-function formatThaiDateTime(
+export function formatThaiDateTime(
   value: Date | string | null | undefined,
   options: Intl.DateTimeFormatOptions = {
     month: 'short',

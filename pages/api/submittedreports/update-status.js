@@ -84,8 +84,10 @@ export default async function handler(req, res) {
           existing.lineUserId,
           buildMessages(
             formatStatusMessage({
+              // ไม่ใส่ชื่อผู้แจ้ง — การ์ดฝั่งประชาชนใช้นโยบายเดียวกับเว็บ /status
+              // (การผูก lineUserId เป็น first-come จากการพิมพ์เลขเรื่องที่ไล่เดาได้
+              //  ปลายทางจึงไม่การันตีว่าเป็นเจ้าของเรื่องจริง)
               complaintId: updated.complaintId || String(complaintId),
-              fullName: existing.isConfidential ? "ไม่เปิดเผย" : (existing.fullName || ""),
               category: existing.category,
               status,
               updatedAt: updated.updatedAt,

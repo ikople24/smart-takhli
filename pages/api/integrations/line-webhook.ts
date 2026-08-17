@@ -19,6 +19,7 @@ import { getAdminGroupId } from '@/lib/lineSettings';
 import {
   lineReply,
   formatStatusMessage,
+  formatThaiDateTime,
   notFoundMessage,
   helpMessage,
   buildMessages,
@@ -307,9 +308,11 @@ async function handleMyCases(
     }
 
     const lines = rows.map((r) => {
-      const dateStr = r.createdAt
-        ? new Date(r.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-        : '-';
+      const dateStr = formatThaiDateTime(r.createdAt, {
+        day: 'numeric',
+        month: 'short',
+        year: '2-digit',
+      });
       const done = r.status === 'ดำเนินการเสร็จสิ้น' ? '✅' : '🔄';
       return `${done} ${r.complaintId}\n   ${[r.category, dateStr].filter(Boolean).join(' · ')}`;
     });
@@ -331,22 +334,10 @@ async function handleMyCases(
 }
 
 /**
- * ย่อชื่อสำหรับการ์ดฝั่งประชาชน (PDPA): "ครรชิต คล้ายแจ่ม" → "ครรชิต ค."
- * เลขเรื่องเป็นเลขรันเดาไล่ได้ — คนอื่นส่งเลขมาถามต้องไม่เห็นชื่อเต็ม
- * (เว็บสาธารณะ /status ก็ตัด fullName ออกอยู่แล้ว — นโยบายเดียวกัน)
- */
-function maskDisplayName(name?: string): string | undefined {
-  if (!name) return name;
-  const parts = name.trim().split(/\s+/);
-  if (parts.length < 2) return parts[0];
-  return `${parts[0]} ${parts[1].charAt(0)}.`;
-}
-
-/**
  * สร้าง message array การ์ดสถานะจาก complaintId (การ์ด + รูป)
  * คืน null ถ้าไม่พบเรื่อง
- * - staffView (เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียน): ชื่อเต็ม + รูปต้นฉบับ
- * - ฝั่งประชาชน: ชื่อย่อ, เรื่องลับเบลอรูป
+ * - staffView (เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียน): ชื่อผู้แจ้ง + รูปต้นฉบับ
+ * - ฝั่งประชาชน: ไม่แสดงชื่อผู้แจ้งเลย (เท่ากับเว็บ /status), เรื่องลับเบลอรูป
  * - bindUserId: ผูกรับ push เฉพาะเมื่อเรื่องยังไม่มีคนผูก (first-come) —
  *   ถ้ามีคนผูกแล้ว bindRefused=true เพื่อให้ caller แนะนำวิธียืนยันตัวด้วยเบอร์ 4 ตัวท้าย
  */
@@ -405,12 +396,15 @@ async function buildStatusMessages(
     }
   }
 
-  // ชื่อ: เรื่องลับไม่เปิดเผย / ประชาชนเห็นชื่อย่อ / เจ้าหน้าที่ (กลุ่มลงทะเบียน) เห็นเต็ม
-  const displayName = complaint.isConfidential
-    ? 'ไม่เปิดเผย'
-    : staffView
-      ? complaint.fullName
-      : maskDisplayName(complaint.fullName);
+  // ชื่อผู้แจ้ง: ฝั่งประชาชน "ไม่แสดงเลย" — เท่ากับเว็บสาธารณะ /status
+  // (API เว็บตัด fullName/phone ทิ้งที่ pages/api/complaints/index.js)
+  // เลขเรื่องเป็นเลขรันไล่เดาได้ ใครพิมพ์เลขมาถามก็เห็นการ์ดนี้ ชื่อย่อก็ยังระบุตัวคนได้
+  // เฉพาะกลุ่มเจ้าหน้าที่ที่ลงทะเบียนเท่านั้นที่เห็นชื่อ (เรื่องลับยังปิดชื่อเหมือนเดิม)
+  const displayName = staffView
+    ? complaint.isConfidential
+      ? 'ไม่เปิดเผย'
+      : complaint.fullName
+    : undefined;
 
   const safeComplaint = {
     ...complaint,
@@ -561,9 +555,11 @@ async function handleShortQuery(
 
     // เจอหลายเรื่อง — แสดงรายการ (สูงสุด 5) ให้ผู้ใช้ส่งเลขเต็มกลับมา
     const lines = matches.slice(0, 5).map((m, i) => {
-      const dateStr = m.createdAt
-        ? new Date(m.createdAt).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
-        : '-';
+      const dateStr = formatThaiDateTime(m.createdAt, {
+        day: 'numeric',
+        month: 'short',
+        year: '2-digit',
+      });
       const extra = [m.category, m.community].filter(Boolean).join(' · ');
       return `${i + 1}. ${m.complaintId}\n   ${extra ? extra + ' · ' : ''}${dateStr}`;
     });
