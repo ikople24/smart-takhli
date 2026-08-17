@@ -273,7 +273,7 @@ async function handleFollow(
         .lean() as { complaintId?: string } | null;
 
       if (latest?.complaintId) {
-        const result = await buildStatusMessages(latest.complaintId);
+        const result = await buildStatusMessages(latest.complaintId, { bindUserId: userId });
         if (result) {
           await lineReply(replyToken, [
             {
@@ -334,7 +334,7 @@ async function handleMyCases(
     }
 
     if (rows.length === 1) {
-      await handleStatusQuery(replyToken, undefined, rows[0].complaintId);
+      await handleStatusQuery(replyToken, userId, rows[0].complaintId);
       return;
     }
 
