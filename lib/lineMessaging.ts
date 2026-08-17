@@ -20,6 +20,7 @@
 //   await lineNotifyAdminGroup(buildMessages(formatNewComplaintMessage(c), c.images?.[0]))
 
 import { getAdminGroupId } from './lineSettings';
+import { buildRatingPostbackData, starText } from './satisfaction/lineRating';
 
 const LINE_API = 'https://api.line.me/v2/bot/message';
 const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
@@ -67,6 +68,71 @@ export function formatThaiDateTime(
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', ...options });
+}
+
+/** ข้อมูลแถบให้คะแนนท้ายการ์ดสถานะ */
+export interface RatingRequest {
+  /** เลขเรื่องแบบ TKC-690006 (ไม่ใช่ ObjectId) */
+  complaintCode: string;
+  /** คะแนนที่คนนี้เคยให้ไว้ — มีค่า = แสดงคะแนนเดิมแทนปุ่ม */
+  current?: number | null;
+}
+
+/**
+ * แถบ "พอใจกับการแก้ไขแค่ไหน?" + ปุ่ม postback 1-5 ดาว
+ * แนบท้าย body ของ bubble เดิม ไม่สร้าง message ใบใหม่ (LINE OA นับโควตาเป็นรายข้อความ)
+ */
+function ratingContents(rating?: RatingRequest | null): Record<string, unknown>[] {
+  if (!rating) return [];
+
+  if (rating.current) {
+    return [
+      { type: 'separator' },
+      {
+        type: 'text',
+        text: `ให้คะแนนไว้แล้ว ${starText(rating.current)}`,
+        size: 'sm',
+        color: '#f59e0b',
+      },
+    ];
+  }
+
+  return [
+    { type: 'separator' },
+    {
+      type: 'text',
+      text: 'พอใจกับการแก้ไขแค่ไหน?',
+      size: 'sm',
+      weight: 'bold',
+      color: '#111111',
+    },
+    {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'xs',
+      contents: [1, 2, 3, 4, 5].map((score) => ({
+        type: 'button',
+        style: 'secondary',
+        height: 'sm',
+        action: {
+          type: 'postback',
+          label: `${score}⭐`,
+          data: buildRatingPostbackData(rating.complaintCode, score),
+          displayText: `ให้ ${score} ดาว`,
+        },
+      })),
+    },
+  ];
+}
+
+/** ข้อความตอบหลังกดดาว */
+export function formatRatingThanks(score: number, updated = false): TextMessage {
+  return {
+    type: 'text',
+    text: updated
+      ? `อัปเดตเป็น ${starText(score)} แล้วครับ`
+      : `ขอบคุณครับ ${starText(score)}\nอยากเล่าเพิ่มพิมพ์มาได้เลยตอนนี้ ถ้าไม่สะดวกข้ามได้ครับ`,
+  };
 }
 
 /**
@@ -268,8 +334,9 @@ export function formatStatusMessage(complaint: {
   updatedAt?: Date | string | null;
   solution?: string[];
   note?: string;
+  rating?: RatingRequest | null;
 }): FlexMessage {
-  const { complaintId, fullName, category, status, updatedAt, solution, note } = complaint;
+  const { complaintId, fullName, category, status, updatedAt, solution, note, rating } = complaint;
   const color = statusColor(status);
   const emoji = statusEmoji(status);
 
@@ -340,6 +407,7 @@ export function formatStatusMessage(complaint: {
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
           ...fixContents,
+          ...ratingContents(rating),
           { type: 'separator' },
           {
             type: 'text',
