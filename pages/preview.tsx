@@ -14,7 +14,7 @@ import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
 import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
 import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
 import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
-import SiteStatsBar from "@/components/site-stats/SiteStatsBar";
+import StatsRow from "@/components/citizen/home/StatsRow";
 import Footer from "@/components/Footer";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
@@ -118,9 +118,7 @@ export default function PreviewHome() {
           )}
         </div>
 
-        <div className="mt-4">
-          <SiteStatsBar />
-        </div>
+        <StatsRow />
 
         <Footer />
         <div className="h-8" />
