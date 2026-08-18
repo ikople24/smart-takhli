@@ -8,6 +8,7 @@ import HeaderCard from "@/components/citizen/home/HeaderCard";
 import EnvCards from "@/components/citizen/home/EnvCards";
 import ComplaintCTA from "@/components/citizen/home/ComplaintCTA";
 import ServiceGrid from "@/components/citizen/home/ServiceGrid";
+import NewsSection from "@/components/citizen/home/NewsSection";
 import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
 import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
@@ -49,6 +50,7 @@ export default function PreviewHome() {
         <EnvCards />
         <ComplaintCTA onStart={scrollToCategories} />
         <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
+        <NewsSection />
         <div className="h-8" />
       </CitizenShell>
 
