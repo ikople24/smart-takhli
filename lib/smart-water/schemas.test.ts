@@ -59,4 +59,9 @@ describe('NodeInputSchema', () => {
     const r = NodeInputSchema.parse({ ...validNode, hydrantNo: ' HD-001 ' });
     expect(r.hydrantNo).toBe('HD-001');
   });
+
+  it('แปลง onPipeId ว่างเป็น undefined', () => {
+    const r = NodeInputSchema.parse({ ...validNode, onPipeId: '' });
+    expect(r.onPipeId).toBeUndefined();
+  });
 });

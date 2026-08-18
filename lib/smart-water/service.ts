@@ -25,11 +25,17 @@ export function derivePipeFields(input: PipeInput) {
   };
 }
 
-/** ตัด key ที่เป็น undefined ก่อน $set — กัน driver เขียน null ทำให้กลุ่มรายงานแตกเป็น null กับ missing */
-function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined)
-  ) as Partial<T>;
+/** แยก key ที่เป็น undefined ออกเป็นรายการ $unset — เคลียร์ค่าได้จริง และไม่เขียน null ลง DB */
+export function splitUndefined<T extends Record<string, unknown>>(
+  obj: T
+): { defined: Partial<T>; unsetKeys: string[] } {
+  const defined: Record<string, unknown> = {};
+  const unsetKeys: string[] = [];
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) unsetKeys.push(k);
+    else defined[k] = v;
+  }
+  return { defined: defined as Partial<T>, unsetKeys };
 }
 
 export async function savePipe(raw: unknown) {
@@ -44,11 +50,15 @@ export async function savePipe(raw: unknown) {
     const prev = await col.findOne({ _id: id }, { projection: { deletedAt: 1 } });
     if (prev && prev.deletedAt) throw new DeletedDocError();
   }
+  const { defined, unsetKeys } = splitUndefined(rest);
   await col.updateOne(
     { _id: id },
     {
-      $set: { ...stripUndefined(rest), ...derived, updatedAt: now },
+      $set: { ...defined, ...derived, updatedAt: now },
       $setOnInsert: { createdAt: now, deletedAt: null },
+      ...(unsetKeys.length
+        ? { $unset: Object.fromEntries(unsetKeys.map((k) => [k, true])) }
+        : {}),
     },
     { upsert: true }
   );
@@ -66,15 +76,19 @@ export async function saveNode(raw: unknown) {
     const prev = await col.findOne({ _id: id }, { projection: { deletedAt: 1 } });
     if (prev && prev.deletedAt) throw new DeletedDocError();
   }
+  const { defined, unsetKeys } = splitUndefined(rest);
   await col.updateOne(
     { _id: id },
     {
       $set: {
-        ...stripUndefined(rest),
+        ...defined,
         onPipeId: onPipeId ? new ObjectId(onPipeId) : null,
         updatedAt: now,
       },
       $setOnInsert: { createdAt: now, deletedAt: null },
+      ...(unsetKeys.length
+        ? { $unset: Object.fromEntries(unsetKeys.map((k) => [k, true])) }
+        : {}),
     },
     { upsert: true }
   );

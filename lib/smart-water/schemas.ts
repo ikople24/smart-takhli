@@ -63,7 +63,7 @@ export const NodeInputSchema = z.object({
     Object.keys(NODE_TYPES) as [keyof typeof NODE_TYPES, ...Array<keyof typeof NODE_TYPES>]
   ),
   geometry: PointSchema,
-  onPipeId: objectIdHex.optional(),
+  onPipeId: z.preprocess(emptyToUndefined, objectIdHex.optional()),
   hydrantNo: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
   size: z.string().trim().max(50).optional(),
   condition: z

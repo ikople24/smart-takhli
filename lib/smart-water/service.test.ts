@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { derivePipeFields } from './service';
+import { derivePipeFields, splitUndefined } from './service';
 
 const baseGeometry = {
   type: 'LineString' as const,
@@ -57,5 +57,19 @@ describe('derivePipeFields', () => {
 
   it('เก็บ bbox ไว้สำหรับ query', () => {
     expect(derivePipeFields(base).bbox).toEqual([100.35, 15.26, 100.36, 15.26]);
+  });
+});
+
+describe('splitUndefined', () => {
+  it('แยก key ที่เป็น undefined เป็น unsetKeys', () => {
+    const r = splitUndefined({ a: 1, b: undefined, c: 'x' });
+    expect(r.defined).toEqual({ a: 1, c: 'x' });
+    expect(r.unsetKeys).toEqual(['b']);
+  });
+
+  it('ไม่มี undefined → unsetKeys ว่าง', () => {
+    const r = splitUndefined({ a: 1 });
+    expect(r.defined).toEqual({ a: 1 });
+    expect(r.unsetKeys).toEqual([]);
   });
 });
