@@ -34,6 +34,7 @@ const navigationItems = [
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
   { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
+  { label: 'ทะเบียนท่อประปา',   href: '/admin/smart-water',              icon: '🚰', group: 'จัดการ' },
   { label: 'ระบบบริหารจัดการขยะ', href: '/admin/smart-waste',               icon: '♻️', group: 'จัดการ' },
   { label: 'ตารางเดินรถเก็บขยะ', href: '/admin/garbage',                   icon: '🚛', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
