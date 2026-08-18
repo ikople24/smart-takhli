@@ -36,6 +36,9 @@ export function computeLengthM(coords: LngLat[]): number {
 
 /** bounding box [west, south, east, north] จาก coordinates */
 export function bboxOf(coords: LngLat[]): [number, number, number, number] {
+  if (!Array.isArray(coords) || coords.length === 0) {
+    throw new Error('bboxOf ต้องมีอย่างน้อย 1 จุด');
+  }
   const lngs = coords.map((c) => c[0]);
   const lats = coords.map((c) => c[1]);
   return [

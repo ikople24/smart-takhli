@@ -47,12 +47,9 @@ export function buildPipeCode(material: MaterialCode, value: number): string {
     ([, v]) => v.code === material
   );
   if (!entry) throw new Error(`ไม่รู้จักชนิดท่อ: ${material}`);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`ขนาดท่อไม่ถูกต้อง: ${value}`);
+  }
   // String(6.0) === "6" อยู่แล้ว จึงไม่ต้องแยกกรณีจำนวนเต็ม
   return `${entry[0]}${String(value)}`;
-}
-
-export function materialSpec(material: MaterialCode) {
-  const entry = Object.values(PIPE_MATERIALS).find((v) => v.code === material);
-  if (!entry) throw new Error(`ไม่รู้จักชนิดท่อ: ${material}`);
-  return entry;
 }

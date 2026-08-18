@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeLengthM, projectToUTM } from './geo';
+import { computeLengthM, projectToUTM, bboxOf } from './geo';
 
 describe('computeLengthM', () => {
   it('เส้นแนวตะวันออก-ตก 0.01 องศา ที่ตาคลี ≈ 1074 ม.', () => {
@@ -53,5 +53,21 @@ describe('projectToUTM', () => {
     expect(x).toBeLessThan(700000);
     expect(y).toBeGreaterThan(1600000);
     expect(y).toBeLessThan(1720000);
+  });
+});
+
+describe('bboxOf', () => {
+  it('หลายจุด', () => {
+    expect(
+      bboxOf([[100.35, 15.26], [100.36, 15.27], [100.34, 15.20]])
+    ).toEqual([100.34, 15.20, 100.36, 15.27]);
+  });
+
+  it('จุดเดียว', () => {
+    expect(bboxOf([[100.35, 15.26]])).toEqual([100.35, 15.26, 100.35, 15.26]);
+  });
+
+  it('array ว่างต้อง throw', () => {
+    expect(() => bboxOf([])).toThrow();
   });
 });

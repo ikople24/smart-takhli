@@ -56,6 +56,10 @@ describe('parsePipeCode', () => {
   it('ปฏิเสธค่าว่าง', () => {
     expect(parsePipeCode('').ok).toBe(false);
   });
+
+  it('ปฏิเสธขนาดศูนย์', () => {
+    expect(parsePipeCode('P0').ok).toBe(false);
+  });
 });
 
 describe('buildPipeCode', () => {
@@ -82,6 +86,11 @@ describe('buildPipeCode', () => {
       if (!r.ok) return;
       expect(buildPipeCode(r.material, r.diameter.value)).toBe(code);
     }
+  });
+
+  it('ปฏิเสธขนาดศูนย์หรือติดลบ', () => {
+    expect(() => buildPipeCode('PVC', 0)).toThrow();
+    expect(() => buildPipeCode('PVC', -4)).toThrow();
   });
 });
 
