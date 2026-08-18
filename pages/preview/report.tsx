@@ -9,6 +9,7 @@ import CitizenShell from "@/components/citizen/CitizenShell";
 import WizardHeader from "@/components/citizen/report/WizardHeader";
 import WizardFooter from "@/components/citizen/report/WizardFooter";
 import { SERVICE_LABELS } from "@/components/citizen/home/ServiceGrid";
+import StepCategory from "@/components/citizen/report/StepCategory";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 
@@ -93,7 +94,17 @@ export default function ReportWizard() {
 
         {step === 1 && (
           <>
-            <div className="flex-1 px-4 pb-4 text-sm text-[#9590A8]">(ขั้นเลือกหมวด — Task 4)</div>
+            <StepCategory
+              menu={complaintMenu}
+              loading={menuLoading}
+              problemOptions={problemOptions}
+              value={category}
+              onChange={(label) => {
+                setCategory(label);
+                setSelectedProblems([]); // ปัญหาที่เลือกไว้เป็นของหมวดเดิม
+                setErrors({});
+              }}
+            />
             <WizardFooter onNext={() => setStep(2)} disabled={!category} />
           </>
         )}
