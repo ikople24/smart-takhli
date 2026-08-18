@@ -10,6 +10,8 @@ import WizardHeader from "@/components/citizen/report/WizardHeader";
 import WizardFooter from "@/components/citizen/report/WizardFooter";
 import { SERVICE_LABELS } from "@/components/citizen/home/ServiceGrid";
 import StepCategory from "@/components/citizen/report/StepCategory";
+import StepDetails from "@/components/citizen/report/StepDetails";
+import { stepDetailsSchema, validateStep } from "@/lib/citizen/report/schema";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 
@@ -110,8 +112,29 @@ export default function ReportWizard() {
         )}
         {step === 2 && (
           <>
-            <div className="flex-1 px-4 pb-4 text-sm text-[#9590A8]">(ขั้นรายละเอียด — Task 5)</div>
-            <WizardFooter onBack={goBack} onNext={() => setStep(3)} />
+            <StepDetails
+              category={category}
+              community={community}
+              onCommunity={setCommunity}
+              problemOptions={problemOptions}
+              selectedProblems={selectedProblems}
+              onToggleProblem={(id) =>
+                setSelectedProblems((prev) =>
+                  prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+                )
+              }
+              onImages={setImageUrls}
+              onUploading={setIsUploading}
+              errors={errors}
+            />
+            <WizardFooter
+              onBack={goBack}
+              onNext={() => {
+                const errs = validateStep(stepDetailsSchema, { community, selectedProblems, imageUrls });
+                setErrors(errs);
+                if (Object.keys(errs).length === 0) setStep(3);
+              }}
+            />
           </>
         )}
         {step === 3 && (
