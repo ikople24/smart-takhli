@@ -133,7 +133,7 @@ export async function listPipes(opts: {
   // ข้อมูลจริงจากแบบมี 2,096 เส้น — default ต้องสูงกว่านั้น ไม่งั้นแผนที่ขาดหายเงียบ ๆ
   return col
     .find(filter)
-    .limit(Math.min(Math.max(opts.limit ?? 5000, 1), 10000))
+    .limit(Math.min(Math.max(Math.floor(opts.limit ?? 5000), 1), 10000))
     .toArray();
 }
 
@@ -151,7 +151,7 @@ export async function listNodes(opts: {
   const col = await nodes();
   return col
     .find(filter)
-    .limit(Math.min(Math.max(opts.limit ?? 3000, 1), 8000))
+    .limit(Math.min(Math.max(Math.floor(opts.limit ?? 3000), 1), 8000))
     .toArray();
 }
 

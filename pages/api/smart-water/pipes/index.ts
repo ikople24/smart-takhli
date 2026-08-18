@@ -4,7 +4,13 @@ import { listPipes, savePipe, DeletedDocError } from '@/lib/smart-water/service'
 import { parseBBox, str, toFeatureCollection, zodIssues } from '@/lib/smart-water/api-helpers';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = await requireSmartWaterAdmin(req);
+  let auth;
+  try {
+    auth = await requireSmartWaterAdmin(req);
+  } catch (e) {
+    console.error('[smart-water/pipes] auth', e);
+    return res.status(500).json({ success: false, message: 'ตรวจสอบสิทธิ์ไม่สำเร็จ' });
+  }
   if (!auth.ok) {
     return res.status(auth.status).json({ success: false, message: auth.message });
   }
@@ -25,6 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
+      if (req.body && typeof req.body === 'object' && '_id' in req.body) {
+        return res
+          .status(400)
+          .json({ success: false, message: 'สร้างใหม่ห้ามส่ง _id — แก้ไขข้อมูลเดิมให้ใช้ PATCH' });
+      }
       const doc = await savePipe(req.body);
       return res.status(201).json({ success: true, data: doc });
     }

@@ -6,7 +6,13 @@ import { savePipe, softDeletePipe, DeletedDocError } from '@/lib/smart-water/ser
 import { zodIssues } from '@/lib/smart-water/api-helpers';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = await requireSmartWaterAdmin(req);
+  let auth;
+  try {
+    auth = await requireSmartWaterAdmin(req);
+  } catch (e) {
+    console.error('[smart-water/pipes/id] auth', e);
+    return res.status(500).json({ success: false, message: 'ตรวจสอบสิทธิ์ไม่สำเร็จ' });
+  }
   if (!auth.ok) {
     return res.status(auth.status).json({ success: false, message: auth.message });
   }
@@ -43,7 +49,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'DELETE') {
-      await softDeletePipe(id);
+      const r = await softDeletePipe(id);
+      if (r.matchedCount === 0) {
+        return res.status(404).json({ success: false, message: 'ไม่พบท่อนี้' });
+      }
       return res.status(200).json({ success: true });
     }
 

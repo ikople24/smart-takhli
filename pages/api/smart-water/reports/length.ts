@@ -6,7 +6,13 @@ import { str } from '@/lib/smart-water/api-helpers';
 const VALID: GroupBy[] = ['material', 'road', 'year', 'status'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const auth = await requireSmartWaterAdmin(req);
+  let auth;
+  try {
+    auth = await requireSmartWaterAdmin(req);
+  } catch (e) {
+    console.error('[smart-water/reports/length] auth', e);
+    return res.status(500).json({ success: false, message: 'ตรวจสอบสิทธิ์ไม่สำเร็จ' });
+  }
   if (!auth.ok) {
     return res.status(auth.status).json({ success: false, message: auth.message });
   }
