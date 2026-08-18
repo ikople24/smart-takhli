@@ -30,26 +30,47 @@ export default function SmartWaterReportPage() {
   const [includeAbandoned, setIncludeAbandoned] = useState(false);
   const [rows, setRows] = useState([]);
   const [totalM, setTotalM] = useState(0);
+  const [totalKm, setTotalKm] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    setError("");
+    setError('');
     fetch(
       `/api/smart-water/reports/length?groupBy=${groupBy}&includeAbandoned=${includeAbandoned}`
     )
-      .then((r) => {
-        if (!r.ok) throw new Error("โหลดรายงานไม่สำเร็จ");
-        return r.json();
+      .then(async (r) => {
+        // อ่าน body เสมอ — endpoint คืน { success:false, message } ที่เป็นภาษาไทยและมีประโยชน์กว่าข้อความรวม
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d?.success) {
+          throw new Error(d?.message || 'โหลดรายงานไม่สำเร็จ');
+        }
+        return d;
       })
       .then((d) => {
-        if (!d.success) throw new Error(d.message || "โหลดรายงานไม่สำเร็จ");
+        if (cancelled) return;
         setRows(d.rows);
         setTotalM(d.grandTotalM);
+        setTotalKm(d.grandTotalKm);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (cancelled) return;
+        console.error('[smart-water/report]', e);
+        // ข้อความจากเซิร์ฟเวอร์เป็นไทยอยู่แล้ว ส่วน error ของเบราว์เซอร์ (Failed to fetch) เป็นอังกฤษ
+        setError(
+          e instanceof TypeError
+            ? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'
+            : e.message || 'โหลดรายงานไม่สำเร็จ'
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [groupBy, includeAbandoned]);
 
   return (
@@ -106,11 +127,20 @@ export default function SmartWaterReportPage() {
         {!loading && !error && (
           <>
             <div className="mb-3 rounded-lg bg-teal-50 p-4">
-              <div className="text-xs text-teal-700">ความยาวรวมทั้งหมด</div>
+              <div className="text-xs text-teal-700">
+                {includeAbandoned
+                  ? 'ความยาวรวมทั้งหมด (รวมท่อที่ยกเลิกใช้งาน)'
+                  : 'ความยาวรวม (ไม่รวมท่อที่ยกเลิกใช้งาน)'}
+              </div>
               <div className="text-2xl font-semibold text-teal-800">
-                {totalM.toLocaleString("th-TH", { maximumFractionDigits: 2 })} ม.
+                {totalM.toLocaleString('th-TH', { maximumFractionDigits: 2 })} ม.
                 <span className="ml-2 text-base font-normal">
-                  ({(totalM / 1000).toFixed(3)} กม.)
+                  (
+                  {totalKm.toLocaleString('th-TH', {
+                    minimumFractionDigits: 3,
+                    maximumFractionDigits: 3,
+                  })}{' '}
+                  กม.)
                 </span>
               </div>
             </div>
@@ -132,9 +162,21 @@ export default function SmartWaterReportPage() {
                     <td className="py-2 text-right font-medium text-slate-800">
                       {r.totalM.toLocaleString("th-TH", { maximumFractionDigits: 2 })}
                     </td>
-                    <td className="py-2 text-right text-slate-500">{r.totalKm}</td>
+                    <td className="py-2 text-right text-slate-500">
+                      {r.totalKm.toLocaleString('th-TH', {
+                        minimumFractionDigits: 3,
+                        maximumFractionDigits: 3,
+                      })}
+                    </td>
                   </tr>
                 ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-slate-400">
+                      ไม่มีข้อมูลท่อตามเงื่อนไขนี้
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -142,6 +184,7 @@ export default function SmartWaterReportPage() {
               หมายเหตุ: ความยาวคำนวณจากระยะราบบนแผนที่ (UTM zone 47N)
               ไม่รวมความยาวส่วนเพิ่มจากข้องอและความลึกของท่อ
               ท่อจริงมักยาวกว่าค่านี้ประมาณ 2–5%
+              แผนที่แสดงท่อที่ยกเลิกใช้งานแบบจาง แต่รายงานนี้ไม่นับรวมจนกว่าจะติ๊กช่องด้านบน
             </p>
           </>
         )}
