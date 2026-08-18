@@ -1,47 +1,45 @@
 // components/citizen/BottomNav.tsx
-// Nav ล่างฝั่งประชาชนโฉมใหม่ — เฟสนี้ 2 แท็บ + ปุ่มแจ้งเรื่องกลาง
-// (แท็บโปรไฟล์รอระบบระบุตัวตนประชาชน ตาม spec 2026-08-18)
+// Nav ล่างฝั่งประชาชนโฉมใหม่ — โครงเดียวกับ nav เดิมของเว็บ (BottomNav.js):
+// ซ้าย = อยู่ระหว่างดำเนินการ (/complaint) · กลาง = ปุ่ม Home ม่วง (/preview)
+// · ขวา = ดำเนินการเสร็จสิ้น (/status)
 import Link from "next/link";
 
-function HomeIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.1 : 1.9} strokeLinejoin="round">
-      <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" />
-    </svg>
-  );
-}
-
-function StatusIcon() {
+function ClockIcon() {
   return (
     <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="3" width="14" height="18" rx="2.5" />
-      <path d="M9 8h6M9 12h6M9 16h4" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
     </svg>
   );
 }
 
-export default function BottomNav({ onReport }: { onReport: () => void }) {
+function CheckIcon() {
   return (
-    <nav className="sticky bottom-0 z-20 flex items-end border-t border-[#EFEDF4] bg-white px-4 pb-6 pt-2">
-      <Link href="/preview" className="flex flex-1 flex-col items-center gap-1 text-[#7C3AED]">
-        <HomeIcon active />
-        <span className="text-[11px] font-semibold">หน้าแรก</span>
+    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+    </svg>
+  );
+}
+
+export default function BottomNav() {
+  return (
+    <nav className="sticky bottom-0 z-20 flex items-end border-t border-[#EFEDF4] bg-white px-2 pb-5 pt-2">
+      <Link href="/complaint" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+        <ClockIcon />
+        <span className="text-[10.5px] leading-tight">อยู่ระหว่างดำเนินการ</span>
       </Link>
-      <div className="flex flex-1 justify-center">
-        <button
-          type="button"
-          onClick={onReport}
-          aria-label="แจ้งเรื่องร้องเรียน"
-          className="-mt-9 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] shadow-[0_10px_22px_rgba(124,58,237,0.4)] transition hover:scale-105"
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
+      <Link href="/preview" aria-label="หน้าแรก" className="flex flex-1 flex-col items-center gap-1">
+        <span className="-mt-9 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] shadow-[0_10px_22px_rgba(124,58,237,0.4)] transition hover:scale-105">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.1} strokeLinejoin="round">
+            <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" />
           </svg>
-        </button>
-      </div>
+        </span>
+        <span className="text-[10.5px] font-semibold leading-tight text-[#7C3AED]">หน้าแรก</span>
+      </Link>
       <Link href="/status" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
-        <StatusIcon />
-        <span className="text-[11px]">สถานะ</span>
+        <CheckIcon />
+        <span className="text-[10.5px] leading-tight">ดำเนินการเสร็จสิ้น</span>
       </Link>
     </nav>
   );

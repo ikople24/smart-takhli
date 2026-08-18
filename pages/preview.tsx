@@ -75,7 +75,7 @@ export default function PreviewHome() {
       <Head>
         <title>เทศบาลเมืองตาคลี · Smart Takhli</title>
       </Head>
-      <CitizenShell onReport={scrollToCategories}>
+      <CitizenShell>
         <HeaderCard />
         <EnvCards />
         <ComplaintCTA onStart={scrollToCategories} />
