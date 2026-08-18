@@ -78,16 +78,17 @@ export default function PreviewHome() {
       <CitizenShell>
         <HeaderCard />
         <EnvCards />
-        <ComplaintCTA onStart={scrollToCategories} />
-        <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
-        <NewsSection />
 
-        <section className="mx-4 mt-6">
+        <section className="mx-4 mt-4">
           <h2 className="text-[15px] font-bold">ตารางรถเก็บขยะ</h2>
           <div className="mt-3">
             <GarbageHomeCard />
           </div>
         </section>
+
+        <ComplaintCTA onStart={scrollToCategories} />
+        <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
+        <NewsSection />
 
         <section className="mx-4 mt-6">
           <h2 className="text-[15px] font-bold">ศูนย์กายอุปกรณ์</h2>
