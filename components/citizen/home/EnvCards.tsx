@@ -8,6 +8,12 @@ import { useCountUp } from "@/components/site-stats/useCountUp";
 
 type Level = { label: string; chipBg: string; chipText: string; dot: string };
 
+// "2026-08-18" → "18/08/2569" (แบบเดียวกับ formatThaiDateShort ของ WaterQualityCard เดิม)
+function thaiDateShort(ymd: string | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd || "");
+  return m ? `${m[3]}/${m[2]}/${parseInt(m[1], 10) + 543}` : "";
+}
+
 function Chip({ level }: { level: Level }) {
   return (
     <span
@@ -35,6 +41,8 @@ function CardFrame({ title, icon, children }: { title: string; icon: React.React
 export default function EnvCards() {
   const [pm, setPm] = useState<string | number | null>(null);
   const [ntu, setNtu] = useState<string | number | null>(null);
+  const [pmSync, setPmSync] = useState("");
+  const [waterSync, setWaterSync] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,10 +54,14 @@ export default function EnvCards() {
       ]);
       if (!alive) return;
       if (pmRes.status === "fulfilled" && pmRes.value?.success && pmRes.value.latest) {
-        setPm(pmRes.value.latest.pm25);
+        const latest = pmRes.value.latest;
+        setPm(latest.pm25);
+        // date_select เป็น พ.ศ. จาก API อยู่แล้ว เช่น "18/08/2569" · Time ตัดวินาทีทิ้ง
+        setPmSync([latest.date_select, latest.Time?.slice(0, 5)].filter(Boolean).join(" "));
       }
       if (waterRes.status === "fulfilled" && waterRes.value?.success && waterRes.value.data) {
         setNtu(waterRes.value.data.tapTurbidityNtu);
+        setWaterSync(thaiDateShort(waterRes.value.data.recordDate));
       }
       setLoading(false);
     };
@@ -94,7 +106,7 @@ export default function EnvCards() {
           </svg>
         }
       >
-        <div className="mt-2 flex items-baseline gap-1.5">
+        <div className="mt-2 flex items-baseline justify-end gap-1.5">
           <span
             className="text-[38px] font-bold leading-none tabular-nums transition-colors duration-500"
             style={{ color: pmLv.key === "none" ? "#9590A8" : pmLv.chipText }}
@@ -104,6 +116,7 @@ export default function EnvCards() {
           <span className="text-[11px] text-[#9590A8]">µg/m³</span>
         </div>
         <Chip level={pmLv} />
+        {pmSync && <div className="mt-1.5 text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {pmSync}</div>}
       </CardFrame>
       <CardFrame
         title="น้ำประปา"
@@ -113,7 +126,7 @@ export default function EnvCards() {
           </svg>
         }
       >
-        <div className="mt-2 flex items-baseline gap-1.5">
+        <div className="mt-2 flex items-baseline justify-end gap-1.5">
           <span
             className="text-[38px] font-bold leading-none tabular-nums transition-colors duration-500"
             style={{ color: waterLv.key === "none" ? "#9590A8" : waterLv.chipText }}
@@ -123,6 +136,7 @@ export default function EnvCards() {
           <span className="text-[11px] text-[#9590A8]">NTU</span>
         </div>
         <Chip level={waterLv} />
+        {waterSync && <div className="mt-1.5 text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {waterSync}</div>}
       </CardFrame>
     </div>
   );
