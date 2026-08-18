@@ -11,7 +11,10 @@ import WizardFooter from "@/components/citizen/report/WizardFooter";
 import { SERVICE_LABELS } from "@/components/citizen/home/ServiceGrid";
 import StepCategory from "@/components/citizen/report/StepCategory";
 import StepDetails from "@/components/citizen/report/StepDetails";
-import { stepDetailsSchema, validateStep } from "@/lib/citizen/report/schema";
+import StepReporter from "@/components/citizen/report/StepReporter";
+import StepSuccess from "@/components/citizen/report/StepSuccess";
+import { fullReportSchema, stepDetailsSchema, stepReporterSchema, validateStep } from "@/lib/citizen/report/schema";
+import { buildComplaintPayload } from "@/lib/citizen/report/payload";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 
@@ -68,6 +71,53 @@ export default function ReportWizard() {
   }, [router.isReady, router.query.category]);
 
   const complaintMenu = menu.filter((m) => !SERVICE_LABELS.includes(m.Prob_name));
+
+  const handleSubmit = async () => {
+    // กันกดซ้ำ + กันส่งระหว่างรูปกำลังอัปโหลด (พฤติกรรมเดิมของฟอร์ม)
+    if (isSubmitting || isUploading) return;
+    const trimmed = { prefix, fullName: fullName.trim(), phone, detail: detail.trim(), location };
+    const stepErrs = validateStep(stepReporterSchema, trimmed);
+    setErrors(stepErrs);
+    if (Object.keys(stepErrs).length > 0) return;
+    // ตรวจรวมทั้งก้อนก่อนส่งจริง (เผื่อย้อนไปแก้จนขั้นก่อนหน้าไม่ครบ)
+    const fullErrs = validateStep(fullReportSchema, {
+      category,
+      community,
+      selectedProblems,
+      imageUrls,
+      ...trimmed,
+    });
+    if (Object.keys(fullErrs).length > 0) {
+      setErrors(fullErrs);
+      setSubmitError("ข้อมูลบางขั้นยังไม่ครบ กรุณาย้อนกลับตรวจสอบ");
+      return;
+    }
+    setIsSubmitting(true);
+    setSubmitError("");
+    try {
+      const payload = buildComplaintPayload(
+        { prefix, fullName, phone, community, selectedProblems, category, imageUrls, detail, location },
+        problemOptions
+      );
+      const res = await fetch("/api/submittedreports/submit-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-app-id": process.env.NEXT_PUBLIC_APP_ID || "app_b",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("ส่งข้อมูลไม่สำเร็จ");
+      const data = await res.json();
+      setComplaintId(data.complaintId);
+      setStep("success");
+      window.scrollTo(0, 0);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const goBack = () => {
     setErrors({});
@@ -139,13 +189,28 @@ export default function ReportWizard() {
         )}
         {step === 3 && (
           <>
-            <div className="flex-1 px-4 pb-4 text-sm text-[#9590A8]">(ขั้นผู้แจ้ง — Task 6)</div>
-            <WizardFooter onBack={goBack} onNext={() => {}} nextLabel="ส่งเรื่อง" loading={isSubmitting} />
+            <StepReporter
+              prefix={prefix}
+              setPrefix={setPrefix}
+              fullName={fullName}
+              setFullName={setFullName}
+              phone={phone}
+              setPhone={setPhone}
+              detail={detail}
+              setDetail={setDetail}
+              location={location}
+              setLocation={setLocation}
+              useCurrentLocation={useCurrentLocation}
+              setUseCurrentLocation={setUseCurrentLocation}
+              errors={errors}
+            />
+            {submitError && (
+              <p className="px-4 pb-2 text-[12px] font-medium text-[#DC2626]">{submitError}</p>
+            )}
+            <WizardFooter onBack={goBack} onNext={handleSubmit} nextLabel="ส่งเรื่อง" loading={isSubmitting} />
           </>
         )}
-        {step === "success" && (
-          <div className="flex-1 px-4 pb-4 text-sm text-[#9590A8]">(จอสำเร็จ — Task 7) {complaintId}</div>
-        )}
+        {step === "success" && <StepSuccess complaintId={complaintId} />}
       </CitizenShell>
     </>
   );
