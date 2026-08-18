@@ -21,14 +21,16 @@ export async function ensureWaterIndexes(): Promise<void> {
     { key: { geometry: "2dsphere" }, name: "geo" },
     { key: { material: 1, diameterMm: 1 }, name: "by_material" },
     { key: { roadName: 1 }, name: "by_road" },
-    { key: { status: 1, deletedAt: 1 }, name: "by_status" },
+    { key: { deletedAt: 1, status: 1 }, name: "by_status" },
     { key: { code: 1 }, name: "by_code" },
   ]);
 
   await db.collection(NODES_COLLECTION).createIndexes([
     { key: { geometry: "2dsphere" }, name: "geo" },
-    { key: { type: 1, deletedAt: 1 }, name: "by_type" },
+    { key: { deletedAt: 1, type: 1 }, name: "by_type" },
     { key: { onPipeId: 1 }, name: "by_pipe" },
+    // unique ครอบทั้งเอกสารที่ถูก soft delete — service ฝั่งลบต้องแปลง hydrantNo
+    // เป็น tombstone (เช่น "HD-001~deleted~<ts>") เพื่อให้เลขเดิม reuse ได้
     {
       key: { hydrantNo: 1 },
       name: "uniq_hydrant_no",
