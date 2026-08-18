@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { pm25Level } from "@/lib/citizen/pm25Level";
 import { waterLevel } from "@/lib/citizen/waterLevel";
+import { useCountUp } from "@/components/site-stats/useCountUp";
 
 type Level = { label: string; chipBg: string; chipText: string; dot: string };
 
@@ -60,6 +61,15 @@ export default function EnvCards() {
     };
   }, []);
 
+  const pmLv = pm25Level(pm);
+  const waterLv = waterLevel(ntu);
+  const ntuNum = Number(ntu);
+  const hasNtu = ntu != null && Number.isFinite(ntuNum);
+  // นับเลขแบบ ease-out ตอนโหลด/ค่าเปลี่ยน (สไตล์เดียวกับการ์ด PM2.5 เดิม)
+  // — NTU เป็นทศนิยม เลยนับที่สเกล x100 แล้วหารกลับตอนแสดง
+  const pmAnim = useCountUp(pmLv.key === "none" ? 0 : parseInt(String(pm), 10), 1200, !loading);
+  const ntuAnim = useCountUp(hasNtu ? Math.round(ntuNum * 100) : 0, 1200, !loading);
+
   if (loading) {
     return (
       <div className="mx-4 mt-3 flex gap-2.5">
@@ -69,11 +79,8 @@ export default function EnvCards() {
     );
   }
 
-  const pmLv = pm25Level(pm);
-  const waterLv = waterLevel(ntu);
-  const pmDisplay = pmLv.key === "none" ? "–" : String(parseInt(String(pm), 10));
-  const ntuNum = Number(ntu);
-  const ntuDisplay = ntu != null && Number.isFinite(ntuNum) ? ntuNum.toFixed(2) : "–";
+  const pmDisplay = pmLv.key === "none" ? "–" : String(pmAnim);
+  const ntuDisplay = hasNtu ? (ntuAnim / 100).toFixed(2) : "–";
 
   return (
     <div className="mx-4 mt-3 flex gap-2.5">
@@ -87,8 +94,13 @@ export default function EnvCards() {
           </svg>
         }
       >
-        <div className="mt-2 flex items-baseline gap-1">
-          <span className="text-3xl font-bold leading-none">{pmDisplay}</span>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span
+            className="text-[38px] font-bold leading-none tabular-nums transition-colors duration-500"
+            style={{ color: pmLv.key === "none" ? "#9590A8" : pmLv.chipText }}
+          >
+            {pmDisplay}
+          </span>
           <span className="text-[11px] text-[#9590A8]">µg/m³</span>
         </div>
         <Chip level={pmLv} />
@@ -101,8 +113,13 @@ export default function EnvCards() {
           </svg>
         }
       >
-        <div className="mt-2 flex items-baseline gap-1">
-          <span className="text-3xl font-bold leading-none">{ntuDisplay}</span>
+        <div className="mt-2 flex items-baseline gap-1.5">
+          <span
+            className="text-[38px] font-bold leading-none tabular-nums transition-colors duration-500"
+            style={{ color: waterLv.key === "none" ? "#9590A8" : waterLv.chipText }}
+          >
+            {ntuDisplay}
+          </span>
           <span className="text-[11px] text-[#9590A8]">NTU</span>
         </div>
         <Chip level={waterLv} />
