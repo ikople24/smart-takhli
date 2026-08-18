@@ -3,13 +3,13 @@
 // spec: docs/superpowers/specs/2026-08-18-citizen-home-redesign-design.md
 import { useEffect, useState } from "react";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import HeaderCard from "@/components/citizen/home/HeaderCard";
 import EnvCards from "@/components/citizen/home/EnvCards";
 import ComplaintCTA from "@/components/citizen/home/ComplaintCTA";
 import ServiceGrid from "@/components/citizen/home/ServiceGrid";
 import NewsSection from "@/components/citizen/home/NewsSection";
-import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
 import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
 import EquipmentRow from "@/components/citizen/home/EquipmentRow";
@@ -26,9 +26,9 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export default function PreviewHome() {
+  const router = useRouter();
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const [hasFetched, setHasFetched] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [showSpecialForm, setShowSpecialForm] = useState(false);
   const [showEducationForm, setShowEducationForm] = useState(false);
   const [specialFormData, setSpecialFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
@@ -59,15 +59,10 @@ export default function PreviewHome() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // พฤติกรรมหมวดพิเศษเหมือนหน้าแรกเดิม (pages/index.tsx)
+  // หมวดบริการเปิด modal เดิม — หมวดร้องเรียนเป็นลิงก์เข้า wizard ใน ServiceGrid แล้ว
   const handleSelect = (label: string) => {
     if (label === "ลงทะเบียนกายอุปกรณ์") setShowSpecialForm(true);
     else if (label === "สำรวจการศึกษา") setShowEducationForm(true);
-    else setSelectedLabel(label);
-  };
-
-  const scrollToCategories = () => {
-    document.getElementById("report-categories")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -86,7 +81,7 @@ export default function PreviewHome() {
           </div>
         </section>
 
-        <ComplaintCTA onStart={scrollToCategories} />
+        <ComplaintCTA onStart={() => router.push("/preview/report")} />
         <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
 
         <section className="mx-4 mt-6">
@@ -125,7 +120,6 @@ export default function PreviewHome() {
         <div className="h-8" />
       </CitizenShell>
 
-      {selectedLabel && <ComplaintFormModal selectedLabel={selectedLabel} onClose={() => setSelectedLabel(null)} />}
       {showSpecialForm && (
         <SpecialFormModal formData={specialFormData} setFormData={setSpecialFormData} onClose={() => setShowSpecialForm(false)} />
       )}
