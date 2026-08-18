@@ -3,6 +3,8 @@
 // spec: docs/superpowers/specs/2026-08-18-citizen-home-redesign-design.md
 import Head from "next/head";
 import CitizenShell from "@/components/citizen/CitizenShell";
+import HeaderCard from "@/components/citizen/home/HeaderCard";
+import EnvCards from "@/components/citizen/home/EnvCards";
 
 export default function PreviewHome() {
   const scrollToCategories = () => {
@@ -15,7 +17,8 @@ export default function PreviewHome() {
         <title>เทศบาลเมืองตาคลี · Smart Takhli</title>
       </Head>
       <CitizenShell onReport={scrollToCategories}>
-        <div className="px-4 py-6 text-sm text-[#9590A8]">กำลังประกอบหน้าแรกโฉมใหม่…</div>
+        <HeaderCard />
+        <EnvCards />
       </CitizenShell>
     </>
   );
