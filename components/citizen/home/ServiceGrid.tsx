@@ -49,7 +49,7 @@ export default function ServiceGrid({
   return (
     <>
       <section id="report-categories" className="mx-4 mt-6 scroll-mt-4">
-        <h2 className="text-[15px] font-bold">แจ้งเรื่องร้องเรียน</h2>
+        <h2 className="text-[15px] font-bold">แจ้งทุกข์-แจ้งเหตุ</h2>
         <p className="text-[11px] text-[#9590A8]">เลือกหมวดปัญหาที่ต้องการแจ้ง</p>
         {loading ? (
           <SkeletonGrid count={6} />

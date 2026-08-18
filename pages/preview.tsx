@@ -88,7 +88,6 @@ export default function PreviewHome() {
 
         <ComplaintCTA onStart={scrollToCategories} />
         <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
-        <NewsSection />
 
         <section className="mx-4 mt-6">
           <h2 className="text-[15px] font-bold">ศูนย์กายอุปกรณ์</h2>
@@ -97,6 +96,8 @@ export default function PreviewHome() {
             <EquipmentRow menu={healthMenu} loading={healthLoading} />
           </div>
         </section>
+
+        <NewsSection />
 
         <div className="mx-4 mt-8 flex items-center justify-center gap-4 text-sm text-[#7C3AED]">
           <a href="https://heyzine.com/flip-book/7cf559d572.html" className="flex items-center gap-1 hover:underline">
