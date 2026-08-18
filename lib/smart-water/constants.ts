@@ -44,3 +44,13 @@ export const CODE_COLORS: Record<string, string> = {
   A12: '#FF7F00', A4: '#FF0000',
 };
 export const FALLBACK_COLOR = '#666666';
+
+/** สีสัญลักษณ์อุปกรณ์บนแผนที่และ legend — fill:false = วงกลมกลวง */
+export const NODE_STYLE: Record<NodeType, { color: string; fill: boolean }> = {
+  hydrant: { color: '#DC2626', fill: true },
+  gate_valve: { color: '#16A34A', fill: false },
+  tap: { color: '#374151', fill: true },
+  end_cap: { color: '#6B7280', fill: false },
+  water_meter: { color: '#2563EB', fill: false },
+  blow_off: { color: '#EA580C', fill: true },
+};

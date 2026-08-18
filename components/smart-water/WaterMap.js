@@ -4,8 +4,13 @@ import { MapContainer, GeoJSON, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { BaseLayersControl } from "@/components/MapBaseTileLayers";
-import { CODE_COLORS, FALLBACK_COLOR } from "@/lib/smart-water/constants";
-import { NODE_STYLE } from "./PipeLegend";
+import { CODE_COLORS, FALLBACK_COLOR, NODE_STYLE } from "@/lib/smart-water/constants";
+import {
+  escapeHtml as esc,
+  pipeStatusLabel,
+  nodeTypeLabel,
+  nodeConditionLabel,
+} from "@/lib/smart-water/labels";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
 
@@ -40,12 +45,12 @@ function onEachPipe(feature, layer) {
       : "";
   layer.bindPopup(`
     <div style="font-family:inherit;min-width:180px">
-      <div style="font-weight:600;font-size:14px">${p.code} — ${p.material}</div>
-      <div>ขนาด ${p.diameter?.value} ${p.diameter?.unit}</div>
-      <div>ถนน: ${p.roadName ?? "-"}</div>
-      <div>ความยาว: <b>${conf === "low" ? Math.round(p.lengthM) : p.lengthM} ม.</b></div>
-      <div>สถานะ: ${p.status}</div>
-      <div>ปีที่วาง: ${p.installedYear ?? "-"}</div>
+      <div style="font-weight:600;font-size:14px">${esc(p.code)} — ${esc(p.material)}</div>
+      <div>ขนาด ${esc(p.diameter?.value)} ${esc(p.diameter?.unit)}</div>
+      <div>ถนน: ${esc(p.roadName ?? "-")}</div>
+      <div>ความยาว: <b>${esc(conf === "low" ? Math.round(p.lengthM) : p.lengthM)} ม.</b></div>
+      <div>สถานะ: ${esc(pipeStatusLabel(p.status))}</div>
+      <div>ปีที่วาง: ${esc(p.installedYear ?? "-")}</div>
       ${warn}
     </div>
   `);
@@ -66,23 +71,26 @@ function onEachNode(feature, layer) {
   const p = feature.properties;
   layer.bindPopup(`
     <div style="font-family:inherit">
-      <div style="font-weight:600">${p.hydrantNo ?? p.type}</div>
-      <div>ชนิด: ${p.type}</div>
-      ${p.size ? `<div>ขนาด: ${p.size}</div>` : ""}
-      <div>สภาพ: ${p.condition ?? "-"}</div>
-      ${p.accessNote ? `<div>หมายเหตุ: ${p.accessNote}</div>` : ""}
+      <div style="font-weight:600">${esc(p.hydrantNo ?? nodeTypeLabel(p.type))}</div>
+      <div>ชนิด: ${esc(nodeTypeLabel(p.type))}</div>
+      ${p.size ? `<div>ขนาด: ${esc(p.size)}</div>` : ""}
+      <div>สภาพ: ${esc(nodeConditionLabel(p.condition))}</div>
+      ${p.accessNote ? `<div>หมายเหตุ: ${esc(p.accessNote)}</div>` : ""}
     </div>
   `);
 }
 
-// ซูมให้พอดีข้อมูลครั้งแรกที่โหลด
-function FitToData({ data }) {
+// ซูมให้พอดีข้อมูลครั้งแรกที่โหลด (รวมทั้งท่อและอุปกรณ์)
+function FitToData({ pipes, nodes }) {
   const map = useMap();
   useEffect(() => {
-    if (!data?.features?.length) return;
-    const b = L.geoJSON(data).getBounds();
+    const features = [pipes, nodes]
+      .filter((d) => d?.features?.length)
+      .flatMap((d) => d.features);
+    if (!features.length) return;
+    const b = L.geoJSON({ type: "FeatureCollection", features }).getBounds();
     if (b.isValid()) map.fitBounds(b, { padding: [40, 40] });
-  }, [map, data]);
+  }, [map, pipes, nodes]);
   return null;
 }
 
@@ -90,9 +98,11 @@ export default function WaterMap({ pipes, nodes }) {
   return (
     <MapContainer center={TAKHLI_CENTER} zoom={15} className="h-full w-full">
       <BaseLayersControl />
+      {/* react-leaflet v5: <GeoJSON> ไม่รีเรนเดอร์เมื่อ data เปลี่ยน — หน้าเพจ mount แผนที่
+          หลังโหลดข้อมูลครบแล้วเท่านั้น ถ้าเพิ่มปุ่มรีเฟรช/ฟิลเตอร์ ต้องใส่ key= บังคับ remount */}
       <GeoJSON data={pipes} style={pipeStyle} onEachFeature={onEachPipe} />
       <GeoJSON data={nodes} pointToLayer={nodeToLayer} onEachFeature={onEachNode} />
-      <FitToData data={pipes} />
+      <FitToData pipes={pipes} nodes={nodes} />
     </MapContainer>
   );
 }

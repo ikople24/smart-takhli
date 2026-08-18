@@ -89,8 +89,12 @@ export default function SmartWaterPage() {
               กำลังโหลดข้อมูล...
             </div>
           )}
-          {!error && loaded && <WaterMap pipes={pipes} nodes={nodes} />}
-          <PipeLegend />
+          {!error && loaded && (
+            <>
+              <WaterMap pipes={pipes} nodes={nodes} />
+              <PipeLegend />
+            </>
+          )}
         </div>
       </div>
     </PermissionGuard>

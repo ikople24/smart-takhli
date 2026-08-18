@@ -1,13 +1,4 @@
-import { PIPE_MATERIALS, NODE_TYPES, CODE_COLORS } from "@/lib/smart-water/constants";
-
-export const NODE_STYLE = {
-  hydrant: { color: "#DC2626", fill: true },
-  gate_valve: { color: "#16A34A", fill: false },
-  tap: { color: "#374151", fill: true },
-  end_cap: { color: "#6B7280", fill: false },
-  water_meter: { color: "#2563EB", fill: false },
-  blow_off: { color: "#EA580C", fill: true },
-};
+import { PIPE_MATERIALS, NODE_TYPES, CODE_COLORS, NODE_STYLE } from "@/lib/smart-water/constants";
 
 export default function PipeLegend() {
   return (
@@ -23,11 +14,11 @@ export default function PipeLegend() {
           <span className="text-slate-600">{code}</span>
         </div>
       ))}
-      <div className="mt-1 text-[10px] leading-4 text-slate-400">
+      <div className="mt-1 text-[10px] leading-4 text-slate-600">
         {Object.entries(PIPE_MATERIALS)
           .map(([letter, m]) => `${letter} = ${m.nameTh}`)
           .join(" · ")}
-        <br />รหัสอื่นนอกแบบแสดงเป็นสีเทา
+        <br />ความหนาเส้น = ขนาดท่อ · รหัสอื่นนอกแบบแสดงเป็นสีเทา
       </div>
       <div className="mt-2 mb-1 font-semibold text-slate-700">อุปกรณ์</div>
       {Object.entries(NODE_TYPES).map(([k, v]) => (
