@@ -115,8 +115,10 @@ export default function EnvCards() {
           </span>
           <span className="text-[11px] text-[#9590A8]">µg/m³</span>
         </div>
-        <Chip level={pmLv} />
-        {pmSync && <div className="mt-1.5 text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {pmSync}</div>}
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <Chip level={pmLv} />
+          {pmSync && <span className="text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {pmSync}</span>}
+        </div>
       </CardFrame>
       <CardFrame
         title="น้ำประปา"
@@ -135,8 +137,10 @@ export default function EnvCards() {
           </span>
           <span className="text-[11px] text-[#9590A8]">NTU</span>
         </div>
-        <Chip level={waterLv} />
-        {waterSync && <div className="mt-1.5 text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {waterSync}</div>}
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <Chip level={waterLv} />
+          {waterSync && <span className="text-[9.5px] leading-tight text-[#9590A8]">อัปเดต {waterSync}</span>}
+        </div>
       </CardFrame>
     </div>
   );
