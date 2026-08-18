@@ -18,6 +18,18 @@ describe('buildLengthPipeline', () => {
     expect(group.$group._id).toHaveProperty('roadName');
   });
 
+  it('group ตามปีที่วางได้', () => {
+    const p = buildLengthPipeline({ groupBy: 'year' });
+    const group = p.find((s) => s.$group)!;
+    expect(group.$group._id).toEqual({ installedYear: '$installedYear' });
+  });
+
+  it('group ตามสถานะได้', () => {
+    const p = buildLengthPipeline({ groupBy: 'status' });
+    const group = p.find((s) => s.$group)!;
+    expect(group.$group._id).toEqual({ status: '$status' });
+  });
+
   it('ตัดท่อที่ถูกลบและท่อยกเลิกออก', () => {
     const p = buildLengthPipeline({});
     const match = p.find((s) => s.$match)!;

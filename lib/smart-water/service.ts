@@ -4,15 +4,32 @@ import { buildPipeCode, toMm } from './pipe-code';
 import { computeLengthM, bboxOf, type LngLat } from './geo';
 import { PipeInputSchema, NodeInputSchema, type PipeInput } from './schemas';
 
+/** โยนเมื่อพยายามเขียนทับเอกสารที่ถูก soft delete — route จับไปตอบ 409 */
+export class DeletedDocError extends Error {
+  constructor() {
+    super('เอกสารนี้ถูกลบแล้ว แก้ไขไม่ได้');
+    this.name = 'DeletedDocError';
+  }
+}
+
 /** pure — เทสต์ได้โดยไม่ต้องต่อ DB */
 export function derivePipeFields(input: PipeInput) {
   const coords = input.geometry.coordinates as LngLat[];
   return {
+    // code สร้างจาก value ตรง ๆ — ผู้เรียกต้องส่ง unit ตามชนิดท่อ (PIPE_MATERIALS[x].unit)
+    // ไม่งั้นได้ code กำกวม เช่น PVC 110mm → "P110" ที่ระบบอ่านเป็นนิ้ว
     code: buildPipeCode(input.material, input.diameter.value),
     diameterMm: toMm(input.diameter.value, input.diameter.unit),
     lengthM: computeLengthM(coords),
     bbox: bboxOf(coords),
   };
+}
+
+/** ตัด key ที่เป็น undefined ก่อน $set — กัน driver เขียน null ทำให้กลุ่มรายงานแตกเป็น null กับ missing */
+function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
 }
 
 export async function savePipe(raw: unknown) {
@@ -23,10 +40,14 @@ export async function savePipe(raw: unknown) {
   const now = new Date();
 
   const col = await pipes();
+  if (_id) {
+    const prev = await col.findOne({ _id: id }, { projection: { deletedAt: 1 } });
+    if (prev && prev.deletedAt) throw new DeletedDocError();
+  }
   await col.updateOne(
     { _id: id },
     {
-      $set: { ...rest, ...derived, updatedAt: now },
+      $set: { ...stripUndefined(rest), ...derived, updatedAt: now },
       $setOnInsert: { createdAt: now, deletedAt: null },
     },
     { upsert: true }
@@ -41,11 +62,15 @@ export async function saveNode(raw: unknown) {
   const now = new Date();
 
   const col = await nodes();
+  if (_id) {
+    const prev = await col.findOne({ _id: id }, { projection: { deletedAt: 1 } });
+    if (prev && prev.deletedAt) throw new DeletedDocError();
+  }
   await col.updateOne(
     { _id: id },
     {
       $set: {
-        ...rest,
+        ...stripUndefined(rest),
         onPipeId: onPipeId ? new ObjectId(onPipeId) : null,
         updatedAt: now,
       },
@@ -61,6 +86,8 @@ export type BBox = [number, number, number, number];
 function bboxFilter(bbox?: BBox): Filter<Document> {
   if (!bbox) return {};
   const [w, s, e, n] = bbox;
+  // bbox เพี้ยน (NaN/กลับด้าน/พื้นที่ศูนย์) → ไม่กรองดีกว่าปล่อยให้ Mongo โยน error ตอน query
+  if (![w, s, e, n].every(Number.isFinite) || !(w < e) || !(s < n)) return {};
   return {
     geometry: {
       $geoIntersects: {
@@ -92,7 +119,7 @@ export async function listPipes(opts: {
   // ข้อมูลจริงจากแบบมี 2,096 เส้น — default ต้องสูงกว่านั้น ไม่งั้นแผนที่ขาดหายเงียบ ๆ
   return col
     .find(filter)
-    .limit(Math.min(opts.limit ?? 5000, 10000))
+    .limit(Math.min(Math.max(opts.limit ?? 5000, 1), 10000))
     .toArray();
 }
 
@@ -110,7 +137,7 @@ export async function listNodes(opts: {
   const col = await nodes();
   return col
     .find(filter)
-    .limit(Math.min(opts.limit ?? 3000, 8000))
+    .limit(Math.min(Math.max(opts.limit ?? 3000, 1), 8000))
     .toArray();
 }
 

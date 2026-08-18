@@ -42,6 +42,11 @@ describe('PipeInputSchema', () => {
     };
     expect(PipeInputSchema.safeParse(bad).success).toBe(false);
   });
+
+  it('ปฏิเสธ _id ที่ไม่ใช่ ObjectId hex', () => {
+    expect(PipeInputSchema.safeParse({ ...validPipe, _id: 'abc' }).success).toBe(false);
+    expect(PipeInputSchema.safeParse({ ...validPipe, _id: '' }).success).toBe(false);
+  });
 });
 
 describe('NodeInputSchema', () => {

@@ -5,6 +5,9 @@ import { PIPE_STATUSES, NODE_TYPES, PIPE_MATERIALS, type MaterialCode } from './
 const emptyToUndefined = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v;
 
+/** ObjectId hex 24 ตัว — เช็คที่ชั้น validate เพื่อให้ id ผิดรูปเป็น ZodError (400) ไม่ใช่ BSONError (500) */
+const objectIdHex = z.string().regex(/^[0-9a-f]{24}$/i, 'id ไม่ถูกต้อง');
+
 const MATERIAL_CODES = Object.values(PIPE_MATERIALS).map((m) => m.code) as [
   MaterialCode,
   ...MaterialCode[]
@@ -30,7 +33,7 @@ export const PointSchema = z.object({
  * — ฝั่ง PATCH ต้อง merge เอกสารเดิมกับ payload ให้ครบก่อนแล้วค่อย parse ทั้งก้อนเสมอ
  */
 export const PipeInputSchema = z.object({
-  _id: z.string().optional(),
+  _id: objectIdHex.optional(),
   material: z.enum(MATERIAL_CODES),
   diameter: z.object({
     value: z.number().positive('ขนาดท่อต้องมากกว่า 0'),
@@ -55,12 +58,12 @@ export const PipeInputSchema = z.object({
 });
 
 export const NodeInputSchema = z.object({
-  _id: z.string().optional(),
+  _id: objectIdHex.optional(),
   type: z.enum(
     Object.keys(NODE_TYPES) as [keyof typeof NODE_TYPES, ...Array<keyof typeof NODE_TYPES>]
   ),
   geometry: PointSchema,
-  onPipeId: z.string().optional(),
+  onPipeId: objectIdHex.optional(),
   hydrantNo: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
   size: z.string().trim().max(50).optional(),
   condition: z
