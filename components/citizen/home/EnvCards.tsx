@@ -5,14 +5,11 @@
 // ค่าล่าสุดให้จุดปลายตรงกับเลขใหญ่) และ /api/smart-papar/water-quality/public-latest
 // (field recent) · กดการ์ด PM เปิด dashboard ตัวเต็มเดิมใน modal
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { pm25Level } from "@/lib/citizen/pm25Level";
 import { waterLevel } from "@/lib/citizen/waterLevel";
 import { useCountUp } from "@/components/site-stats/useCountUp";
 import Sparkline from "./Sparkline";
-
-// dashboard เดิมลาก recharts มาด้วย — โหลดเมื่อผู้ใช้กดเปิดเท่านั้น
-const Pm25Dashboard = dynamic(() => import("@/components/Pmdata"), { ssr: false });
+import Pm25InfoModal from "./Pm25InfoModal";
 
 type Level = { key: string; label: string; chipBg: string; chipText: string; dot: string };
 
@@ -83,6 +80,7 @@ function CardBody({
 export default function EnvCards() {
   const [pm, setPm] = useState<string | number | null>(null);
   const [pmTrend, setPmTrend] = useState<number[]>([]);
+  const [pmDaily, setPmDaily] = useState<{ date: string; avg: number }[]>([]);
   const [pmTime, setPmTime] = useState("");
   const [ntu, setNtu] = useState<string | number | null>(null);
   const [waterTrend, setWaterTrend] = useState<number[]>([]);
@@ -102,9 +100,9 @@ export default function EnvCards() {
         const { latest, dailyAverages } = pmRes.value;
         setPm(latest.pm25);
         setPmTime(latest.Time?.slice(0, 5) || "");
-        const daily = (dailyAverages || [])
-          .map((d: { avg: number }) => Number(d.avg))
-          .filter(Number.isFinite);
+        const rows = (dailyAverages || []).filter((d: { avg: number }) => Number.isFinite(Number(d.avg)));
+        setPmDaily(rows);
+        const daily = rows.map((d: { avg: number }) => Number(d.avg));
         const latestNum = parseInt(String(latest.pm25), 10);
         setPmTrend(Number.isFinite(latestNum) ? [...daily, latestNum] : daily);
       }
@@ -192,30 +190,11 @@ export default function EnvCards() {
       </div>
 
       {showPmDetail && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setShowPmDetail(false)}
-        >
-          <div
-            className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-2xl bg-[#F6F5FA] p-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-[15px] font-bold text-[#1B1830]">รายละเอียด PM2.5</span>
-              <button
-                type="button"
-                onClick={() => setShowPmDetail(false)}
-                aria-label="ปิด"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#6B6880] shadow-sm"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-              </button>
-            </div>
-            <Pm25Dashboard />
-          </div>
-        </div>
+        <Pm25InfoModal
+          value={pmLv.key === "none" ? 0 : parseInt(String(pm), 10)}
+          daily={pmDaily}
+          onClose={() => setShowPmDetail(false)}
+        />
       )}
     </>
   );
