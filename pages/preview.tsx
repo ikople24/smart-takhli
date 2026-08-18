@@ -12,7 +12,7 @@ import NewsSection from "@/components/citizen/home/NewsSection";
 import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
 import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
 import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
-import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
+import EquipmentRow from "@/components/citizen/home/EquipmentRow";
 import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
 import StatsRow from "@/components/citizen/home/StatsRow";
 import Footer from "@/components/Footer";
@@ -94,7 +94,7 @@ export default function PreviewHome() {
           <h2 className="text-[15px] font-bold">ศูนย์กายอุปกรณ์</h2>
           <p className="text-[11px] text-[#9590A8]">ยืม-คืนอุปกรณ์ช่วยเหลือผู้ป่วยและผู้สูงอายุ</p>
           <div className="mt-3">
-            <AvailableListOnly menu={healthMenu} loading={healthLoading} />
+            <EquipmentRow menu={healthMenu} loading={healthLoading} />
           </div>
         </section>
 
