@@ -80,7 +80,7 @@ const Layout = ({ children }) => {
   }
 
   // หน้าฝั่งประชาชนโฉมใหม่ (citizen shell) มี chrome ของตัวเอง — ไม่ครอบ layout เดิม
-  if (router.pathname === "/preview") {
+  if (router.pathname === "/preview" || router.pathname.startsWith("/preview/")) {
     return <>{children}</>;
   }
 

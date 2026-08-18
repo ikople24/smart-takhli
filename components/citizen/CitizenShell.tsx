@@ -6,12 +6,12 @@ import { ReactNode } from "react";
 import { anuphan } from "./fonts";
 import BottomNav from "./BottomNav";
 
-export default function CitizenShell({ children }: { children: ReactNode }) {
+export default function CitizenShell({ children, hideNav = false }: { children: ReactNode; hideNav?: boolean }) {
   return (
     <div className={`${anuphan.className} min-h-screen bg-[#EDEAF3]`}>
       <div className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-[#F6F5FA] text-[#1B1830] shadow-[0_0_40px_rgba(60,40,100,0.10)]">
         <main className="flex-1">{children}</main>
-        <BottomNav />
+        {!hideNav && <BottomNav />}
       </div>
     </div>
   );

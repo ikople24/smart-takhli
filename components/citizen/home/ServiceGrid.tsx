@@ -6,8 +6,8 @@ import Image from "next/image";
 import { MenuItem } from "@/stores/useMenuStore";
 
 // หมวดที่เป็น "บริการ" — ต้องสะกดตรงกับ Prob_name ใน DB (ตัวเดียวกับที่
-// handleSelect ใน pages/preview.tsx ใช้แยก modal)
-const SERVICE_LABELS = ["ลงทะเบียนกายอุปกรณ์", "สำรวจการศึกษา"];
+// handleSelect ใน pages/preview.tsx ใช้แยก modal · wizard ใช้กรองหมวดร้องเรียน)
+export const SERVICE_LABELS = ["ลงทะเบียนกายอุปกรณ์", "สำรวจการศึกษา"];
 
 function CategoryCard({ item, onSelect }: { item: MenuItem; onSelect: (label: string) => void }) {
   return (
