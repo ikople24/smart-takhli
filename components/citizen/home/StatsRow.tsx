@@ -24,7 +24,7 @@ function StatItem({
 }) {
   const display = useCountUp(value, 1200, true);
   return (
-    <div className="flex items-center gap-2.5 rounded-[14px] bg-[#F6F5FA] px-3 py-2.5">
+    <div className="flex items-center gap-2.5 rounded-[16px] bg-white px-3.5 py-3 shadow-[0_4px_12px_rgba(60,40,100,0.04)]">
       <span className="shrink-0">{icon}</span>
       <div className="min-w-0">
         <div className="text-lg font-bold leading-none tabular-nums text-[#1B1830]">
@@ -65,7 +65,7 @@ export default function StatsRow() {
   return (
     <section className="mx-4 mt-6">
       <h2 className="text-[15px] font-bold">สถิติการเข้าชมเว็บไซต์</h2>
-      <div className="mt-3 grid grid-cols-2 gap-2 rounded-[18px] bg-white p-2.5 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+      <div className="mt-3 grid grid-cols-2 gap-2.5">
         <StatItem icon={<Eye className="h-5 w-5 text-sky-500" />} label="เข้าชมทั้งหมด" value={stats.total} />
         <StatItem icon={<CalendarDays className="h-5 w-5 text-cyan-500" />} label="วันนี้" value={stats.today} />
         <StatItem icon={<TrendingUp className="h-5 w-5 text-emerald-500" />} label="เดือนนี้" value={stats.month} />
