@@ -27,7 +27,9 @@
 - **`water_nodes`** — geometry `Point` + `type`, `hydrantNo` (unique partial index), `size`, `condition`,
   `onPipeId`, `accessNote`, `note`
 - index: `ensureWaterIndexes()` ใน `lib/smart-water/db.ts` (idempotent, seed script เรียกให้อัตโนมัติ) —
-  **ทุก compound index ขึ้นต้นด้วย `deletedAt` เสมอ** เพราะทุก query กรอง `deletedAt: null`
+  `by_status`/`by_type` ขึ้นต้นด้วย `deletedAt` เพราะทุก query กรอง `deletedAt: null` (คิวรี "เอาทั้งหมดที่ยังไม่ลบ"
+  จึงใช้ index ได้) ส่วน `by_material`/`by_road`/`by_code` ไม่ต้องมี `deletedAt` นำ — สัดส่วนเอกสารที่ถูกลบน้อย
+  กรองทีหลังถูกกว่า
 
 ## กติกาสำคัญ (ห้ามพลาด)
 
@@ -75,6 +77,9 @@
 - **seed**: `node --env-file=.env.local --import tsx scripts/seed-water.ts` — idempotent
   (ลบเฉพาะเอกสารที่แท็ก `SEED-DATA` แล้วเขียนใหม่ ข้อมูลจริงที่มีอยู่ไม่ถูกแตะ) และเรียก
   `ensureWaterIndexes()` ให้ด้วยในตัว
+
+  > **ลำดับสำคัญตอนขึ้นข้อมูลจริง:** ต้องสร้าง index ให้เสร็จ (รัน seed script หนึ่งครั้ง) **ก่อน** import ข้อมูลจริง
+  > — ถ้า import ข้อมูลที่มี `hydrantNo` ซ้ำเข้าไปก่อน จะสร้าง unique index `uniq_hydrant_no` ไม่ผ่าน
 - **⚠️ ข้อมูล seed เป็นพิกัดสมมติรอบตาคลี ไม่ใช่แนวท่อจริง — ห้ามเอาตัวเลขไปใช้อ้างอิงในรายงานจริง**
   ตอนขึ้นข้อมูลจริงต้องลบข้อมูล seed ทิ้งเอง (ยังไม่มี flag `--purge` ในสคริปต์):
   ```js

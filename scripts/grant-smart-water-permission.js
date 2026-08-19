@@ -37,7 +37,11 @@ async function main() {
       "users"
     );
 
+  // role clause: ตัดบัญชี role `user` ออก เพราะ /admin/smart-water เป็นหน้าแอดมิน และ
+  // การเติม path ลง allowedPages ของ user ธรรมดาเท่ากับเปิดหน้าแอดมิน
+  // ให้ non-admin (custom allowedPages override ค่า default ของ role)
   const filter = {
+    role: { $in: ["admin", "superadmin"] },
     "allowedPages.0": { $exists: true },
     allowedPages: { $ne: NEW_PAGE },
   };

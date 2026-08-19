@@ -69,8 +69,8 @@ export async function requireSmartWaterAdmin(req: NextApiRequest): Promise<Smart
 
   // ใช้ helper กลางของรีโป — allowedPages ว่างตกไปใช้ DEFAULT_PERMISSIONS[role]
   // หน้านี้ไม่อยู่ใน DEFAULT_PERMISSIONS.admin (นโยบาย: superadmin ติ๊กสิทธิ์รายคน)
-  // → admin ที่ยังไม่ถูกให้สิทธิ์จะได้ 403 — ให้สิทธิ์ที่ /admin/superadmin
-  //   หรือรัน scripts/grant-smart-water-permission.js --yes
+  // → admin ที่ยังไม่ถูกให้สิทธิ์จะได้ 403 — ให้สิทธิ์รายคนที่ /admin/superadmin (วิธีหลักตามนโยบาย)
+  //   scripts/grant-smart-water-permission.js --yes มีไว้กรณีต้องเปิดให้แอดมินทั้งหมดพร้อมกันเท่านั้น
   const allowed = Array.isArray(mongoUser.allowedPages) ? mongoUser.allowedPages : [];
   if (!hasPermission(role, allowed, REQUIRED_PAGE)) {
     return { ok: false, status: 403, message: "ไม่มีสิทธิ์หน้านี้" };
