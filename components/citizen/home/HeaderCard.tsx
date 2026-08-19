@@ -1,9 +1,12 @@
 // components/citizen/home/HeaderCard.tsx
-// การ์ดหัวหน้าแรกโฉมใหม่ — โลโก้ + ชื่อเทศบาล + คำทักทายตามวัน (shimmer สไตล์
-// "Hello" ของ iOS) · ชื่อวันคำนวณฝั่ง client เท่านั้น (ใน useEffect) เพราะ
-// เซิร์ฟเวอร์รัน UTC — SSR ไปคนละวันแล้วจะ hydration mismatch
-import { useEffect, useState } from "react";
+// การ์ดหัวหน้าแรกโฉมใหม่ — โลโก้ + ชื่อเทศบาล + คำทักทายตามวัน แบบ "hello" ของ
+// Apple: ฟอนต์ลายมือ (Sriracha) เขียนโผล่ทีละอักษร ชิดขวา
+// · ชื่อวันคำนวณฝั่ง client เท่านั้น (เซิร์ฟเวอร์ UTC วันเพี้ยน + กัน hydration mismatch)
+// · แตกอักษรด้วย Intl.Segmenter แบบ grapheme — สระ/วรรณยุกต์ไทยเกาะพยัญชนะ
+//   เป็นก้อนเดียว ไม่หลุดจากกันตอนใส่ animation รายตัว
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { sriracha } from "../fonts";
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
 
@@ -14,8 +17,18 @@ export default function HeaderCard() {
     setDayName(THAI_DAYS[new Date().getDay()]);
   }, []);
 
+  const graphemes = useMemo(() => {
+    if (!dayName) return [];
+    const text = `สวัสดีวัน${dayName}`;
+    try {
+      return Array.from(new Intl.Segmenter("th", { granularity: "grapheme" }).segment(text), (s) => s.segment);
+    } catch {
+      return [text]; // เบราว์เซอร์เก่าไม่มี Segmenter — โชว์ทั้งคำทีเดียว
+    }
+  }, [dayName]);
+
   return (
-    <div className="mx-4 mt-4 rounded-[22px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] px-4 py-4 shadow-[0_12px_26px_rgba(124,58,237,0.28)]">
+    <div className="mx-4 mt-4 rounded-[22px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] px-5 py-4 shadow-[0_12px_26px_rgba(124,58,237,0.28)]">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/90">
           <Image src="/logoTK.png" alt="ตราเทศบาลเมืองตาคลี" width={40} height={40} className="h-10 w-10 object-contain" />
@@ -26,50 +39,43 @@ export default function HeaderCard() {
         </div>
       </div>
 
-      {dayName && (
-        <div className="greeting mt-3 pb-1 text-[26px] font-light leading-tight tracking-[0.3px]">
-          สวัสดีวัน{dayName}
+      {graphemes.length > 0 && (
+        <div className={`${sriracha.className} greeting mt-2 pb-1 text-right text-[30px] leading-snug text-white`} aria-label={`สวัสดีวัน${dayName}`}>
+          {graphemes.map((ch, i) => (
+            <span key={i} className="ch" style={{ animationDelay: `${0.25 + i * 0.13}s` }} aria-hidden="true">
+              {ch}
+            </span>
+          ))}
         </div>
       )}
 
       <style jsx>{`
-        .greeting {
-          background: linear-gradient(
-            105deg,
-            #ffffff 25%,
-            rgba(255, 255, 255, 0.45) 45%,
-            #f3e8ff 50%,
-            rgba(255, 255, 255, 0.45) 55%,
-            #ffffff 75%
-          );
-          background-size: 250% 100%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          color: transparent;
-          animation: greeting-in 0.9s ease-out both, greeting-shimmer 3.2s linear 0.9s infinite;
+        .ch {
+          display: inline-block;
+          opacity: 0;
+          animation: write-in 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+          animation-delay: inherit;
         }
-        @keyframes greeting-in {
-          from {
+        @keyframes write-in {
+          0% {
             opacity: 0;
-            transform: translateY(8px);
+            transform: translateY(6px) rotate(-4deg) scale(0.9);
+            filter: blur(4px);
           }
-          to {
+          60% {
             opacity: 1;
-            transform: translateY(0);
+            filter: blur(0.5px);
           }
-        }
-        @keyframes greeting-shimmer {
-          from {
-            background-position: 125% 0;
-          }
-          to {
-            background-position: -125% 0;
+          100% {
+            opacity: 1;
+            transform: translateY(0) rotate(0deg) scale(1);
+            filter: blur(0);
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .greeting {
+          .ch {
             animation: none;
+            opacity: 1;
           }
         }
       `}</style>
