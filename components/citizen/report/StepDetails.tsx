@@ -2,7 +2,7 @@
 // ขั้น 2: ชุมชน + รายการปัญหา (chips multi) + แนบรูป ≤3
 // reuse CommunitySelector / ImageUploads เดิมทั้งดุ้น — เขียนใหม่เฉพาะ chips
 import Image from "next/image";
-import CommunitySelector from "@/components/complaints/CommunitySelector";
+import CommunityPicker from "./CommunityPicker";
 import ImageUploads from "@/components/ImageUploads";
 
 type ProblemOption = { _id: string; label: string; category: string; iconUrl?: string };
@@ -37,12 +37,7 @@ export default function StepDetails({
 
   return (
     <div className="flex-1 overflow-auto px-4 pb-4">
-      <label className="mx-0.5 mb-2 mt-1.5 block text-[13px] font-semibold">
-        ชุมชน <span className="text-[#EF4444]">*</span>
-      </label>
-      <div className="[&_select]:w-full">
-        <CommunitySelector selected={community} onSelect={onCommunity} error={undefined} />
-      </div>
+      <CommunityPicker selected={community} onSelect={onCommunity} />
       <FieldError message={errors.community} />
 
       <label className="mx-0.5 mb-2.5 mt-4 block text-[13px] font-semibold">
