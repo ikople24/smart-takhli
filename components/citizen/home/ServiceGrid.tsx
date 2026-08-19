@@ -6,9 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MenuItem } from "@/stores/useMenuStore";
 
-// หมวดที่เป็น "บริการ" — ต้องสะกดตรงกับ Prob_name ใน DB (ตัวเดียวกับที่
-// handleSelect ใน pages/preview.tsx ใช้แยก modal · wizard ใช้กรองหมวดร้องเรียน)
-export const SERVICE_LABELS = ["ลงทะเบียนกายอุปกรณ์", "สำรวจการศึกษา"];
+import { SERVICE_LABELS } from "@/lib/citizen/serviceLabels";
 
 const cardClass =
   "flex flex-col items-center rounded-[16px] bg-white px-2 py-4 shadow-[0_4px_12px_rgba(60,40,100,0.04)] transition hover:-translate-y-0.5";

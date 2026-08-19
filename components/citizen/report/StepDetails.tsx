@@ -3,7 +3,7 @@
 // reuse CommunitySelector / ImageUploads เดิมทั้งดุ้น — เขียนใหม่เฉพาะ chips
 import Image from "next/image";
 import CommunityPicker from "./CommunityPicker";
-import ImageUploads from "@/components/ImageUploads";
+import PhotoUploader from "./PhotoUploader";
 
 type ProblemOption = { _id: string; label: string; category: string; iconUrl?: string };
 
@@ -79,7 +79,7 @@ export default function StepDetails({
       <label className="mx-0.5 mb-2.5 mt-5 block text-[13px] font-semibold">
         แนบรูปภาพ <span className="font-normal text-[#9590A8]">(ไม่เกิน 3 รูป)</span>
       </label>
-      <ImageUploads onChange={onImages} onUploadingChange={onUploading} />
+      <PhotoUploader onChange={onImages} onUploadingChange={onUploading} />
       <FieldError message={errors.imageUrls} />
     </div>
   );

@@ -8,7 +8,7 @@ import { useRouter } from "next/router";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import WizardHeader from "@/components/citizen/report/WizardHeader";
 import WizardFooter from "@/components/citizen/report/WizardFooter";
-import { SERVICE_LABELS } from "@/components/citizen/home/ServiceGrid";
+import { SERVICE_LABELS } from "@/lib/citizen/serviceLabels";
 import StepCategory from "@/components/citizen/report/StepCategory";
 import StepDetails from "@/components/citizen/report/StepDetails";
 import StepReporter from "@/components/citizen/report/StepReporter";
