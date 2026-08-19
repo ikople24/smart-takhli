@@ -79,6 +79,11 @@ const Layout = ({ children }) => {
     );
   }
 
+  // หน้าฝั่งประชาชนโฉมใหม่ (citizen shell) มี chrome ของตัวเอง — ไม่ครอบ layout เดิม
+  if (router.pathname === "/preview" || router.pathname.startsWith("/preview/")) {
+    return <>{children}</>;
+  }
+
   // Public / User pages: layout เดิม
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 w-full min-w-[320px]">

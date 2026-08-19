@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { Circle } from "lucide-react";
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 
-const getPm25LevelInfo = (value) => {
+// export ให้หน้า citizen (/preview) ใช้ข้อความระดับ/คำแนะนำชุดเดียวกัน — แหล่งความจริงอยู่ที่นี่ที่เดียว
+export const getPm25LevelInfo = (value) => {
   const pm = parseFloat(value);
 
   if (!pm || isNaN(pm) || pm === 0) {
