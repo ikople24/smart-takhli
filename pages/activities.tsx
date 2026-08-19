@@ -1,366 +1,254 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-import Image from 'next/image';
-import ActivityFeedbackPanel from '@/components/activities/ActivityFeedbackPanel';
-import {
-  promptFont,
-  anuphanFont,
-  formatThaiDate,
-  DateBlock,
-} from '@/components/activities/ActivityFeedCard';
+// pages/activities.tsx
+// ข่าว & กิจกรรมโฉมใหม่ (เฟส 4) — ฟีด + รายละเอียด (?activity=) ในหน้าเดียว
+// spec: docs/superpowers/specs/2026-08-19-citizen-activities-design.md
+// ข้อมูลจาก /api/activities/feed เดิม · เปิดรายละเอียดนับ views ผ่าน POST /view เดิม
+import { useEffect, useMemo, useRef, useState } from "react";
+import Head from "next/head";
+import Image from "next/image";
+import { useRouter } from "next/router";
+import CitizenShell from "@/components/citizen/CitizenShell";
+import ActivityCard, { ActivityItem } from "@/components/citizen/activities/ActivityCard";
+import { activityPhase } from "@/lib/citizen/activities/phase";
+import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
 
-interface Activity {
-  _id: string;
-  name: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  isDefault: boolean;
-  images?: string[];
-  views?: number;
-  stats?: { avgRating: number | null; count: number };
-}
+type PhaseFilter = "all" | "upcoming" | "active" | "ended";
 
-const ActivitiesPage = () => {
+const CHIP_LABELS: { key: PhaseFilter; label: string }[] = [
+  { key: "all", label: "ทั้งหมด" },
+  { key: "upcoming", label: "กำลังจะเริ่ม" },
+  { key: "active", label: "กำลังดำเนินการ" },
+  { key: "ended", label: "สิ้นสุดแล้ว" },
+];
+
+export default function ActivitiesPage() {
   const router = useRouter();
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [heroIdx, setHeroIdx] = useState(0);
-  const articleRef = useRef<HTMLElement | null>(null);
+  const [filter, setFilter] = useState<PhaseFilter>("all");
+  const [now, setNow] = useState<Date | null>(null); // client-only กัน hydration/เวลาเซิร์ฟเวอร์เพี้ยน
+  const [shared, setShared] = useState(false);
+  const viewedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!router.isReady) return;
-    fetchActivities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+    setNow(new Date());
+    fetch("/api/activities/feed?limit=50")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setActivities(json.data);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-  // นับผู้เข้าชมเมื่อเปิดดูรายละเอียด — 1 ครั้ง/กิจกรรม/session
-  // (ผูกกับ _id ไม่ใช่ object เพื่อไม่ให้ refreshStats รีเซ็ต hero/นับซ้ำ)
+  const selectedId = typeof router.query.activity === "string" ? router.query.activity : "";
+  const selected = selectedId ? activities.find((a) => a._id === selectedId) ?? null : null;
+
+  // นับยอดอ่านด้วยตัวนับเดิม — ครั้งเดียวต่อการเปิดต่อรายการ
   useEffect(() => {
-    if (!selectedActivity?._id) return;
-    setHeroIdx(0);
-    const key = `activity-viewed-${selectedActivity._id}`;
-    if (typeof window !== 'undefined' && !sessionStorage.getItem(key)) {
-      sessionStorage.setItem(key, '1');
-      fetch(`/api/activities/${selectedActivity._id}/view`, { method: 'POST' }).catch(() => {});
-    }
-  }, [selectedActivity?._id]);
+    if (!selected || viewedRef.current.has(selected._id)) return;
+    viewedRef.current.add(selected._id);
+    fetch(`/api/activities/${selected._id}/view`, { method: "POST" }).catch(() => {});
+  }, [selected]);
 
-  // อัปเดตคะแนน/จำนวนความเห็นในหน้า หลังผู้ใช้ส่งความคิดเห็นใหม่ (คงตัวที่เลือกไว้)
-  const refreshStats = async () => {
+  const filtered = useMemo(() => {
+    if (!now || filter === "all") return activities;
+    return activities.filter((a) => activityPhase(a, now).key === filter);
+  }, [activities, filter, now]);
+
+  const countFor = (key: PhaseFilter) =>
+    !now ? null : key === "all" ? activities.length : activities.filter((a) => activityPhase(a, now).key === key).length;
+
+  const featured = filtered.find((a) => (a.images?.length ?? 0) > 0) ?? null;
+  const rest = filtered.filter((a) => a !== featured);
+
+  const backToFeed = () => router.replace("/activities", undefined, { shallow: true });
+
+  const share = async () => {
+    if (!selected) return;
+    const url = `${window.location.origin}/activities?activity=${selected._id}`;
     try {
-      const response = await fetch('/api/activities/feed?limit=50');
-      const data = await response.json();
-      if (data.success) {
-        setActivities(data.data);
-        setSelectedActivity((prev) =>
-          prev ? data.data.find((a: Activity) => a._id === prev._id) || prev : prev
-        );
+      if (navigator.share) {
+        await navigator.share({ title: selected.name, url });
+        return;
       }
-    } catch (error) {
-      console.error('Error refreshing stats:', error);
+    } catch {
+      return;
     }
+    await navigator.clipboard.writeText(url).catch(() => {});
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
   };
 
-  const fetchActivities = async () => {
-    try {
-      setLoading(true);
-      // ใช้ feed endpoint เพื่อให้ได้ stats (คะแนนเฉลี่ย) และ views มาด้วย
-      const response = await fetch('/api/activities/feed?limit=50');
-      const data = await response.json();
-      if (data.success) {
-        setActivities(data.data);
-        // เลือกจาก ?activity= ก่อน แล้วค่อย fallback เป็นกิจกรรมเริ่มต้น
-        const fromQuery =
-          typeof router.query.activity === 'string'
-            ? data.data.find((a: Activity) => a._id === router.query.activity)
-            : null;
-        const defaultActivity =
-          fromQuery || data.data.find((a: Activity) => a.isDefault) || data.data[0];
-        if (defaultActivity) {
-          setSelectedActivity(defaultActivity);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelect = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setTimeout(() => {
-      articleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 60);
-  };
-
-  const getActivityStatus = (activity: Activity) => {
-    const now = new Date();
-    const startDate = new Date(activity.startDate);
-    const endDate = new Date(activity.endDate);
-
-    if (now < startDate) {
-      return { status: 'upcoming', text: 'กำลังจะเริ่ม', color: 'border-amber-300 bg-amber-50 text-amber-700' };
-    } else if (now > endDate) {
-      return { status: 'ended', text: 'สิ้นสุดแล้ว', color: 'border-rose-200 bg-rose-50 text-rose-600' };
-    } else {
-      return { status: 'active', text: 'กำลังดำเนินการ', color: 'border-emerald-300 bg-emerald-50 text-emerald-700' };
-    }
-  };
-
-  const StatusChip = ({ activity }: { activity: Activity }) => {
-    const s = getActivityStatus(activity);
-    return (
-      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${s.color}`}>
-        {s.status === 'active' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />}
-        {s.text}
-      </span>
-    );
-  };
-
-  const MetaRow = ({ activity }: { activity: Activity }) => (
-    <div className="flex items-center gap-3 text-xs text-slate-500">
-      <span className="font-medium">
-        {activity.stats?.count ? (
-          <>
-            <span className="text-amber-500">★</span> {activity.stats.avgRating?.toFixed(1)}
-            <span className="text-slate-400"> ({activity.stats.count})</span>
-          </>
-        ) : (
-          'ยังไม่มีความเห็น'
-        )}
-      </span>
-      <span className="text-slate-300">|</span>
-      <span className="tabular-nums">👁 {activity.views || 0} ผู้เข้าชม</span>
-    </div>
-  );
-
-  // หมายเหตุ: _app.tsx ครอบทุกหน้าด้วย <Layout> อยู่แล้ว — ห้ามครอบซ้ำที่นี่ (เคยทำให้ navbar ซ้อนสองชั้น)
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center py-12">
-          <div className="loading loading-spinner loading-lg"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const featured = activities[0];
-  const rest = activities.slice(1);
+  const phase = selected && now ? activityPhase(selected, now) : null;
 
   return (
-      <div
-        className={`${anuphanFont.className} min-h-screen bg-[radial-gradient(circle,rgba(15,23,42,0.04)_1px,transparent_1px)] [background-size:22px_22px]`}
-      >
-        <div className="container mx-auto max-w-6xl px-4 py-10">
-          {/* Masthead แบบหนังสือพิมพ์ */}
-          <header className="mb-8 text-center" style={{ animation: 'fadeIn .5s ease-out both' }}>
-            <p className={`${promptFont.className} text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400`}>
-              เทศบาลเมืองตาคลี · Takhli Municipality
-            </p>
-            <h1 className={`${promptFont.className} mt-2 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl`}>
-              ข่าวกิจกรรม
-            </h1>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-slate-500">
-              บันทึกกิจกรรมที่เทศบาลดำเนินการเพื่อประชาชน พร้อมผลประเมินความพึงพอใจจากผู้เข้าร่วมจริง
-            </p>
-            <div className="mx-auto mt-6 w-full max-w-3xl">
-              <div className="border-t-2 border-slate-900" />
-              <div className="mt-1 border-t border-slate-300" />
-            </div>
-          </header>
-
-          {/* ข่าวเด่น (กิจกรรมล่าสุด) */}
-          {featured && (
-            <div
-              onClick={() => handleSelect(featured)}
-              className={`group mb-6 cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/10 ${
-                selectedActivity?._id === featured._id
-                  ? 'border-slate-900 ring-1 ring-slate-900'
-                  : 'border-slate-900/10'
-              }`}
-              style={{ animation: 'fadeIn .5s ease-out both', animationDelay: '80ms' }}
+    <>
+      <Head>
+        <title>ข่าว & กิจกรรม · Smart Takhli</title>
+        <meta name="description" content="ข่าวสารและกิจกรรมของเทศบาลเมืองตาคลี" />
+      </Head>
+      <CitizenShell hideNav>
+        {/* หัวจอ */}
+        <div className="shrink-0 px-4 pb-3 pt-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => (selected ? backToFeed() : router.push("/"))}
+              aria-label={selected ? "กลับหน้าฟีดข่าว" : "กลับหน้าแรก"}
+              className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-white shadow-[0_2px_8px_rgba(60,40,100,0.06)]"
             >
-              <div className="grid lg:grid-cols-5">
-                <div className="relative aspect-video overflow-hidden bg-slate-100 lg:col-span-3 lg:aspect-auto lg:min-h-[320px]">
-                  {featured.images?.[0] ? (
-                    <Image
-                      src={featured.images[0]}
-                      alt={featured.name}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 60vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      priority
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_100%)] text-6xl opacity-90">📅</div>
-                  )}
-                </div>
-                <div className="flex flex-col justify-center gap-3 p-6 lg:col-span-2 lg:p-8">
-                  <div className="flex items-center gap-3">
-                    <DateBlock dateString={featured.startDate} />
-                    <div>
-                      <p className={`${promptFont.className} text-[11px] font-semibold uppercase tracking-[0.25em] text-amber-600`}>
-                        ข่าวเด่น
-                      </p>
-                      <StatusChip activity={featured} />
-                    </div>
-                  </div>
-                  <h2 className={`${promptFont.className} text-2xl font-bold leading-snug text-slate-900 decoration-amber-400 decoration-[3px] underline-offset-4 group-hover:underline lg:text-3xl`}>
-                    {featured.name}
-                  </h2>
-                  {featured.description && (
-                    <p className="text-sm leading-relaxed text-slate-500 line-clamp-3">{featured.description}</p>
-                  )}
-                  <MetaRow activity={featured} />
-                  <span className={`${promptFont.className} inline-flex items-center gap-1 text-sm font-semibold text-slate-900`}>
-                    อ่านรายละเอียด
-                    <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-                  </span>
-                </div>
-              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A4458" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="m15 6-6 6 6 6" />
+              </svg>
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-[17px] font-bold leading-tight">ข่าว & กิจกรรม</div>
+              <div className="text-[11px] text-[#9590A8]">ข่าวสารและกิจกรรมของเทศบาล</div>
             </div>
-          )}
+          </div>
 
-          {/* ข่าวอื่น ๆ */}
-          {rest.length > 0 && (
-            <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rest.map((activity, i) => (
-                <div
-                  key={activity._id}
-                  onClick={() => handleSelect(activity)}
-                  className={`group cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-900/10 ${
-                    selectedActivity?._id === activity._id
-                      ? 'border-slate-900 ring-1 ring-slate-900'
-                      : 'border-slate-900/10'
-                  }`}
-                  style={{ animation: 'fadeIn .5s ease-out both', animationDelay: `${160 + i * 90}ms` }}
-                >
-                  <div className="relative aspect-video overflow-hidden bg-slate-100">
-                    {activity.images?.[0] ? (
-                      <Image
-                        src={activity.images[0]}
-                        alt={activity.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#0f172a_0%,#1e3a5f_100%)] text-5xl opacity-90">📅</div>
-                    )}
-                    <div className="absolute left-3 top-3">
-                      <DateBlock dateString={activity.startDate} />
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="mb-1.5"><StatusChip activity={activity} /></div>
-                    <h3 className={`${promptFont.className} text-base font-semibold leading-snug text-slate-900 line-clamp-2 decoration-amber-400 decoration-2 underline-offset-4 group-hover:underline`}>
-                      {activity.name}
-                    </h3>
-                    {activity.description && (
-                      <p className="mt-1.5 text-sm leading-relaxed text-slate-500 line-clamp-2">{activity.description}</p>
-                    )}
-                    <div className="mt-3 border-t border-dashed border-slate-200 pt-3">
-                      <MetaRow activity={activity} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* บทความ: รายละเอียดกิจกรรมที่เลือก */}
-          {selectedActivity && (
-            <article
-              ref={articleRef}
-              className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-900/10 bg-white shadow-sm"
-              style={{ animation: 'fadeIn .5s ease-out both', animationDelay: '240ms' }}
-            >
-              <div className="p-6 sm:p-8">
-                <p className={`${promptFont.className} text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400`}>
-                  รายละเอียดกิจกรรม
-                </p>
-                <h2 className={`${promptFont.className} mt-2 text-2xl font-bold leading-snug text-slate-900 sm:text-3xl`}>
-                  {selectedActivity.name}
-                </h2>
-
-                {/* แถบ meta คั่นด้วยเส้นบน-ล่างแบบบทความ */}
-                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-slate-200 py-3 text-sm text-slate-600">
-                  <span>
-                    📅 {formatThaiDate(selectedActivity.startDate)} – {formatThaiDate(selectedActivity.endDate)}
-                  </span>
-                  <span className="tabular-nums">👁 {selectedActivity.views || 0} ผู้เข้าชม</span>
-                  {selectedActivity.stats?.count ? (
-                    <span className="font-medium">
-                      <span className="text-amber-500">★</span> {selectedActivity.stats.avgRating?.toFixed(1)}
-                      <span className="text-slate-400"> จาก {selectedActivity.stats.count} ความเห็น</span>
-                    </span>
-                  ) : null}
-                  <StatusChip activity={selectedActivity} />
-                </div>
-
-                {/* รูปหลัก + แถบ thumbnail สลับรูปได้ */}
-                {selectedActivity.images && selectedActivity.images.length > 0 && (
-                  <div className="mt-6">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                      <Image
-                        src={selectedActivity.images[Math.min(heroIdx, selectedActivity.images.length - 1)]}
-                        alt={selectedActivity.name}
-                        fill
-                        sizes="(max-width: 1024px) 100vw, 900px"
-                        className="object-cover"
-                      />
-                    </div>
-                    {selectedActivity.images.length > 1 && (
-                      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                        {selectedActivity.images.map((img, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => setHeroIdx(i)}
-                            className={`relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                              i === heroIdx ? 'border-amber-400' : 'border-transparent opacity-70 hover:opacity-100'
-                            }`}
-                          >
-                            <Image src={img} alt={`${selectedActivity.name} ${i + 1}`} fill sizes="96px" className="object-cover" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {selectedActivity.description && (
-                  <p className="mt-6 max-w-prose text-base leading-relaxed text-slate-600">
-                    {selectedActivity.description}
-                  </p>
-                )}
-
-                {/* กล่องความคิดเห็น — ไม่แสดงข้อมูลกิจกรรมซ้ำกับบทความด้านบน */}
-                <ActivityFeedbackPanel selectedActivity={selectedActivity} onSubmitted={refreshStats} />
-              </div>
-            </article>
-          )}
-
-          {/* ไม่มีกิจกรรม */}
-          {activities.length === 0 && (
-            <div className="py-16 text-center" style={{ animation: 'fadeIn .5s ease-out both' }}>
-              <div className="text-6xl">📰</div>
-              <h3 className={`${promptFont.className} mt-4 text-xl font-semibold text-slate-900`}>
-                ยังไม่มีข่าวกิจกรรมในขณะนี้
-              </h3>
-              <p className="mt-2 text-sm text-slate-500">
-                กรุณาตรวจสอบอีกครั้งในภายหลัง หรือติดต่อผู้ดูแลระบบเพื่อสอบถามข้อมูลเพิ่มเติม
-              </p>
+          {!selected && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5">
+              {CHIP_LABELS.map((c) => {
+                const count = countFor(c.key);
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setFilter(c.key)}
+                    className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12.5px] ${
+                      filter === c.key
+                        ? "bg-[#7C3AED] font-semibold text-white"
+                        : "border border-[#ECEAF2] bg-white text-[#6B6880]"
+                    }`}
+                  >
+                    {c.label}
+                    {count != null ? ` ${count}` : ""}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
-  );
-};
 
-export default ActivitiesPage;
+        <div className="flex-1 px-4 pb-8">
+          {loading ? (
+            <div className="flex flex-col gap-3" role="status" aria-label="กำลังโหลดข่าวกิจกรรม">
+              <div className="h-52 animate-pulse rounded-[20px] bg-white/70" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-[95px] animate-pulse rounded-[16px] bg-white/70" />
+              ))}
+              <span className="sr-only">กำลังโหลดข่าวกิจกรรม</span>
+            </div>
+          ) : selectedId && !selected ? (
+            <div className="rounded-[18px] bg-white p-8 text-center shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+              <div className="text-[15px] font-bold">ไม่พบข่าวหรือกิจกรรมนี้</div>
+              <button
+                type="button"
+                onClick={backToFeed}
+                className="mt-4 rounded-full bg-[#7C3AED] px-5 py-2 text-[13px] font-semibold text-white"
+              >
+                กลับหน้าฟีดข่าว
+              </button>
+            </div>
+          ) : selected ? (
+            /* ── รายละเอียด ── */
+            <div className="space-y-3">
+              {(selected.images?.length ?? 0) > 0 && (
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {selected.images!.map((url, i) => (
+                    <div
+                      key={i}
+                      className={`relative shrink-0 overflow-hidden rounded-[16px] bg-[#EEF1FB] ${
+                        selected.images!.length === 1 ? "h-[210px] w-full" : "h-[180px] w-[260px]"
+                      }`}
+                    >
+                      <Image src={url} alt={`รูปที่ ${i + 1} ของ ${selected.name}`} fill sizes="260px" className="object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                <div className="text-[16px] font-bold leading-snug">{selected.name}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  {phase && (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                      style={{ background: phase.chipBg, color: phase.chipText }}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${phase.key === "active" ? "animate-pulse" : ""}`}
+                        style={{ background: phase.dot }}
+                      />
+                      {phase.label}
+                    </span>
+                  )}
+                  <span className="text-[11.5px] text-[#9590A8]">
+                    {formatThaiDate(selected.startDate)} – {formatThaiDate(selected.endDate)}
+                  </span>
+                  {typeof selected.views === "number" && (
+                    <span className="text-[11.5px] text-[#9590A8]">อ่าน {selected.views}</span>
+                  )}
+                </div>
+                {selected.description && (
+                  <p className="mt-3 whitespace-pre-line text-[13.5px] leading-relaxed text-[#4A4458]">
+                    {selected.description}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={share}
+                className="w-full rounded-[15px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] py-3.5 text-center text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
+              >
+                {shared ? "คัดลอกลิงก์แล้ว ✓" : "แชร์ข่าวนี้"}
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-[16px] bg-white p-6 text-center text-[13px] text-[#9590A8]">
+              ยังไม่มีข่าวหรือกิจกรรมในหมวดนี้
+            </div>
+          ) : (
+            /* ── ฟีด ── */
+            <div className="flex flex-col gap-3">
+              {featured && now && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.replace(`/activities?activity=${featured._id}`, undefined, { shallow: true })
+                  }
+                  className="overflow-hidden rounded-[20px] bg-white text-left shadow-[0_8px_22px_rgba(60,40,100,0.07)] transition hover:-translate-y-0.5"
+                >
+                  <div className="relative h-[150px] bg-[#EEF1FB]">
+                    <Image src={featured.images![0]} alt="" fill sizes="480px" className="object-cover" />
+                    {(() => {
+                      const p = activityPhase(featured, now);
+                      return (
+                        <span
+                          className="absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10.5px] font-semibold"
+                          style={{ background: p.chipBg, color: p.chipText }}
+                        >
+                          {p.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="p-4">
+                    <div className="line-clamp-2 text-[15.5px] font-semibold leading-snug">{featured.name}</div>
+                    {featured.description && (
+                      <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-[#6B6880]">
+                        {featured.description}
+                      </p>
+                    )}
+                    <div className="mt-2.5 text-[11.5px] text-[#9590A8]">{formatThaiDate(featured.startDate)}</div>
+                  </div>
+                </button>
+              )}
+              {now && rest.map((a) => <ActivityCard key={a._id} activity={a} now={now} />)}
+            </div>
+          )}
+        </div>
+      </CitizenShell>
+    </>
+  );
+}

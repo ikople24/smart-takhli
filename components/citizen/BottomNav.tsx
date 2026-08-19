@@ -1,7 +1,7 @@
 // components/citizen/BottomNav.tsx
 // Nav ล่างฝั่งประชาชนโฉมใหม่ — โครงเดียวกับ nav เดิมของเว็บ (BottomNav.js):
-// ซ้าย = อยู่ระหว่างดำเนินการ · กลาง = ปุ่ม Home ม่วง (/preview) · ขวา =
-// ดำเนินการเสร็จสิ้น — ตั้งแต่เฟส 3 สองแท็บข้างชี้ /preview/status พร้อม filter
+// ซ้าย = อยู่ระหว่างดำเนินการ · กลาง = ปุ่ม Home ม่วง (/) · ขวา =
+// ดำเนินการเสร็จสิ้น — สองแท็บข้างชี้ /status พร้อม filter
 import Link from "next/link";
 
 function ClockIcon() {
@@ -25,11 +25,11 @@ function CheckIcon() {
 export default function BottomNav() {
   return (
     <nav className="sticky bottom-0 z-20 flex items-end border-t border-[#EFEDF4] bg-white px-2 pb-5 pt-2">
-      <Link href="/preview/status?filter=active" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+      <Link href="/status?filter=active" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
         <ClockIcon />
         <span className="text-[10.5px] leading-tight">อยู่ระหว่างดำเนินการ</span>
       </Link>
-      <Link href="/preview" aria-label="หน้าแรก" className="flex flex-1 flex-col items-center gap-1">
+      <Link href="/" aria-label="หน้าแรก" className="flex flex-1 flex-col items-center gap-1">
         <span className="-mt-9 flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] shadow-[0_10px_22px_rgba(124,58,237,0.4)] transition hover:scale-105">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.1} strokeLinejoin="round">
             <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" />
@@ -37,7 +37,7 @@ export default function BottomNav() {
         </span>
         <span className="text-[10.5px] font-semibold leading-tight text-[#7C3AED]">หน้าแรก</span>
       </Link>
-      <Link href="/preview/status?filter=done" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+      <Link href="/status?filter=done" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
         <CheckIcon />
         <span className="text-[10.5px] leading-tight">ดำเนินการเสร็จสิ้น</span>
       </Link>

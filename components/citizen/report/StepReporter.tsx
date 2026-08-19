@@ -104,6 +104,7 @@ export default function StepReporter({
           onToggle={setUseCurrentLocation}
           location={location}
           setLocation={setLocation}
+          formSubmitted={false}
           accent="purple"
         />
       </div>

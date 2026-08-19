@@ -1,4 +1,4 @@
-// pages/preview/status/[id].tsx
+// pages/status/[id].tsx
 // จอรายละเอียดสถานะรายเรื่อง (เฟส 3) — timeline 4 ขั้น + ปัญหา/รายละเอียด +
 // รูปก่อน-หลัง + การ์ดเจ้าหน้าที่ + ให้คะแนนเมื่อเสร็จสิ้น
 // spec: docs/superpowers/specs/2026-08-19-citizen-status-design.md
@@ -105,7 +105,7 @@ export default function StatusDetail() {
   }, [router.isReady, id]);
 
   const share = async () => {
-    const url = `${window.location.origin}/preview/status/${id}`;
+    const url = `${window.location.origin}/status/${id}`;
     const title = complaint?.problems?.[0] || complaint?.category || "เรื่องร้องเรียน";
     try {
       if (navigator.share) {
@@ -122,7 +122,7 @@ export default function StatusDetail() {
 
   const goBack = () => {
     if (window.history.length > 1) router.back();
-    else router.push("/preview/status");
+    else router.push("/status");
   };
 
   const done = complaint?.status === DONE;
@@ -176,7 +176,7 @@ export default function StatusDetail() {
               <p className="mt-1 text-[12px] text-[#9590A8]">เรื่องอาจถูกลบ หรือเป็นเรื่องลับที่ไม่เปิดเผยสาธารณะ</p>
               <button
                 type="button"
-                onClick={() => router.push("/preview/status")}
+                onClick={() => router.push("/status")}
                 className="mt-4 rounded-full bg-[#7C3AED] px-5 py-2 text-[13px] font-semibold text-white"
               >
                 กลับหน้าติดตามสถานะ

@@ -1,4 +1,4 @@
-// pages/preview/status/index.tsx
+// pages/status/index.tsx
 // ลิสต์ติดตามสถานะโฉมใหม่ (เฟส 3) — รวมทุกสถานะ + chips กรอง
 // spec: docs/superpowers/specs/2026-08-19-citizen-status-design.md
 // ข้อมูล: GET /api/complaints (PDPA/เรื่องลับกรองฝั่ง server) + assignments เดิม
@@ -125,7 +125,7 @@ export default function StatusList() {
   const changeFilter = (f: FilterKey) => {
     setFilter(f);
     const query = f === "all" ? {} : { filter: f };
-    router.replace({ pathname: "/preview/status", query }, undefined, { shallow: true });
+    router.replace({ pathname: "/status", query }, undefined, { shallow: true });
   };
 
   const iconFor = (category?: string) => menu.find((m) => m.Prob_name === category)?.Prob_pic;
@@ -147,7 +147,7 @@ export default function StatusList() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push("/preview")}
+              onClick={() => router.push("/")}
               aria-label="กลับหน้าแรก"
               className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-white shadow-[0_2px_8px_rgba(60,40,100,0.06)]"
             >

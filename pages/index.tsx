@@ -1,77 +1,40 @@
+// pages/index.tsx
+// หน้าแรกฝั่งประชาชน (โฉมใหม่ — cutover จาก /preview 2026-08-19)
+// spec: docs/superpowers/specs/2026-08-18-citizen-home-redesign-design.md
+import { useEffect, useState } from "react";
+import Head from "next/head";
+import { useRouter } from "next/router";
+import CitizenShell from "@/components/citizen/CitizenShell";
+import HeaderCard from "@/components/citizen/home/HeaderCard";
+import EnvCards from "@/components/citizen/home/EnvCards";
+import ComplaintCTA from "@/components/citizen/home/ComplaintCTA";
+import ServiceGrid from "@/components/citizen/home/ServiceGrid";
+import NewsSection from "@/components/citizen/home/NewsSection";
+import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
+import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
+import EquipmentRow from "@/components/citizen/home/EquipmentRow";
+import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
+import StatsRow from "@/components/citizen/home/StatsRow";
+import Footer from "@/components/Footer";
+import { useMenuStore } from "@/stores/useMenuStore";
+import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
+import { BookOpen, Download } from "lucide-react";
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
-import React, { useEffect, useState, useMemo } from "react";
-import Image from "next/image";
-import { useMenuStore, MenuItem } from "@/stores/useMenuStore";
-import ComplaintFormModal from "@/components/complaints/ComplaintFormModal";
-import Pm25Dashboard from "@/components/Pmdata";
-import WaterQualityCard from "@/components/smart-papar/WaterQualityCard";
-import Footer from "@/components/Footer";
-
-import SpecialFormModal from "@/components/sm-health/SpacialFormModal";
-import AvailableListOnly from "@/components/sm-health/AvailableListOnly";
-import { useHealthMenuStore } from "@/stores/useHealthMenuStore";
-import { BookOpen, Download } from "lucide-react";
-
-import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModal";
-import ActivityFeed from "@/components/activities/ActivityFeed";
-import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
-import SiteStatsBar from "@/components/site-stats/SiteStatsBar";
-
-export default function Home() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
-  }, []);
-
+export default function PreviewHome() {
+  const router = useRouter();
   const { menu, fetchMenu, menuLoading } = useMenuStore();
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
   const [showSpecialForm, setShowSpecialForm] = useState(false);
   const [showEducationForm, setShowEducationForm] = useState(false);
+  const [specialFormData, setSpecialFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
   const { menu: healthMenu, loading: healthLoading, fetchMenu: fetchHealthMenu } = useHealthMenuStore();
-  const [formData, setFormData] = useState({ name: "", phone: "", equipment: "", reason: "" });
   const [hasFetchedHealth, setHasFetchedHealth] = useState(false);
-
-
-  const texts = useMemo(() => [
-    "แจ้งทุกข์ - แจ้งเหตุ",
-    "ลงทะเบียน กายอุปกรณ์",
-    "เทศบาลเมืองตาคลี",
-    "Smart Solution Award 2023",
-  ], []);
-  const [displayText, setDisplayText] = useState("");
-  const [textIndex, setTextIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-
-  const [hasFetched, setHasFetched] = useState(false);
-
-  useEffect(() => {
-    const currentText = texts[textIndex];
-    if (charIndex < currentText.length) {
-      const timeout = setTimeout(() => {
-        setDisplayText(currentText.substring(0, charIndex + 1));
-        setCharIndex(charIndex + 1);
-      }, 75);
-      return () => clearTimeout(timeout);
-    } else {
-      const timeout = setTimeout(() => {
-        setCharIndex(0);
-        setTextIndex((prev) => (prev + 1) % texts.length);
-      }, 1500);
-      return () => clearTimeout(timeout);
-    }
-  }, [charIndex, textIndex, texts]);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (!hasFetched && menu.length === 0 && !menuLoading) {
@@ -87,143 +50,93 @@ export default function Home() {
     }
   }, [healthMenu.length, fetchHealthMenu, healthLoading, hasFetchedHealth]);
 
-
-  const handleOpenModal = (label: string) => {
-    if (label === "ลงทะเบียนกายอุปกรณ์") {
-      setShowSpecialForm(true);
-    } else if (label === "สำรวจการศึกษา") {
-      setShowEducationForm(true);
-    } else {
-      setSelectedLabel(label);
-    }
-  };
-  const handleCloseModal = () => {
-    setSelectedLabel(null);
-  };
-
   useEffect(() => {
-    console.log("📦 menu from store:", menu);
-  }, [menu]);
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // หมวดบริการเปิด modal เดิม — หมวดร้องเรียนเป็นลิงก์เข้า wizard ใน ServiceGrid แล้ว
+  const handleSelect = (label: string) => {
+    if (label === "ลงทะเบียนกายอุปกรณ์") setShowSpecialForm(true);
+    else if (label === "สำรวจการศึกษา") setShowEducationForm(true);
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col -mt-8 w-full max-w-screen-sm min-w-[320px] mx-auto overflow-x-hidden">
-      <div className="mt-8 text-center text-xl font-semibold min-h-[1.5rem]">
-        <span className={
-          textIndex === 0 ? "text-pink-600" :
-            textIndex === 1 ? "text-emerald-600" :
-              "text-indigo-600"
-        }>
-          {displayText}
-        </span>
-        <span className="animate-pulse text-indigo-500">|</span>
-      </div>
-      <div className="mt-4 px-4 w-full max-w-screen-sm mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-stretch gap-3">
-          <Pm25Dashboard className="sm:w-[60%] h-full" />
-          <WaterQualityCard className="sm:w-[40%] h-full" />
-        </div>
-      </div>
-      <div className="flex-1 px-4 pt-8 pb-20 w-full max-w-screen-sm mx-auto">
-        {menuLoading ? (
-          <div className="flex justify-center items-center h-60">
-            <div className="w-12 h-12 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-              {menu.map((item: MenuItem, index) => (
-                <button
-                  key={item._id || index}
-                  className="flex flex-col items-center rounded-xl"
-                  onClick={() => handleOpenModal(item.Prob_name)}
-                >
-                  <div className="w-40 h-40 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-2 transform transition duration-200 hover:scale-105 relative">
-                    <Image
-                      src={item.Prob_pic}
-                      alt={item.Prob_name}
-                      width={128}
-                      height={128}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="text-center text-gray-700 text-sm sm:text-md font-medium">
-                    {item.Prob_name}
-                  </div>
-                </button>
-              ))}
-            </div>
-            <div className="mt-4">
-              <GarbageHomeCard />
-            </div>
-            {/* {section 2 smart-health} */}
-            <div className="flex flex-col items-center mt-4 mb-2 p-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="inline-grid *:[grid-area:1/1]">
-                  <div className="status status-success status-lg animate-ping"></div>
-                  <div className="status status-success status-lg"></div>
-                </div>
-                <span className="font-bold text-blue-400">SMART-HEALTH</span>
-              </div>
-              <span className="font-semibold text-blue-400">✨ ศูนย์กายอุปกรณ์ ✨</span>
-              <AvailableListOnly menu={healthMenu} loading={healthLoading} />
-            </div>
-
-            {/* ข่าวกิจกรรม */}
-            <div className="flex flex-col items-center mt-4 mb-2 p-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="inline-grid *:[grid-area:1/1]">
-                  <div className="status status-info status-lg animate-ping"></div>
-                  <div className="status status-info status-lg"></div>
-                </div>
-                <span className="font-bold text-indigo-400">ACTIVITY NEWS</span>
-              </div>
-              <ActivityFeed limit={3} showViewAll />
-            </div>
-          </>
-        )}
-        {selectedLabel && (
-          <ComplaintFormModal selectedLabel={selectedLabel} onClose={handleCloseModal} />
-        )}
-      </div>
-      {showSpecialForm && (
-        <SpecialFormModal
-          formData={formData}
-          setFormData={setFormData}
-          onClose={() => setShowSpecialForm(false)}
+    <>
+      <Head>
+        <title>เทศบาลเมืองตาคลี · Smart Takhli</title>
+        <meta
+          name="description"
+          content="เทศบาลเมืองตาคลี ยินดีให้บริการทุกช่วงวัย ผู้สูงอายุและผู้พิการสามารถขอยืมกายอุปกรณ์ได้ แจ้งทุกข์-แจ้งเหตุ ติดตามสถานะเรื่องร้องเรียน ตรวจคุณภาพอากาศ PM2.5 น้ำประปา และตารางรถเก็บขยะ"
         />
+        <meta property="og:title" content="เทศบาลเมืองตาคลี · Smart Takhli" />
+        <meta
+          property="og:description"
+          content="เทศบาลเมืองตาคลี ยินดีให้บริการทุกช่วงวัย ผู้สูงอายุและผู้พิการสามารถขอยืมกายอุปกรณ์ได้"
+        />
+      </Head>
+      <CitizenShell>
+        {/* หัวเรื่องหลักของหน้า — ซ่อนจากตา แต่ crawler เห็นและ screen reader อ่านเป็นอย่างแรก */}
+        <h1 className="sr-only">
+          เทศบาลเมืองตาคลี ยินดีให้บริการทุกช่วงวัย ผู้สูงอายุและผู้พิการสามารถขอยืมกายอุปกรณ์ได้
+        </h1>
+        <HeaderCard />
+        <EnvCards />
+
+        <section className="mx-4 mt-4">
+          <h2 className="text-[15px] font-bold">ตารางรถเก็บขยะ</h2>
+          <div className="mt-3">
+            <GarbageHomeCard />
+          </div>
+        </section>
+
+        <ComplaintCTA onStart={() => router.push("/report")} />
+        <ServiceGrid menu={menu} loading={menuLoading} onSelect={handleSelect} />
+
+        <section className="mx-4 mt-6">
+          <h2 className="text-[15px] font-bold">ศูนย์กายอุปกรณ์</h2>
+          <p className="text-[11px] text-[#9590A8]">ยืม-คืนอุปกรณ์ช่วยเหลือผู้ป่วยและผู้สูงอายุ</p>
+          <div className="mt-3">
+            <EquipmentRow menu={healthMenu} loading={healthLoading} />
+          </div>
+        </section>
+
+        <NewsSection />
+
+        <div className="mx-4 mt-8 flex items-center justify-center gap-4 text-sm text-[#7C3AED]">
+          <a href="https://heyzine.com/flip-book/7cf559d572.html" className="flex items-center gap-1 hover:underline">
+            <BookOpen size={16} />
+            คู่มือประชาชน
+          </a>
+          {deferredPrompt && (
+            <button
+              type="button"
+              onClick={() => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+              }}
+              className="flex items-center gap-1 rounded-full bg-[#7C3AED] px-4 py-2 text-white"
+            >
+              <Download size={16} />
+              ติดตั้งแอป
+            </button>
+          )}
+        </div>
+
+        <StatsRow />
+
+        <Footer />
+        <div className="h-8" />
+      </CitizenShell>
+
+      {showSpecialForm && (
+        <SpecialFormModal formData={specialFormData} setFormData={setSpecialFormData} onClose={() => setShowSpecialForm(false)} />
       )}
-
-      <SchoolSurveyModal
-        isOpen={showEducationForm}
-        onClose={() => setShowEducationForm(false)}
-      />
-
-      <div className="flex justify-center items-center gap-4 text-purple-400 text-sm mb-4">
-        <a
-          href="https://heyzine.com/flip-book/7cf559d572.html"
-          className="flex items-center gap-1 hover:underline"
-        >
-          <BookOpen size={16} className="text-purple-500" />
-          คู่มือประชาชน
-        </a>
-        {deferredPrompt && (
-          <button
-            onClick={() => {
-              deferredPrompt.prompt();
-              deferredPrompt.userChoice.then(() => {
-                setDeferredPrompt(null);
-              });
-            }}
-            className="flex items-center gap-1 mt-1 bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
-          >
-            <Download size={16} className="text-white" />
-            ติดตั้งแอป
-          </button>
-        )}
-      </div>
-
-      <SiteStatsBar />
-
-      <Footer />
-    </div>
+      <SchoolSurveyModal isOpen={showEducationForm} onClose={() => setShowEducationForm(false)} />
+    </>
   );
 }
