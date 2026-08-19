@@ -29,7 +29,20 @@ export default function NewsSection() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading || activities.length === 0) return null;
+  if (loading) {
+    return (
+      <section className="mx-4 mt-6" role="status" aria-label="กำลังโหลดข่าวกิจกรรม">
+        <div className="h-5 w-28 animate-pulse rounded-md bg-white/80" />
+        <div className="mt-3 flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[95px] animate-pulse rounded-[16px] bg-white/70" />
+          ))}
+        </div>
+        <span className="sr-only">กำลังโหลดข่าวกิจกรรม</span>
+      </section>
+    );
+  }
+  if (activities.length === 0) return null;
 
   return (
     <section className="mx-4 mt-6">

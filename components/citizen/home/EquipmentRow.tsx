@@ -13,7 +13,11 @@ export default function EquipmentRow({
   loading?: boolean;
 }) {
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+    <div
+      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2"
+      role={loading ? "status" : undefined}
+      aria-label={loading ? "กำลังโหลดรายการกายอุปกรณ์" : undefined}
+    >
       {loading
         ? Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-[108px] w-[86px] shrink-0 animate-pulse rounded-[14px] bg-white/70" />

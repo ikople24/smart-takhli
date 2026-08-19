@@ -181,10 +181,11 @@ export default function StatusList() {
 
         <div className="flex-1 px-4 pb-6">
           {loading ? (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5" role="status" aria-label="กำลังโหลดรายการเรื่องร้องเรียน">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-[110px] animate-pulse rounded-[16px] bg-white/70" />
               ))}
+              <span className="sr-only">กำลังโหลดรายการเรื่องร้องเรียน</span>
             </div>
           ) : items.length === 0 ? (
             <div className="rounded-[16px] bg-white p-6 text-center text-[13px] text-[#9590A8]">

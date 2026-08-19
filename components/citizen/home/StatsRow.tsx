@@ -46,6 +46,7 @@ function StatItem({
 
 export default function StatsRow() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = () =>
@@ -55,11 +56,24 @@ export default function StatsRow() {
           if (j.success) setStats(j.data);
         })
         .catch(() => {});
-    load();
+    load().finally(() => setLoading(false));
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
   }, []);
 
+  if (loading) {
+    return (
+      <section className="mx-4 mt-6" role="status" aria-label="กำลังโหลดสถิติการเข้าชมเว็บไซต์">
+        <div className="h-5 w-40 animate-pulse rounded-md bg-white/80" />
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[62px] animate-pulse rounded-[16px] bg-white/70" />
+          ))}
+        </div>
+        <span className="sr-only">กำลังโหลดสถิติการเข้าชมเว็บไซต์</span>
+      </section>
+    );
+  }
   if (!stats) return null;
 
   return (

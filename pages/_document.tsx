@@ -2,7 +2,8 @@ import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
-    <Html lang="en" data-theme="light">
+    // lang="th" สำคัญต่อ screen reader — ให้เลือกเสียงอ่านภาษาไทยถูกต้อง
+    <Html lang="th" data-theme="light">
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
