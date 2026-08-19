@@ -173,6 +173,7 @@ export default function ReportWizard() {
                   prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
                 )
               }
+              imageUrls={imageUrls}
               onImages={setImageUrls}
               onUploading={setIsUploading}
               errors={errors}

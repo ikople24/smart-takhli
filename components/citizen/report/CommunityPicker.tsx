@@ -15,7 +15,9 @@ export default function CommunityPicker({
   selected: string;
   onSelect: (community: string) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // เริ่มแบบย่อถ้ามีชุมชนเลือกไว้แล้ว (เช่น ย้อนกลับมาจากขั้น 3) — state ภายใน
+  // รีเซตตอน unmount แต่ค่าที่เลือกอยู่กับ parent
+  const [collapsed, setCollapsed] = useState(() => Boolean(selected));
   const [locate, setLocate] = useState<LocateState>("idle");
   const [locateMessage, setLocateMessage] = useState("");
   const [fromLocation, setFromLocation] = useState(false);

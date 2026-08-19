@@ -6,16 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 
+// controlled component: รายการรูปอยู่ที่ parent (state ของหน้า wizard) —
+// สลับขั้นไปกลับแล้วรูปไม่หาย (ถือ state เองจะโดนรีเซตตอน unmount)
 export default function PhotoUploader({
+  value = [],
   onChange,
   onUploadingChange,
   maxImages = 3,
 }: {
+  value?: string[];
   onChange: (urls: string[]) => void;
   onUploadingChange?: (uploading: boolean) => void;
   maxImages?: number;
 }) {
-  const [previews, setPreviews] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,8 +31,8 @@ export default function PhotoUploader({
     if (selected.length === 0) return;
     setIsUploading(true);
     try {
-      const remaining = maxImages - previews.length;
-      const next = [...previews];
+      const remaining = maxImages - value.length;
+      const next = [...value];
       for (const file of selected.slice(0, remaining)) {
         try {
           const url = await uploadToCloudinary(file);
@@ -38,7 +41,6 @@ export default function PhotoUploader({
           console.error("Upload error:", err);
         }
       }
-      setPreviews(next);
       onChange(next);
     } finally {
       setIsUploading(false);
@@ -47,18 +49,16 @@ export default function PhotoUploader({
   };
 
   const removeImage = (index: number) => {
-    const next = previews.filter((_, i) => i !== index);
-    setPreviews(next);
-    onChange(next);
+    onChange(value.filter((_, i) => i !== index));
   };
 
-  const emptySlots = Math.max(0, maxImages - previews.length);
+  const emptySlots = Math.max(0, maxImages - value.length);
 
   return (
     <div>
       <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleFiles} className="hidden" disabled={isUploading} />
       <div className="flex gap-2.5">
-        {previews.map((url, i) => (
+        {value.map((url, i) => (
           <div key={url} className="relative h-[92px] w-[92px] shrink-0 overflow-hidden rounded-[14px] bg-[#EEF1FB]">
             <Image src={url} alt={`รูปที่ ${i + 1}`} fill sizes="92px" className="object-cover" />
             <button
@@ -84,7 +84,7 @@ export default function PhotoUploader({
           >
             {isUploading ? (
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#7C3AED] border-t-transparent" />
-            ) : i === 0 && previews.length === 0 ? (
+            ) : i === 0 && value.length === 0 ? (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
                 <circle cx="12" cy="13" r="3.5" />
