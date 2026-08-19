@@ -1,6 +1,7 @@
 // components/citizen/report/StepDetails.tsx
 // ขั้น 2: ชุมชน + รายการปัญหา (chips multi) + แนบรูป ≤3
 // reuse CommunitySelector / ImageUploads เดิมทั้งดุ้น — เขียนใหม่เฉพาะ chips
+import Image from "next/image";
 import CommunitySelector from "@/components/complaints/CommunitySelector";
 import ImageUploads from "@/components/ImageUploads";
 
@@ -55,18 +56,24 @@ export default function StepDetails({
               key={opt._id}
               type="button"
               onClick={() => onToggleProblem(opt._id)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12.5px] ${
+              className={`inline-flex items-center gap-2 rounded-full py-2 pl-2.5 pr-3.5 text-[12.5px] ${
                 selected
                   ? "bg-[#7C3AED] font-medium text-white"
                   : "border border-[#E4DEF2] bg-white text-[#4A4458]"
               }`}
             >
+              {/* ไอคอนรายปัญหาจาก store เดิม (เหมือนฟอร์มเดิม) — ตอนเลือกครอบวงขาวให้เด่นบนพื้นม่วง */}
+              {opt.iconUrl && (
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full ${selected ? "bg-white/90" : ""}`}>
+                  <Image src={opt.iconUrl} alt="" width={20} height={20} className="h-5 w-5 object-contain" />
+                </span>
+              )}
+              {opt.label}
               {selected && (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12.5l4 4L19 6" />
                 </svg>
               )}
-              {opt.label}
             </button>
           );
         })}
