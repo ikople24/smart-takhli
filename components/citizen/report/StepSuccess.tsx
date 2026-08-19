@@ -62,7 +62,7 @@ export default function StepSuccess({ complaintId }: { complaintId: string }) {
 
       <div className="shrink-0 px-6 pb-8 pt-3">
         <Link
-          href="/status"
+          href="/preview/status"
           className="block rounded-[15px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] py-3.5 text-center text-[15px] font-semibold text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
         >
           ติดตามสถานะเรื่อง

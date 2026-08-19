@@ -1,7 +1,7 @@
 // components/citizen/BottomNav.tsx
 // Nav ล่างฝั่งประชาชนโฉมใหม่ — โครงเดียวกับ nav เดิมของเว็บ (BottomNav.js):
-// ซ้าย = อยู่ระหว่างดำเนินการ (/complaint) · กลาง = ปุ่ม Home ม่วง (/preview)
-// · ขวา = ดำเนินการเสร็จสิ้น (/status)
+// ซ้าย = อยู่ระหว่างดำเนินการ · กลาง = ปุ่ม Home ม่วง (/preview) · ขวา =
+// ดำเนินการเสร็จสิ้น — ตั้งแต่เฟส 3 สองแท็บข้างชี้ /preview/status พร้อม filter
 import Link from "next/link";
 
 function ClockIcon() {
@@ -25,7 +25,7 @@ function CheckIcon() {
 export default function BottomNav() {
   return (
     <nav className="sticky bottom-0 z-20 flex items-end border-t border-[#EFEDF4] bg-white px-2 pb-5 pt-2">
-      <Link href="/complaint" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+      <Link href="/preview/status?filter=active" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
         <ClockIcon />
         <span className="text-[10.5px] leading-tight">อยู่ระหว่างดำเนินการ</span>
       </Link>
@@ -37,7 +37,7 @@ export default function BottomNav() {
         </span>
         <span className="text-[10.5px] font-semibold leading-tight text-[#7C3AED]">หน้าแรก</span>
       </Link>
-      <Link href="/status" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+      <Link href="/preview/status?filter=done" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
         <CheckIcon />
         <span className="text-[10.5px] leading-tight">ดำเนินการเสร็จสิ้น</span>
       </Link>
