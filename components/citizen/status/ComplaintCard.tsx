@@ -40,7 +40,7 @@ export default function ComplaintCard({
 
   return (
     <Link
-      href={`/preview/status/${complaint._id}`}
+      href={`/status/${complaint._id}`}
       className="block rounded-[16px] bg-white p-3.5 shadow-[0_4px_12px_rgba(60,40,100,0.04)] transition hover:-translate-y-0.5"
     >
       <div className="flex items-center gap-3">

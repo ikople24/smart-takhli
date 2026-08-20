@@ -1,4 +1,4 @@
-// pages/preview/report.tsx
+// pages/report.tsx
 // Wizard แจ้งทุกข์-แจ้งเหตุ 3 ขั้น + จอสำเร็จ (เฟส 2 ของรีดีไซน์ฝั่งประชาชน)
 // spec: docs/superpowers/specs/2026-08-18-citizen-report-wizard-design.md
 // เข้าด้วย ?category=<Prob_name> = เริ่มขั้น 2 (หมวดตั้งให้แล้ว ย้อนไปขั้น 1 ได้)

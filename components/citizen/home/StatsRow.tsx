@@ -64,10 +64,10 @@ export default function StatsRow() {
   if (loading) {
     return (
       <section className="mx-4 mt-6" role="status" aria-label="กำลังโหลดสถิติการเข้าชมเว็บไซต์">
-        <div className="h-5 w-40 animate-pulse rounded-md bg-white/80" />
+        <div className="h-5 w-40 skeleton rounded-md bg-[#E9E4F3]" />
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[62px] animate-pulse rounded-[16px] bg-white/70" />
+            <div key={i} className="h-[62px] skeleton rounded-[16px] bg-[#E9E4F3]" />
           ))}
         </div>
         <span className="sr-only">กำลังโหลดสถิติการเข้าชมเว็บไซต์</span>

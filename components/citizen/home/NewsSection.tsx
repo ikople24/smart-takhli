@@ -32,10 +32,10 @@ export default function NewsSection() {
   if (loading) {
     return (
       <section className="mx-4 mt-6" role="status" aria-label="กำลังโหลดข่าวกิจกรรม">
-        <div className="h-5 w-28 animate-pulse rounded-md bg-white/80" />
+        <div className="h-5 w-28 skeleton rounded-md bg-[#E9E4F3]" />
         <div className="mt-3 flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-[95px] animate-pulse rounded-[16px] bg-white/70" />
+            <div key={i} className="h-[95px] skeleton rounded-[16px] bg-[#E9E4F3]" />
           ))}
         </div>
         <span className="sr-only">กำลังโหลดข่าวกิจกรรม</span>
@@ -48,7 +48,7 @@ export default function NewsSection() {
     <section className="mx-4 mt-6">
       <div className="flex items-end justify-between">
         <h2 className="text-[15px] font-bold">ข่าวกิจกรรม</h2>
-        <Link href="/preview/activities" className="text-xs font-medium text-[#8B5CF6]">
+        <Link href="/activities" className="text-xs font-medium text-[#8B5CF6]">
           ดูทั้งหมด ›
         </Link>
       </div>
@@ -56,7 +56,7 @@ export default function NewsSection() {
         {activities.map((a) => (
           <Link
             key={a._id}
-            href={`/preview/activities?activity=${a._id}`}
+            href={`/activities?activity=${a._id}`}
             className="flex gap-3 rounded-[16px] bg-white p-2.5 shadow-[0_4px_12px_rgba(60,40,100,0.04)]"
           >
             <div className="relative h-[74px] w-[74px] shrink-0 overflow-hidden rounded-[12px] bg-[#EEF1FB]">

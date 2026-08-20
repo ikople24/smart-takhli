@@ -1,7 +1,7 @@
 // components/citizen/home/ServiceGrid.tsx
 // grid หมวดจาก useMenuStore เดิม แยกสองกลุ่ม: เรื่องร้องเรียน กับ บริการ
 // (ลงทะเบียนกายอุปกรณ์/สำรวจการศึกษา ไม่ใช่เรื่องร้องเรียน — เปิด modal คนละตัว
-// ใน pages/preview.tsx) — id="report-categories" เป็นเป้าเลื่อนของปุ่มแจ้งเรื่อง
+// ใน pages/index.tsx) — id="report-categories" เป็นเป้าเลื่อนของปุ่มแจ้งเรื่อง
 import Image from "next/image";
 import Link from "next/link";
 import { MenuItem } from "@/stores/useMenuStore";
@@ -26,7 +26,7 @@ function CardInner({ item }: { item: MenuItem }) {
 function CategoryCard({ item, onSelect }: { item: MenuItem; onSelect: (label: string) => void }) {
   if (!SERVICE_LABELS.includes(item.Prob_name)) {
     return (
-      <Link href={`/preview/report?category=${encodeURIComponent(item.Prob_name)}`} className={cardClass}>
+      <Link href={`/report?category=${encodeURIComponent(item.Prob_name)}`} className={cardClass}>
         <CardInner item={item} />
       </Link>
     );
@@ -42,7 +42,7 @@ function SkeletonGrid({ count }: { count: number }) {
   return (
     <div className="mt-3 grid grid-cols-3 gap-3" role="status" aria-label="กำลังโหลดรายการหมวด">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-32 animate-pulse rounded-[16px] bg-white/70" />
+        <div key={i} className="h-32 skeleton rounded-[16px] bg-[#E9E4F3]" />
       ))}
       <span className="sr-only">กำลังโหลดรายการหมวด</span>
     </div>

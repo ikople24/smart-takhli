@@ -20,7 +20,7 @@ export default function EquipmentRow({
     >
       {loading
         ? Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[108px] w-[86px] shrink-0 animate-pulse rounded-[14px] bg-white/70" />
+            <div key={i} className="h-[108px] w-[86px] shrink-0 skeleton rounded-[14px] bg-[#E9E4F3]" />
           ))
         : menu.map((item, index) => {
             const available = typeof item.available === "number" ? item.available : 0;

@@ -19,7 +19,7 @@ export default function ActivityCard({ activity, now }: { activity: ActivityItem
   const phase = activityPhase(activity, now);
   return (
     <Link
-      href={`/preview/activities?activity=${activity._id}`}
+      href={`/activities?activity=${activity._id}`}
       className="flex gap-3 rounded-[16px] bg-white p-2.5 shadow-[0_4px_12px_rgba(60,40,100,0.04)] transition hover:-translate-y-0.5"
     >
       <div className="relative h-[74px] w-[74px] shrink-0 overflow-hidden rounded-[12px] bg-[#EEF1FB]">

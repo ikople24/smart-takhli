@@ -37,37 +37,43 @@ export default function StepSuccess({ complaintId }: { complaintId: string }) {
           </span>
         </div>
 
+      </div>
+
+      {/* LINE OA คือช่องทางติดตามหลัก (เฟสโปรไฟล์ถูกยกเลิก 2026-08-19) —
+          ปุ่มเพิ่มเพื่อนเป็น action หลักของจอนี้ ปุ่มอื่นเป็นรอง */}
+      <div className="shrink-0 px-6 pb-8 pt-3">
         {lineOaUrl && (
-          <a
-            href={followUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex w-full items-center gap-3 rounded-[16px] bg-white p-3.5 text-left shadow-[0_4px_14px_rgba(60,40,100,0.05)]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#06C755]">
+          <>
+            <p className="mb-2 text-center text-[12.5px] font-medium text-[#4A4458]">
+              อย่าลืมเพิ่มเพื่อน LINE เทศบาล — ช่องทางแจ้งเตือนความคืบหน้าเรื่องของคุณ
+            </p>
+            <a
+              href={followUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2.5 rounded-[15px] bg-[#06C755] py-4 text-center text-[15px] font-bold text-white shadow-[0_10px_22px_rgba(6,199,85,0.35)]"
+            >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
                 <path d="M12 2C6.5 2 2 5.7 2 10.2c0 4 3.6 7.4 8.5 8.1.3.07.8.2.9.5.1.3.07.6.04.9l-.1.8c-.05.3-.2 1 .9.5 1.1-.5 5.8-3.4 7.9-5.8C21.3 12.1 22 11.2 22 10.2 22 5.7 17.5 2 12 2Z" />
               </svg>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold">ติดตามเรื่องนี้ผ่าน LINE</span>
-              <span className="block text-[11px] text-[#9590A8]">รับแจ้งเตือนความคืบหน้าอัตโนมัติ — กดแล้วส่งข้อความที่เตรียมไว้ให้</span>
-            </span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CFC8DE" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-              <path d="m9 6 6 6-6 6" />
-            </svg>
-          </a>
+              เพิ่มเพื่อน LINE รับแจ้งเตือนเรื่องนี้
+            </a>
+            <p className="mt-1.5 text-center text-[10.5px] text-[#9590A8]">
+              กดแล้วระบบเตรียมข้อความ &quot;สถานะ {complaintId}&quot; ให้ — กดส่งในแชทได้เลย
+            </p>
+          </>
         )}
-      </div>
-
-      <div className="shrink-0 px-6 pb-8 pt-3">
         <Link
-          href="/preview/status"
-          className="block rounded-[15px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] py-3.5 text-center text-[15px] font-semibold text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
+          href="/status"
+          className={`mt-3 block rounded-[15px] py-3.5 text-center text-[14px] font-semibold ${
+            lineOaUrl
+              ? "bg-[#F1ECFE] text-[#7C3AED]"
+              : "bg-gradient-to-br from-[#7C3AED] to-[#9050F0] text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
+          }`}
         >
           ติดตามสถานะเรื่อง
         </Link>
-        <Link href="/preview" className="mt-1 block py-3.5 text-center text-[14px] font-medium text-[#7C3AED]">
+        <Link href="/" className="mt-1 block py-3 text-center text-[13.5px] font-medium text-[#7C3AED]">
           กลับหน้าแรก
         </Link>
       </div>
