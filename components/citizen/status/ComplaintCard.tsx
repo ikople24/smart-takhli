@@ -3,12 +3,12 @@
 // รูปใหญ่เต็มความกว้าง (หลายรูป = สไลด์ปัดได้ + จุดบอกตำแหน่ง) · ป้ายวันที่มุมบน
 // · ไอคอนหมวด+ชื่อหมวด+ชุมชนซ้อนบนรูป · ชิปปัญหา + รหัสคำร้องจริง (TKC-…)
 // · รายละเอียดย่อ · ขั้นตอน 4 ไอคอนพร้อมป้าย (รับเรื่อง→มอบหมาย→ดำเนินการ→เสร็จสิ้น)
-import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FileText, UserCheck, Clock, CheckCircle2, MapPin, Calendar } from "lucide-react";
 import { statusProgress } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
+import PhotoSlider from "./PhotoSlider";
 
 export type ComplaintListItem = {
   _id: string;
@@ -77,14 +77,6 @@ export default function ComplaintCard({
 }) {
   const progress = statusProgress(complaint, assignment);
   const images = complaint.images ?? [];
-  const [slide, setSlide] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
-
-  const onSlideScroll = () => {
-    const el = sliderRef.current;
-    if (!el) return;
-    setSlide(Math.round(el.scrollLeft / el.clientWidth));
-  };
 
   const headOverlay = (
     <>
@@ -112,17 +104,6 @@ export default function ComplaintCard({
           )}
         </span>
       </div>
-      {images.length > 1 && (
-        <div className="absolute bottom-3 right-3 flex gap-1.5">
-          {images.map((_, i) => (
-            <span
-              key={i}
-              className="h-1.5 rounded-full transition-all"
-              style={{ width: i === slide ? 14 : 6, background: i === slide ? "#fff" : "rgba(255,255,255,0.55)" }}
-            />
-          ))}
-        </div>
-      )}
     </>
   );
 
@@ -132,24 +113,9 @@ export default function ComplaintCard({
       className="block overflow-hidden rounded-[18px] bg-white shadow-[0_4px_14px_rgba(60,40,100,0.05)] transition hover:-translate-y-0.5"
     >
       {images.length > 0 ? (
-        <div className="relative h-[170px]">
-          {images.length === 1 ? (
-            <Image src={images[0]} alt="" fill sizes="480px" className="object-cover" />
-          ) : (
-            <div
-              ref={sliderRef}
-              onScroll={onSlideScroll}
-              className="flex h-full snap-x snap-mandatory overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden"
-            >
-              {images.map((url, i) => (
-                <div key={i} className="relative h-full w-full shrink-0 snap-center">
-                  <Image src={url} alt={`รูปที่ ${i + 1}`} fill sizes="480px" className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
+        <PhotoSlider images={images} heightClass="h-[170px]" rounded="rounded-none">
           {headOverlay}
-        </div>
+        </PhotoSlider>
       ) : (
         /* ไม่มีรูป — หัวแบบแถบไอคอนหมวดแทน */
         <div className="flex items-center gap-2.5 px-3.5 pt-3.5">

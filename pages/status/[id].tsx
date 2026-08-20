@@ -191,7 +191,7 @@ export default function StatusDetail() {
           ) : (
             <>
               {/* รูปตั้งต้นของเรื่อง — โชว์ทันทีบนสุด (หลายรูปปัดสไลด์ได้) */}
-              {(complaint.images?.length ?? 0) > 0 && <PhotoSlider images={complaint.images!} />}
+              {(complaint.images?.length ?? 0) > 0 && <PhotoSlider images={complaint.images!} counter />}
 
               {/* หัวเรื่อง */}
               <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
