@@ -11,6 +11,7 @@ export default function PhotoSlider({
   rounded = "rounded-[18px]",
   counter = false,
   autoMs = 3500,
+  dotsClass = "bottom-3 right-3",
   children,
 }: {
   images: string[];
@@ -18,6 +19,7 @@ export default function PhotoSlider({
   rounded?: string;
   counter?: boolean;
   autoMs?: number;
+  dotsClass?: string; // ตำแหน่งจุดบอกสไลด์ (hero รายละเอียดใช้กลางบนตามแคนวาส)
   children?: ReactNode; // overlay เพิ่มเติม (เช่น ป้ายวันที่/หมวด ของการ์ด)
 }) {
   const [slide, setSlide] = useState(0);
@@ -70,7 +72,7 @@ export default function PhotoSlider({
       )}
       {images.length > 1 && (
         <>
-          <div className="pointer-events-none absolute bottom-3 right-3 flex gap-1.5">
+          <div className={`pointer-events-none absolute flex gap-1.5 ${dotsClass}`}>
             {images.map((_, i) => (
               <span
                 key={i}

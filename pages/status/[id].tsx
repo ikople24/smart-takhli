@@ -6,8 +6,11 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
+import Image from "next/image";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import Timeline from "@/components/citizen/status/Timeline";
+import { useMenuStore } from "@/stores/useMenuStore";
+import { Calendar, MapPin, X } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
@@ -44,6 +47,16 @@ type Assignment = {
 export default function StatusDetail() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : "";
+  const { menu, fetchMenu, menuLoading } = useMenuStore();
+  const [hasFetchedMenu, setHasFetchedMenu] = useState(false);
+
+  // ไอคอนหมวดสำหรับ hero (จาก menu เดิม)
+  useEffect(() => {
+    if (!hasFetchedMenu && menu.length === 0 && !menuLoading) {
+      fetchMenu();
+      setHasFetchedMenu(true);
+    }
+  }, [menu.length, fetchMenu, menuLoading, hasFetchedMenu]);
 
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [assignment, setAssignment] = useState<Assignment>(null);
@@ -131,6 +144,10 @@ export default function StatusDetail() {
   const title = complaint?.problems?.[0] || complaint?.category || "เรื่องร้องเรียน";
   const officer = assignment?.user ?? null;
   const officerPhone = officer?.phone?.replace(/[^0-9+]/g, "") || "";
+  const heroImages = complaint?.images ?? [];
+  const showHero = !loading && !notFound && !!complaint && heroImages.length > 0;
+  const categoryIcon = menu.find((m) => m.Prob_name === complaint?.category)?.Prob_pic;
+  const codeText = complaint ? complaint.complaintId || complaint._id.slice(-8).toUpperCase() : "";
 
   return (
     <>
@@ -138,8 +155,56 @@ export default function StatusDetail() {
         <title>รายละเอียดสถานะ · Smart Takhli</title>
       </Head>
       <CitizenShell hideNav>
-        {/* หัวจอ */}
-        <div className="shrink-0 px-4 pb-3 pt-4">
+        {/* ── hero รูปเรื่อง (ตามแคนวาส): X ลอยมุมขวา · จุดสไลด์กลางบน ·
+            ไอคอนหมวด(ไม่มีพื้นขาว) + ชุมชน + วันที่ + ชิปสถานะ ซ้อนบนรูป ── */}
+        {showHero && (
+          <PhotoSlider
+            images={heroImages}
+            heightClass="h-[250px]"
+            rounded="rounded-none"
+            dotsClass="top-4 left-1/2 -translate-x-1/2"
+          >
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 to-transparent" />
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="ปิด"
+              className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white"
+            >
+              <X size={20} />
+            </button>
+            <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                {categoryIcon && (
+                  <Image src={categoryIcon} alt={complaint!.category || ""} width={52} height={52} className="h-[52px] w-[52px] rounded-full object-cover" />
+                )}
+                <div>
+                  {complaint!.community && (
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-white">
+                      <MapPin size={13} className="text-[#FBBF24]" />
+                      ชุมชน{complaint!.community}
+                    </div>
+                  )}
+                  {complaint!.createdAt && (
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-white/85">
+                      <Calendar size={13} />
+                      {formatThaiDate(complaint!.createdAt)}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <span
+                className="shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-bold text-white"
+                style={{ background: done ? "#27AE60" : "#DB9A28" }}
+              >
+                {done ? "ดำเนินการเสร็จสิ้น" : "อยู่ระหว่างดำเนินการ"}
+              </span>
+            </div>
+          </PhotoSlider>
+        )}
+
+        {/* หัวจอ (เมื่อไม่มี hero: กำลังโหลด/ไม่พบ/ไม่มีรูป) */}
+        <div className={showHero ? "hidden" : "shrink-0 px-4 pb-3 pt-4"}>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -190,17 +255,24 @@ export default function StatusDetail() {
             </div>
           ) : (
             <>
-              {/* รูปตั้งต้นของเรื่อง — โชว์ทันทีบนสุด (หลายรูปปัดสไลด์ได้) */}
-              {(complaint.images?.length ?? 0) > 0 && <PhotoSlider images={complaint.images!} counter />}
-
-              {/* หัวเรื่อง */}
-              <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
-                <div className="text-[16px] font-bold leading-snug">{title}</div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#9590A8]">
-                  {complaint.community && <span>ชุมชน{complaint.community}</span>}
-                  {complaint.createdAt && <span>แจ้งเมื่อ {formatThaiDate(complaint.createdAt)}</span>}
-                </div>
+              {/* เลขที่คำร้อง — แถวใต้ hero ตามแคนวาส */}
+              <div className="flex items-center justify-between rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                <span className="text-[13.5px] text-[#9590A8]">เลขที่คำร้อง</span>
+                <span className="rounded-[12px] border border-[#ECEAF2] bg-[#F9F8FC] px-3.5 py-1.5 font-mono text-[15px] font-bold tracking-wide text-[#1B1830]">
+                  {codeText}
+                </span>
               </div>
+
+              {/* หัวเรื่อง — เฉพาะเมื่อไม่มี hero (มี hero แล้วข้อมูลนี้อยู่บนรูป) */}
+              {!showHero && (
+                <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                  <div className="text-[16px] font-bold leading-snug">{title}</div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#9590A8]">
+                    {complaint.community && <span>ชุมชน{complaint.community}</span>}
+                    {complaint.createdAt && <span>แจ้งเมื่อ {formatThaiDate(complaint.createdAt)}</span>}
+                  </div>
+                </div>
+              )}
 
               <Timeline rows={statusTimeline(complaint, assignment)} />
 
