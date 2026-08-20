@@ -11,6 +11,7 @@ import CitizenShell from "@/components/citizen/CitizenShell";
 import Timeline from "@/components/citizen/status/Timeline";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
+import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 import { maskOfficerName } from "@/lib/citizen/maskName";
 import { Calendar, ClipboardList, Heart, MapPin, Star, X } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
@@ -58,9 +59,12 @@ export default function StatusDetail() {
   const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
   const [hasFetchedMenu, setHasFetchedMenu] = useState(false);
 
+  const { adminOptions, fetchAdminOptions } = useAdminOptionsStore();
+
   useEffect(() => {
     fetchProblemOptions();
-  }, [fetchProblemOptions]);
+    fetchAdminOptions(); // ไอคอนวิธีแก้ของเจ้าหน้าที่ (AdminOption.icon_url)
+  }, [fetchProblemOptions, fetchAdminOptions]);
 
   // ไอคอนหมวดสำหรับ hero (จาก menu เดิม)
   useEffect(() => {
@@ -348,11 +352,21 @@ export default function StatusDetail() {
                   </div>
                   {(assignment!.solution?.length ?? 0) > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {assignment!.solution!.map((s) => (
-                        <span key={s} className="rounded-full bg-[#E6F6EC] px-3 py-1 text-[11.5px] font-medium text-[#1B935A]">
-                          {s}
-                        </span>
-                      ))}
+                      {assignment!.solution!.map((s) => {
+                        // ไอคอนวิธีแก้จาก AdminOption (field icon_url) — fallback เดียวกับ UI admin
+                        const icon =
+                          (adminOptions as { label: string; icon_url?: string }[]).find((o) => o.label === s)
+                            ?.icon_url || "/check-icon.png";
+                        return (
+                          <span
+                            key={s}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[#E6F6EC] py-1 pl-1.5 pr-3 text-[11.5px] font-medium text-[#1B935A]"
+                          >
+                            <Image src={icon} alt="" width={18} height={18} className="h-[18px] w-[18px] rounded-full object-contain" />
+                            {s}
+                          </span>
+                        );
+                      })}
                     </div>
                   )}
                   {assignment!.note?.trim() && (
