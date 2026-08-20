@@ -498,18 +498,30 @@ export default function StatusDetail() {
 
         {/* ปุ่มล่าง */}
         {complaint && !notFound && (
-          <div className="sticky bottom-0 z-20 flex shrink-0 gap-2.5 border-t border-[#EFEDF4] bg-white px-4 pb-7 pt-3">
+          <div className="sticky bottom-0 z-20 flex shrink-0 gap-2 border-t border-[#EFEDF4] bg-white px-4 pb-7 pt-3">
+            {/* ปุ่มกลับด้านล่าง — หน้ายาว เลื่อนไปไหนก็ปิดได้ ไม่ต้องเลื่อนขึ้นไปหา ✕ บนสุด */}
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label="กลับไปหน้าก่อนหน้า"
+              className="flex w-[74px] items-center justify-center gap-1 rounded-[15px] bg-[#F4F2F9] py-3.5 text-[13.5px] font-semibold text-[#57506A]"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              กลับ
+            </button>
             <a
               href={`tel:${CONTACT_PHONE_TEL}`}
               title={`โทร ${CONTACT_PHONE_DISPLAY}`}
-              className="w-[118px] rounded-[15px] bg-[#F1ECFE] py-3.5 text-center text-[14px] font-semibold text-[#7C3AED]"
+              className="w-[104px] rounded-[15px] bg-[#F1ECFE] py-3.5 text-center text-[13.5px] font-semibold text-[#7C3AED]"
             >
               ติดต่อ จนท.
             </a>
             <button
               type="button"
               onClick={share}
-              className="flex-1 rounded-[15px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] py-3.5 text-center text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
+              className="flex-1 rounded-[15px] bg-gradient-to-br from-[#7C3AED] to-[#9050F0] py-3.5 text-center text-[13.5px] font-semibold text-white shadow-[0_10px_22px_rgba(124,58,237,0.30)]"
             >
               {shared ? "คัดลอกลิงก์แล้ว ✓" : "แชร์เรื่องนี้"}
             </button>
