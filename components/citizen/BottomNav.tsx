@@ -23,9 +23,12 @@ function CheckIcon() {
 }
 
 export default function BottomNav() {
+  // โปร่งแสง + เบลอพื้นหลังแบบเดียวกับ TopNavbar (bg-base-100/90 backdrop-blur-md)
+  // ของเดิมเป็นขาวทึบ เลื่อนแล้วการ์ดขาวไหลมาชนจนแยกขอบ nav ไม่ออก —
+  // เงาขอบบนช่วยตัดชั้นให้เห็นว่าเป็นแถบลอย ปุ่ม Home ยังทึบตามเดิม
   return (
-    <nav className="sticky bottom-0 z-20 flex items-end border-t border-[#EFEDF4] bg-white px-2 pb-5 pt-2">
-      <Link href="/status?filter=active" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+    <nav className="sticky bottom-0 z-20 flex items-end border-t border-white/70 bg-white/85 px-2 pb-5 pt-2 shadow-[0_-6px_20px_rgba(60,40,100,0.10)] backdrop-blur-xl">
+      <Link href="/status?filter=active" className="flex flex-1 flex-col items-center gap-1 text-[#857F99]">
         <ClockIcon />
         <span className="text-[10.5px] leading-tight">อยู่ระหว่างดำเนินการ</span>
       </Link>
@@ -37,7 +40,7 @@ export default function BottomNav() {
         </span>
         <span className="text-[10.5px] font-semibold leading-tight text-[#7C3AED]">หน้าแรก</span>
       </Link>
-      <Link href="/status?filter=done" className="flex flex-1 flex-col items-center gap-1 text-[#A7A2B6]">
+      <Link href="/status?filter=done" className="flex flex-1 flex-col items-center gap-1 text-[#857F99]">
         <CheckIcon />
         <span className="text-[10.5px] leading-tight">ดำเนินการเสร็จสิ้น</span>
       </Link>
