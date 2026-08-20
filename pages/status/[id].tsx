@@ -19,6 +19,7 @@ const MAX_RATINGS = 4;
 
 type Complaint = {
   _id: string;
+  complaintId?: string; // รหัสคำร้องจริง เช่น TKC-690017
   category?: string;
   problems?: string[];
   community?: string;
@@ -151,7 +152,11 @@ export default function StatusDetail() {
             </button>
             <div className="min-w-0 flex-1">
               <div className="text-[17px] font-bold leading-tight">รายละเอียดสถานะ</div>
-              {complaint && <div className="font-mono text-[11px] text-[#9590A8]">{complaint._id.slice(-8).toUpperCase()}</div>}
+              {complaint && (
+                <div className="font-mono text-[11px] text-[#9590A8]">
+                  {complaint.complaintId || complaint._id.slice(-8).toUpperCase()}
+                </div>
+              )}
             </div>
             {complaint && (
               <span

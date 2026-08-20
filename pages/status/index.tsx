@@ -2,7 +2,7 @@
 // ลิสต์ติดตามสถานะโฉมใหม่ (เฟส 3) — รวมทุกสถานะ + chips กรอง
 // spec: docs/superpowers/specs/2026-08-19-citizen-status-design.md
 // ข้อมูล: GET /api/complaints (PDPA/เรื่องลับกรองฝั่ง server) + assignments เดิม
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import CitizenShell from "@/components/citizen/CitizenShell";
@@ -64,8 +64,13 @@ export default function StatusList() {
     };
   }, []);
 
+  // กัน response เก่าทับ: fetch ของ filter ก่อนหน้า (เช่น all ตอน mount) อาจตอบ
+  // ช้ากว่า fetch ของ filter จาก query แล้วเขียนทับลิสต์ — ใช้เลขรอบล่าสุดตัดทิ้ง
+  const fetchSeq = useRef(0);
+
   const fetchPage = useCallback(
     async (pageNum: number, currentFilter: FilterKey, append: boolean) => {
+      const seq = ++fetchSeq.current;
       const status = FILTER_STATUS[currentFilter];
       const params = new URLSearchParams({
         withCount: "true",
@@ -76,6 +81,7 @@ export default function StatusList() {
       });
       if (status) params.set("status", status);
       const json = await fetch(`/api/complaints?${params}`).then((r) => r.json());
+      if (seq !== fetchSeq.current) return; // มี fetch รอบใหม่กว่าแล้ว — ทิ้งผลรอบนี้
       const rows: ComplaintListItem[] = json?.data ?? [];
       setTotal(json?.pagination?.total ?? rows.length);
       setItems((prev) => (append ? [...prev, ...rows] : rows));
