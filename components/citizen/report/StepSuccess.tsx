@@ -22,10 +22,12 @@ export default function StepSuccess({ complaintId }: { complaintId: string }) {
           </div>
         </div>
         <div className="mt-6 text-[22px] font-bold">ส่งเรื่องสำเร็จ</div>
-        <p className="mt-2 max-w-[260px] text-[13.5px] leading-relaxed text-[#6B6880]">
+        {/* ห้ามระบุกรอบเวลาเป็นจำนวนวัน (เจ้าของสั่ง 2026-08-20) — วัดจากเรื่องที่ปิดงานจริง
+            200 เรื่องล่าสุด มีเพียง 51% ที่เสร็จภายใน 3 วัน การรับปากตัวเลขจึงผิดเกือบครึ่ง */}
+        <p className="mt-2 max-w-[280px] text-[13.5px] leading-relaxed text-[#6B6880]">
           เราได้รับเรื่องร้องเรียนของคุณแล้ว
           <br />
-          เจ้าหน้าที่จะดำเนินการภายใน 3 วันทำการ
+          เจ้าหน้าที่จะตรวจสอบและเร่งดำเนินการให้เร็วที่สุด
         </p>
 
         <div className="mt-6 w-full rounded-[18px] bg-white p-4.5 text-center shadow-[0_8px_22px_rgba(60,40,100,0.07)]">
