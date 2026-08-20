@@ -9,6 +9,7 @@ import { useRouter } from "next/router";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import Timeline from "@/components/citizen/status/Timeline";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
+import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
 import { statusTimeline } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
@@ -189,6 +190,9 @@ export default function StatusDetail() {
             </div>
           ) : (
             <>
+              {/* รูปตั้งต้นของเรื่อง — โชว์ทันทีบนสุด (หลายรูปปัดสไลด์ได้) */}
+              {(complaint.images?.length ?? 0) > 0 && <PhotoSlider images={complaint.images!} />}
+
               {/* หัวเรื่อง */}
               <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
                 <div className="text-[16px] font-bold leading-snug">{title}</div>
@@ -220,7 +224,10 @@ export default function StatusDetail() {
                 </div>
               )}
 
-              <BeforeAfter before={complaint.images ?? []} after={assignment?.solutionImages ?? []} />
+              {/* เทียบก่อน-หลังเฉพาะเมื่อมีรูปผลงาน (รูปตั้งต้นอยู่ hero ข้างบนแล้ว) */}
+              {(assignment?.solutionImages?.length ?? 0) > 0 && (
+                <BeforeAfter before={complaint.images ?? []} after={assignment?.solutionImages ?? []} />
+              )}
 
               {officer && (officer.name || officer.department) && (
                 <div className="flex items-center gap-3 rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">

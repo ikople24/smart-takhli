@@ -1,8 +1,12 @@
 // components/citizen/status/ComplaintCard.tsx
-// การ์ดเรื่องร้องเรียนในลิสต์ติดตามสถานะ (แคนวาสจอ "ติดตามสถานะ"):
-// ไอคอนหมวด · ชื่อเรื่อง · เลขเรื่อง mono · ชิปสถานะ · progress 4 ท่อน · อัปเดตล่าสุด
+// การ์ดเรื่องร้องเรียนแบบหน้าเดิม (ตามที่เจ้าของสั่ง 2026-08-20):
+// รูปใหญ่เต็มความกว้าง (หลายรูป = สไลด์ปัดได้ + จุดบอกตำแหน่ง) · ป้ายวันที่มุมบน
+// · ไอคอนหมวด+ชื่อหมวด+ชุมชนซ้อนบนรูป · ชิปปัญหา + รหัสคำร้องจริง (TKC-…)
+// · รายละเอียดย่อ · ขั้นตอน 4 ไอคอนพร้อมป้าย (รับเรื่อง→มอบหมาย→ดำเนินการ→เสร็จสิ้น)
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { FileText, UserCheck, Clock, CheckCircle2, MapPin, Calendar } from "lucide-react";
 import { statusProgress } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
 
@@ -12,6 +16,8 @@ export type ComplaintListItem = {
   category?: string;
   problems?: string[];
   images?: string[];
+  detail?: string;
+  community?: string;
   status?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -22,7 +28,43 @@ export type AssignmentLite = {
   completedAt?: string | null;
 } | null;
 
-const DONE = "ดำเนินการเสร็จสิ้น";
+const STEPS = [
+  { label: "รับเรื่อง", Icon: FileText, color: "#22C55E" },
+  { label: "มอบหมาย", Icon: UserCheck, color: "#4F6EF7" },
+  { label: "ดำเนินการ", Icon: Clock, color: "#F2A93B" },
+  { label: "เสร็จสิ้น", Icon: CheckCircle2, color: "#16A34A" },
+];
+
+function StepRow({ step }: { step: number }) {
+  return (
+    <div className="mt-3 flex items-center rounded-[14px] bg-[#F8F7FB] px-2 py-2.5">
+      {STEPS.map(({ label, Icon, color }, i) => {
+        const reached = i + 1 <= step;
+        return (
+          <div key={label} className="flex flex-1 items-center">
+            <div className="flex flex-1 flex-col items-center gap-1">
+              <span
+                className="flex h-9 w-9 items-center justify-center rounded-full"
+                style={{ background: reached ? color : "#ECE9F3" }}
+              >
+                <Icon size={17} color={reached ? "#fff" : "#9590A8"} strokeWidth={2.2} />
+              </span>
+              <span className="text-[10px] font-semibold" style={{ color: reached ? color : "#9590A8" }}>
+                {label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <span
+                className="mb-4 h-[2.5px] w-6 shrink-0 rounded-full"
+                style={{ background: i + 2 <= step ? STEPS[i + 1].color : "#ECE9F3" }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ComplaintCard({
   complaint,
@@ -34,53 +76,123 @@ export default function ComplaintCard({
   iconUrl?: string;
 }) {
   const progress = statusProgress(complaint, assignment);
-  const done = complaint.status === DONE;
-  const title = complaint.problems?.[0] || complaint.category || "เรื่องร้องเรียน";
-  const chip = done
-    ? { bg: "#E6F6EC", text: "#1B935A", label: "เสร็จสิ้น" }
-    : { bg: "#FEF6E0", text: "#C77E10", label: "ดำเนินการ" };
+  const images = complaint.images ?? [];
+  const [slide, setSlide] = useState(0);
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  const onSlideScroll = () => {
+    const el = sliderRef.current;
+    if (!el) return;
+    setSlide(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  const headOverlay = (
+    <>
+      {/* ไล่เงาล่างให้ตัวหนังสือบนรูปอ่านออก */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
+      {complaint.createdAt && (
+        <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-[11.5px] font-semibold text-[#1B1830]">
+          <Calendar size={13} className="text-[#4F6EF7]" />
+          {formatThaiDate(complaint.createdAt)}
+        </span>
+      )}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2.5">
+        {iconUrl && (
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[12px] bg-white p-1">
+            <Image src={iconUrl} alt="" width={40} height={40} className="h-full w-full rounded-[8px] object-cover" />
+          </span>
+        )}
+        <span className="min-w-0">
+          <span className="block text-[15px] font-bold leading-tight text-white drop-shadow">{complaint.category || "เรื่องร้องเรียน"}</span>
+          {complaint.community && (
+            <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/90">
+              <MapPin size={12} className="text-[#FBBF24]" />
+              {complaint.community}
+            </span>
+          )}
+        </span>
+      </div>
+      {images.length > 1 && (
+        <div className="absolute bottom-3 right-3 flex gap-1.5">
+          {images.map((_, i) => (
+            <span
+              key={i}
+              className="h-1.5 rounded-full transition-all"
+              style={{ width: i === slide ? 14 : 6, background: i === slide ? "#fff" : "rgba(255,255,255,0.55)" }}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <Link
       href={`/status/${complaint._id}`}
-      className="block rounded-[16px] bg-white p-3.5 shadow-[0_4px_12px_rgba(60,40,100,0.04)] transition hover:-translate-y-0.5"
+      className="block overflow-hidden rounded-[18px] bg-white shadow-[0_4px_14px_rgba(60,40,100,0.05)] transition hover:-translate-y-0.5"
     >
-      <div className="flex items-center gap-3">
-        {/* รูปถ่ายจริงของเรื่อง (PDPA เบลอจาก server แล้ว) — ไม่มีรูปค่อยใช้ไอคอนหมวด */}
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-[#F1ECFE]">
-          {complaint.images?.[0] ? (
-            <Image src={complaint.images[0]} alt="" width={56} height={56} className="h-full w-full object-cover" />
-          ) : iconUrl ? (
-            <Image src={iconUrl} alt="" width={56} height={56} className="h-full w-full object-cover" />
+      {images.length > 0 ? (
+        <div className="relative h-[170px]">
+          {images.length === 1 ? (
+            <Image src={images[0]} alt="" fill sizes="480px" className="object-cover" />
           ) : (
-            <span className="text-[16px] font-bold text-[#7C3AED]">{(complaint.category || "ร").slice(0, 1)}</span>
+            <div
+              ref={sliderRef}
+              onScroll={onSlideScroll}
+              className="flex h-full snap-x snap-mandatory overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden"
+            >
+              {images.map((url, i) => (
+                <div key={i} className="relative h-full w-full shrink-0 snap-center">
+                  <Image src={url} alt={`รูปที่ ${i + 1}`} fill sizes="480px" className="object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+          {headOverlay}
+        </div>
+      ) : (
+        /* ไม่มีรูป — หัวแบบแถบไอคอนหมวดแทน */
+        <div className="flex items-center gap-2.5 px-3.5 pt-3.5">
+          <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[12px] bg-[#F1ECFE]">
+            {iconUrl ? (
+              <Image src={iconUrl} alt="" width={44} height={44} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-[16px] font-bold text-[#7C3AED]">{(complaint.category || "ร").slice(0, 1)}</span>
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-bold leading-tight">{complaint.category || "เรื่องร้องเรียน"}</span>
+            {complaint.community && (
+              <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-[#9590A8]">
+                <MapPin size={12} className="text-[#F2A93B]" />
+                {complaint.community}
+              </span>
+            )}
+          </span>
+          {complaint.createdAt && (
+            <span className="shrink-0 text-[11px] text-[#9590A8]">{formatThaiDate(complaint.createdAt)}</span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="line-clamp-1 text-[14px] font-semibold">{title}</div>
-          <div className="mt-0.5 font-mono text-[11px] text-[#9590A8]">
+      )}
+
+      <div className="px-3.5 pb-3.5 pt-3">
+        <div className="flex items-center justify-between gap-2">
+          {complaint.problems?.[0] ? (
+            <span className="inline-flex max-w-[65%] items-center rounded-full bg-[#F1ECFE] px-3 py-1 text-[11.5px] font-semibold text-[#7C3AED]">
+              <span className="truncate">{complaint.problems[0]}</span>
+              {complaint.problems.length > 1 && <span className="ml-1 shrink-0">+{complaint.problems.length - 1}</span>}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span className="shrink-0 font-mono text-[11px] text-[#9590A8]">
             {complaint.complaintId || complaint._id.slice(-8).toUpperCase()}
-          </div>
+          </span>
         </div>
-        <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-          style={{ background: chip.bg, color: chip.text }}
-        >
-          {chip.label}
-        </span>
-      </div>
-      <div className="mt-3 flex items-center gap-1.5">
-        {[1, 2, 3, 4].map((n) => (
-          <div
-            key={n}
-            className="h-1 flex-1 rounded-full"
-            style={{ background: n <= progress.step ? "#7C3AED" : "#E4DEF2" }}
-          />
-        ))}
-      </div>
-      <div className="mt-2 text-[11px] text-[#9590A8]">
-        อัปเดตล่าสุด · {progress.label}
-        {complaint.updatedAt ? ` · ${formatThaiDate(complaint.updatedAt)}` : ""}
+        {complaint.detail && (
+          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[#4A4458]">{complaint.detail}</p>
+        )}
+        <StepRow step={progress.step} />
       </div>
     </Link>
   );
