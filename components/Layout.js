@@ -87,14 +87,17 @@ const Layout = ({ children }) => {
     return <>{children}</>;
   }
 
+  // /garbage มี UI เต็มหน้าของตัวเอง — ไม่แสดง BottomNav เก่าซ้อน (เจ้าของสั่ง 2026-08-20)
+  const hideOldBottomNav = router.pathname === "/garbage";
+
   // Public / User pages: layout เดิม
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 w-full min-w-[320px]">
       <TopNavbar />
-      <main className="flex-1 pb-16 px-4 pt-4 flex flex-col gap-4 w-full overflow-x-hidden">
+      <main className={`flex-1 ${hideOldBottomNav ? "pb-4" : "pb-16"} px-4 pt-4 flex flex-col gap-4 w-full overflow-x-hidden`}>
         <div className="w-full">{children}</div>
       </main>
-      <BottomNav />
+      {!hideOldBottomNav && <BottomNav />}
     </div>
   );
 };
