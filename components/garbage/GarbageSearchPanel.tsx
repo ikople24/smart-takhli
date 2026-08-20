@@ -4,6 +4,7 @@ import { formatRange, formatThaiTime, minutesNowInBangkok, todayInBangkok, weekd
 import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from "@/lib/garbage/labels";
 import { findNextPickup } from "@/lib/garbage/nextPickup";
 import { useDebounce } from "./useDebounce";
+import { useLocateCommunity } from "./useLocateCommunity";
 
 const MIN_CHARS = 2;
 
@@ -49,7 +50,26 @@ export default function GarbageSearchPanel() {
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // ชุมชนที่ได้จากปุ่ม "รถขยะใกล้ฉัน" — ใช้ติดป้ายว่าผลชุดนี้มาจากตำแหน่ง ไม่ใช่คำที่พิมพ์เอง
+  const [locatedCommunity, setLocatedCommunity] = useState<string | null>(null);
   const reqIdRef = useRef(0);
+  const { state: locateState, message: locateMessage, locate, clearMessage } = useLocateCommunity();
+
+  // เติมชื่อชุมชนลงช่องค้นหาแทนที่จะค้นเงียบ ๆ — ผู้ใช้เห็นว่าระบบเดาชุมชนไหนให้
+  // และแก้คำเองต่อได้ทันทีถ้าเดาผิด (ช่องค้นหาเดิมยิง API ให้อยู่แล้ว)
+  const locateMe = () => {
+    locate((community) => {
+      setLocatedCommunity(community);
+      setTerm(community);
+    });
+  };
+
+  const onTypeTerm = (value: string) => {
+    setTerm(value);
+    // พิมพ์เองเมื่อไร ผลก็ไม่ใช่ "จากตำแหน่ง" อีกต่อไป
+    setLocatedCommunity(null);
+    clearMessage();
+  };
 
   useEffect(() => {
     if (debounced.length < MIN_CHARS) {
@@ -88,16 +108,44 @@ export default function GarbageSearchPanel() {
   const groups = hits ? groupByWeekday(hits) : [];
   // คำนวณครั้งเดียวต่อ render — ใช้ทั้งเงื่อนไขแสดงผลและตัวข้อความ
   const nextText = hits ? nextPickupText(hits) : null;
+  // ผลชุดนี้มาจากตำแหน่งจริงก็ต่อเมื่อคำที่ค้นอยู่ยังเป็นชื่อชุมชนที่ระบบหาให้
+  // (ผู้ใช้แก้คำเมื่อไร locatedCommunity ถูกล้างอยู่แล้ว — เช็คซ้ำกันสถานะค้างระหว่าง debounce)
+  const fromLocation = locatedCommunity != null && debounced === locatedCommunity;
 
   return (
     <section className="rounded-3xl bg-white/80 ring-1 ring-slate-200 p-4">
-      <h2 className="text-base font-semibold text-slate-800">ค้นหาถนนหรือชุมชนของคุณ</h2>
-      <p className="text-xs text-slate-500 mt-0.5">พิมพ์ชื่อถนน ซอย หรือชุมชน เช่น มาลัย · ใส่คำนำหน้าหรือไม่ก็ได้</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-slate-800">ค้นหาถนนหรือชุมชนของคุณ</h2>
+          <p className="text-xs text-slate-500 mt-0.5">พิมพ์ชื่อถนน ซอย หรือชุมชน เช่น มาลัย · ใส่คำนำหน้าหรือไม่ก็ได้</p>
+        </div>
+        <button
+          type="button"
+          onClick={locateMe}
+          disabled={locateState === "locating"}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5
+            text-[11.5px] font-semibold text-emerald-800 ring-1 ring-emerald-200
+            transition hover:bg-emerald-100 disabled:opacity-60"
+        >
+          {locateState === "locating" ? (
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-700 border-t-transparent" />
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+          )}
+          {locateState === "locating" ? "กำลังหาตำแหน่ง…" : "รถขยะใกล้ฉัน"}
+        </button>
+      </div>
+
+      {locateMessage && <p className="mt-2 text-xs font-medium text-amber-700">{locateMessage}</p>}
 
       <input
         type="search"
         value={term}
-        onChange={(e) => setTerm(e.target.value)}
+        onChange={(e) => onTypeTerm(e.target.value)}
         placeholder="เช่น มาลัย, ชุมชนสามัคคี"
         // text-base (16px) จำเป็น — ต่ำกว่านี้ iOS Safari จะซูมหน้าเองตอนโฟกัสช่องกรอก
         className="mt-3 w-full rounded-2xl border border-slate-300 px-4 py-3 text-base
@@ -124,7 +172,7 @@ export default function GarbageSearchPanel() {
           </div>
         )}
 
-        {!loading && !error && hits != null && hits.length === 0 && (
+        {!loading && !error && !fromLocation && hits != null && hits.length === 0 && (
           <p role="status" className="mt-3 text-sm text-slate-600">
             ไม่พบ &ldquo;{debounced}&rdquo; — ลองพิมพ์ชื่อถนนหรือชุมชนให้สั้นลง เช่น ตัดคำว่า ซอย ออก
           </p>
@@ -132,8 +180,26 @@ export default function GarbageSearchPanel() {
 
         {!loading && !error && groups.length > 0 && nextText && (
           <div className="mt-4 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
-            <div className="text-xs text-emerald-800">รอบเก็บถัดไปของจุดที่ค้นเจอ</div>
+            <div className="text-xs text-emerald-800">
+              {fromLocation ? `รอบเก็บถัดไปในชุมชน${locatedCommunity}` : "รอบเก็บถัดไปของจุดที่ค้นเจอ"}
+            </div>
             <div className="text-base font-semibold text-emerald-900">{nextText}</div>
+            {fromLocation && (
+              <div className="mt-0.5 text-[11px] text-emerald-700">
+                จากตำแหน่งของคุณ · แก้คำในช่องค้นหาได้ถ้าไม่ใช่ชุมชนนี้
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* อยู่ในเขตชุมชนจริงแต่ไม่มีจุดเก็บที่ค้นเจอ — ต้องบอกให้ต่างจาก "พิมพ์ผิด"
+            ไม่งั้นคนอ่านว่า "ไม่พบ <ชื่อชุมชนตัวเอง>" แล้วงงว่าพิมพ์อะไรผิด */}
+        {!loading && !error && fromLocation && hits != null && hits.length === 0 && (
+          <div className="mt-3 rounded-2xl bg-amber-50/80 ring-1 ring-amber-200 px-4 py-3">
+            <p className="text-sm font-semibold text-amber-900">ชุมชนของคุณคือ {locatedCommunity}</p>
+            <p className="mt-1 text-xs text-amber-800">
+              แต่ยังไม่มีจุดเก็บของชุมชนนี้ในระบบ — ลองพิมพ์ชื่อถนนของคุณ หรือสอบถามกองสาธารณสุขตามเบอร์ด้านล่าง
+            </p>
           </div>
         )}
 
