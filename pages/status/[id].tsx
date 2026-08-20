@@ -10,7 +10,7 @@ import Image from "next/image";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import Timeline from "@/components/citizen/status/Timeline";
 import { useMenuStore } from "@/stores/useMenuStore";
-import { Calendar, MapPin, X } from "lucide-react";
+import { Calendar, Heart, MapPin, Star, X } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
@@ -18,6 +18,9 @@ import { statusTimeline } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
 
 const DONE = "ดำเนินการเสร็จสิ้น";
+// เบอร์กลางเทศบาลเมืองตาคลี — เจ้าของกำหนดให้ใช้เบอร์เดียวทุกเรื่อง (2026-08-20)
+const CONTACT_PHONE_DISPLAY = "056-219299";
+const CONTACT_PHONE_TEL = "056219299";
 // เพดานให้คะแนนต่อเรื่อง (source public) — ค่าเดียวกับ CardOfficail เดิม
 const MAX_RATINGS = 4;
 
@@ -143,7 +146,6 @@ export default function StatusDetail() {
   const done = complaint?.status === DONE;
   const title = complaint?.problems?.[0] || complaint?.category || "เรื่องร้องเรียน";
   const officer = assignment?.user ?? null;
-  const officerPhone = officer?.phone?.replace(/[^0-9+]/g, "") || "";
   const heroImages = complaint?.images ?? [];
   const showHero = !loading && !notFound && !!complaint && heroImages.length > 0;
   const categoryIcon = menu.find((m) => m.Prob_name === complaint?.category)?.Prob_pic;
@@ -318,34 +320,56 @@ export default function StatusDetail() {
                 </div>
               )}
 
-              {/* ให้คะแนนความพึงพอใจ */}
-              <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
-                <div className="text-[13px] font-bold">ให้คะแนนความพึงพอใจ</div>
-                {!done ? (
-                  <p className="mt-1 text-[12px] text-[#9590A8]">ทำได้เมื่อดำเนินการเสร็จสิ้น</p>
-                ) : ratingCount != null && ratingCount >= MAX_RATINGS ? (
-                  <p className="mt-1 text-[12px] text-[#1B935A]">เรื่องนี้ได้รับคะแนนครบแล้ว ขอบคุณสำหรับความคิดเห็น</p>
-                ) : showRating ? (
-                  <div className="mt-2">
-                    <SatisfactionForm
-                      complaintId={complaint._id}
-                      status={complaint.status}
-                      onSubmit={() => {
-                        setShowRating(false);
-                        setRatingCount((prev) => (prev == null ? prev : prev + 1));
-                      }}
-                    />
+              {/* ให้คะแนนความพึงพอใจ — การ์ดชมพู + หัวใจ + ดาว 5 ดวง (ตามแคนวาส) */}
+              {(() => {
+                const ratable = done && ratingCount != null && ratingCount < MAX_RATINGS;
+                const full = done && ratingCount != null && ratingCount >= MAX_RATINGS;
+                const subtitle = !done
+                  ? "ทำได้เมื่อดำเนินการเสร็จสิ้น"
+                  : full
+                    ? "เรื่องนี้ได้รับคะแนนครบแล้ว ขอบคุณสำหรับความคิดเห็น"
+                    : "แตะดาวเพื่อให้คะแนนเรื่องนี้";
+                return (
+                  <div className="rounded-[18px] bg-[#FDF0F4] p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                    <button
+                      type="button"
+                      disabled={!ratable}
+                      onClick={() => setShowRating(true)}
+                      className="flex w-full items-center gap-3 text-left"
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#F0527C] to-[#E23A56] shadow-[0_6px_14px_rgba(226,58,86,0.30)]">
+                        <Heart size={22} color="#fff" fill="#fff" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14.5px] font-bold text-[#1B1830]">ให้คะแนนความพึงพอใจ</span>
+                        <span className={`mt-0.5 block text-[12px] ${full ? "text-[#1B935A]" : "text-[#9590A8]"}`}>{subtitle}</span>
+                      </span>
+                      <span className="flex shrink-0 gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            size={17}
+                            color={ratable ? "#F2A93B" : "#EFC7D4"}
+                            fill={ratable ? "#F2A93B" : "#EFC7D4"}
+                          />
+                        ))}
+                      </span>
+                    </button>
+                    {ratable && showRating && (
+                      <div className="mt-3">
+                        <SatisfactionForm
+                          complaintId={complaint._id}
+                          status={complaint.status}
+                          onSubmit={() => {
+                            setShowRating(false);
+                            setRatingCount((prev) => (prev == null ? prev : prev + 1));
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowRating(true)}
-                    className="mt-2.5 rounded-full bg-[#7C3AED] px-4 py-2 text-[12.5px] font-semibold text-white"
-                  >
-                    ให้คะแนนเรื่องนี้
-                  </button>
-                )}
-              </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -353,14 +377,13 @@ export default function StatusDetail() {
         {/* ปุ่มล่าง */}
         {complaint && !notFound && (
           <div className="sticky bottom-0 z-20 flex shrink-0 gap-2.5 border-t border-[#EFEDF4] bg-white px-4 pb-7 pt-3">
-            {officerPhone && (
-              <a
-                href={`tel:${officerPhone}`}
-                className="w-[118px] rounded-[15px] bg-[#F1ECFE] py-3.5 text-center text-[14px] font-semibold text-[#7C3AED]"
-              >
-                ติดต่อ จนท.
-              </a>
-            )}
+            <a
+              href={`tel:${CONTACT_PHONE_TEL}`}
+              title={`โทร ${CONTACT_PHONE_DISPLAY}`}
+              className="w-[118px] rounded-[15px] bg-[#F1ECFE] py-3.5 text-center text-[14px] font-semibold text-[#7C3AED]"
+            >
+              ติดต่อ จนท.
+            </a>
             <button
               type="button"
               onClick={share}
