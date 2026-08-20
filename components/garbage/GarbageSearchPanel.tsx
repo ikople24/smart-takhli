@@ -3,21 +3,11 @@ import type { SearchHit } from "@/types/garbage";
 import { formatRange, formatThaiTime, minutesNowInBangkok, todayInBangkok, weekdayOf } from "@/lib/garbage/time";
 import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from "@/lib/garbage/labels";
 import { findNextPickup } from "@/lib/garbage/nextPickup";
+import { buildDayChips, pickDefaultWeekday } from "@/lib/garbage/searchDays";
 import { useDebounce } from "./useDebounce";
 import { useLocateCommunity } from "./useLocateCommunity";
 
 const MIN_CHARS = 2;
-
-/** จัดกลุ่มผลลัพธ์ตามวัน โดยคงลำดับที่ API ส่งมา (เรียงวันแล้วเรียงเวลาแล้ว) */
-function groupByWeekday(hits: SearchHit[]): Array<{ weekday: number; weekdayName: string; hits: SearchHit[] }> {
-  const groups: Array<{ weekday: number; weekdayName: string; hits: SearchHit[] }> = [];
-  for (const h of hits) {
-    const last = groups[groups.length - 1];
-    if (last && last.weekday === h.weekday) last.hits.push(h);
-    else groups.push({ weekday: h.weekday, weekdayName: h.weekdayName, hits: [h] });
-  }
-  return groups;
-}
 
 function timeText(h: SearchHit): string {
   if (h.atMin != null) return `รถถึงประมาณ ${formatThaiTime(h.atMin)}`;
@@ -52,6 +42,8 @@ export default function GarbageSearchPanel() {
   const [error, setError] = useState("");
   // ชุมชนที่ได้จากปุ่ม "รถขยะใกล้ฉัน" — ใช้ติดป้ายว่าผลชุดนี้มาจากตำแหน่ง ไม่ใช่คำที่พิมพ์เอง
   const [locatedCommunity, setLocatedCommunity] = useState<string | null>(null);
+  // วันที่กำลังดูอยู่ในแถบชิป — null = ยังไม่มีผลค้นหา
+  const [selectedWeekday, setSelectedWeekday] = useState<number | null>(null);
   const reqIdRef = useRef(0);
   const { state: locateState, message: locateMessage, locate, clearMessage } = useLocateCommunity();
 
@@ -90,7 +82,12 @@ export default function GarbageSearchPanel() {
         if (!alive || myId !== reqIdRef.current) return;
         // API ชุดนี้คืน { error } ไม่ใช่ { success, message }
         if (!res.ok) throw new Error(json?.error || "ค้นหาไม่สำเร็จ");
-        setHits(json.hits ?? []);
+        const nextHits: SearchHit[] = json.hits ?? [];
+        setHits(nextHits);
+        // ผลชุดใหม่ = วันที่เลือกไว้เดิมอาจไม่มีเก็บแล้ว — เด้งไปวันของรอบถัดไปเสมอ
+        setSelectedWeekday(
+          pickDefaultWeekday(nextHits, weekdayOf(todayInBangkok()), minutesNowInBangkok())
+        );
       } catch (e: unknown) {
         if (!alive || myId !== reqIdRef.current) return;
         setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
@@ -105,9 +102,10 @@ export default function GarbageSearchPanel() {
     };
   }, [debounced]);
 
-  const groups = hits ? groupByWeekday(hits) : [];
   // คำนวณครั้งเดียวต่อ render — ใช้ทั้งเงื่อนไขแสดงผลและตัวข้อความ
   const nextText = hits ? nextPickupText(hits) : null;
+  const dayChips = hits ? buildDayChips(hits) : [];
+  const dayHits = hits && selectedWeekday != null ? hits.filter((h) => h.weekday === selectedWeekday) : [];
   // ผลชุดนี้มาจากตำแหน่งจริงก็ต่อเมื่อคำที่ค้นอยู่ยังเป็นชื่อชุมชนที่ระบบหาให้
   // (ผู้ใช้แก้คำเมื่อไร locatedCommunity ถูกล้างอยู่แล้ว — เช็คซ้ำกันสถานะค้างระหว่าง debounce)
   const fromLocation = locatedCommunity != null && debounced === locatedCommunity;
@@ -178,7 +176,7 @@ export default function GarbageSearchPanel() {
           </p>
         )}
 
-        {!loading && !error && groups.length > 0 && nextText && (
+        {!loading && !error && hits != null && hits.length > 0 && nextText && (
           <div className="mt-4 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-4 py-3">
             <div className="text-xs text-emerald-800">
               {fromLocation ? `รอบเก็บถัดไปในชุมชน${locatedCommunity}` : "รอบเก็บถัดไปของจุดที่ค้นเจอ"}
@@ -203,13 +201,56 @@ export default function GarbageSearchPanel() {
           </div>
         )}
 
-        {!loading && !error && groups.length > 0 && (
-          <div className="mt-4 space-y-4">
-            {groups.map((g) => (
-              <div key={g.weekday}>
-                <div className="text-sm font-semibold text-emerald-800">วัน{g.weekdayName}</div>
-                <ul className="mt-1.5 space-y-1.5">
-                  {g.hits.map((h, i) => (
+        {/* แถบชิป 7 วัน — ค้นชุมชนหนึ่งได้ถึง 90 แถว (19 จุด × 7 วัน) ถ้าไล่ทุกวันพร้อมกันจะล้นจอ
+            จึงให้เลือกดูทีละวัน โดยเปิดที่วันของ "รอบเก็บถัดไป" ให้ก่อน */}
+        {!loading && !error && hits != null && hits.length > 0 && (
+          <div className="mt-4">
+            <div className="flex gap-1.5" role="group" aria-label="เลือกวันที่ต้องการดู">
+              {dayChips.map((c) => {
+                const isSelected = c.weekday === selectedWeekday;
+                const isToday = c.weekday === weekdayOf(todayInBangkok());
+                return (
+                  <button
+                    key={c.weekday}
+                    type="button"
+                    disabled={c.count === 0}
+                    onClick={() => setSelectedWeekday(c.weekday)}
+                    aria-pressed={isSelected}
+                    aria-label={`วัน${weekdayName(c.weekday)}${c.count === 0 ? " ไม่มีรถเข้า" : ` ${c.count} จุด`}`}
+                    className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold transition ${
+                      isSelected
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : c.count === 0
+                          ? "bg-slate-50 text-slate-300 cursor-not-allowed"
+                          : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                    }`}
+                  >
+                    {c.shortName}
+                    {/* จุดใต้ตัวอักษรบอกว่าวันนี้คือวันไหน — ผู้ใช้จะได้อ้างอิงตัวเองได้ทันที */}
+                    <span
+                      aria-hidden="true"
+                      className={`mx-auto mt-1 block h-1 w-1 rounded-full ${
+                        isToday ? (isSelected ? "bg-white" : "bg-emerald-500") : "bg-transparent"
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex items-baseline justify-between gap-2">
+              <div className="text-sm font-semibold text-emerald-800">
+                วัน{weekdayName(selectedWeekday ?? 0)}
+                {selectedWeekday === weekdayOf(todayInBangkok()) && (
+                  <span className="ml-1.5 text-[11px] font-medium text-emerald-600">(วันนี้)</span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-500">{dayHits.length} จุด</div>
+            </div>
+
+            <div className="mt-1.5">
+                <ul className="space-y-1.5">
+                  {dayHits.map((h, i) => (
                     <li key={`${h.routeCode}-${h.matchName}-${i}`}
                       className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2">
                       <div className="flex items-baseline justify-between gap-2">
@@ -239,8 +280,7 @@ export default function GarbageSearchPanel() {
                     </li>
                   ))}
                 </ul>
-              </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
