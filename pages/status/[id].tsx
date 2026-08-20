@@ -3,7 +3,7 @@
 // รูปก่อน-หลัง + การ์ดเจ้าหน้าที่ + ให้คะแนนเมื่อเสร็จสิ้น
 // spec: docs/superpowers/specs/2026-08-19-citizen-status-design.md
 // ข้อมูลทุกส่วนจาก API สาธารณะเดิม (PDPA sanitize ฝั่ง server) — ไม่เพิ่มการเปิดเผยใหม่
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import Image from "next/image";
@@ -14,7 +14,8 @@ import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 import { maskOfficerName } from "@/lib/citizen/maskName";
 import { handlingSpeed, handlingDuration } from "@/lib/citizen/status/handlingKpi";
-import { Calendar, CalendarDays, CheckCircle2, ClipboardList, Heart, MapPin, Star, Timer, X, Zap } from "lucide-react";
+import { summarizeSatisfaction } from "@/lib/citizen/status/satisfactionSummary";
+import { Calendar, CalendarDays, CheckCircle2, ClipboardList, Heart, MapPin, MessageSquare, Star, Timer, TrendingUp, X, Zap } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
@@ -49,6 +50,8 @@ type Officer = {
   profileUrl?: string;
   profileImage?: string;
 } | null;
+
+type RatingRow = { rating?: number; comment?: string; createdAt?: string };
 
 type Assignment = {
   assignedAt?: string | null;
@@ -87,6 +90,18 @@ export default function StatusDetail() {
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ratingCount, setRatingCount] = useState<number | null>(null);
+  // คะแนน/ความเห็นที่ประเมินเข้ามาแล้ว (endpoint เดิมที่การ์ด SatisfactionChart ใช้ —
+  // คืนเฉพาะ rating/comment/createdAt สูงสุด 4 แถว)
+  const [ratings, setRatings] = useState<RatingRow[]>([]);
+
+  const loadRatings = useCallback(async (complaintObjectId: string) => {
+    try {
+      const rows = await fetch(`/api/satisfaction/${complaintObjectId}`).then((r) => r.json());
+      setRatings(Array.isArray(rows) ? rows : []);
+    } catch {
+      setRatings([]);
+    }
+  }, []);
   const [showRating, setShowRating] = useState(false);
   const [shared, setShared] = useState(false);
 
@@ -132,6 +147,8 @@ export default function StatusDetail() {
         } catch {
           if (alive) setRatingCount(null);
         }
+
+        if (alive) loadRatings(c._id);
       } catch {
         if (alive) setNotFound(true);
       } finally {
@@ -141,7 +158,7 @@ export default function StatusDetail() {
     return () => {
       alive = false;
     };
-  }, [router.isReady, id]);
+  }, [router.isReady, id, loadRatings]);
 
   const share = async () => {
     const url = `${window.location.origin}/status/${id}`;
@@ -485,8 +502,98 @@ export default function StatusDetail() {
                           onSubmit={() => {
                             setShowRating(false);
                             setRatingCount((prev) => (prev == null ? prev : prev + 1));
+                            loadRatings(complaint._id); // ให้กราฟ/ความเห็นอัปเดตทันที
                           }}
                         />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ผลประเมินที่ได้รับแล้ว — โดนัท % + ดาวเฉลี่ย + ความเห็น
+                  (เกณฑ์ %/ป้ายข้อความชุดเดียวกับการ์ดเดิม SatisfactionChart) */}
+              {(() => {
+                const s = summarizeSatisfaction(ratings);
+                if (s.count === 0) return null;
+                const toneColor: Record<string, string> = {
+                  great: "#16A34A",
+                  good: "#3B5BDB",
+                  fair: "#F2A93B",
+                  poor: "#E23A56",
+                };
+                const color = toneColor[s.label!.tone];
+                const R = 30;
+                const C = 2 * Math.PI * R;
+                return (
+                  <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[13px] font-bold">
+                        <TrendingUp size={15} className="text-[#7C3AED]" />
+                        ผลประเมินความพึงพอใจ
+                      </div>
+                      <span className="rounded-full bg-[#F6F4FB] px-2.5 py-1 text-[11px] font-medium text-[#57506A]">
+                        {s.count}/{MAX_RATINGS} ครั้ง
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-4">
+                      {/* โดนัท */}
+                      <div className="relative h-[76px] w-[76px] shrink-0">
+                        <svg width="76" height="76" viewBox="0 0 76 76" className="-rotate-90">
+                          <circle cx="38" cy="38" r={R} fill="none" stroke="#EFEDF4" strokeWidth="9" />
+                          <circle
+                            cx="38"
+                            cy="38"
+                            r={R}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth="9"
+                            strokeLinecap="round"
+                            strokeDasharray={`${(C * s.percent) / 100} ${C}`}
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[17px] font-bold" style={{ color }}>
+                          {s.percent}%
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => {
+                            const on = i < Math.round(s.average);
+                            return <Star key={i} size={16} color={on ? "#F2A93B" : "#E4E0EC"} fill={on ? "#F2A93B" : "#E4E0EC"} />;
+                          })}
+                        </div>
+                        <div className="mt-1 text-[19px] font-bold leading-none text-[#1B1830]">
+                          {s.average.toFixed(1)}
+                          <span className="text-[12.5px] font-medium text-[#9590A8]">/5</span>
+                        </div>
+                        <div className="mt-1 text-[12px] font-semibold" style={{ color }}>
+                          {s.label!.text}
+                        </div>
+                      </div>
+                    </div>
+
+                    {s.comments.length > 0 && (
+                      <div className="mt-3 border-t border-[#F1EFF6] pt-3">
+                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[#57506A]">
+                          <MessageSquare size={13} className="text-[#7C3AED]" />
+                          ความคิดเห็นจากผู้แจ้ง
+                        </div>
+                        <div className="mt-2 flex flex-col gap-1.5">
+                          {s.comments.map((c, i) => (
+                            <div key={i} className="rounded-[13px] bg-[#F8F7FB] px-3 py-2">
+                              <div className="flex gap-0.5">
+                                {Array.from({ length: 5 }).map((_, j) => {
+                                  const on = j < Number(c.rating);
+                                  return <Star key={j} size={10} color={on ? "#F2A93B" : "#E4E0EC"} fill={on ? "#F2A93B" : "#E4E0EC"} />;
+                                })}
+                              </div>
+                              <p className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed text-[#4A4458]">{c.comment}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
