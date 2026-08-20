@@ -13,7 +13,8 @@ import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 import { useAdminOptionsStore } from "@/stores/useAdminOptionsStore";
 import { maskOfficerName } from "@/lib/citizen/maskName";
-import { Calendar, ClipboardList, Heart, MapPin, Star, X } from "lucide-react";
+import { handlingSpeed, handlingDuration } from "@/lib/citizen/status/handlingKpi";
+import { Calendar, CalendarDays, CheckCircle2, ClipboardList, Heart, MapPin, Star, Timer, X, Zap } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
@@ -40,7 +41,14 @@ type Complaint = {
   updatedAt?: string;
 };
 
-type Officer = { name?: string; position?: string; department?: string; phone?: string } | null;
+type Officer = {
+  name?: string;
+  position?: string;
+  department?: string;
+  phone?: string;
+  profileUrl?: string;
+  profileImage?: string;
+} | null;
 
 type Assignment = {
   assignedAt?: string | null;
@@ -325,23 +333,80 @@ export default function StatusDetail() {
                 <BeforeAfter before={complaint.images ?? []} after={assignment?.solutionImages ?? []} />
               )}
 
-              {officer && (officer.name || officer.department) && (
-                <div className="flex items-center gap-3 rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F1ECFE] text-[#7C3AED]">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="8" r="3.5" />
-                      <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    {/* ไม่แสดงชื่อเต็มเจ้าหน้าที่ — ปิดนามสกุล (เจ้าของสั่ง) */}
-                    <div className="text-[13.5px] font-semibold">{maskOfficerName(officer.name) || "เจ้าหน้าที่ผู้รับผิดชอบ"}</div>
-                    <div className="text-[11.5px] text-[#9590A8]">
-                      {[officer.position, officer.department].filter(Boolean).join(" · ") || "เทศบาลเมืองตาคลี"}
+              {officer && (officer.name || officer.department) && (() => {
+                // KPI ความเร็ว + วันรับเรื่อง/เสร็จ — เกณฑ์เดียวกับการ์ดเดิม (lib/citizen/status/handlingKpi)
+                const speed = handlingSpeed(assignment?.assignedAt, assignment?.completedAt);
+                const duration = handlingDuration(assignment?.assignedAt, assignment?.completedAt);
+                const speedTone: Record<string, string> = {
+                  fast: "bg-[#E6F6EC] text-[#1B935A]",
+                  good: "bg-[#EAF0FE] text-[#3B5BDB]",
+                  ok: "bg-[#FDF3E2] text-[#C77E10]",
+                  slow: "bg-[#FBEDE4] text-[#D9622B]",
+                  late: "bg-[#FBE7E7] text-[#D64545]",
+                };
+                const avatar = officer.profileUrl || officer.profileImage;
+                return (
+                  <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[13px] font-bold">เจ้าหน้าที่ดูแลเรื่อง</div>
+                      {speed && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${speedTone[speed.tone]}`}>
+                          <Zap size={11} />
+                          {speed.text}
+                        </span>
+                      )}
                     </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <div className="flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full bg-[#F1ECFE] text-[#7C3AED] ring-2 ring-[#EDE7FB]">
+                          {avatar ? (
+                            <Image src={avatar} alt="" width={52} height={52} className="h-full w-full object-cover" unoptimized />
+                          ) : (
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="8" r="3.5" />
+                              <path d="M5 20v-1a7 7 0 0 1 14 0v1" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-white bg-[#22C55E]">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12.5l4 4L19 6" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        {/* ไม่แสดงชื่อเต็มเจ้าหน้าที่ — ปิดนามสกุล (เจ้าของสั่ง) */}
+                        <div className="truncate text-[13.5px] font-semibold">{maskOfficerName(officer.name) || "เจ้าหน้าที่ผู้รับผิดชอบ"}</div>
+                        <div className="truncate text-[11.5px] text-[#9590A8]">
+                          {[officer.position, officer.department].filter(Boolean).join(" · ") || "เทศบาลเมืองตาคลี"}
+                        </div>
+                      </div>
+                    </div>
+                    {(assignment?.assignedAt || assignment?.completedAt || duration) && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {assignment?.assignedAt && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F4FB] px-2.5 py-1 text-[11px] font-medium text-[#57506A]">
+                            <CalendarDays size={11} className="text-[#7C3AED]" />
+                            รับเรื่อง {formatThaiDate(assignment.assignedAt)}
+                          </span>
+                        )}
+                        {assignment?.completedAt && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E6F6EC] px-2.5 py-1 text-[11px] font-medium text-[#1B935A]">
+                            <CheckCircle2 size={11} />
+                            เสร็จ {formatThaiDate(assignment.completedAt)}
+                          </span>
+                        )}
+                        {duration && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F4FB] px-2.5 py-1 text-[11px] font-medium text-[#57506A]">
+                            <Timer size={11} className="text-[#7C3AED]" />
+                            ใช้เวลา {duration}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* บันทึกจากเจ้าหน้าที่ — note/solution ใน assignment (ของเดิมที่หายไป) */}
               {((assignment?.note?.trim()?.length ?? 0) > 0 || (assignment?.solution?.length ?? 0) > 0) && (
