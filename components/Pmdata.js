@@ -104,9 +104,26 @@ export function Pm25InfoModalContent({ onClose, latest, dailyAverages, monthlyAv
   const isConnected = latest?.pm25 && parseFloat(latest.pm25) > 0;
   const pm25Value = isConnected ? parseInt(latest.pm25, 10) : 0;
   const displayDate = latest?.date_select || "";
+
+  // ปิดด้วยปุ่ม Esc (คีย์บอร์ด/แท็บเล็ตมีคีย์บอร์ด) — คู่กับปุ่มปิดล่างและแตะพื้นหลัง
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="bg-white rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">ข้อมูลคุณภาพอากาศ</h3>
           <button
@@ -353,6 +370,20 @@ export function Pm25InfoModalContent({ onClose, latest, dailyAverages, monthlyAv
               อัพเดท: {displayDate} เวลา {latest.Time}
             </div>
           )}
+        </div>
+
+        {/* ปุ่มปิดด้านล่าง — เนื้อหายาว เลื่อนสุดแล้วปิดได้เลยไม่ต้องเลื่อนกลับขึ้นไปหา ✕ */}
+        <div className="sticky bottom-0 -mx-5 -mb-5 mt-4 border-t border-gray-100 bg-white px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#7C3AED] py-2.5 text-sm font-semibold text-white active:scale-[0.99]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+            ปิดหน้าต่าง
+          </button>
         </div>
       </div>
     </div>
