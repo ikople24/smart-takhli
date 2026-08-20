@@ -10,7 +10,9 @@ import Image from "next/image";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import Timeline from "@/components/citizen/status/Timeline";
 import { useMenuStore } from "@/stores/useMenuStore";
-import { Calendar, Heart, MapPin, Star, X } from "lucide-react";
+import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
+import { maskOfficerName } from "@/lib/citizen/maskName";
+import { Calendar, ClipboardList, Heart, MapPin, Star, X } from "lucide-react";
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
@@ -43,6 +45,8 @@ type Assignment = {
   assignedAt?: string | null;
   completedAt?: string | null;
   solutionImages?: string[];
+  solution?: string[];
+  note?: string;
   userId?: string;
   user?: Officer;
 } | null;
@@ -51,7 +55,12 @@ export default function StatusDetail() {
   const router = useRouter();
   const id = typeof router.query.id === "string" ? router.query.id : "";
   const { menu, fetchMenu, menuLoading } = useMenuStore();
+  const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
   const [hasFetchedMenu, setHasFetchedMenu] = useState(false);
+
+  useEffect(() => {
+    fetchProblemOptions();
+  }, [fetchProblemOptions]);
 
   // ไอคอนหมวดสำหรับ hero (จาก menu เดิม)
   useEffect(() => {
@@ -282,11 +291,20 @@ export default function StatusDetail() {
                 <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
                   <div className="text-[13px] font-bold">ปัญหาที่พบ</div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {complaint.problems!.map((p) => (
-                      <span key={p} className="rounded-full bg-[#F1ECFE] px-3 py-1 text-[11.5px] font-medium text-[#7C3AED]">
-                        {p}
-                      </span>
-                    ))}
+                    {complaint.problems!.map((p) => {
+                      const iconUrl = problemOptions.find((o: { label: string }) => o.label === p)?.iconUrl;
+                      return (
+                        <span
+                          key={p}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[#F1ECFE] py-1 pl-1.5 pr-3 text-[11.5px] font-medium text-[#7C3AED]"
+                        >
+                          {iconUrl && (
+                            <Image src={iconUrl} alt="" width={18} height={18} className="h-[18px] w-[18px] rounded-full object-contain" />
+                          )}
+                          {p}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -312,11 +330,36 @@ export default function StatusDetail() {
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13.5px] font-semibold">{officer.name || "เจ้าหน้าที่ผู้รับผิดชอบ"}</div>
+                    {/* ไม่แสดงชื่อเต็มเจ้าหน้าที่ — ปิดนามสกุล (เจ้าของสั่ง) */}
+                    <div className="text-[13.5px] font-semibold">{maskOfficerName(officer.name) || "เจ้าหน้าที่ผู้รับผิดชอบ"}</div>
                     <div className="text-[11.5px] text-[#9590A8]">
                       {[officer.position, officer.department].filter(Boolean).join(" · ") || "เทศบาลเมืองตาคลี"}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* บันทึกจากเจ้าหน้าที่ — note/solution ใน assignment (ของเดิมที่หายไป) */}
+              {((assignment?.note?.trim()?.length ?? 0) > 0 || (assignment?.solution?.length ?? 0) > 0) && (
+                <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
+                  <div className="flex items-center gap-1.5 text-[13px] font-bold">
+                    <ClipboardList size={15} className="text-[#7C3AED]" />
+                    บันทึกจากเจ้าหน้าที่
+                  </div>
+                  {(assignment!.solution?.length ?? 0) > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {assignment!.solution!.map((s) => (
+                        <span key={s} className="rounded-full bg-[#E6F6EC] px-3 py-1 text-[11.5px] font-medium text-[#1B935A]">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {assignment!.note?.trim() && (
+                    <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-[#4A4458]">
+                      {assignment!.note}
+                    </p>
+                  )}
                 </div>
               )}
 
