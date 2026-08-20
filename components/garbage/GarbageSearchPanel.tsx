@@ -4,10 +4,26 @@ import { formatRange, formatThaiTime, minutesNowInBangkok, todayInBangkok, weekd
 import { KIND_LABEL_TH, truckLabel, weekdayName, zoneLabel } from "@/lib/garbage/labels";
 import { findNextPickup } from "@/lib/garbage/nextPickup";
 import { buildDayChips, pickDefaultWeekday } from "@/lib/garbage/searchDays";
+import type { TrackedStop } from "@/lib/garbage/trackedStop";
 import { useDebounce } from "./useDebounce";
 import { useLocateCommunity } from "./useLocateCommunity";
 
 const MIN_CHARS = 2;
+
+/** hit หนึ่งแถว → รูปจุดที่ติดตาม (zoneLabel มาจาก routeCode ไม่ต้องให้ API ส่งมา) */
+function toTrackedStop(h: SearchHit): TrackedStop {
+  return {
+    routeCode: h.routeCode,
+    seq: h.seq,
+    stopName: h.stopName,
+    zoneLabel: zoneLabel(h.routeCode),
+    truckNumber: h.truckNumber,
+    truckColor: h.truckColor,
+    atMin: h.atMin,
+    // วันของ hit ไม่ใช่วันนี้ — จุดเดียวกันคนละวันรถถึงคนละเวลา นับถอยหลังจึงต้องผูกกับวันที่เลือก
+    weekday: h.weekday as TrackedStop["weekday"],
+  };
+}
 
 function timeText(h: SearchHit): string {
   if (h.atMin != null) return `รถถึงประมาณ ${formatThaiTime(h.atMin)}`;
@@ -34,7 +50,13 @@ function nextPickupText(hits: SearchHit[]): string | null {
   return `${when} ${time}${tail}`;
 }
 
-export default function GarbageSearchPanel() {
+export default function GarbageSearchPanel({
+  tracked,
+  onToggleTracked,
+}: {
+  tracked: TrackedStop | null;
+  onToggleTracked: (next: TrackedStop) => void;
+}) {
   const [term, setTerm] = useState("");
   const debounced = useDebounce(term.trim(), 300);
   const [hits, setHits] = useState<SearchHit[] | null>(null);
@@ -248,18 +270,48 @@ export default function GarbageSearchPanel() {
               <div className="text-[11px] text-slate-500">{dayHits.length} จุด</div>
             </div>
 
+            {/* ชวนให้กด — ไม่งั้นไม่มีใครรู้ว่าแถวพวกนี้แตะได้ (ของเดิมเป็นลิสต์อ่านอย่างเดียว) */}
+            <p className="mt-1 text-[11px] text-slate-500">
+              📌 แตะจุดของคุณเพื่อติดตาม แล้วหน้าแรกจะนับถอยหลังบอกว่าอีกกี่นาทีรถถึง
+            </p>
+
             <div className="mt-1.5">
                 <ul className="space-y-1.5">
-                  {dayHits.map((h, i) => (
-                    <li key={`${h.routeCode}-${h.matchName}-${i}`}
-                      className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2">
+                  {dayHits.map((h, i) => {
+                    const isTracked =
+                      tracked != null && tracked.routeCode === h.routeCode && tracked.seq === h.seq;
+                    // `/search` ตั้ง s-maxage=300 — ช่วงหลัง deploy ยังมีผลจากแคชรุ่นก่อนที่ไม่มี
+                    // seq/truckColor กดติดตามไปก็เขียนค่าที่ parseTrackedStop อ่านกลับไม่ได้
+                    // แล้วจุดหายเงียบ ๆ · แถวแบบนั้นให้แสดงเฉย ๆ ไม่ต้องกด
+                    const canTrack = Number.isInteger(h.seq) && Boolean(h.truckColor);
+                    return (
+                    <li key={`${h.routeCode}-${h.seq}-${h.matchName}-${i}`}>
+                      <button
+                        type="button"
+                        disabled={!canTrack}
+                        onClick={() => onToggleTracked(toTrackedStop(h))}
+                        aria-pressed={isTracked}
+                        className={`w-full rounded-2xl px-3 py-2 text-left transition ${
+                          isTracked
+                            ? "bg-emerald-50 ring-2 ring-emerald-500"
+                            : canTrack
+                              ? "bg-slate-50 ring-1 ring-slate-200 hover:ring-emerald-300"
+                              : "bg-slate-50 ring-1 ring-slate-200 cursor-default"
+                        }`}
+                      >
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-sm font-medium text-slate-800">
+                          {isTracked && <span aria-hidden="true">📌 </span>}
                           {h.matchType === "community" ? `ชุมชน${h.matchName}` : h.matchName}
                         </span>
                         <span className="text-xs text-slate-500 whitespace-nowrap">{truckLabel(h.truckNumber)}</span>
                       </div>
-                      <div className="text-xs text-slate-600 mt-0.5">{timeText(h)}</div>
+                      <div className="text-xs text-slate-600 mt-0.5">
+                        {timeText(h)}
+                        {isTracked && (
+                          <span className="ml-1.5 font-semibold text-emerald-700">· กำลังติดตาม (แตะเพื่อเลิก)</span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {/* ผลแบบชุมชน: หัวรายการเป็นชื่อชุมชนแล้ว บรรทัดนี้จึงบอก "จุดไหนในชุมชน"
                             ผลแบบชื่อจุด: หัวรายการเป็นชื่อจุดแล้ว บรรทัดนี้จึงบอกว่าอยู่ชุมชนไหน */}
@@ -277,8 +329,10 @@ export default function GarbageSearchPanel() {
                           </span>
                         )}
                       </div>
+                      </button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
             </div>
           </div>
