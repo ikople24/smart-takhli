@@ -97,85 +97,20 @@ export const getPm25LevelInfo = (value) => {
   };
 };
 
-const Pm25Dashboard = ({ className = "" } = {}) => {
-  const [latest, setLatest] = useState(null);
-  const [dailyAverages, setDailyAverages] = useState([]);
-  const [monthlyAverages, setMonthlyAverages] = useState([]);
-  const [error, setError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [currentInfo, setCurrentInfo] = useState(null);
-  const [mounted, setMounted] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState("");
-  const [currentDate, setCurrentDate] = useState("");
-
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/pm25/dashboard", { cache: "no-store" });
-      const data = await res.json();
-      if (!data.success || !data.latest) {
-        setError(true);
-        const rawErr = data.error || "";
-        setErrorMessage(
-          /401/.test(rawErr)
-            ? "ไม่สามารถเชื่อมต่อได้ — ตรวจสอบ DUSTBOY_API_KEY ในเซิร์ฟเวอร์"
-            : rawErr || "ไม่สามารถโหลดข้อมูลได้"
-        );
-        setLatest(null);
-        setDailyAverages(data.dailyAverages || []);
-        setMonthlyAverages(data.monthlyAverages || []);
-        return;
-      }
-      setLatest(data.latest);
-      setDailyAverages(data.dailyAverages || []);
-      setMonthlyAverages(data.monthlyAverages || []);
-      setError(false);
-      setErrorMessage("");
-    } catch (err) {
-      console.error("Error loading PM2.5 data:", err);
-      setError(true);
-      setErrorMessage("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
-      setLatest(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-    const updateTime = () => {
-      setCurrentTime(new Date().toLocaleTimeString("th-TH"));
-      setCurrentDate(new Date().toLocaleDateString("th-TH"));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    loadData();
-    const refresh = setInterval(loadData, 60 * 60 * 1000);
-    return () => clearInterval(refresh);
-  }, [loadData]);
-
-  const pm25Info = getPm25LevelInfo(latest?.pm25 || 0);
-  const displayDate = latest?.date_select || currentDate;
+// modal "ข้อมูลคุณภาพอากาศ" ตัวจริง — แยก export ให้หน้าแรก citizen เปิดใช้ตรง ๆ
+// (2026-08-20) เนื้อหา/หน้าตาเดิมทุกบรรทัด ย้ายมาจาก modalContent ใน Pm25Dashboard
+export function Pm25InfoModalContent({ onClose, latest, dailyAverages, monthlyAverages }) {
+  const currentInfo = getPm25LevelInfo(latest?.pm25 || 0);
   const isConnected = latest?.pm25 && parseFloat(latest.pm25) > 0;
   const pm25Value = isConnected ? parseInt(latest.pm25, 10) : 0;
-
-  const handleClick = () => {
-    setCurrentInfo(pm25Info);
-    setShowModal(true);
-  };
-
-  const modalContent = showModal && currentInfo && (
+  const displayDate = latest?.date_select || "";
+  return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">ข้อมูลคุณภาพอากาศ</h3>
           <button
-            onClick={() => setShowModal(false)}
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
           >
             ✕
@@ -421,6 +356,88 @@ const Pm25Dashboard = ({ className = "" } = {}) => {
         </div>
       </div>
     </div>
+  );
+}
+
+const Pm25Dashboard = ({ className = "" } = {}) => {
+  const [latest, setLatest] = useState(null);
+  const [dailyAverages, setDailyAverages] = useState([]);
+  const [monthlyAverages, setMonthlyAverages] = useState([]);
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [currentInfo, setCurrentInfo] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
+
+  const loadData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pm25/dashboard", { cache: "no-store" });
+      const data = await res.json();
+      if (!data.success || !data.latest) {
+        setError(true);
+        const rawErr = data.error || "";
+        setErrorMessage(
+          /401/.test(rawErr)
+            ? "ไม่สามารถเชื่อมต่อได้ — ตรวจสอบ DUSTBOY_API_KEY ในเซิร์ฟเวอร์"
+            : rawErr || "ไม่สามารถโหลดข้อมูลได้"
+        );
+        setLatest(null);
+        setDailyAverages(data.dailyAverages || []);
+        setMonthlyAverages(data.monthlyAverages || []);
+        return;
+      }
+      setLatest(data.latest);
+      setDailyAverages(data.dailyAverages || []);
+      setMonthlyAverages(data.monthlyAverages || []);
+      setError(false);
+      setErrorMessage("");
+    } catch (err) {
+      console.error("Error loading PM2.5 data:", err);
+      setError(true);
+      setErrorMessage("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+      setLatest(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString("th-TH"));
+      setCurrentDate(new Date().toLocaleDateString("th-TH"));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const refresh = setInterval(loadData, 60 * 60 * 1000);
+    return () => clearInterval(refresh);
+  }, [loadData]);
+
+  const pm25Info = getPm25LevelInfo(latest?.pm25 || 0);
+  const displayDate = latest?.date_select || currentDate;
+  const isConnected = latest?.pm25 && parseFloat(latest.pm25) > 0;
+  const pm25Value = isConnected ? parseInt(latest.pm25, 10) : 0;
+
+  const handleClick = () => {
+    setCurrentInfo(pm25Info);
+    setShowModal(true);
+  };
+
+  const modalContent = showModal && currentInfo && (
+    <Pm25InfoModalContent
+      onClose={() => setShowModal(false)}
+      latest={latest}
+      dailyAverages={dailyAverages}
+      monthlyAverages={monthlyAverages}
+    />
   );
 
   if (!mounted || loading) {

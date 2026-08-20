@@ -5,11 +5,18 @@
 // ค่าล่าสุดให้จุดปลายตรงกับเลขใหญ่) และ /api/smart-papar/water-quality/public-latest
 // (field recent) · กดการ์ด PM เปิด dashboard ตัวเต็มเดิมใน modal
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { pm25Level } from "@/lib/citizen/pm25Level";
 import { waterLevel } from "@/lib/citizen/waterLevel";
 import { useCountUp } from "@/components/site-stats/useCountUp";
 import Sparkline from "./Sparkline";
-import Pm25InfoModal from "./Pm25InfoModal";
+
+// modal ข้อมูลคุณภาพอากาศ "ตัวจริง" จากหน้าปัดเดิม (ลาก recharts มาด้วย —
+// โหลดเมื่อผู้ใช้กดเปิดเท่านั้น)
+const Pm25InfoModalContent = dynamic(
+  () => import("@/components/Pmdata").then((m) => m.Pm25InfoModalContent),
+  { ssr: false }
+);
 
 type Level = { key: string; label: string; chipBg: string; chipText: string; dot: string };
 
@@ -81,6 +88,8 @@ export default function EnvCards() {
   const [pm, setPm] = useState<string | number | null>(null);
   const [pmTrend, setPmTrend] = useState<number[]>([]);
   const [pmDaily, setPmDaily] = useState<{ date: string; avg: number }[]>([]);
+  const [pmMonthly, setPmMonthly] = useState<unknown[]>([]);
+  const [pmLatest, setPmLatest] = useState<Record<string, unknown> | null>(null);
   const [pmTime, setPmTime] = useState("");
   const [ntu, setNtu] = useState<string | number | null>(null);
   const [waterTrend, setWaterTrend] = useState<number[]>([]);
@@ -97,8 +106,10 @@ export default function EnvCards() {
       ]);
       if (!alive) return;
       if (pmRes.status === "fulfilled" && pmRes.value?.success && pmRes.value.latest) {
-        const { latest, dailyAverages } = pmRes.value;
+        const { latest, dailyAverages, monthlyAverages } = pmRes.value;
         setPm(latest.pm25);
+        setPmLatest(latest);
+        setPmMonthly(monthlyAverages || []);
         setPmTime(latest.Time?.slice(0, 5) || "");
         const rows = (dailyAverages || []).filter((d: { avg: number }) => Number.isFinite(Number(d.avg)));
         setPmDaily(rows);
@@ -191,10 +202,11 @@ export default function EnvCards() {
       </div>
 
       {showPmDetail && (
-        <Pm25InfoModal
-          value={pmLv.key === "none" ? 0 : parseInt(String(pm), 10)}
-          daily={pmDaily}
+        <Pm25InfoModalContent
           onClose={() => setShowPmDetail(false)}
+          latest={pmLatest}
+          dailyAverages={pmDaily}
+          monthlyAverages={pmMonthly}
         />
       )}
     </>
