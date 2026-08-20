@@ -5,6 +5,9 @@ export const WEEKDAY_TH: string[] = [
   "อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์",
 ];
 
+/** ชื่อวันแบบสั้นสำหรับชิป 7 วัน — index เดียวกับ WEEKDAY_TH (0 = อาทิตย์) */
+export const WEEKDAY_SHORT_TH: string[] = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+
 export function weekdayName(weekday: Weekday | number): string {
   return WEEKDAY_TH[weekday] ?? "";
 }

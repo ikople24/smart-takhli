@@ -140,13 +140,18 @@ export default function GarbagePage() {
   }, []);
 
   // แตะจุดเดิมอีกครั้ง = เลิกติดตาม (ไม่มีปุ่มลบแยก ผู้ใช้เดาได้จากจุดที่ไฮไลต์อยู่)
+  // ใช้ร่วมกันทั้งไทม์ไลน์ของวันนี้และผลค้นหา — กติกา toggle ต้องมีชุดเดียว
+  const toggleTracked = useCallback(
+    (next: TrackedStop) => {
+      const isSame = tracked && tracked.routeCode === next.routeCode && tracked.seq === next.seq;
+      writeTracked(isSame ? null : next);
+    },
+    [tracked, writeTracked]
+  );
+
   const selectStop = useCallback(
     (run: TimelineRun, stop: TimelineStop) => {
-      if (tracked && tracked.routeCode === run.routeCode && tracked.seq === stop.seq) {
-        writeTracked(null);
-        return;
-      }
-      writeTracked({
+      toggleTracked({
         routeCode: run.routeCode,
         seq: stop.seq,
         stopName: stop.name,
@@ -157,7 +162,7 @@ export default function GarbagePage() {
         weekday: weekdayToday,
       });
     },
-    [tracked, weekdayToday, writeTracked]
+    [toggleTracked, weekdayToday]
   );
 
   return (
@@ -191,7 +196,7 @@ export default function GarbagePage() {
           onClearTracked={() => writeTracked(null)}
         />
 
-        <GarbageSearchPanel />
+        <GarbageSearchPanel tracked={tracked} onToggleTracked={toggleTracked} />
 
         {dayToday && <DayOffNotice assignments={dayToday.assignments} />}
 

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import type { SearchHit } from "@/types/garbage";
 import { normalizePlaceName } from "@/lib/garbage/community";
-import { routes as routesCol, assignments as assignmentsCol } from "@/lib/garbage/db";
+import { routes as routesCol, assignments as assignmentsCol, trucks as trucksCol } from "@/lib/garbage/db";
 import { WEEKDAY_TH } from "@/lib/garbage/labels";
 import { pickLatestVersions } from "@/lib/garbage/resolve";
 import { todayInBangkok } from "@/lib/garbage/time";
@@ -28,17 +28,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const [rCol, aCol] = await Promise.all([routesCol(), assignmentsCol()]);
+    const [rCol, aCol, tCol] = await Promise.all([routesCol(), assignmentsCol(), trucksCol()]);
     // ใช้เที่ยงคืนกรุงเทพฯ ของวันนี้ ให้ตรงกับ convention effectiveTo แบบ inclusive ใน resolve.ts
     // (effectiveTo = เที่ยงคืนของวันสุดท้ายที่ยังใช้ผัง — เทียบด้วยเวลาปัจจุบันจะตัดผังของวันนี้ทิ้งผิด ๆ)
     const at = new Date(`${todayInBangkok()}T00:00:00+07:00`);
-    const [allRoutes, rawAssignments] = await Promise.all([
+    const [allRoutes, rawAssignments, allTrucks] = await Promise.all([
       rCol.find({ active: true }).toArray(),
       aCol.find({
         effectiveFrom: { $lte: at },
         $or: [{ effectiveTo: null }, { effectiveTo: { $gte: at } }],
       }).sort({ effectiveFrom: -1, _id: -1 }).toArray(),
+      // เลือกเฉพาะ number/color — เอกสาร Truck มี driverName ซึ่ง **ห้ามหลุดออก API สาธารณะ**
+      tCol.find({}, { projection: { _id: 0, number: 1, color: 1 } }).toArray(),
     ]);
+    // สีรถ default เป็น "green" เหมือน resolve.ts — คันที่ยังไม่มีในทะเบียนจะได้ไม่ทำให้ hit หาย
+    const colorByTruck = new Map(allTrucks.map((t) => [t.number, t.color]));
 
     // จัดกลุ่ม assignment ตามวัน แล้วเลือกเวอร์ชันล่าสุดของแต่ละวัน
     const byWeekday = new Map<number, typeof rawAssignments>();
@@ -64,10 +68,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // วันนั้นไม่ได้เก็บจุดนี้ → ไม่ใช่คำตอบของ "วันไหนรถมา" จึงไม่ต้องแสดง
           if (!timeBySeq.has(s.seq)) continue;
           hits.push({
-            matchType: "stop", matchName: s.name, stopName: s.name,
+            matchType: "stop", matchName: s.name, stopName: s.name, seq: s.seq,
             routeCode: route.code, routeName: route.name,
             weekday, weekdayName: WEEKDAY_TH[weekday],
             truckNumber: a.truckNumber,
+            truckColor: colorByTruck.get(a.truckNumber) ?? "green",
             kind: a.kind, coverForRouteCode: a.coverForRouteCode,
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
@@ -84,10 +89,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (matchedSeqs.has(s.seq)) continue; // แสดงเป็นผลแบบ "ชื่อจุด" ไปแล้ว
           if (!timeBySeq.has(s.seq)) continue; // วันนั้นไม่ได้เก็บจุดนี้
           hits.push({
-            matchType: "community", matchName: s.communityName, stopName: s.name,
+            matchType: "community", matchName: s.communityName, stopName: s.name, seq: s.seq,
             routeCode: route.code, routeName: route.name,
             weekday, weekdayName: WEEKDAY_TH[weekday],
             truckNumber: a.truckNumber,
+            truckColor: colorByTruck.get(a.truckNumber) ?? "green",
             kind: a.kind, coverForRouteCode: a.coverForRouteCode,
             startMin: a.startMin, endMin: a.endMin,
             atMin: timeBySeq.get(s.seq) ?? null,
