@@ -32,10 +32,10 @@ export default function NewsSection() {
   if (loading) {
     return (
       <section className="mx-4 mt-6" role="status" aria-label="กำลังโหลดข่าวกิจกรรม">
-        <div className="h-5 w-28 animate-pulse rounded-md bg-white/80" />
+        <div className="h-5 w-28 skeleton rounded-md bg-[#E9E4F3]" />
         <div className="mt-3 flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-[95px] animate-pulse rounded-[16px] bg-white/70" />
+            <div key={i} className="h-[95px] skeleton rounded-[16px] bg-[#E9E4F3]" />
           ))}
         </div>
         <span className="sr-only">กำลังโหลดข่าวกิจกรรม</span>

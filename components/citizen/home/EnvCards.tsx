@@ -148,8 +148,8 @@ export default function EnvCards() {
   if (loading) {
     return (
       <div className="mx-4 mt-3 flex gap-2.5" role="status" aria-label="กำลังโหลดข้อมูลคุณภาพอากาศและน้ำประปา">
-        <div className="h-32 flex-1 animate-pulse rounded-[18px] bg-white/70" />
-        <div className="h-32 flex-1 animate-pulse rounded-[18px] bg-white/70" />
+        <div className="h-32 flex-1 skeleton rounded-[18px] bg-[#E9E4F3]" />
+        <div className="h-32 flex-1 skeleton rounded-[18px] bg-[#E9E4F3]" />
         <span className="sr-only">กำลังโหลดข้อมูลคุณภาพอากาศและน้ำประปา</span>
       </div>
     );

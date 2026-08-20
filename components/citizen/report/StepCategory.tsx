@@ -32,7 +32,7 @@ export default function StepCategory({
       {loading ? (
         <div className="flex flex-col gap-2.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[72px] animate-pulse rounded-[16px] bg-white/70" />
+            <div key={i} className="h-[72px] skeleton rounded-[16px] bg-[#E9E4F3]" />
           ))}
         </div>
       ) : (

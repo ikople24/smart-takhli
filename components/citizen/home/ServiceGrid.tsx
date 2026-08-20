@@ -42,7 +42,7 @@ function SkeletonGrid({ count }: { count: number }) {
   return (
     <div className="mt-3 grid grid-cols-3 gap-3" role="status" aria-label="กำลังโหลดรายการหมวด">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-32 animate-pulse rounded-[16px] bg-white/70" />
+        <div key={i} className="h-32 skeleton rounded-[16px] bg-[#E9E4F3]" />
       ))}
       <span className="sr-only">กำลังโหลดรายการหมวด</span>
     </div>

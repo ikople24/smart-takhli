@@ -134,9 +134,9 @@ export default function ActivitiesPage() {
         <div className="flex-1 px-4 pb-8">
           {loading ? (
             <div className="flex flex-col gap-3" role="status" aria-label="กำลังโหลดข่าวกิจกรรม">
-              <div className="h-52 animate-pulse rounded-[20px] bg-white/70" />
+              <div className="h-52 skeleton rounded-[20px] bg-[#E9E4F3]" />
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-[95px] animate-pulse rounded-[16px] bg-white/70" />
+                <div key={i} className="h-[95px] skeleton rounded-[16px] bg-[#E9E4F3]" />
               ))}
               <span className="sr-only">กำลังโหลดข่าวกิจกรรม</span>
             </div>

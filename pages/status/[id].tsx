@@ -167,8 +167,8 @@ export default function StatusDetail() {
         <div className="flex-1 space-y-3 px-4 pb-6">
           {loading ? (
             <>
-              <div className="h-24 animate-pulse rounded-[18px] bg-white/70" />
-              <div className="h-56 animate-pulse rounded-[18px] bg-white/70" />
+              <div className="h-24 skeleton rounded-[18px] bg-[#E9E4F3]" />
+              <div className="h-56 skeleton rounded-[18px] bg-[#E9E4F3]" />
             </>
           ) : notFound || !complaint ? (
             <div className="rounded-[18px] bg-white p-8 text-center shadow-[0_4px_14px_rgba(60,40,100,0.05)]">
