@@ -171,11 +171,15 @@ export interface SearchHit {
    * แล้วชาวบ้านแยกไม่ออกว่าแถวไหนคือจุดใกล้บ้านตัวเอง
    */
   stopName: string;
+  /** ลำดับจุดในสาย — คู่กับ routeCode เป็นคีย์ของจุดที่ติดตาม (`TrackedStop`) */
+  seq: number;
   routeCode: string;
   routeName: string;
   weekday: number;
   weekdayName: string;
   truckNumber: number;
+  /** สีรถของงานวันนั้น — ต้องมีเพื่อกดติดตามจากผลค้นหาได้โดยไม่ต้องยิง API ซ้ำ */
+  truckColor: TruckColor;
   kind: AssignmentKind;
   coverForRouteCode: string | null;
   startMin: Minutes | null;

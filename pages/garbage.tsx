@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import type { ResolvedDaySchedule } from "@/types/garbage";
 import GarbageHero from "@/components/garbage/GarbageHero";
 import GarbageSearchPanel from "@/components/garbage/GarbageSearchPanel";
@@ -139,13 +140,18 @@ export default function GarbagePage() {
   }, []);
 
   // แตะจุดเดิมอีกครั้ง = เลิกติดตาม (ไม่มีปุ่มลบแยก ผู้ใช้เดาได้จากจุดที่ไฮไลต์อยู่)
+  // ใช้ร่วมกันทั้งไทม์ไลน์ของวันนี้และผลค้นหา — กติกา toggle ต้องมีชุดเดียว
+  const toggleTracked = useCallback(
+    (next: TrackedStop) => {
+      const isSame = tracked && tracked.routeCode === next.routeCode && tracked.seq === next.seq;
+      writeTracked(isSame ? null : next);
+    },
+    [tracked, writeTracked]
+  );
+
   const selectStop = useCallback(
     (run: TimelineRun, stop: TimelineStop) => {
-      if (tracked && tracked.routeCode === run.routeCode && tracked.seq === stop.seq) {
-        writeTracked(null);
-        return;
-      }
-      writeTracked({
+      toggleTracked({
         routeCode: run.routeCode,
         seq: stop.seq,
         stopName: stop.name,
@@ -156,7 +162,7 @@ export default function GarbagePage() {
         weekday: weekdayToday,
       });
     },
-    [tracked, weekdayToday, writeTracked]
+    [toggleTracked, weekdayToday]
   );
 
   return (
@@ -167,6 +173,17 @@ export default function GarbagePage() {
       </Head>
 
       <div className="mx-auto w-full max-w-screen-sm space-y-4">
+        {/* หน้านี้ซ่อน BottomNav เก่าไว้ จึงไม่มีทางกลับเลยถ้าไม่มีปุ่มนี้ (เจ้าของแจ้ง 2026-08-20) */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-100 transition hover:bg-emerald-50"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          กลับหน้าแรก
+        </Link>
+
         <GarbageHero
           statusText={live.statusText}
           moving={live.moving}
@@ -179,7 +196,7 @@ export default function GarbagePage() {
           onClearTracked={() => writeTracked(null)}
         />
 
-        <GarbageSearchPanel />
+        <GarbageSearchPanel tracked={tracked} onToggleTracked={toggleTracked} />
 
         {dayToday && <DayOffNotice assignments={dayToday.assignments} />}
 
