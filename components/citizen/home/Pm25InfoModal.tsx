@@ -1,9 +1,13 @@
 // components/citizen/home/Pm25InfoModal.tsx
-// modal "ข้อมูลคุณภาพอากาศ" ฉบับ citizen — เนื้อหาชุดเดียวกับ modal เดิมใน
-// Pmdata.js: ระดับ+ค่าปัจจุบัน · แนวทางการป้องกัน · ย้อนหลังรายวัน
-// (ข้อความ/เกณฑ์มาจาก getPm25LevelInfo ตัวจริง ไม่ก็อปซ้ำ)
+// modal "ข้อมูลคุณภาพอากาศ" ฉบับ citizen — ระดับ+ค่าปัจจุบัน · แนวทางการป้องกัน ·
+// ย้อนหลังรายวัน (ข้อความ/เกณฑ์จาก getPm25LevelInfo ตัวจริง ไม่ก็อปซ้ำ)
+// ต่อท้ายด้วยหน้าปัด Pm25Dashboard เดิมทั้งตัว (กราฟ/เวลาที่อัปเดตครบแบบหน้าเก่า)
+import dynamic from "next/dynamic";
 import { getPm25LevelInfo } from "@/components/Pmdata";
 import { pm25Level } from "@/lib/citizen/pm25Level";
+
+// หน้าปัดเดิมลาก recharts มาด้วย — โหลดเมื่อผู้ใช้เปิด modal เท่านั้น
+const Pm25Dashboard = dynamic(() => import("@/components/Pmdata"), { ssr: false });
 
 type Daily = { date: string; avg: number; dayName?: string };
 
@@ -60,6 +64,11 @@ export default function Pm25InfoModal({
         <div className="mt-3 rounded-[16px] bg-[#F6F5FA] p-3.5">
           <h4 className="mb-1.5 text-[13px] font-bold text-[#1B1830]">แนวทางการป้องกัน</h4>
           <p className="whitespace-pre-line text-[12.5px] leading-relaxed text-[#4A4458]">{info.prevention}</p>
+        </div>
+
+        {/* หน้าปัด PM2.5 เดิมทั้งตัว — กราฟแนวโน้ม/เวลาที่อัปเดต แบบเดียวกับหน้าเก่า */}
+        <div className="mt-3">
+          <Pm25Dashboard />
         </div>
 
         {daily.length > 0 && (
