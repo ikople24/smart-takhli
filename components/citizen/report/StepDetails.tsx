@@ -53,10 +53,10 @@ export default function StepDetails({
               key={opt._id}
               type="button"
               onClick={() => onToggleProblem(opt._id)}
-              className={`inline-flex items-center gap-2 rounded-full py-2 pl-2.5 pr-3.5 text-[12.5px] ${
+              className={`inline-flex items-center gap-2 rounded-full py-2 pl-2.5 pr-3.5 text-[12.5px] transition ${
                 selected
-                  ? "bg-[#7C3AED] font-medium text-white"
-                  : "border border-[#E4DEF2] bg-white text-[#4A4458]"
+                  ? "bg-gradient-to-br from-[#7C3AED] to-[#9050F0] font-semibold text-white shadow-[0_6px_14px_rgba(124,58,237,0.35)]"
+                  : "bg-white text-[#57506A] shadow-[0_2px_10px_rgba(124,58,237,0.08)] ring-1 ring-[#E9E3F8] hover:ring-[#C9B8F0]"
               }`}
             >
               {/* ไอคอนรายปัญหาจาก store เดิม (เหมือนฟอร์มเดิม) — ตอนเลือกครอบวงขาวให้เด่นบนพื้นม่วง */}
