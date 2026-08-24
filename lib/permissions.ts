@@ -79,6 +79,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/smart-water',
+    label: 'ทะเบียนท่อประปา',
+    icon: '🚰',
+    description: 'ทะเบียนท่อประปาและอุปกรณ์ — แผนที่แนวท่อ + รายงานความยาว',
+    category: 'management'
+  },
+  {
     path: '/admin/smart-waste',
     label: 'ระบบบริหารจัดการขยะ',
     icon: '♻️',
