@@ -18,10 +18,10 @@ export const cardCls =
 // หัวตาราง/แถวโฮเวอร์
 export const tableHeadCls = 'bg-[#F6F3FD] text-[12px] font-bold text-[#57506A]';
 
-// การ์ดสถิติ — tone: 'purple' (เต็ม) | 'green' | 'gray' | 'deep' | 'default'
+// การ์ดสถิติ — tone: 'purple' (เต็ม) | 'green' | 'gray' | 'deep' | 'red' | 'default'
 export function StatCard({ value, label, tone = 'default' }) {
   const filled = tone === 'purple';
-  const valueColor = { green: '#16A34A', gray: '#9CA3AF', deep: '#6D28D9' }[tone];
+  const valueColor = { green: '#16A34A', gray: '#9CA3AF', deep: '#6D28D9', red: '#DC2626' }[tone];
   return (
     <div className={'rounded-[18px] p-4 ' + (filled ? 'bg-[#7C3AED] text-white' : 'bg-white border border-[#E7E2F2]')}>
       <div className="text-[30px] font-bold leading-none"
