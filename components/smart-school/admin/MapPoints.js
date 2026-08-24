@@ -27,7 +27,7 @@ const VULN_MAP = {
 // high+medium ในตาราง = "เปราะบางมาก" ทั้งคู่ → บนแผนที่รวมเป็นเขียว, low = แดง
 const mapKind = (item) => (vulnerabilityLevel(item) === 'low' ? 'low' : 'high');
 
-const HOUSEHOLD_RADIUS_M = 35; // จุดที่อยู่ในรัศมีนี้ = น่าจะบ้านเดียวกัน
+const HOUSEHOLD_RADIUS_M = 15; // จุดที่อยู่ในรัศมีนี้ = น่าจะบ้านเดียวกัน
 const HOME_COLOR = '#D97706';   // วงสีทองไฮไลต์บ้านเดียวกัน
 const CLUSTER_COLOR = '#6D28D9'; // วงตัวเลขม่วง (หลายจุดใกล้กัน)
 
@@ -150,7 +150,7 @@ export default function MapPoints({ data }) {
       if (g.length > 1) {
         const lat = g.reduce((s, m) => s + m.location.lat, 0) / g.length;
         const lng = g.reduce((s, m) => s + m.location.lng, 0) / g.length;
-        const radius = Math.max(18, ...g.map((m) => distM({ lat, lng }, m.location))) + 8;
+        const radius = Math.max(10, ...g.map((m) => distM({ lat, lng }, m.location))) + 6;
         groups.push({ members: g, lat, lng, radius });
       }
     }
@@ -190,7 +190,7 @@ export default function MapPoints({ data }) {
     const kind = mapKind(item);
     return (
       <Popup>
-        <div className="min-w-[280px]">
+        <div className="p-3 min-w-[260px]">
           <h3 className="text-base font-semibold text-gray-800 mb-2">{item.prefix || ''}{item.name}</h3>
           <div className="space-y-1.5 text-sm">
             <div className="flex items-center gap-2">
@@ -274,14 +274,14 @@ export default function MapPoints({ data }) {
               <Circle key={`hh-${i}`} center={[g.lat, g.lng]} radius={g.radius}
                 pathOptions={{ color: HOME_COLOR, weight: 2, fillColor: HOME_COLOR, fillOpacity: 0.1 }}>
                 <Popup>
-                  <div className="min-w-[220px]">
-                    <div className="font-bold text-[#B45309] mb-1">🏠 น่าจะบ้านเดียวกัน — {g.members.length} ราย</div>
+                  <div className="p-3 min-w-[220px] max-w-[300px]">
+                    <div className="font-bold text-[#B45309] mb-1.5 pr-6 leading-snug">🏠 น่าจะบ้านเดียวกัน — {g.members.length} ราย</div>
                     <ul className="text-sm list-disc pl-4 space-y-0.5">
                       {g.members.map((m) => (
                         <li key={m._id}>{m.prefix || ''}{m.name} <span className="text-gray-500">({m.educationLevel || '-'})</span></li>
                       ))}
                     </ul>
-                    <div className="text-[11px] text-gray-400 mt-1.5">อยู่ในรัศมี ~{HOUSEHOLD_RADIUS_M} ม. — ควรตรวจสอบว่าเป็นครัวเรือนเดียวกันหรือไม่</div>
+                    <div className="text-[11px] text-gray-400 mt-2 leading-snug">อยู่ในรัศมี ~{HOUSEHOLD_RADIUS_M} ม. — ควรตรวจสอบว่าเป็นครัวเรือนเดียวกันหรือไม่</div>
                   </div>
                 </Popup>
               </Circle>
