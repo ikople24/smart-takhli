@@ -393,7 +393,17 @@ async function handleRatingPostback(
     });
 
     if (!result.ok) {
-      await lineReply(replyToken, [notFoundMessage(parsed.complaintCode)]);
+      // เรื่องถูกเปิดกลับมาทำต่อหลังส่งการ์ดไปแล้ว — ปุ่มในการ์ดใบเก่ายังกดได้ตลอด
+      await lineReply(replyToken, [
+        result.reason === 'not_closed'
+          ? {
+              type: 'text',
+              text:
+                `เรื่อง ${parsed.complaintCode} ยังดำเนินการไม่เสร็จครับ\n` +
+                `ให้คะแนนได้เมื่อเจ้าหน้าที่ปิดงานแล้ว — ระบบจะส่งการ์ดใหม่ให้อัตโนมัติ`,
+            }
+          : notFoundMessage(parsed.complaintCode),
+      ]);
       return;
     }
 
