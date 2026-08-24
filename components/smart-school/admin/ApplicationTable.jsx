@@ -121,7 +121,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 <th className={tableHeadCls}>ระดับ</th>
                 <th className={tableHeadCls}>เบอร์โทร</th>
                 <th className={tableHeadCls}>เลขบัตร</th>
-                <th className={tableHeadCls}>รายได้/ปี</th>
+                <th className={tableHeadCls}>ต่อหัว / รายได้/ปี</th>
                 <th className={tableHeadCls}>สถานะ</th>
                 <th className={tableHeadCls}>ครัวเรือน/เกณฑ์</th>
                 <th className={tableHeadCls}></th>
@@ -132,6 +132,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 const rn = renewalStatus(r);
                 const badge = RENEWAL_BADGE[rn.kind];
                 const vl = vulnerabilityLevel(r);
+                const perDay = perCapitaDailyIncome(r);
                 return (
                 <tr key={r._id} className={'border-t border-[#F0ECF8] hover:bg-[#F6F3FD] ' + VULN_ROW[vl]}>
                   <td className="whitespace-nowrap">{r.applicationId}</td>
@@ -153,10 +154,11 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                     )}
                   </td>
                   <td className="whitespace-nowrap">
-                    <div>{(r.annualIncome || 0).toLocaleString()}</div>
+                    <div className="font-semibold">{Math.round(perDay).toLocaleString()} บ./วัน</div>
+                    <div className="text-[11.5px] text-[#8A8398]">{(r.annualIncome || 0).toLocaleString()} /ปี</div>
                     <span
                       className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${VULN_BADGE[vl]}`}
-                      title={`${VULN_LEVELS[vl].label} — จัด/เรียงกลุ่มตามรายได้ต่อหัวต่อวัน`}
+                      title={`${VULN_LEVELS[vl].label} — รายได้ต่อหัวต่อวัน`}
                     >
                       {VULN_LEVELS[vl].label}
                     </span>
