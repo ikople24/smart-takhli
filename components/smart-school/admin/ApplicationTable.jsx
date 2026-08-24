@@ -12,13 +12,16 @@ const RENEWAL_BADGE = {
 };
 
 // กลุ่มเปราะบาง (รายได้ต่อหัวต่อวัน) — badge สี + สีพื้นแถวจาง ๆ
+// สีตามที่ผู้ใช้เลือก: มาก=เขียว · กลาง=เหลือง · น้อย=แดง
 const VULN_BADGE = {
-  high: 'bg-[#FEE2E2] text-[#B91C1C]',
-  low: 'bg-[#DCFCE7] text-[#15803D]',
+  high: 'bg-[#DCFCE7] text-[#15803D]',
+  medium: 'bg-[#FEF9C3] text-[#A16207]',
+  low: 'bg-[#FEE2E2] text-[#B91C1C]',
 };
 const VULN_ROW = {
-  high: 'bg-[#FEF6F5]',
-  low: 'bg-[#F3FBF6]',
+  high: 'bg-[#F3FBF6]',
+  medium: 'bg-[#FEFCE8]',
+  low: 'bg-[#FEF6F5]',
 };
 
 export default function ApplicationTable({ rows, onDetail, onEdit }) {
@@ -96,6 +99,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
           onChange={(e) => setVulnFilter(e.target.value)}>
           <option value="all">เปราะบาง: ทั้งหมด</option>
           <option value="high">เปราะบางมาก</option>
+          <option value="medium">ค่ากลาง</option>
           <option value="low">เปราะบางน้อย</option>
         </select>
         <select className="select select-bordered select-sm" value={sortBy}
