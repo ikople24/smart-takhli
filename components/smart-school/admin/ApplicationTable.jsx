@@ -98,9 +98,9 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
         <select className="select select-bordered select-sm" value={vulnFilter}
           onChange={(e) => setVulnFilter(e.target.value)}>
           <option value="all">เปราะบาง: ทั้งหมด</option>
-          <option value="high">เปราะบางมาก</option>
-          <option value="medium">ค่ากลาง</option>
-          <option value="low">เปราะบางน้อย</option>
+          <option value="high">เปราะบางมาก (เขียว)</option>
+          <option value="medium">เปราะบางมาก (เหลือง)</option>
+          <option value="low">เปราะบางน้อย (แดง)</option>
         </select>
         <select className="select select-bordered select-sm" value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}>
