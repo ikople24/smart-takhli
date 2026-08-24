@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Swal from 'sweetalert2';
 import ApplicationTable from './ApplicationTable';
@@ -8,7 +8,6 @@ import BlockedSchoolsPanel from './BlockedSchoolsPanel';
 import AllocationBoard from './AllocationBoard';
 import CitizenIdPanel from './CitizenIdPanel';
 import ExportApplicants from './ExportApplicants';
-import { vulnerabilityLevel } from '@/lib/smart-school/vulnerability';
 import { DashboardHeader, YearPills, PillTabs, StatCard, cardCls } from '@/components/smart-school/adminTheme';
 
 const MapPoints = dynamic(() => import('./MapPoints'), { ssr: false });
@@ -87,14 +86,6 @@ export default function SmartSchoolDashboard() {
   // ปีในแท็บ = union ของ data.years กับ data.year กัน edge case ปีงบใหม่ที่ยังไม่มีใบสมัคร (data.year ไม่อยู่ใน years)
   const yearTabs = data ? Array.from(new Set([...(data.years || []), data.year])).sort((a, b) => b - a) : [];
 
-  // กลุ่มเปราะบาง (รายได้ต่อหัวต่อวัน) — คำนวณฝั่ง client จากใบสมัครทั้งปี
-  const vuln = useMemo(() => {
-    const apps = data?.applications || [];
-    let high = 0, low = 0;
-    for (const r of apps) (vulnerabilityLevel(r) === 'high' ? high++ : low++);
-    return { high, low };
-  }, [data]);
-
   return (
     <div className="space-y-4">
       <div className={cardCls + ' p-5'}>
@@ -135,9 +126,6 @@ export default function SmartSchoolDashboard() {
             <StatCard value={stats.byStatus?.['ตรวจสอบแล้ว'] || 0} label="ตรวจสอบแล้ว" tone="deep" />
             <StatCard value={stats.byStatus?.['ได้รับทุน'] || 0} label="ได้รับทุน" tone="green" />
             <StatCard value={stats.byStatus?.['ไม่ผ่านเกณฑ์'] || 0} label="ไม่ผ่านเกณฑ์" tone="gray" />
-            {/* กลุ่มเปราะบาง = รายได้ต่อหัวต่อวัน (≤150 = มาก) */}
-            <StatCard value={vuln.high} label="เปราะบางมาก (≤150 บ./วัน/หัว)" tone="red" />
-            <StatCard value={vuln.low} label="เปราะบางน้อย (>150 บ./วัน/หัว)" tone="green" />
           </div>
         )}
       </div>

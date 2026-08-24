@@ -45,10 +45,9 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
       return [r.name, r.applicationId, r.phone, r.address, r.schoolName]
         .some((v) => (v || '').toLowerCase().includes(q));
     });
-    // เรียงหลังกรอง — รายได้ว่าง/ไม่มี = 0 · sort() ของ V8 stable ค่าเท่ากันคงลำดับเดิม
-    const inc = (r) => Number(r.annualIncome) || 0;
-    if (sortBy === 'income-asc') out.sort((a, b) => inc(a) - inc(b));
-    else if (sortBy === 'income-desc') out.sort((a, b) => inc(b) - inc(a));
+    // เรียงหลังกรอง ตาม "รายได้ต่อหัวต่อวัน" (ต่อหัว = หารสมาชิกครัวเรือน) · sort() ของ V8 stable
+    if (sortBy === 'income-asc') out.sort((a, b) => perCapitaDailyIncome(a) - perCapitaDailyIncome(b));
+    else if (sortBy === 'income-desc') out.sort((a, b) => perCapitaDailyIncome(b) - perCapitaDailyIncome(a));
     return out;
   }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter, vulnFilter, sortBy]);
 
@@ -101,8 +100,8 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
         </select>
         <select className="select select-bordered select-sm" value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}>
-          <option value="income-asc">เรียง: รายได้ น้อย→มาก</option>
-          <option value="income-desc">เรียง: รายได้ มาก→น้อย</option>
+          <option value="income-asc">เรียง: รายได้ต่อหัว น้อย→มาก</option>
+          <option value="income-desc">เรียง: รายได้ต่อหัว มาก→น้อย</option>
           <option value="default">เรียง: ล่าสุด</option>
         </select>
         <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
@@ -129,7 +128,6 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 const rn = renewalStatus(r);
                 const badge = RENEWAL_BADGE[rn.kind];
                 const vl = vulnerabilityLevel(r);
-                const perDay = perCapitaDailyIncome(r);
                 return (
                 <tr key={r._id} className={'border-t border-[#F0ECF8] hover:bg-[#F6F3FD] ' + VULN_ROW[vl]}>
                   <td className="whitespace-nowrap">{r.applicationId}</td>
@@ -154,9 +152,9 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                     <div>{(r.annualIncome || 0).toLocaleString()}</div>
                     <span
                       className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${VULN_BADGE[vl]}`}
-                      title={`${VULN_LEVELS[vl].label} · รายได้ต่อหัว ${Math.round(perDay).toLocaleString()} บาท/วัน (${(r.householdMembers || 1)} คนในบ้าน)`}
+                      title={`${VULN_LEVELS[vl].label} — จัด/เรียงกลุ่มตามรายได้ต่อหัวต่อวัน`}
                     >
-                      {VULN_LEVELS[vl].short} · {Math.round(perDay).toLocaleString()}฿/วัน
+                      {VULN_LEVELS[vl].label}
                     </span>
                   </td>
                   <td>
