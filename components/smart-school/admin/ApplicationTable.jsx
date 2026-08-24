@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { SCHOLARSHIP_LEVELS, levelBucket } from '@/lib/smart-school/scholarshipLevels';
 import { cardCls, tableHeadCls, chipCls, inputCls, statusBadgeCls } from '@/components/smart-school/adminTheme';
 import { renewalStatus } from '@/lib/smart-school/takhliScholarship';
+import { vulnerabilityLevel, perCapitaDailyIncome, VULN_LEVELS } from '@/lib/smart-school/vulnerability';
 
 // badge หน้าชื่อ: เก่า/ใหม่/ไม่ระบุ — isRenewal อย่างเดียวไม่พอ เพราะระบบไม่มีข้อมูลก่อนปี 2568
 const RENEWAL_BADGE = {
@@ -10,12 +11,26 @@ const RENEWAL_BADGE = {
   unknown: { label: 'ไม่ระบุ', cls: 'bg-[#F1F1F4] text-[#6B7280]' },
 };
 
+// กลุ่มเปราะบาง (รายได้ต่อหัวต่อวัน) — badge สี + สีพื้นแถวจาง ๆ
+// สีตามที่ผู้ใช้เลือก: มาก=เขียว · กลาง=เหลือง · น้อย=แดง
+const VULN_BADGE = {
+  high: 'bg-[#DCFCE7] text-[#15803D]',
+  medium: 'bg-[#FEF9C3] text-[#A16207]',
+  low: 'bg-[#FEE2E2] text-[#B91C1C]',
+};
+const VULN_ROW = {
+  high: 'bg-[#F3FBF6]',
+  medium: 'bg-[#FEFCE8]',
+  low: 'bg-[#FEF6F5]',
+};
+
 export default function ApplicationTable({ rows, onDetail, onEdit }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [renewalFilter, setRenewalFilter] = useState('all'); // all | renewal | new
   const [levelTab, setLevelTab] = useState('all');
   const [citizenFilter, setCitizenFilter] = useState('all'); // all | has | none
+  const [vulnFilter, setVulnFilter] = useState('all'); // all | high | low
   // default = รายได้น้อย→มาก: เปิดหน้ามาให้คนรายได้น้อยขึ้นก่อน (ตรงกับงานจัดสรรทุน)
   const [sortBy, setSortBy] = useState('income-asc'); // income-asc | income-desc | default
 
@@ -28,16 +43,16 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
       if (renewalFilter !== 'all' && renewalStatus(r).kind !== renewalFilter) return false;
       if (citizenFilter === 'has' && !r.hasCitizenId) return false;
       if (citizenFilter === 'none' && r.hasCitizenId) return false;
+      if (vulnFilter !== 'all' && vulnerabilityLevel(r) !== vulnFilter) return false;
       if (!q) return true;
       return [r.name, r.applicationId, r.phone, r.address, r.schoolName]
         .some((v) => (v || '').toLowerCase().includes(q));
     });
-    // เรียงหลังกรอง — รายได้ว่าง/ไม่มี = 0 · sort() ของ V8 stable ค่าเท่ากันคงลำดับเดิม
-    const inc = (r) => Number(r.annualIncome) || 0;
-    if (sortBy === 'income-asc') out.sort((a, b) => inc(a) - inc(b));
-    else if (sortBy === 'income-desc') out.sort((a, b) => inc(b) - inc(a));
+    // เรียงหลังกรอง ตาม "รายได้ต่อหัวต่อวัน" (ต่อหัว = หารสมาชิกครัวเรือน) · sort() ของ V8 stable
+    if (sortBy === 'income-asc') out.sort((a, b) => perCapitaDailyIncome(a) - perCapitaDailyIncome(b));
+    else if (sortBy === 'income-desc') out.sort((a, b) => perCapitaDailyIncome(b) - perCapitaDailyIncome(a));
     return out;
-  }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter, sortBy]);
+  }, [rows, search, statusFilter, renewalFilter, levelTab, citizenFilter, vulnFilter, sortBy]);
 
   return (
     <div className={cardCls + ' p-4 space-y-3'}>
@@ -80,10 +95,17 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
           <option value="has">มีเลขบัตรแล้ว</option>
           <option value="none">ยังไม่มีเลขบัตร</option>
         </select>
+        <select className="select select-bordered select-sm" value={vulnFilter}
+          onChange={(e) => setVulnFilter(e.target.value)}>
+          <option value="all">เปราะบาง: ทั้งหมด</option>
+          <option value="high">เปราะบางมาก (เขียว)</option>
+          <option value="medium">เปราะบางมาก (เหลือง)</option>
+          <option value="low">เปราะบางน้อย (แดง)</option>
+        </select>
         <select className="select select-bordered select-sm" value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}>
-          <option value="income-asc">เรียง: รายได้ น้อย→มาก</option>
-          <option value="income-desc">เรียง: รายได้ มาก→น้อย</option>
+          <option value="income-asc">เรียง: รายได้ต่อหัว น้อย→มาก</option>
+          <option value="income-desc">เรียง: รายได้ต่อหัว มาก→น้อย</option>
           <option value="default">เรียง: ล่าสุด</option>
         </select>
         <span className="text-[12px] text-[#8A8398] self-center">{filtered.length} รายการ</span>
@@ -99,7 +121,7 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                 <th className={tableHeadCls}>ระดับ</th>
                 <th className={tableHeadCls}>เบอร์โทร</th>
                 <th className={tableHeadCls}>เลขบัตร</th>
-                <th className={tableHeadCls}>รายได้/ปี</th>
+                <th className={tableHeadCls}>ต่อหัว / รายได้/ปี</th>
                 <th className={tableHeadCls}>สถานะ</th>
                 <th className={tableHeadCls}>ครัวเรือน/เกณฑ์</th>
                 <th className={tableHeadCls}></th>
@@ -109,8 +131,10 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
               {filtered.map((r) => {
                 const rn = renewalStatus(r);
                 const badge = RENEWAL_BADGE[rn.kind];
+                const vl = vulnerabilityLevel(r);
+                const perDay = perCapitaDailyIncome(r);
                 return (
-                <tr key={r._id} className="border-t border-[#F0ECF8] hover:bg-[#F6F3FD]">
+                <tr key={r._id} className={'border-t border-[#F0ECF8] hover:bg-[#F6F3FD] ' + VULN_ROW[vl]}>
                   <td className="whitespace-nowrap">{r.applicationId}</td>
                   <td className="whitespace-nowrap">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold mr-1 ${badge.cls}`} title={rn.reason}>
@@ -129,7 +153,16 @@ export default function ApplicationTable({ rows, onDetail, onEdit }) {
                       </span>
                     )}
                   </td>
-                  <td>{(r.annualIncome || 0).toLocaleString()}</td>
+                  <td className="whitespace-nowrap">
+                    <div className="font-semibold">{Math.round(perDay).toLocaleString()} บ./วัน</div>
+                    <div className="text-[11.5px] text-[#8A8398]">{(r.annualIncome || 0).toLocaleString()} /ปี</div>
+                    <span
+                      className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${VULN_BADGE[vl]}`}
+                      title={`${VULN_LEVELS[vl].label} — รายได้ต่อหัวต่อวัน`}
+                    >
+                      {VULN_LEVELS[vl].label}
+                    </span>
+                  </td>
                   <td>
                     <span className={statusBadgeCls(r.status)}>{r.status}</span>
                   </td>
