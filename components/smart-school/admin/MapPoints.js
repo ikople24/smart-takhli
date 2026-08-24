@@ -1,6 +1,6 @@
 // components/smart-school/admin/MapPoints.js
 // แผนที่ผู้สมัคร — หมุดสีตามกลุ่มเปราะบาง 2 สถานะ (มาก=เขียว · น้อย=แดง)
-// + คลัสเตอร์ตามพิกัด (รวมหมุดใกล้กัน ซูมแล้วแตก) + ไฮไลต์กลุ่มที่น่าจะบ้านเดียวกัน (วงสีทอง)
+// + คลัสเตอร์ตามพิกัด (รวมหมุดใกล้กัน ซูมแล้วแตก) + ไฮไลต์กลุ่มที่มีแนวโน้มอยู่บ้านเดียวกัน (วงสีทอง)
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { MapContainer, Marker, Popup, GeoJSON, Circle, useMap, useMapEvents } from 'react-leaflet';
@@ -27,7 +27,7 @@ const VULN_MAP = {
 // high+medium ในตาราง = "เปราะบางมาก" ทั้งคู่ → บนแผนที่รวมเป็นเขียว, low = แดง
 const mapKind = (item) => (vulnerabilityLevel(item) === 'low' ? 'low' : 'high');
 
-const HOUSEHOLD_RADIUS_M = 15; // จุดที่อยู่ในรัศมีนี้ = น่าจะบ้านเดียวกัน
+const HOUSEHOLD_RADIUS_M = 15; // จุดที่อยู่ในรัศมีนี้ = มีแนวโน้มอยู่บ้านเดียวกัน
 const HOME_COLOR = '#D97706';   // วงสีทองไฮไลต์บ้านเดียวกัน
 const CLUSTER_COLOR = '#6D28D9'; // วงตัวเลขม่วง (หลายจุดใกล้กัน)
 
@@ -135,7 +135,7 @@ export default function MapPoints({ data }) {
 
   const withCoords = useMemo(() => filteredData.filter(hasCoords), [filteredData]);
 
-  // กลุ่มบ้านเดียวกัน (global) — จุดที่อยู่ในรัศมี ~35 ม. เกาะกลุ่มกัน (greedy)
+  // กลุ่มบ้านเดียวกัน (global) — จุดที่อยู่ในรัศมี HOUSEHOLD_RADIUS_M เกาะกลุ่มกัน (greedy)
   const householdGroups = useMemo(() => {
     const pts = withCoords;
     const used = new Array(pts.length).fill(false);
@@ -269,13 +269,13 @@ export default function MapPoints({ data }) {
                 })} />
             )}
 
-            {/* ไฮไลต์กลุ่มน่าจะบ้านเดียวกัน (วงสีทอง) — วาดใต้หมุด */}
+            {/* ไฮไลต์กลุ่มมีแนวโน้มอยู่บ้านเดียวกัน (วงสีทอง) — วาดใต้หมุด */}
             {householdGroups.map((g, i) => (
               <Circle key={`hh-${i}`} center={[g.lat, g.lng]} radius={g.radius}
                 pathOptions={{ color: HOME_COLOR, weight: 2, fillColor: HOME_COLOR, fillOpacity: 0.1 }}>
                 <Popup>
                   <div className="p-3 min-w-[220px] max-w-[300px]">
-                    <div className="font-bold text-[#B45309] mb-1.5 pr-6 leading-snug">🏠 น่าจะบ้านเดียวกัน — {g.members.length} ราย</div>
+                    <div className="font-bold text-[#B45309] mb-1.5 pr-6 leading-snug">🏠 มีแนวโน้มอยู่บ้านเดียวกัน — {g.members.length} ราย</div>
                     <ul className="text-sm list-disc pl-4 space-y-0.5">
                       {g.members.map((m) => (
                         <li key={m._id}>{m.prefix || ''}{m.name} <span className="text-gray-500">({m.educationLevel || '-'})</span></li>
@@ -309,7 +309,7 @@ export default function MapPoints({ data }) {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 px-1 text-[12.5px] text-[#57506A]">
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: VULN_MAP.high.color }} />เปราะบางมาก</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: VULN_MAP.low.color }} />เปราะบางน้อย</span>
-          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full inline-block border-2" style={{ borderColor: HOME_COLOR }} />🏠 น่าจะบ้านเดียวกัน</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full inline-block border-2" style={{ borderColor: HOME_COLOR }} />🏠 มีแนวโน้มอยู่บ้านเดียวกัน</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: CLUSTER_COLOR }} />หลายจุดใกล้กัน (คลิกเพื่อซูม)</span>
         </div>
       </div>
