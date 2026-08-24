@@ -252,7 +252,7 @@ export default function MapPoints({ data }) {
           <span className="ml-2 text-[13px] font-normal text-[#8A8398]">({withCoords.length} จุด · {householdGroups.length} กลุ่มบ้านเดียวกัน)</span>
         </h3>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <MapContainer center={center} zoom={12} style={{ height: '600px', width: '100%', zIndex: 0 }} className="rounded-lg">
+          <MapContainer center={center} zoom={12} maxZoom={21} style={{ height: '600px', width: '100%', zIndex: 0 }} className="rounded-lg">
             <MapController onZoom={setZoom} mapRef={mapRef} />
             <BaseLayersControl />
 

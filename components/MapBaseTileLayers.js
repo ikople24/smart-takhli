@@ -15,6 +15,8 @@ export function BaseLayersControl({ position = "topright" }) {
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+          maxZoom={21}
+          maxNativeZoom={19}
         />
       </LayersControl.BaseLayer>
       <LayersControl.BaseLayer name="ดาวเทียม">
@@ -22,6 +24,7 @@ export function BaseLayersControl({ position = "topright" }) {
           url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
           attribution="&copy; Google Maps"
           subdomains={GOOGLE_SUBDOMAINS}
+          maxZoom={21}
         />
       </LayersControl.BaseLayer>
       <LayersControl.BaseLayer name="ไฮบริด">
@@ -29,6 +32,7 @@ export function BaseLayersControl({ position = "topright" }) {
           url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
           attribution="&copy; Google Maps"
           subdomains={GOOGLE_SUBDOMAINS}
+          maxZoom={21}
         />
       </LayersControl.BaseLayer>
     </LayersControl>
