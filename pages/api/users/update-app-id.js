@@ -1,83 +1,53 @@
+// POST /api/users/update-app-id  { userId, appId }
+// กำหนด appId ให้ user = อนุมัติให้ใช้โมดูลของแอปนั้น (เรียกจากหน้า /admin/superadmin เท่านั้น — superadmin only)
+
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
+import { requireSuperadmin } from "@/pages/api/permissions/_auth";
+import User from "@/pages/api/permissions/_userModel";
+import { logAuditEvent } from "@/lib/auditLogger";
 
-/**
- * API สำหรับอัพเดท appId ของ user
- * ใช้กำหนดว่า user นี้อยู่ใน app ไหน
- */
 export default async function handler(req, res) {
-  const { method } = req;
-
-  await dbConnect();
-
-  if (method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, message: "Method Not Allowed" });
   }
 
   try {
-    const { userId, appId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "userId is required",
-      });
+    const auth = await requireSuperadmin(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({ success: false, message: auth.message });
     }
 
-    if (!appId) {
-      return res.status(400).json({
-        success: false,
-        message: "appId is required",
-      });
+    const { userId, appId } = req.body || {};
+    if (typeof userId !== "string" || !mongoose.isValidObjectId(userId)) {
+      return res.status(400).json({ success: false, message: "userId ไม่ถูกต้อง" });
+    }
+    if (typeof appId !== "string" || appId.trim() === "") {
+      return res.status(400).json({ success: false, message: "appId ไม่ถูกต้อง" });
     }
 
-    // สร้าง User model
-    const UserSchema = new mongoose.Schema(
-      {
-        name: String,
-        position: String,
-        department: String,
-        role: String,
-        phone: String,
-        profileImage: String,
-        profileUrl: String,
-        assignedTask: String,
-        clerkId: String,
-        appId: { type: String, default: "" },
-        isActive: { type: Boolean, default: true },
-        isArchived: { type: Boolean, default: false },
-        exitDate: { type: Date, default: null },
-        exitNote: { type: String, default: "" },
-        allowedPages: { type: [String], default: [] },
-      },
-      { collection: "users", timestamps: true }
-    );
-
-    const User = mongoose.models.User || mongoose.model("User", UserSchema);
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { appId },
-      { new: true, runValidators: true }
-    ).lean();
-
-    if (!user) {
+    await dbConnect();
+    const before = await User.findById(userId).select("name appId").lean();
+    if (!before) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    console.log(`✅ Updated appId for user ${user.name}: ${appId}`);
+    await User.updateOne({ _id: userId }, { $set: { appId } });
 
-    return res.status(200).json({
-      success: true,
-      message: "App ID updated successfully",
-      user,
+    await logAuditEvent({
+      actorClerkId: auth.userId,
+      actorName: auth.actorName,
+      action: "app_id_assigned",
+      resourceType: "user",
+      resourceId: userId,
+      before: { appId: before.appId || "" },
+      after: { appId },
+      description: `กำหนด App "${appId}" ให้ ${before.name || userId}`,
     });
+
+    return res.status(200).json({ success: true, message: "App ID updated successfully" });
   } catch (e) {
-    console.error("❌ Failed to update appId:", e.message);
-    return res.status(500).json({
-      success: false,
-      message: e.message,
-    });
+    console.error("update-app-id error:", e.message);
+    return res.status(500).json({ success: false, message: e.message });
   }
 }
-
