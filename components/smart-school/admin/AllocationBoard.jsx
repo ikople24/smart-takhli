@@ -120,8 +120,8 @@ export default function AllocationBoard({ rows, onRefresh }) {
     const awarded = list
       .filter((r) => r.status === 'ได้รับทุน')
       .sort((a, b) => (a.scholarshipRank ?? Number.MAX_SAFE_INTEGER) - (b.scholarshipRank ?? Number.MAX_SAFE_INTEGER));
-    const header = ['ลำดับที่', 'ชื่อ-นามสกุล', 'สถานศึกษา', 'จำนวนเงิน(บาท)'];
-    const lines = awarded.map((r) => [r.scholarshipRank ?? '', `${r.prefix || ''}${r.name || ''}`, r.schoolName || '', r.scholarshipAmount || info.amount]);
+    const header = ['ลำดับที่', 'ชื่อ-นามสกุล', 'สถานศึกษา', 'จำนวนเงิน(บาท)', 'รูปนักเรียน'];
+    const lines = awarded.map((r) => [r.scholarshipRank ?? '', `${r.prefix || ''}${r.name || ''}`, r.schoolName || '', r.scholarshipAmount || info.amount, (r.imageUrl && r.imageUrl[0]) || '']);
     const csv = [header, ...lines].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
