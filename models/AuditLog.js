@@ -21,7 +21,11 @@ const AuditLogSchema = new mongoose.Schema({
       'complaint_completed',
       // Permissions
       'permissions_updated',
+      'permissions_bulk_updated',
       'app_id_assigned',
+      // User repair (หน้า superadmin)
+      'user_repaired',
+      'user_doc_deleted',
       // Assignment
       'assignment_created',
       'assignment_completed',
