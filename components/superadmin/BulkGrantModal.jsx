@@ -82,7 +82,7 @@ export default function BulkGrantModal({ users, onClose, onDone }) {
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <h3 className="font-semibold text-slate-800">ให้สิทธิ์เป็นชุด</h3>
-          <button type="button" aria-label="ปิด" onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button type="button" aria-label="ปิด" onClick={onClose} disabled={saving} className="text-slate-400 hover:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-4 space-y-3 overflow-y-auto">
@@ -140,7 +140,7 @@ export default function BulkGrantModal({ users, onClose, onDone }) {
         </div>
 
         <div className="p-4 border-t border-slate-200 flex justify-end gap-2">
-          <button onClick={onClose} className="btn btn-sm btn-ghost">ยกเลิก</button>
+          <button onClick={onClose} disabled={saving} className="btn btn-sm btn-ghost">ยกเลิก</button>
           <button onClick={submit} disabled={saving || !pagePath || checked.size === 0}
             className="btn btn-sm bg-slate-800 hover:bg-slate-900 text-white border-0">
             {saving ? <span className="loading loading-spinner loading-sm" /> : `บันทึก (${checked.size} คน)`}

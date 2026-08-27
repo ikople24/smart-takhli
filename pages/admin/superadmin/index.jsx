@@ -2,7 +2,7 @@
 // หน้าจัดการ user + สิทธิ์ (superadmin เท่านั้น) — รีดีไซน์ 2026-08
 // ลิสต์เดียว merge Clerk+Mongo (GET /api/permissions/users-overview) พร้อมสถานะต่อคน
 // spec: docs/superpowers/specs/2026-08-27-superadmin-user-management-design.md
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import Swal from "sweetalert2";
@@ -25,6 +25,15 @@ const FILTERS = [
 // key ประจำแถว: บางแถวไม่มี mongoId (no_doc) บางแถวอาจไม่มี clerkId (doc เก่า)
 const rowKey = (u) => u.mongoId || u.clerkId;
 
+// อ่าน JSON แบบกันเคส server ตอบ HTML (เช่น build ทับ dev) — ให้ข้อความอ่านรู้เรื่องแทน SyntaxError
+async function readJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return { message: `เซิร์ฟเวอร์ตอบผิดรูปแบบ (HTTP ${res.status})` };
+  }
+}
+
 export default function SuperAdminPage() {
   const { user } = useUser();
   const router = useRouter();
@@ -32,12 +41,15 @@ export default function SuperAdminPage() {
   const [rows, setRows] = useState([]);
   const [clerkUnavailable, setClerkUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [expandedKey, setExpandedKey] = useState(null);
+  const expandedRef = useRef(null); // sync กับ expandedKey — ใช้กันเทสิทธิ์ที่แก้ค้างไว้ตอน refetch
   const [editedPages, setEditedPages] = useState({}); // key = mongoId
   const [busy, setBusy] = useState({}); // key = rowKey
   const [bulkOpen, setBulkOpen] = useState(false);
+  const fetchSeq = useRef(0);
 
   const isSuperAdmin = user?.publicMetadata?.role === "superadmin";
 
@@ -52,11 +64,14 @@ export default function SuperAdminPage() {
     }
   }, [user, isSuperAdmin, router]);
 
-  const fetchOverview = useCallback(async () => {
+  const fetchOverview = useCallback(async ({ background = false } = {}) => {
     try {
-      setLoading(true);
+      const seq = ++fetchSeq.current;
+      if (background) setRefreshing(true);
+      else setLoading(true);
       const res = await fetch("/api/permissions/users-overview");
-      const data = await res.json();
+      const data = await readJson(res);
+      if (seq !== fetchSeq.current) return;
       if (!res.ok) throw new Error(data.message || "โหลดข้อมูลไม่สำเร็จ");
       setRows(data.users || []);
       setClerkUnavailable(!!data.clerkUnavailable);
@@ -64,12 +79,17 @@ export default function SuperAdminPage() {
       for (const u of data.users || []) {
         if (u.mongoId) pagesMap[u.mongoId] = u.allowedPages;
       }
-      setEditedPages(pagesMap);
+      // อย่าเทสิทธิ์ที่กำลังแก้ค้างอยู่ในแถวที่กางอยู่ (refetch เกิดหลังทุก action)
+      setEditedPages((prev) => {
+        const k = expandedRef.current;
+        return k && prev[k] ? { ...pagesMap, [k]: prev[k] } : pagesMap;
+      });
     } catch (e) {
       console.error(e);
       Swal.fire({ icon: "error", title: "โหลดข้อมูลไม่สำเร็จ", text: e.message });
     } finally {
-      setLoading(false);
+      if (background) setRefreshing(false);
+      else setLoading(false);
     }
   }, []);
 
@@ -81,7 +101,7 @@ export default function SuperAdminPage() {
     try {
       setBusy((prev) => ({ ...prev, [key]: true }));
       await fn();
-      await fetchOverview();
+      await fetchOverview({ background: true });
     } catch (e) {
       console.error(e);
       Swal.fire({ icon: "error", title: "ไม่สำเร็จ", text: e.message });
@@ -96,7 +116,7 @@ export default function SuperAdminPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
+    const data = await readJson(res);
     if (!res.ok) throw new Error(data.message || "Failed");
     return data;
   };
@@ -133,7 +153,10 @@ export default function SuperAdminPage() {
     }
     await withBusy(rowKey(u), async () => {
       // contract ใช้ mongoId — เจาะจง doc เดียวเสมอ (ดู spec/repair-user)
-      await post("/api/permissions/repair-user", { mongoId: u.mongoId, action });
+      const data = await post("/api/permissions/repair-user", { mongoId: u.mongoId, action });
+      if (data.message || data.name) {
+        Swal.fire({ icon: "success", title: data.message || `เติมชื่อ "${data.name}" แล้ว`, timer: 2500, showConfirmButton: false });
+      }
     });
   };
 
@@ -246,8 +269,8 @@ export default function SuperAdminPage() {
             <button onClick={() => setBulkOpen(true)} className="btn btn-xs btn-outline border-slate-300 text-slate-600">
               <ListChecks className="w-3.5 h-3.5 mr-1" />ให้สิทธิ์เป็นชุด
             </button>
-            <button onClick={fetchOverview} aria-label="รีเฟรช" className="btn btn-xs btn-ghost text-slate-500">
-              <RefreshCw className="w-3.5 h-3.5" />
+            <button onClick={() => fetchOverview({ background: true })} aria-label="รีเฟรช" className="btn btn-xs btn-ghost text-slate-500">
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             </button>
           </div>
         </div>
@@ -268,7 +291,11 @@ export default function SuperAdminPage() {
                   busy={!!busy[key]}
                   expanded={expandedKey === key}
                   clerkUnavailable={clerkUnavailable}
-                  onToggle={() => setExpandedKey(expandedKey === key ? null : key)}
+                  onToggle={() => {
+                    const next = expandedKey === key ? null : key;
+                    setExpandedKey(next);
+                    expandedRef.current = next;
+                  }}
                   onOnboard={onboard}
                   onAssignApp={assignApp}
                   onRepair={repair}
@@ -297,7 +324,7 @@ export default function SuperAdminPage() {
         <BulkGrantModal
           users={rows.filter((u) => u.status === STATUS.ACTIVE)}
           onClose={() => setBulkOpen(false)}
-          onDone={() => { setBulkOpen(false); fetchOverview(); }}
+          onDone={() => { setBulkOpen(false); fetchOverview({ background: true }); }}
         />
       )}
     </div>
