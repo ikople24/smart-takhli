@@ -1581,7 +1581,8 @@ export default function SuperAdminPage() {
       if (!confirm.isConfirmed) return;
     }
     await withBusy(rowKey(u), async () => {
-      await post("/api/permissions/repair-user", { clerkId: u.clerkId, action });
+      // contract เปลี่ยนเป็น mongoId ตาม code review Task 6 (เจาะจง doc เดียว กัน clerkId ซ้ำ)
+      await post("/api/permissions/repair-user", { mongoId: u.mongoId, action });
     });
   };
 
