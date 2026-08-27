@@ -37,13 +37,14 @@
 | `active` | `appId` = `NEXT_PUBLIC_APP_ID` ปัจจุบัน |
 | `orphan` | มี doc แต่ `clerkId` หาใน Clerk ไม่เจอ (บัญชีถูกลบ) |
 
-- response ต่อคน: `clerkId`, `mongoId`, `name` (Mongo → fallback ชื่อ Clerk), `email`, `imageUrl`, `position`, `department`, `appId`, `role` (Mongo) , `clerkRole` (`publicMetadata.role`), `allowedApps`, `allowedPages`, `lastSignInAt`, `status`
+- response ต่อคน: `clerkId`, `mongoId`, `name` (Mongo → fallback ชื่อ Clerk), `email`, `imageUrl`, `position`, `department`, `appId`, `role` (Mongo) , `clerkRole` (`publicMetadata.role`), `allowedApps`, `allowedPages`, `lastSignInAt`, `status`, `isStub`, `clerkBlocksApp`
+- **`clerkBlocksApp`** *(เพิ่มตาม code review 2026-08-27)*: โค้ดจริงของ `verify-app-access` ให้ Clerk `allowedApps` (ถ้าไม่ว่าง) **ตัดสิน app access ขาด** — Mongo `appId` เป็นแค่ fallback ตอน allowedApps ว่าง ดังนั้น user อาจโชว์ `active` แต่ล็อกอินแอปนี้ไม่ได้ · field นี้ = true เมื่อ allowedApps ไม่ว่างและไม่มีแอปปัจจุบัน/`*` (superadmin ยกเว้น) → UI แสดง badge เตือน · ด้านกลับ (`other_app` แต่ allowedApps อนุญาตแอปนี้ = เข้า shell ได้แต่ใช้โมดูลไม่ได้) คงตาม status เดิม — UI ห้ามตีความ `other_app` ว่า "เข้าไม่ได้เลย"
 - **logic merge + คำนวณ status เป็น pure function** ใน `lib/superadmin/usersOverview.ts` (รับ array Clerk + array Mongo คืน array ที่ merge แล้ว) — endpoint เป็นแค่เปลือกบาง ๆ
 
 #### 2. `POST /api/permissions/repair-user` — body `{ clerkId, action }`
 
 - `action: "fill_name"` — ดึงชื่อ (fallback email) จาก Clerk มา `$set: { name }` (ตามแบบ `scripts/backfill-user-name-appid.js`)
-- `action: "delete_stub"` — ลบ doc ได้**เฉพาะเมื่อเป็น stub จริง**: ไม่มี `name` และไม่มี `appId` และไม่มี `createdAt` — ไม่ผ่าน guard คืน 400 · ก่อนลบเก็บ doc เต็มลง audit log เสมอ (แทน backup file)
+- `action: "delete_stub"` — ลบ doc ได้**เฉพาะเมื่อเป็น stub จริง**: ไม่มี `name`, ไม่มี `appId`, ไม่มี `createdAt`/`updatedAt` และ `allowedPages` ว่าง *(เข้มขึ้นจากร่างแรกตาม code review 2026-08-27 — กัน doc ที่เคยถูกแก้สิทธิ์แล้วหลุดเข้า guard)* — ไม่ผ่าน guard คืน 400 · ก่อนลบเก็บ doc เต็มลง audit log เสมอ (แทน backup file)
 - `action: "delete_orphan"` — ลบ doc ของบัญชีที่ถูกลบจาก Clerk ไปแล้ว · guard: server เรียก Clerk ยืนยันเองว่า `clerkId` นั้นไม่มีจริง (404) ก่อนลบ — ไม่เชื่อสถานะที่ client ส่งมา · เก็บ doc เต็มลง audit log ก่อนลบเช่นกัน
 - ใช้ได้กับ doc ทุกแอป (การซ่อมไม่จำกัดแอป)
 
