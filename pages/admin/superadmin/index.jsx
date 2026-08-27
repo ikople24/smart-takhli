@@ -155,7 +155,14 @@ export default function SuperAdminPage() {
       // contract ใช้ mongoId — เจาะจง doc เดียวเสมอ (ดู spec/repair-user)
       const data = await post("/api/permissions/repair-user", { mongoId: u.mongoId, action });
       if (data.message || data.name) {
-        Swal.fire({ icon: "success", title: data.message || `เติมชื่อ "${data.name}" แล้ว`, timer: 2500, showConfirmButton: false });
+        // ใช้ text (textContent) ไม่ใช่ title เพราะ Swal render title เป็น HTML — data.name มาจาก Clerk
+        Swal.fire({
+          icon: "success",
+          title: data.name ? "เติมชื่อจาก Clerk แล้ว" : "สำเร็จ",
+          text: data.message || data.name || "",
+          timer: 2500,
+          showConfirmButton: false,
+        });
       }
     });
   };
