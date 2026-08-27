@@ -106,7 +106,7 @@ export default function UserRow({
           )}
           {expandable && (
             <button type="button" aria-expanded={expanded} aria-label="กาง/หุบสิทธิ์"
-              className="text-slate-400" onClick={onToggle}>
+              className="text-slate-400 cursor-pointer" onClick={onToggle}>
               {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
             </button>
           )}

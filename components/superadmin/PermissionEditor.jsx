@@ -35,7 +35,7 @@ export default function PermissionEditor({ role, value, onChange, onSave, saving
     <div className="border-t border-slate-200 p-4 bg-slate-50">
       {usingDefault && (
         <div className="mb-4 rounded-xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">
-          ตอนนี้ใช้<strong>ค่า default ตาม role &quot;{role}&quot;</strong> ({defaults.length} หน้า) —
+          ตอนนี้ใช้<strong>ค่า default ตาม role &quot;{role || "(ไม่ระบุ)"}&quot;</strong> ({defaults.length} หน้า) —
           ติ๊กหน้าใดก็ตามจะเปลี่ยนเป็นสิทธิ์กำหนดเอง และ default จะไม่มีผลอีก
         </div>
       )}
@@ -66,7 +66,7 @@ export default function PermissionEditor({ role, value, onChange, onSave, saving
         {orderedCats.map((cat) => (
           <div key={cat}>
             <div className="flex items-center justify-between mb-2">
-              <h5 className="text-sm font-semibold text-slate-600">{CATEGORY_LABELS[cat]}</h5>
+              <h5 className="text-sm font-semibold text-slate-600">{CATEGORY_LABELS[cat] || cat}</h5>
               <button onClick={() => toggleCategory(groups[cat])}
                 className="text-xs text-sky-600 hover:underline">
                 ติ๊ก/เอาออกทั้งหมวด
