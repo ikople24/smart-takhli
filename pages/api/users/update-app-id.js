@@ -26,13 +26,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, message: "appId ไม่ถูกต้อง" });
     }
 
+    const cleanAppId = appId.trim();
+
     await dbConnect();
     const before = await User.findById(userId).select("name appId").lean();
     if (!before) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    await User.updateOne({ _id: userId }, { $set: { appId } });
+    await User.updateOne({ _id: userId }, { $set: { appId: cleanAppId } });
 
     await logAuditEvent({
       actorClerkId: auth.userId,
@@ -41,8 +43,8 @@ export default async function handler(req, res) {
       resourceType: "user",
       resourceId: userId,
       before: { appId: before.appId || "" },
-      after: { appId },
-      description: `กำหนด App "${appId}" ให้ ${before.name || userId}`,
+      after: { appId: cleanAppId },
+      description: `กำหนด App "${cleanAppId}" ให้ ${before.name || userId}`,
     });
 
     return res.status(200).json({ success: true, message: "App ID updated successfully" });
