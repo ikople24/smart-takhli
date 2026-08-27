@@ -52,9 +52,10 @@
 
 #### 3. `POST /api/permissions/bulk-grant` — body `{ pagePath, userIds, mode: "grant" | "revoke" }`
 
-- validate: `pagePath` ต้องอยู่ใน `ALL_PAGES` · `userIds` ต้องเป็น user ของแอปปัจจุบันเท่านั้น
-- `grant` = `$addToSet` / `revoke` = `$pull` บน `allowedPages`
-- **กติกาสำคัญ:** แตะเฉพาะ user ที่ `allowedPages` **ไม่ว่าง** — ลิสต์ว่าง = ใช้ `DEFAULT_PERMISSIONS[role]`; การเติม 1 หน้าเข้าลิสต์ว่างจะ override default ทั้งชุดหายเงียบ · user ลิสต์ว่างที่ถูกส่งมาให้ **ข้าม** และรายงานกลับใน response (`skipped: [...]`)
+- validate: `pagePath` ต้องอยู่ใน `ALL_PAGES` · `userIds` ต้องเป็น user ของแอปปัจจุบันเท่านั้น (dedupe + ตรวจเป็น ObjectId จริงก่อนใช้)
+- `grant` = `$addToSet` / `revoke` = `$pull` บน `allowedPages` — write filter บังคับซ้ำที่ชั้นเขียน: `appId` ตรง + `allowedPages` ไม่ว่าง + ไม่ archived (กัน race ระหว่างอ่าน-เขียน)
+- **กติกาสำคัญ:** แตะเฉพาะ user ที่ `allowedPages` **ไม่ว่าง** — ลิสต์ว่าง = ใช้ `DEFAULT_PERMISSIONS[role]`; การเติม 1 หน้าเข้าลิสต์ว่างจะ override default ทั้งชุดหายเงียบ · user ลิสต์ว่างที่ถูกส่งมาให้ **ข้าม** และรายงานกลับใน response (`skippedDefault: [...]`)
+- **กติกาฝั่ง revoke** *(เพิ่มตาม code review 2026-08-27)*: ห้าม revoke จนลิสต์**ว่าง** — ลิสต์ว่างทำให้ user เด้งกลับไปใช้ default ของ role ซึ่งอาจ**ได้สิทธิ์เพิ่ม** (revoke กลายเป็น escalation) · เคสนี้ **ข้าม** และรายงานกลับ (`skippedWouldEmpty: [...]`) — ให้แก้รายคนผ่านตัวแก้สิทธิ์แทน
 - แทนที่ grant script ตระกูล `scripts/grant-*` สำหรับงานประจำ (script เดิมเก็บไว้เป็นประวัติ)
 
 ### ของเดิมที่คงไว้ / เลิกใช้
