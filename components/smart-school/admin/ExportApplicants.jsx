@@ -30,7 +30,9 @@ const HEADERS = [
   'รายเก่า/ใหม่',
   'สถานะ',
   'เงินทุน',
+  'รับทุน',
   'ลิงก์แผนที่',
+  'รูปนักเรียน',
   'หมายเหตุ',
 ];
 
@@ -61,7 +63,9 @@ function rowCells(row) {
     RENEWAL_LABEL[renewalStatus(row).kind] || '',
     row.status || '',
     row.scholarshipAmount ?? '',
+    row.status === 'ได้รับทุน' ? 'ได้รับ' : '',
     mapsLink(row.location),
+    (row.imageUrl && row.imageUrl[0]) || '',
     row.note || '',
   ];
 }
