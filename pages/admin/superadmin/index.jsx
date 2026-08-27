@@ -1,609 +1,305 @@
-import { useState, useEffect } from "react";
+// pages/admin/superadmin/index.jsx
+// หน้าจัดการ user + สิทธิ์ (superadmin เท่านั้น) — รีดีไซน์ 2026-08
+// ลิสต์เดียว merge Clerk+Mongo (GET /api/permissions/users-overview) พร้อมสถานะต่อคน
+// spec: docs/superpowers/specs/2026-08-27-superadmin-user-management-design.md
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/router";
 import Swal from "sweetalert2";
-import {
-  Shield,
-  Users,
-  Search,
-  Crown,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-  Save,
-  AlertTriangle,
-  Building2,
-  Briefcase,
-  UserPlus
-} from "lucide-react";
-import { ALL_PAGES, getExecutivePagePaths } from "@/lib/permissions";
+import { Crown, Users, Search, RefreshCw, AlertTriangle, Building2, ListChecks } from "lucide-react";
+import { STATUS } from "@/lib/superadmin/usersOverview";
+import UserRow from "@/components/superadmin/UserRow";
+import PermissionEditor from "@/components/superadmin/PermissionEditor";
+import BulkGrantModal from "@/components/superadmin/BulkGrantModal";
 
-// App ID ปัจจุบัน (ดึงจาก env)
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "smart-takhli";
+const NEEDS_ACTION = [STATUS.BROKEN, STATUS.ORPHAN, STATUS.NO_DOC, STATUS.NO_APP];
+
+const FILTERS = [
+  { key: "all", label: "ทั้งหมด" },
+  { key: "needs_action", label: "ต้องดำเนินการ" },
+  { key: "active", label: "ใช้งานได้" },
+  { key: "other_app", label: "แอปอื่น" },
+];
+
+// key ประจำแถว: บางแถวไม่มี mongoId (no_doc) บางแถวอาจไม่มี clerkId (doc เก่า)
+const rowKey = (u) => u.mongoId || u.clerkId;
 
 export default function SuperAdminPage() {
   const { user } = useUser();
   const router = useRouter();
-  
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [saving, setSaving] = useState({});
-  const [expandedUser, setExpandedUser] = useState(null);
-  const [editedPages, setEditedPages] = useState({});
-  const [showOnlyCurrentApp, setShowOnlyCurrentApp] = useState(true); // กรองเฉพาะ app ปัจจุบัน
-  const [unregistered, setUnregistered] = useState([]); // มีบัญชี Clerk แต่ยังไม่มี doc ใน Mongo
-  const [onboarding, setOnboarding] = useState({});
 
-  const isSuperAdmin = user?.publicMetadata?.role === 'superadmin';
+  const [rows, setRows] = useState([]);
+  const [clerkUnavailable, setClerkUnavailable] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [expandedKey, setExpandedKey] = useState(null);
+  const [editedPages, setEditedPages] = useState({}); // key = mongoId
+  const [busy, setBusy] = useState({}); // key = rowKey
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const isSuperAdmin = user?.publicMetadata?.role === "superadmin";
 
   useEffect(() => {
     if (user && !isSuperAdmin) {
       Swal.fire({
-        icon: 'error',
-        title: 'ไม่มีสิทธิ์เข้าถึง',
-        text: 'เฉพาะ Super Admin เท่านั้น',
-        confirmButtonText: 'กลับหน้าหลัก',
-      }).then(() => router.replace('/'));
+        icon: "error",
+        title: "ไม่มีสิทธิ์เข้าถึง",
+        text: "เฉพาะ Super Admin เท่านั้น",
+        confirmButtonText: "กลับหน้าหลัก",
+      }).then(() => router.replace("/"));
     }
   }, [user, isSuperAdmin, router]);
 
-  useEffect(() => {
-    if (isSuperAdmin) fetchUsers();
-  }, [isSuperAdmin]);
-
-  const fetchUsers = async () => {
+  const fetchOverview = useCallback(async () => {
     try {
       setLoading(true);
-      // ดึงจาก MongoDB โดยตรง (รวม allowedPages)
-      const res = await fetch('/api/users/get-all-users-local');
+      const res = await fetch("/api/permissions/users-overview");
       const data = await res.json();
-      const usersList = Array.isArray(data) ? data : (data.users || []);
-      setUsers(usersList);
-      
-      // Initialize edited pages - ถ้ายังไม่มี allowedPages ให้เป็นทุกหน้า (default)
+      if (!res.ok) throw new Error(data.message || "โหลดข้อมูลไม่สำเร็จ");
+      setRows(data.users || []);
+      setClerkUnavailable(!!data.clerkUnavailable);
       const pagesMap = {};
-      usersList.forEach(u => {
-        pagesMap[u._id] = u.allowedPages || ALL_PAGES.map(p => p.path);
-      });
+      for (const u of data.users || []) {
+        if (u.mongoId) pagesMap[u.mongoId] = u.allowedPages;
+      }
       setEditedPages(pagesMap);
-
-      // พนักงานใหม่: มีบัญชี Clerk แล้วแต่ยังไม่มี doc ใน Mongo → ยังใช้งานระบบไม่ได้
-      const unregRes = await fetch('/api/permissions/clerk-unregistered');
-      const unregData = await unregRes.json();
-      setUnregistered(unregData.users || []);
-    } catch (error) {
-      console.error("Error:", error);
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: "error", title: "โหลดข้อมูลไม่สำเร็จ", text: e.message });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // เพิ่มพนักงานใหม่เข้าระบบ = สร้าง Mongo doc (ผูก clerkId + appId ปัจจุบัน)
-  // หลังจากนี้เขาจะเข้าระบบได้ และโผล่ในรายการด้านล่างให้ติ๊กสิทธิ์ต่อ
-  const onboardUser = async (clerkUser) => {
+  useEffect(() => {
+    if (isSuperAdmin) fetchOverview();
+  }, [isSuperAdmin, fetchOverview]);
+
+  const withBusy = async (key, fn) => {
     try {
-      setOnboarding(prev => ({ ...prev, [clerkUser.clerkId]: true }));
-
-      const res = await fetch('/api/users/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clerkId: clerkUser.clerkId,
-          name: clerkUser.name || clerkUser.email,
-          role: 'admin',
-          profileUrl: clerkUser.imageUrl,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed');
-      }
-
-      Swal.fire({
-        icon: 'success',
-        title: 'เพิ่มเข้าระบบแล้ว',
-        text: `${clerkUser.name || clerkUser.email} ใช้งาน ${CURRENT_APP_ID} ได้แล้ว — กำหนดสิทธิ์หน้าต่อได้ด้านล่าง`,
-        timer: 2500,
-        showConfirmButton: false,
-      });
-
-      await fetchUsers();
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ icon: 'error', title: 'เพิ่มไม่สำเร็จ', text: error.message });
+      setBusy((prev) => ({ ...prev, [key]: true }));
+      await fn();
+      await fetchOverview();
+    } catch (e) {
+      console.error(e);
+      Swal.fire({ icon: "error", title: "ไม่สำเร็จ", text: e.message });
     } finally {
-      setOnboarding(prev => ({ ...prev, [clerkUser.clerkId]: false }));
+      setBusy((prev) => ({ ...prev, [key]: false }));
     }
   };
 
-  const togglePage = (userId, pagePath) => {
-    setEditedPages(prev => {
-      const current = prev[userId] || [];
-      if (current.includes(pagePath)) {
-        return { ...prev, [userId]: current.filter(p => p !== pagePath) };
-      } else {
-        return { ...prev, [userId]: [...current, pagePath] };
-      }
+  const post = async (url, body) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed");
+    return data;
+  };
+
+  const onboard = (u) =>
+    withBusy(rowKey(u), async () => {
+      await post("/api/users/create", {
+        clerkId: u.clerkId,
+        name: u.name || u.email,
+        role: "admin",
+        profileUrl: u.imageUrl,
+      });
+      Swal.fire({ icon: "success", title: "เพิ่มเข้าระบบแล้ว", text: `${u.name || u.email} ใช้งาน ${CURRENT_APP_ID} ได้แล้ว`, timer: 2000, showConfirmButton: false });
+    });
+
+  const assignApp = (u) =>
+    withBusy(rowKey(u), async () => {
+      await post("/api/users/update-app-id", { userId: u.mongoId, appId: CURRENT_APP_ID });
+      Swal.fire({ icon: "success", title: "กำหนด App แล้ว", timer: 1500, showConfirmButton: false });
+    });
+
+  const repair = async (u, action) => {
+    if (action !== "fill_name") {
+      const confirm = await Swal.fire({
+        icon: "warning",
+        title: action === "delete_stub" ? "ลบ stub doc?" : "ลบ doc ของบัญชีที่ถูกลบ?",
+        text: "ข้อมูลเดิมจะถูกเก็บสำเนาไว้ใน Audit Log",
+        showCancelButton: true,
+        confirmButtonText: "ลบ",
+        cancelButtonText: "ยกเลิก",
+        confirmButtonColor: "#dc2626",
+      });
+      if (!confirm.isConfirmed) return;
+    }
+    await withBusy(rowKey(u), async () => {
+      // contract ใช้ mongoId — เจาะจง doc เดียวเสมอ (ดู spec/repair-user)
+      await post("/api/permissions/repair-user", { mongoId: u.mongoId, action });
     });
   };
 
-  const selectAllPages = (userId) => {
-    setEditedPages(prev => ({
-      ...prev,
-      [userId]: ALL_PAGES.map(p => p.path)
-    }));
-  };
-
-  const clearAllPages = (userId) => {
-    setEditedPages(prev => ({
-      ...prev,
-      [userId]: []
-    }));
-  };
-
-  // Preset "ผู้บริหาร" — เห็นทุกโมดูลยกเว้นการตั้งค่า (ดู getExecutivePagePaths ใน lib/permissions)
-  const applyExecutivePreset = (userId) => {
-    setEditedPages(prev => ({
-      ...prev,
-      [userId]: getExecutivePagePaths()
-    }));
-  };
-
-  const saveUserPages = async (userData) => {
-    try {
-      setSaving(prev => ({ ...prev, [userData._id]: true }));
-      
-      // บันทึกลง MongoDB
-      const res = await fetch('/api/users/update-allowed-pages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userData._id,
-          allowedPages: editedPages[userData._id] || [],
-        }),
+  const savePages = (u) =>
+    withBusy(rowKey(u), async () => {
+      await post("/api/users/update-allowed-pages", {
+        userId: u.mongoId,
+        allowedPages: editedPages[u.mongoId] || [],
       });
+      Swal.fire({ icon: "success", title: "บันทึกสิทธิ์แล้ว", timer: 1500, showConfirmButton: false });
+    });
 
-      if (res.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: 'บันทึกสำเร็จ',
-          text: `อัปเดตหน้าที่อนุญาตสำหรับ ${userData.name} แล้ว`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
-        
-        // Update local state
-        setUsers(prev => prev.map(u => 
-          u._id === userData._id 
-            ? { ...u, allowedPages: editedPages[userData._id] } 
-            : u
-        ));
-      } else {
-        throw new Error('Failed');
-      }
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถบันทึกได้' });
-    } finally {
-      setSaving(prev => ({ ...prev, [userData._id]: false }));
-    }
-  };
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((u) => {
+      const matchSearch =
+        q === "" ||
+        [u.name, u.email, u.department, u.position, u.clerkId]
+          .some((f) => (f || "").toLowerCase().includes(q));
+      if (!matchSearch) return false;
+      if (filter === "needs_action") return NEEDS_ACTION.includes(u.status);
+      if (filter === "active") return u.status === STATUS.ACTIVE;
+      if (filter === "other_app") return u.status === STATUS.OTHER_APP;
+      return true;
+    });
+  }, [rows, search, filter]);
 
-  // กำหนด appId ให้ user
-  const assignAppId = async (userData) => {
-    try {
-      setSaving(prev => ({ ...prev, [userData._id]: true }));
-      
-      const res = await fetch('/api/users/update-app-id', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userData._id,
-          appId: CURRENT_APP_ID,
-        }),
-      });
-
-      if (res.ok) {
-        Swal.fire({
-          icon: 'success',
-          title: 'กำหนด App สำเร็จ',
-          text: `${userData.name} ถูกกำหนดให้ใช้ ${CURRENT_APP_ID} แล้ว`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
-        
-        // Update local state
-        setUsers(prev => prev.map(u => 
-          u._id === userData._id 
-            ? { ...u, appId: CURRENT_APP_ID } 
-            : u
-        ));
-      } else {
-        throw new Error('Failed');
-      }
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถกำหนด App ได้' });
-    } finally {
-      setSaving(prev => ({ ...prev, [userData._id]: false }));
-    }
-  };
-
-  // กรอง users ตาม search และ appId
-  const filteredUsers = users.filter(u => {
-    // สำคัญ: อย่าใช้ (u.name?...  || u.department?...) ตรง ๆ เพราะถ้า user "ไม่มีทั้ง
-    // name และ department" ผลจะเป็น undefined (falsy) → ถูกซ่อนถาวรแม้ search ว่าง
-    // (เคสจริง: doc ที่สร้างข้ามแอปมาไม่มี name → หายไปจากรายการทั้งหมด)
-    const q = searchTerm.trim().toLowerCase();
-    const matchSearch = q === "" ||
-      (u.name || "").toLowerCase().includes(q) ||
-      (u.department || "").toLowerCase().includes(q) ||
-      (u.clerkId || "").toLowerCase().includes(q);
-
-    if (!showOnlyCurrentApp) return matchSearch;
-
-    // กรองเฉพาะ user ที่มี appId ตรงกัน หรือยังไม่ได้กำหนด appId
-    const userAppId = u.appId || "";
-    return matchSearch && (userAppId === "" || userAppId === CURRENT_APP_ID);
-  });
-
-  // นับจำนวน user ที่ยังไม่ได้กำหนด appId
-  const usersWithoutAppId = users.filter(u => !u.appId || u.appId === "").length;
-  const usersWithCurrentApp = users.filter(u => u.appId === CURRENT_APP_ID).length;
+  const counts = useMemo(
+    () => ({
+      total: rows.length,
+      active: rows.filter((u) => u.status === STATUS.ACTIVE).length,
+      needsAction: rows.filter((u) => NEEDS_ACTION.includes(u.status)).length,
+      otherApp: rows.filter((u) => u.status === STATUS.OTHER_APP).length,
+    }),
+    [rows]
+  );
 
   if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="loading loading-spinner loading-lg text-primary"></div>
+        <div className="loading loading-spinner loading-lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-100 p-4 md:p-8">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl shadow-lg">
-                <Crown className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Super Admin</h1>
-                <p className="text-purple-200">จัดการหน้าที่อนุญาตสำหรับแต่ละ User</p>
-              </div>
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-slate-800 rounded-xl">
+              <Crown className="w-7 h-7 text-amber-400" />
             </div>
-            <div className="flex gap-2">
-              <a href="/admin/superadmin/line-settings" className="btn btn-sm btn-outline text-white border-white/40 hover:bg-white/10">
-                💬 ตั้งค่า LINE
-              </a>
-              <a href="/admin/superadmin/audit-log" className="btn btn-sm btn-outline text-white border-white/40 hover:bg-white/10">
-                📜 Audit Log
-              </a>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">จัดการผู้ใช้และสิทธิ์</h1>
+              <p className="text-sm text-slate-500">แอปปัจจุบัน: {CURRENT_APP_ID}</p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <a href="/admin/superadmin/line-settings" className="btn btn-sm btn-outline border-slate-300 text-slate-600">💬 ตั้งค่า LINE</a>
+            <a href="/admin/superadmin/audit-log" className="btn btn-sm btn-outline border-slate-300 text-slate-600">📜 Audit Log</a>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-blue-400" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {[
+            { icon: Users, label: "ทั้งหมด", value: counts.total, cls: "text-slate-600" },
+            { icon: Building2, label: `ใช้งานได้ (${CURRENT_APP_ID})`, value: counts.active, cls: "text-emerald-600" },
+            { icon: AlertTriangle, label: "ต้องดำเนินการ", value: counts.needsAction, cls: "text-amber-600" },
+            { icon: Users, label: "แอปอื่น", value: counts.otherApp, cls: "text-slate-400" },
+          ].map((s) => (
+            <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
+              <s.icon className={`w-7 h-7 ${s.cls}`} />
               <div>
-                <div className="text-2xl font-bold text-white">{users.length}</div>
-                <div className="text-sm text-blue-200">ผู้ใช้ทั้งหมด</div>
+                <div className="text-xl font-bold text-slate-800">{s.value}</div>
+                <div className="text-xs text-slate-500">{s.label}</div>
               </div>
             </div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-8 h-8 text-emerald-400" />
-              <div>
-                <div className="text-2xl font-bold text-white">{usersWithCurrentApp}</div>
-                <div className="text-sm text-emerald-200">{CURRENT_APP_ID}</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-8 h-8 text-amber-400" />
-              <div>
-                <div className="text-2xl font-bold text-white">{usersWithoutAppId}</div>
-                <div className="text-sm text-amber-200">ยังไม่กำหนด App</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-purple-400" />
-              <div>
-                <div className="text-2xl font-bold text-white">{ALL_PAGES.length}</div>
-                <div className="text-sm text-purple-200">หน้าทั้งหมด</div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Search & Refresh */}
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 mb-6 border border-white/20">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="ค้นหาผู้ใช้..."
-                className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showOnlyCurrentApp}
-                  onChange={(e) => setShowOnlyCurrentApp(e.target.checked)}
-                  className="checkbox checkbox-sm checkbox-primary"
-                />
-                <span className="text-white text-sm">เฉพาะ {CURRENT_APP_ID}</span>
-              </label>
-              <button
-                onClick={fetchUsers}
-                className="btn btn-outline border-white/30 text-white hover:bg-white/10"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                รีเฟรช
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="bg-blue-500/20 border border-blue-500/40 rounded-xl p-4 mb-6">
-          <p className="text-blue-200 text-sm mb-2">
-            💡 <strong>วิธีใช้:</strong> กดลูกศรเพื่อขยายและเลือกหน้าที่อนุญาตให้แต่ละ user เข้าถึงได้ 
-            จากนั้นกดบันทึก
-          </p>
-          <p className="text-amber-200 text-sm">
-            🔒 <strong>ความปลอดภัย:</strong> User ที่มี badge &quot;ยังไม่กำหนด App&quot; จะ<strong>ไม่สามารถเข้าใช้งานได้</strong> 
-            คุณต้องกด &quot;กำหนด App&quot; เพื่ออนุมัติให้ใช้งาน <strong>{CURRENT_APP_ID}</strong>
-          </p>
-        </div>
-
-        {/* พนักงานใหม่: มีบัญชี Clerk แต่ยังไม่มี doc ใน Mongo → ยังเข้าระบบไม่ได้ */}
-        {!loading && unregistered.length > 0 && (
-          <div className="bg-emerald-500/10 border border-emerald-500/40 rounded-2xl p-4 mb-6">
-            <div className="flex items-center gap-2 mb-1">
-              <UserPlus className="w-5 h-5 text-emerald-400" />
-              <h3 className="text-white font-semibold">
-                พนักงานใหม่รอเพิ่มเข้าระบบ ({unregistered.length})
-              </h3>
-            </div>
-            <p className="text-emerald-200/80 text-sm mb-4">
-              มีบัญชี Clerk แล้วแต่ยังไม่มีข้อมูลในระบบ → ตอนนี้เข้าใช้งานไม่ได้ (ขึ้น &quot;ยังไม่ได้ลงทะเบียน&quot;)
-              กด &quot;เพิ่มเข้าระบบ&quot; เพื่อสร้างข้อมูลและกำหนด App <strong>{CURRENT_APP_ID}</strong> ให้
-            </p>
-
-            <div className="space-y-2">
-              {unregistered.map((cu) => (
-                <div
-                  key={cu.clerkId}
-                  className="flex items-center justify-between gap-4 bg-white/5 rounded-xl p-3 border border-white/10"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {cu.imageUrl ? (
-                      <img
-                        src={cu.imageUrl}
-                        alt={cu.name}
-                        className="w-10 h-10 rounded-full object-cover ring-2 ring-white/20"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold">
-                        {(cu.name || cu.email || '?').charAt(0)}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="text-white font-medium truncate">
-                        {cu.name || '(ยังไม่ตั้งชื่อใน Clerk)'}
-                      </div>
-                      <div className="text-sm text-gray-400 truncate">{cu.email}</div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => onboardUser(cu)}
-                    disabled={onboarding[cu.clerkId]}
-                    className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white border-0 shrink-0"
-                  >
-                    {onboarding[cu.clerkId] ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        เพิ่มเข้าระบบ
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
+        {/* Clerk unavailable banner */}
+        {clerkUnavailable && (
+          <div className="mb-4 rounded-xl bg-amber-50 border border-amber-300 px-4 py-3 text-sm text-amber-800">
+            ⚠️ ติดต่อ Clerk ไม่ได้ชั่วคราว — แสดงเฉพาะข้อมูลในระบบ ปุ่มเพิ่ม/ซ่อมถูกปิดไว้จนกว่าจะเชื่อมต่อได้
           </div>
         )}
 
-        {/* Users List */}
+        {/* Toolbar */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-3 mb-4 flex flex-col md:flex-row gap-3 md:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="ค้นหา ชื่อ / email / กอง / clerkId..."
+              className="input input-sm input-bordered w-full pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {FILTERS.map((f) => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                className={`btn btn-xs rounded-full ${filter === f.key ? "bg-slate-800 text-white border-0" : "btn-ghost text-slate-500"}`}>
+                {f.label}
+              </button>
+            ))}
+            <button onClick={() => setBulkOpen(true)} className="btn btn-xs btn-outline border-slate-300 text-slate-600">
+              <ListChecks className="w-3.5 h-3.5 mr-1" />ให้สิทธิ์เป็นชุด
+            </button>
+            <button onClick={fetchOverview} aria-label="รีเฟรช" className="btn btn-xs btn-ghost text-slate-500">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="loading loading-spinner loading-lg text-purple-400"></div>
+            <div className="loading loading-spinner loading-lg" />
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredUsers.map((userData) => {
-              const isSavingThis = saving[userData._id];
-              const isExpanded = expandedUser === userData._id;
-              const userPages = editedPages[userData._id] || [];
-
+          <div className="space-y-2">
+            {filtered.map((u) => {
+              const key = rowKey(u);
               return (
-                <div
-                  key={userData._id}
-                  className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 overflow-hidden"
+                <UserRow
+                  key={key}
+                  u={u}
+                  busy={!!busy[key]}
+                  expanded={expandedKey === key}
+                  clerkUnavailable={clerkUnavailable}
+                  onToggle={() => setExpandedKey(expandedKey === key ? null : key)}
+                  onOnboard={onboard}
+                  onAssignApp={assignApp}
+                  onRepair={repair}
                 >
-                  {/* User Row */}
-                  <div 
-                    className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-white/5"
-                    onClick={() => setExpandedUser(isExpanded ? null : userData._id)}
-                  >
-                    <div className="flex items-center gap-4">
-                      {userData.profileUrl ? (
-                        <img
-                          src={userData.profileUrl}
-                          alt={userData.name}
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white/30"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
-                          {userData.name?.charAt(0) || '?'}
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-semibold text-white flex items-center gap-2">
-                          {userData.name || (
-                            <span className="italic text-amber-300">
-                              (ยังไม่มีชื่อ) {userData.clerkId}
-                            </span>
-                          )}
-                          {/* แสดงสถานะ appId */}
-                          {userData.appId === CURRENT_APP_ID ? (
-                            <span className="badge badge-sm bg-emerald-600 border-0 text-white">
-                              {CURRENT_APP_ID}
-                            </span>
-                          ) : userData.appId ? (
-                            <span className="badge badge-sm bg-orange-600 border-0 text-white">
-                              {userData.appId}
-                            </span>
-                          ) : (
-                            <span className="badge badge-sm bg-amber-600 border-0 text-white">
-                              ยังไม่กำหนด App
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-300">
-                          {userData.position} • {userData.department}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* ปุ่มกำหนด App สำหรับ user ที่ยังไม่ได้กำหนด */}
-                      {(!userData.appId || userData.appId === "") && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); assignAppId(userData); }}
-                          disabled={isSavingThis}
-                          className="btn btn-xs bg-amber-600 hover:bg-amber-700 text-white border-0"
-                        >
-                          {isSavingThis ? (
-                            <span className="loading loading-spinner loading-xs"></span>
-                          ) : (
-                            <>
-                              <Building2 className="w-3 h-3 mr-1" />
-                              กำหนด App
-                            </>
-                          )}
-                        </button>
-                      )}
-                      <span className="text-purple-300 text-sm">
-                        {userPages.length}/{ALL_PAGES.length} หน้า
-                      </span>
-                      {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded: Page Permissions */}
-                  {isExpanded && (
-                    <div className="border-t border-white/10 p-4 bg-black/20">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-white font-medium">หน้าที่อนุญาต</h4>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); applyExecutivePreset(userData._id); }}
-                            title="เห็นทุกโมดูลยกเว้นการตั้งค่า"
-                            className="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
-                          >
-                            <Briefcase className="w-3 h-3 mr-1" />
-                            ผู้บริหาร
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); selectAllPages(userData._id); }}
-                            className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 text-white border-0"
-                          >
-                            <Check className="w-3 h-3 mr-1" />
-                            เลือกทั้งหมด
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); clearAllPages(userData._id); }}
-                            className="btn btn-xs bg-red-600 hover:bg-red-700 text-white border-0"
-                          >
-                            <X className="w-3 h-3 mr-1" />
-                            ล้างทั้งหมด
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-                        {ALL_PAGES.map(page => {
-                          const isAllowed = userPages.includes(page.path);
-                          return (
-                            <button
-                              key={page.path}
-                              onClick={(e) => { e.stopPropagation(); togglePage(userData._id, page.path); }}
-                              className={`p-2 rounded-lg text-left text-sm transition-all ${
-                                isAllowed
-                                  ? 'bg-emerald-600/30 border border-emerald-500/50 text-white'
-                                  : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
-                              }`}
-                            >
-                              <span className="mr-2">{page.icon}</span>
-                              {page.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        onClick={(e) => { e.stopPropagation(); saveUserPages(userData); }}
-                        disabled={isSavingThis}
-                        className="btn btn-sm bg-purple-600 hover:bg-purple-700 text-white border-0"
-                      >
-                        {isSavingThis ? (
-                          <span className="loading loading-spinner loading-sm"></span>
-                        ) : (
-                          <Save className="w-4 h-4 mr-1" />
-                        )}
-                        บันทึก
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  <PermissionEditor
+                    role={u.role}
+                    value={editedPages[u.mongoId] || []}
+                    onChange={(next) => setEditedPages((prev) => ({ ...prev, [u.mongoId]: next }))}
+                    onSave={() => savePages(u)}
+                    saving={!!busy[key]}
+                  />
+                </UserRow>
               );
             })}
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-20 text-gray-400">
-                <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <p className="text-xl">ไม่พบผู้ใช้</p>
+            {filtered.length === 0 && (
+              <div className="text-center py-16 text-slate-400">
+                <Users className="w-14 h-14 mx-auto mb-3 opacity-40" />
+                <p>ไม่พบผู้ใช้ตามเงื่อนไข</p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {bulkOpen && (
+        <BulkGrantModal
+          users={rows.filter((u) => u.status === STATUS.ACTIVE)}
+          onClose={() => setBulkOpen(false)}
+          onDone={() => { setBulkOpen(false); fetchOverview(); }}
+        />
+      )}
     </div>
   );
 }
