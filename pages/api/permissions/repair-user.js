@@ -13,10 +13,7 @@ import { requireSuperadmin } from "./_auth";
 import { isStubDoc } from "@/lib/superadmin/usersOverview";
 import { logAuditEvent } from "@/lib/auditLogger";
 import AuditLog from "@/models/AuditLog";
-
-const User =
-  mongoose.models.User ||
-  mongoose.model("User", new mongoose.Schema({}, { collection: "users", strict: false }));
+import User from "./_userModel";
 
 const ACTIONS = ["fill_name", "delete_stub", "delete_orphan"];
 

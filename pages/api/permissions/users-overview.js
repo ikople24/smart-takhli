@@ -6,15 +6,11 @@
 // สำหรับหน้านี้ — ถ้าดึงลิสต์ Clerk ไม่สำเร็จ (เช่น rate limit) ยังคืนข้อมูลฝั่ง Mongo พร้อม clerkUnavailable: true (ถ้า Clerk ล่มทั้งระบบ auth guard จะ 500 ก่อนถึงจุดนี้)
 
 import dbConnect from "@/lib/dbConnect";
-import mongoose from "mongoose";
 import { requireSuperadmin } from "./_auth";
 import { buildUsersOverview, toClerkLite } from "@/lib/superadmin/usersOverview";
+import User from "./_userModel";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "";
-
-const User =
-  mongoose.models.User ||
-  mongoose.model("User", new mongoose.Schema({}, { collection: "users", strict: false }));
 
 // ดึง Clerk users ให้ครบทุกคน (org ปัจจุบัน ~92 คน — ห้ามพึ่ง limit ครั้งเดียว)
 // เรียงเก่า→ใหม่ กัน user สมัครใหม่ระหว่าง paginate ทำให้หน้าเลื่อนแล้วได้คนซ้ำ

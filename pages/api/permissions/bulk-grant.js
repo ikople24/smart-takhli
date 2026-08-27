@@ -13,12 +13,9 @@ import { requireSuperadmin } from "./_auth";
 import { ALL_PAGES } from "@/lib/permissions";
 import { planBulkGrant } from "@/lib/superadmin/bulkGrant";
 import { logAuditEvent } from "@/lib/auditLogger";
+import User from "./_userModel";
 
 const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || "";
-
-const User =
-  mongoose.models.User ||
-  mongoose.model("User", new mongoose.Schema({}, { collection: "users", strict: false }));
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -52,7 +49,7 @@ export default async function handler(req, res) {
 
     await dbConnect();
     const docs = await User.find({ _id: { $in: ids } }).lean();
-    const plan = planBulkGrant(docs, ids, CURRENT_APP_ID);
+    const plan = planBulkGrant(docs, ids, CURRENT_APP_ID, { mode, pagePath });
 
     if (plan.notFound.length > 0 || plan.crossApp.length > 0) {
       return res.status(400).json({
@@ -63,19 +60,37 @@ export default async function handler(req, res) {
       });
     }
 
+    if (plan.applyIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        applied: 0,
+        modified: 0,
+        skippedDefault: plan.skippedDefault,
+        skippedWouldEmpty: plan.skippedWouldEmpty,
+      });
+    }
+
     const op =
       mode === "grant"
         ? { $addToSet: { allowedPages: pagePath } }
         : { $pull: { allowedPages: pagePath } };
-    const result = await User.updateMany({ _id: { $in: plan.applyIds } }, op);
+    const result = await User.updateMany(
+      {
+        _id: { $in: plan.applyIds },
+        appId: CURRENT_APP_ID,
+        "allowedPages.0": { $exists: true },
+        isArchived: { $ne: true },
+      },
+      op
+    );
 
     await logAuditEvent({
       actorClerkId: auth.userId,
       actorName: auth.actorName,
       action: "permissions_bulk_updated",
       resourceType: "user",
-      description: `${mode === "grant" ? "ให้" : "ถอน"}สิทธิ์ ${pagePath} แก่ ${plan.applyIds.length} คน (ข้าม ${plan.skippedDefault.length} คนที่ใช้ default)`,
-      meta: { pagePath, mode, applied: plan.applyIds, skippedDefault: plan.skippedDefault },
+      description: `${mode === "grant" ? "ให้" : "ถอน"}สิทธิ์ ${pagePath} แก่ ${plan.applyIds.length} คน (ข้าม ${plan.skippedDefault.length} คนที่ใช้ default / ข้าม ${plan.skippedWouldEmpty.length} คนที่จะเหลือ 0 หน้า)`,
+      meta: { pagePath, mode, applied: plan.applyIds, skippedDefault: plan.skippedDefault, skippedWouldEmpty: plan.skippedWouldEmpty, matchedCount: result.matchedCount, modifiedCount: result.modifiedCount },
     });
 
     return res.status(200).json({
@@ -83,6 +98,7 @@ export default async function handler(req, res) {
       applied: plan.applyIds.length,
       modified: result.modifiedCount,
       skippedDefault: plan.skippedDefault,
+      skippedWouldEmpty: plan.skippedWouldEmpty,
     });
   } catch (error) {
     console.error("bulk-grant error:", error?.message);
