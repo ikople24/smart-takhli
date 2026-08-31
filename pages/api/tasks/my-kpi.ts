@@ -1,104 +1,178 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getAuth } from '@clerk/nextjs/server';
+// pages/api/tasks/my-kpi.ts
+// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked
+// งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน (เปิด + เสร็จ) พร้อม derived fields (lib/tasks/derived.js), KPI strip
+// (lib/tasks/kpi.js) และถ้าส่ง groupBy มาจะจัดกลุ่มให้ด้วย (lib/tasks/groupBy.js) — client จะ regroup เองก็ได้
+// คีย์เดิม (status pending|overdue|completed, daysAssigned, resolutionDays, actionUrl) คงไว้ให้หน้า my-tasks เดิมใช้ต่อ
+import type { NextApiRequest, NextApiResponse } from 'next';
 import mongoose from 'mongoose';
-import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
+import '@/models/Complaint';
+import '@/models/Organization';
+import { getTaskSettings } from '@/lib/tasks/loadSettings';
+import { deriveAssignment } from '@/lib/tasks/derived';
+import { computeKpi } from '@/lib/tasks/kpi';
+import { GROUP_BY, groupTasks, filterByAlert } from '@/lib/tasks/groupBy';
+import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
+import { summarizeText, toDate } from '@/lib/tasks/format';
+import type { DerivedAssignment, OfficerTask, GroupBy, AlertKind, Badge, StatusPill } from '@/lib/tasks/types';
+import { getOfficer } from './_auth';
 
-interface AssignmentDoc {
-  _id: string;
-  complaintId: {
-    _id: string;
-    fullName: string;
-    detail?: string;
-    category?: string;
-    status?: string;
-  } | null;
+interface ComplaintLean {
+  _id: mongoose.Types.ObjectId;
+  complaintId?: string;
+  fullName?: string;
+  detail?: string;
+  category?: string;
+  status?: string;
+  community?: string;
+  images?: string[];
+  location?: { lat?: number; lng?: number };
+  createdAt?: Date;
+  updatedAt?: Date;
+  organizationId?: { _id: mongoose.Types.ObjectId; name?: string } | null;
+}
+
+interface AssignmentLean {
+  _id: mongoose.Types.ObjectId;
+  complaintId: ComplaintLean | null;
+  role?: string;
+  stage?: string;
   assignedAt: Date;
-  completedAt?: Date;
+  completedAt?: Date | null;
+  updatedAt?: Date | null;
+  dueDate?: Date | null;
+  slaPausedAt?: Date | null;
+  slaPausedMs?: number;
+  coordination?: {
+    agencyName?: string;
+    coordinatorOrgId?: mongoose.Types.ObjectId | null;
+    documentNo?: string;
+    sentAt?: Date | null;
+    nextFollowUpAt?: Date | null;
+    followUps?: Array<{ at?: Date }>;
+  };
+  blocked?: {
+    isBlocked?: boolean;
+    reason?: string;
+    itemName?: string;
+    purchaseRefNo?: string;
+    expectedAt?: Date | null;
+    since?: Date | null;
+  };
+  timeline?: Array<{ at?: Date }>;
 }
 
-interface MongoUser {
-  _id: string;
-  clerkId: string;
-}
+const iso = (v: unknown): string | null => {
+  const d = toDate(v);
+  return d ? d.toISOString() : null;
+};
+
+const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { userId } = getAuth(req);
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  const auth = await getOfficer(req);
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.message });
+  const { officer } = auth;
 
   try {
-    await dbConnect();
+    const now = new Date();
+    const settings = await getTaskSettings();
 
-    const UserSchema = new mongoose.Schema(
-      { clerkId: String, name: String },
-      { collection: 'users' }
-    );
-    const User = mongoose.models.User || mongoose.model('User', UserSchema);
-    const mongoUser = (await User.findOne({ clerkId: userId }).lean()) as MongoUser | null;
-
-    if (!mongoUser) return res.status(404).json({ error: 'User not found' });
-
-    // Fetch ALL assignments (completed + pending) — not just open ones
-    const allAssignments = (await Assignment.find({ userId: mongoUser._id })
+    const rows = (await Assignment.find({ userId: officer._id })
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'fullName detail category status',
+        select: 'complaintId fullName detail category status community images location createdAt updatedAt organizationId',
+        populate: { path: 'organizationId', model: 'Organization', select: 'name' },
       })
       .sort({ assignedAt: -1 })
-      .lean()) as unknown as AssignmentDoc[];
+      .lean()) as unknown as AssignmentLean[];
 
-    const now = Date.now();
-    const OVERDUE_DAYS = 7;
+    const officerDepartment = officer.department ?? '';
 
-    const assignments = allAssignments.map((a) => {
-      const daysAssigned = Math.floor((now - new Date(a.assignedAt).getTime()) / 86400000);
-      const isCompleted = !!a.completedAt;
-      const isOverdue = !isCompleted && daysAssigned > OVERDUE_DAYS;
-      const resolutionDays = isCompleted
-        ? Math.floor(
-            (new Date(a.completedAt!).getTime() - new Date(a.assignedAt).getTime()) / 86400000
-          )
-        : null;
+    const assignments: OfficerTask[] = rows.map((a) => {
+      const c = a.complaintId;
+      const derived = deriveAssignment({ assignment: a, complaint: c ?? {}, settings, now }) as DerivedAssignment;
+      const badges = badgesForAssignment(derived) as Badge[];
+      const statusPill = statusPillFor(derived) as StatusPill;
+      const detailTitle = summarizeText(c?.detail, 90);
+      const coord = a.coordination;
+      const followUps = Array.isArray(coord?.followUps) ? coord!.followUps! : [];
+      const lastFollowUp = followUps.reduce<Date | null>((best, f) => {
+        const d = toDate(f?.at);
+        return d && (!best || d > best) ? d : best;
+      }, null);
 
       return {
+        ...derived,
         _id: String(a._id),
-        complaintId: a.complaintId ? String(a.complaintId._id) : null,
-        title: a.complaintId?.fullName ?? '(ไม่ระบุชื่อ)',
-        description: a.complaintId?.detail?.substring(0, 120),
-        category: a.complaintId?.category,
-        status: isCompleted ? 'completed' : isOverdue ? 'overdue' : 'pending',
-        assignedAt: a.assignedAt,
-        completedAt: a.completedAt ?? null,
-        daysAssigned,
-        resolutionDays,
-        actionUrl: a.complaintId
-          ? `/admin/manage-complaints?complaintId=${a.complaintId._id}`
+        complaintId: c ? String(c._id) : null,
+        code: c?.complaintId || null,
+        title: detailTitle || c?.category || '(ไม่ระบุรายละเอียด)',
+        description: [c?.fullName ? `ผู้แจ้ง: ${c.fullName}` : null, c?.community || null].filter(Boolean).join(' · ') || undefined,
+        category: c?.category ?? '',
+        community: c?.community ?? '',
+        department: c?.organizationId?.name || officerDepartment,
+        complaintStatus: c?.status ?? '',
+        status: derived.isCompleted ? 'completed' : derived.isOverdue ? 'overdue' : 'pending',
+        assignedAt: iso(a.assignedAt) ?? new Date(0).toISOString(),
+        completedAt: iso(a.completedAt),
+        updatedAt: iso(a.updatedAt),
+        imageCount: Array.isArray(c?.images) ? c!.images!.length : 0,
+        hasLocation: typeof c?.location?.lat === 'number' && typeof c?.location?.lng === 'number',
+        badges,
+        statusPill,
+        coordination: derived.needsCoordination && coord
+          ? {
+              agencyName: String(coord.agencyName ?? '').trim(),
+              coordinatorOrgId: coord.coordinatorOrgId ? String(coord.coordinatorOrgId) : null,
+              documentNo: coord.documentNo ?? '',
+              sentAt: iso(coord.sentAt),
+              nextFollowUpAt: iso(coord.nextFollowUpAt),
+              followUpCount: followUps.length,
+              lastFollowUpAt: lastFollowUp ? lastFollowUp.toISOString() : null,
+            }
           : null,
+        blocked: derived.isBlocked && a.blocked
+          ? {
+              isBlocked: true,
+              reason: a.blocked.reason ?? '',
+              itemName: a.blocked.itemName ?? '',
+              purchaseRefNo: a.blocked.purchaseRefNo ?? '',
+              expectedAt: iso(a.blocked.expectedAt),
+              since: iso(a.blocked.since) ?? iso(a.slaPausedAt),
+            }
+          : null,
+        actionUrl: c ? `/admin/manage-complaints?complaintId=${String(c._id)}` : null,
       };
     });
 
-    // KPI calculations
-    const total = assignments.length;
-    const completed = assignments.filter((a) => a.status === 'completed').length;
-    const pending = assignments.filter((a) => a.status === 'pending').length;
-    const overdue = assignments.filter((a) => a.status === 'overdue').length;
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const kpi = computeKpi(assignments, { now });
 
-    const resolvedTimes = assignments
-      .filter((a) => a.resolutionDays !== null)
-      .map((a) => a.resolutionDays as number);
-    const avgResolutionDays =
-      resolvedTimes.length > 0
-        ? Math.round(resolvedTimes.reduce((s, v) => s + v, 0) / resolvedTimes.length)
-        : null;
+    // จัดกลุ่มเฉพาะงานที่ยังเปิด (กลุ่มงานของฉัน = งานที่ถืออยู่) — กรองตามการ์ดเตือนถ้าส่ง alert มา
+    const groupByRaw = typeof req.query.groupBy === 'string' ? req.query.groupBy : '';
+    const alertRaw = typeof req.query.alert === 'string' ? req.query.alert : '';
+    const alert = (ALERT_KINDS as string[]).includes(alertRaw) ? (alertRaw as AlertKind) : null;
+    const groups = (GROUP_BY as readonly string[]).includes(groupByRaw)
+      ? groupTasks(filterByAlert(assignments.filter((a) => !a.isCompleted), alert), groupByRaw as GroupBy)
+      : undefined;
 
     res.status(200).json({
       success: true,
-      kpi: { total, completed, pending, overdue, completionRate, avgResolutionDays },
+      now: now.toISOString(),
+      officer: {
+        id: String(officer._id),
+        name: officer.name ?? '',
+        department: officerDepartment,
+        position: officer.position ?? '',
+        role: officer.role ?? 'admin',
+      },
+      settings,
+      kpi,
       assignments,
+      ...(groups ? { groups } : {}),
     });
   } catch (error) {
     console.error('Error fetching KPI:', error);

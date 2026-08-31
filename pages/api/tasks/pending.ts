@@ -5,6 +5,8 @@ import dbConnect from '@/lib/dbConnect';
 import Assignment from '@/models/Assignment';
 import Complaint from '@/models/Complaint';
 import Satisfaction from '@/models/Satisfaction';
+import { getTaskSettings } from '@/lib/tasks/loadSettings';
+import { deriveAssignment } from '@/lib/tasks/derived';
 
 interface Task {
   _id: string;
@@ -74,18 +76,20 @@ export default async function handler(
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'fullName detail category location assignedAt',
+        select: 'fullName detail category location createdAt status',
       })
       .lean();
+
+    // SLA ต่อประเภทเรื่องจาก task_settings (เดิม hardcode 7 วัน) — เกณฑ์เดียวกับ my-kpi
+    const settings = await getTaskSettings();
+    const now = new Date();
 
     // Process complaint assignments
     for (const assignment of pendingAssignments) {
       const complaint = assignment.complaintId;
       if (complaint) {
-        const daysAssigned = Math.floor(
-          (Date.now() - new Date(assignment.assignedAt).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        const isOverdue = daysAssigned > 7; // 7 day threshold
+        const derived = deriveAssignment({ assignment, complaint, settings, now });
+        const isOverdue = derived.isOverdue;
 
         tasks.push({
           _id: String(assignment._id),
@@ -95,7 +99,7 @@ export default async function handler(
           status: isOverdue ? 'overdue' : 'pending',
           priority: isOverdue ? 'high' : 'medium',
           assignedAt: assignment.assignedAt,
-          dueDate: new Date(new Date(assignment.assignedAt).getTime() + 7 * 24 * 60 * 60 * 1000),
+          dueDate: derived.dueDate ? new Date(derived.dueDate) : undefined,
           actionUrl: `/admin/manage-complaints?complaintId=${String(complaint._id)}`,
           metadata: {
             complaintId: complaint._id,

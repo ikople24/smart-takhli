@@ -32,6 +32,8 @@ interface Assignment {
   assignedAt: string;
   completedAt?: string | null;
   daysAssigned: number;
+  /** จำนวนวันที่เลยกำหนด (API คำนวณจาก SLA ต่อประเภทเรื่องใน task_settings) */
+  overdueDays: number;
   resolutionDays: number | null;
   actionUrl: string | null;
 }
@@ -214,7 +216,7 @@ export default function MyTasksPage() {
                     )}
                     {a.status === 'overdue' && (
                       <span className="text-error font-medium">
-                        เกิน {a.daysAssigned - 7} วัน
+                        เกิน {a.overdueDays} วัน
                       </span>
                     )}
                   </div>
