@@ -1349,8 +1349,8 @@ export default function AdminDashboard() {
             <p className="text-4xl font-bold tracking-tight counter-number">{satisfactionPercent.toFixed(1)}<span className="text-lg font-normal opacity-60">%</span></p>
             {stats.satisfactionTotalRatings > 0 && (
               <p className="text-amber-100/80 text-xs mt-1">
-                ผู้แจ้ง {stats.satisfactionReporters} ราย · {stats.satisfactionTotalRatings} คะแนน
-                {' '}· เฉลี่ยดิบ {stats.satisfactionRaw.toFixed(1)}
+                ทุกช่วงเวลา · ผู้แจ้ง {stats.satisfactionReporters} ราย · {stats.satisfactionTotalRatings} คะแนน
+                {' '}· เฉลี่ยดิบ {stats.satisfactionRaw.toFixed(1)} / 5
               </p>
             )}
             {stats.satisfactionByLine?.count > 0 && (
