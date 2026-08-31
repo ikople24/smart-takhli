@@ -18,6 +18,10 @@
 
 `Complaint`, `Assignment`, `AdminOption`
 
+> `Assignment` ถูกขยาย (role / stage / dueDate / SLA pause / coordination / blocked / timeline) และ
+> `Complaint.organizationId` เพิ่มใน **ทั้ง** `models/Complaint.js` และ `models/SubmittedReport.js`
+> โดยโมดูลงานเจ้าหน้าที่ — ดู [tasks.md](tasks.md)
+
 ## Components (`components/complaints/`)
 
 `ComplaintFormModal`, `ComplaintDetailModal`, `ComplaintStats`, `OverdueComplaintsAlert`,
