@@ -137,8 +137,8 @@ auth ของทั้ง 3 endpoint คงเดิม (stats.js เปิด�
 ### B. หน้าจอ
 
 - `pages/admin/dashboard.jsx` การ์ด "ความพึงพอใจ": headline `%` และดาวใช้
-  `averageRating` (ค่าใหม่) · เพิ่มบรรทัดเล็ก **"ผู้แจ้ง 24 ราย · 59 คะแนน ·
-  เฉลี่ยดิบ 4.4"** เหนือบรรทัด LINE เดิม · `calculateStats` เก็บ `reporters`,
+  `averageRating` (ค่าใหม่) · เพิ่มบรรทัดเล็ก **"ทุกช่วงเวลา · ผู้แจ้ง 24 ราย · 59 คะแนน ·
+  เฉลี่ยดิบ 4.4 / 5"** (ระบุ "ทุกช่วงเวลา" เพราะการ์ดอื่นในกริดกรองตามปีงบ · ใส่ "/ 5" ให้เทียบสเกลกับ headline % ได้) เหนือบรรทัด LINE เดิม · `calculateStats` เก็บ `reporters`,
   `totalRatings`, `rawAverage` เพิ่ม
 - `pages/admin/analytics.tsx`: การ์ด "4.85 / 5" + subtitle "ผู้แจ้ง 24 ราย · 59 การประเมิน" ·
   กราฟรายสัปดาห์รับค่าใหม่โดยไม่แก้ component

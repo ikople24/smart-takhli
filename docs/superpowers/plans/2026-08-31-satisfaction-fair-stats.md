@@ -31,7 +31,7 @@
 | Modify `components/SatisfactionForm.js` | แสดง `message` จาก server + prop `onQuotaFull` |
 | Modify `pages/status/[id].tsx` | import ค่าคงที่ + `onQuotaFull` refetch count |
 | Modify `components/complaints/CardOfficail.js` | import ค่าคงที่ + `onQuotaFull` |
-| Modify `pages/admin/dashboard.jsx` | บรรทัดเล็ก "ผู้แจ้ง N ราย · M คะแนน · เฉลี่ยดิบ x.x" |
+| Modify `pages/admin/dashboard.jsx` | บรรทัดเล็ก "ทุกช่วงเวลา · ผู้แจ้ง N ราย · M คะแนน · เฉลี่ยดิบ x.x / 5" |
 | Modify `pages/admin/analytics.tsx` | subtitle การ์ด + interface |
 | Modify `docs/modules/satisfaction.md`, `CLAUDE.md` | กติกาการนับ + โควตา server |
 
@@ -1060,8 +1060,8 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
             <p className="text-4xl font-bold tracking-tight counter-number">{satisfactionPercent.toFixed(1)}<span className="text-lg font-normal opacity-60">%</span></p>
             {stats.satisfactionTotalRatings > 0 && (
               <p className="text-amber-100/80 text-xs mt-1">
-                ผู้แจ้ง {stats.satisfactionReporters} ราย · {stats.satisfactionTotalRatings} คะแนน
-                {' '}· เฉลี่ยดิบ {stats.satisfactionRaw.toFixed(1)}
+                ทุกช่วงเวลา · ผู้แจ้ง {stats.satisfactionReporters} ราย · {stats.satisfactionTotalRatings} คะแนน
+                {' '}· เฉลี่ยดิบ {stats.satisfactionRaw.toFixed(1)} / 5
               </p>
             )}
             {stats.satisfactionByLine?.count > 0 && (
@@ -1091,7 +1091,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
 
 - [ ] **Step 4: ดูหน้าจริง**
 
-เปิด `http://localhost:3000/admin/dashboard` (login แอดมิน): การ์ด "ความพึงพอใจ" แสดง **97.x%** ดาว 5 ดวงเต็ม บรรทัดเล็ก "ผู้แจ้ง 24 ราย · 59 คะแนน · เฉลี่ยดิบ 4.4"
+เปิด `http://localhost:3000/admin/dashboard` (login แอดมิน): การ์ด "ความพึงพอใจ" แสดง **97.x%** ดาว 5 ดวงเต็ม บรรทัดเล็ก "ทุกช่วงเวลา · ผู้แจ้ง 24 ราย · 59 คะแนน · เฉลี่ยดิบ 4.4 / 5"
 เปิด `http://localhost:3000/admin/analytics`: การ์ด "ความพึงพอใจเฉลี่ย" = **4.85 / 5** subtitle "ผู้แจ้ง 24 ราย · 59 การประเมิน" · กราฟรายสัปดาห์ไม่ดิ่งถึง 1.0 ในสัปดาห์ท้าย ๆ
 
 Run: `npx next lint --file pages/admin/dashboard.jsx --file pages/admin/analytics.tsx`
