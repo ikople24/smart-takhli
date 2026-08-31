@@ -28,7 +28,8 @@ export default async function handler(req, res) {
         : res.status(404).json({ success: false, message: "ไม่พบเรื่องร้องเรียนนี้" });
     }
 
-    return res.status(201).json({ success: true, data: result.data });
+    // ไม่คืน document — ผู้เรียก (SatisfactionForm) ดูแค่ res.ok และ endpoint สาธารณะไม่ควรคืนทั้ง document (มีฟิลด์ lineUserId)
+    return res.status(201).json({ success: true });
   } catch (error) {
     console.error("Error saving satisfaction:", error);
     return res.status(500).json({ message: "Server error" });

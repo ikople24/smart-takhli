@@ -1,4 +1,4 @@
-// GET /api/analytics/satisfaction?days=30
+// GET /api/analytics/satisfaction?days=90 (ค่าเริ่มต้น 90, สูงสุด 365)
 // แนวโน้มความพึงพอใจรายสัปดาห์ (ISO week เวลา Bangkok) — สำหรับ Area Chart
 // avgRating ต่อสัปดาห์นับแบบ "1 ผู้แจ้ง = 1 เสียง" เหมือน headline บนแดชบอร์ด
 // (ไม่งั้นกราฟจะดิ่งค้านกับตัวเลขรวม) · count และ distribution เป็นจำนวนครั้งดิบ
@@ -11,8 +11,8 @@ import { loadSatisfactionStats } from '@/lib/satisfaction/readStats';
 import { computeFairStats } from '@/lib/satisfaction/fairStats';
 import { isoWeekKey } from '@/lib/satisfaction/isoWeek';
 
-type RatingRow = { complaintId: string; rating: number; source?: string; createdAt: Date };
-type ReportMap = Map<string, { phone?: string; lineUserId?: string }>;
+// ชนิดข้อมูลอนุมานจาก JSDoc ของ readStats.js — ถ้ารูปข้อมูลเปลี่ยนที่นั่น ไฟล์นี้จะ compile ไม่ผ่านแทนที่จะพังตอนรัน
+type RatingRow = Awaited<ReturnType<typeof loadSatisfactionStats>>['ratings'][number];
 type Bucket = { year: number; week: number; label: string; rows: RatingRow[] };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,15 +21,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { userId } = getAuth(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-  const days = Math.min(parseInt(req.query.days as string) || 90, 365);
+  const days = Math.min(Math.max(parseInt(req.query.days as string, 10) || 90, 1), 365);
   const from = new Date();
   from.setDate(from.getDate() - days);
 
   try {
-    const { ratings, reports } = (await loadSatisfactionStats({ from })) as {
-      ratings: RatingRow[];
-      reports: ReportMap;
-    };
+    const { ratings, reports } = await loadSatisfactionStats({ from });
 
     // แบ่งถังรายสัปดาห์ แล้วใช้กติกาเดียวกับ headline ต่อถัง
     const buckets = new Map<string, Bucket>();

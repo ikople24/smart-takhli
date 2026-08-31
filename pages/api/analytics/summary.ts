@@ -83,6 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             : 0,
         avgSatisfaction: avgSatisfaction != null ? parseFloat(avgSatisfaction.toFixed(2)) : null,
         totalRatings,
+        // จำนวนผู้แจ้ง (เจ้าของเรื่อง) ที่ต่างกันในเรื่องที่มีคะแนน — ไม่ใช่จำนวนคนที่กดให้ดาว
         satisfactionReporters: fair.reporters,
         avgResolutionDays,
       },
