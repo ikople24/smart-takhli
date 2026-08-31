@@ -757,7 +757,11 @@ export default function AdminDashboard() {
       inProgress: 0,
       completed: 0,
       overdue: 0,
+      // averageRating นับต่อผู้แจ้ง (lib/satisfaction/fairStats.js) — headline · ที่เหลือเป็นค่าดิบไว้โชว์บรรทัดเล็ก
       satisfaction: satisfactionData.averageRating || 0,
+      satisfactionRaw: satisfactionData.rawAverage || 0,
+      satisfactionReporters: satisfactionData.reporters || 0,
+      satisfactionTotalRatings: satisfactionData.totalRatings || 0,
       satisfactionByLine: satisfactionData.bySource?.line || { count: 0, average: 0 },
       byCategory: {},
       byCommunity: {},
@@ -1343,6 +1347,12 @@ export default function AdminDashboard() {
             </div>
             <p className="text-amber-100 text-sm mb-1">ความพึงพอใจ</p>
             <p className="text-4xl font-bold tracking-tight counter-number">{satisfactionPercent.toFixed(1)}<span className="text-lg font-normal opacity-60">%</span></p>
+            {stats.satisfactionTotalRatings > 0 && (
+              <p className="text-amber-100/80 text-xs mt-1">
+                ผู้แจ้ง {stats.satisfactionReporters} ราย · {stats.satisfactionTotalRatings} คะแนน
+                {' '}· เฉลี่ยดิบ {stats.satisfactionRaw.toFixed(1)}
+              </p>
+            )}
             {stats.satisfactionByLine?.count > 0 && (
               <p className="text-amber-100/80 text-xs mt-1">
                 จากผู้ที่ผูก LINE กับเรื่อง {stats.satisfactionByLine.count} รายการ

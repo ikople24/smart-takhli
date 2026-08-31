@@ -29,8 +29,9 @@ interface Summary {
   completedAssignments: number;
   pendingAssignments: number;
   completionRate: number;
-  avgSatisfaction: number | null;
+  avgSatisfaction: number | null; // นับต่อผู้แจ้ง (lib/satisfaction/fairStats.js)
   totalRatings: number;
+  satisfactionReporters: number;
   avgResolutionDays: number | null;
 }
 
@@ -187,7 +188,7 @@ export default function AnalyticsPage() {
             <KpiCard
               title="ความพึงพอใจเฉลี่ย"
               value={summary?.avgSatisfaction ? `${summary.avgSatisfaction} / 5` : '-'}
-              sub={`จาก ${summary?.totalRatings ?? 0} การประเมิน`}
+              sub={`ผู้แจ้ง ${summary?.satisfactionReporters ?? 0} ราย · ${summary?.totalRatings ?? 0} การประเมิน`}
               icon={StarIcon}
               color="bg-warning/10 text-warning"
             />
