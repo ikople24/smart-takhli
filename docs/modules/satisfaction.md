@@ -13,10 +13,13 @@
 - `pages/api/satisfaction/*` (รวม `[id].js`) — `count.js` รับ/คืนค่าแยกตาม `source` · `stats.js` คืนสถิติรวม (ดู "กติกาการนับ")
 - `models/Satisfaction.js` — `source: 'public' | 'line'`, `lineUserId`
 - `lib/satisfaction/lineRating.js` — logic ล้วนของ postback (มีเทส)
-- `lib/satisfaction/quota.js` — ค่าคงที่โควตา 4 ครั้ง/เรื่อง + `isPublicQuotaFull` (มีเทส) — ใช้ทั้ง server และ client
+- `lib/satisfaction/quota.js` — ค่าคงที่โควตา 4 ครั้ง/เรื่อง + `isPublicQuotaFull` + `publicQuotaFullMessage` (มีเทส) — ใช้ทั้ง server และ client
+  **ห้าม hardcode เลข 4 หรือข้อความ "ครบ 4 ครั้ง" ที่อื่น** ให้ import จากไฟล์นี้
 - `lib/satisfaction/fairStats.js` — กติกานับ "1 ผู้แจ้ง = 1 เสียง" (logic ล้วน มีเทส) · `lib/satisfaction/isoWeek.js` — แบ่งถังรายสัปดาห์ Bangkok (มีเทส)
 - `lib/satisfaction/readStats.js` — **จุดเดียว**ที่อ่านข้อมูลทำสถิติรวม → ผู้เรียก `pages/api/satisfaction/stats.js`,
   `pages/api/analytics/summary.ts`, `pages/api/analytics/satisfaction.ts` — **ห้ามคำนวณ `$avg` ดิบเองที่อื่น**
+  · join `SubmittedReport` (`phone`, `lineUserId` ของ**เรื่อง**) เพื่อทำ `reporterKey` — โมดูลนี้จึงพึ่ง model ของโมดูลร้องเรียน
+  · ⚠️ `stats.js` **เปิดสาธารณะ** (ไม่มี `getAuth`) แต่เส้นทางอ่านนี้โหลดเบอร์โทรประชาชนเข้า memory → ต้องคืน**เฉพาะตัวเลขรวม**เท่านั้น ห้ามคืน `reporterKey`/เบอร์/ชื่อ
 - `lib/satisfaction/record.js` — **จุดเดียว**ที่เขียน collection `satisfactions` (รวมด่านโควตาฝั่ง server)
   ⚠️ การอ่าน**รายเรื่อง**ยังอ่านตรงจาก model ที่ `pages/api/satisfaction/{count,[id],by-complaint,recent-comments}.js`, `pages/api/tasks/pending.ts`
   เอนด์พอยต์ที่หน้าสาธารณะเรียกต้อง `.select()` เฉพาะฟิลด์ที่ใช้เสมอ — คืนทั้ง document = ปล่อย `lineUserId` ของประชาชนออกเว็บ
@@ -26,7 +29,7 @@
 
 | ช่องทาง | ใครให้ได้ | โควตา | `source` |
 |---|---|---|---|
-| การ์ดหน้า `/status` | ใครก็ได้ที่เปิดเรื่องนั้น | 4 ครั้ง/เรื่อง — บังคับฝั่ง server ใน `record.js` (2026-08-31) → API ตอบ 429 · ค่าคงที่ `lib/satisfaction/quota.js` | `public` |
+| การ์ดหน้า `/status` | ใครก็ได้ที่เปิดเรื่องนั้น | 4 ครั้ง/เรื่อง — บังคับฝั่ง server ใน `record.js` (2026-08-31, คืน `quota_exceeded`) → `create.js` แปลงเป็น 429 · ค่าคงที่ `lib/satisfaction/quota.js` | `public` |
 | ปุ่มดาวในการ์ด LINE | คนที่ผูก LINE กับเรื่องนั้น | 1 ครั้ง/เรื่อง (แก้ได้) | `line` |
 
 การ์ด LINE แนบแถบ ⭐1-5 (postback) ไปกับการ์ดปิดงานและการ์ดสถานะของเรื่องที่ปิดแล้ว
@@ -46,11 +49,11 @@
 2. เฉลี่ยค่าของทุกเรื่องที่ `reporterKey` เดียวกัน → 1 ผู้แจ้ง = 1 ค่า
 3. เฉลี่ยข้ามผู้แจ้ง → `averageRating`
 
-`reporterKey` = `tel:<เบอร์ตัดอักขระที่ไม่ใช่ตัวเลข>` → ไม่มีเบอร์ `line:<lineUserId>` → ไม่มีทั้งคู่/เรื่องถูกลบ `complaint:<id>`
+`reporterKey` (จาก `phone`/`lineUserId` ของ**เรื่อง**ใน `SubmittedReport` — join ที่ `readStats.js`) = `tel:<เบอร์ตัดอักขระที่ไม่ใช่ตัวเลข>` → ไม่มีเบอร์ `line:<lineUserId>` → ไม่มีทั้งคู่/เรื่องถูกลบ `complaint:<id>`
 (ไม่เติม 0 ให้เบอร์ 9 หลัก) · กติกาเดียวใช้กับทุกคน — เบอร์เจ้าหน้าที่ที่คีย์แทนประชาชนหลายเรื่องก็ยุบเป็น 1 เสียง
 · ⚠️ `reporters` คือจำนวน**ผู้แจ้ง** (เจ้าของเรื่องที่มีคะแนน) **ไม่ใช่**จำนวนคนที่กดดาว — UI ต้องใช้คำว่า "ผู้แจ้ง N ราย"
 
-**ทำไม:** ผู้แจ้งรายเดียวยื่นเรื่องเดิมซ้ำ ~10 ใบแล้วให้ 1 ดาวทุกใบ ทำให้ % รวมตกจาก 97% เหลือ 88%
+**ทำไม (ตัวเลข ณ 2026-08-31):** ผู้แจ้งรายเดียวยื่นเรื่องเดิมซ้ำ ~10 ใบแล้วให้ 1 ดาวทุกใบ ทำให้ % รวมตกจาก 97% เหลือ 88%
 ทั้งที่ประชาชนที่เหลือพอใจ — ไม่บล็อก/ไม่ลบ/ไม่ซ่อนคะแนนใคร แค่ให้ทุกคนมีน้ำหนักเท่ากัน
 
 **ตัวเลขดิบยังคืนเพื่อความโปร่งใส:** `totalRatings` (ครั้ง), `rawAverage`, `ratingDistribution` (histogram รายดาว **ดิบ** —
