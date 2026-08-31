@@ -1,4 +1,5 @@
 import { recordPublicRating } from "@/lib/satisfaction/record";
+import { publicQuotaFullMessage } from "@/lib/satisfaction/quota";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -14,8 +15,11 @@ export default async function handler(req, res) {
   try {
     const result = await recordPublicRating({ complaintId, rating, comment });
 
-    // ให้คะแนนได้เฉพาะเรื่องที่ปิดงานแล้ว — กันคนยิง API ตรง ๆ ข้ามหน้าเว็บ
+    // ให้คะแนนได้เฉพาะเรื่องที่ปิดงานแล้ว และไม่เกินโควตา — กันคนยิง API ตรง ๆ ข้ามหน้าเว็บ
     if (!result.ok) {
+      if (result.reason === "quota_exceeded") {
+        return res.status(429).json({ success: false, message: publicQuotaFullMessage() });
+      }
       return result.reason === "not_closed"
         ? res.status(409).json({
             success: false,
