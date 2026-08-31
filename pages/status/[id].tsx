@@ -19,6 +19,7 @@ import { Calendar, CalendarDays, CheckCircle2, ClipboardList, Heart, MapPin, Mes
 import BeforeAfter from "@/components/citizen/status/BeforeAfter";
 import PhotoSlider from "@/components/citizen/status/PhotoSlider";
 import SatisfactionForm from "@/components/SatisfactionForm";
+import { MAX_PUBLIC_RATINGS_PER_COMPLAINT as MAX_RATINGS } from "@/lib/satisfaction/quota";
 import { statusTimeline } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
 
@@ -26,8 +27,6 @@ const DONE = "ดำเนินการเสร็จสิ้น";
 // เบอร์กลางเทศบาลเมืองตาคลี — เจ้าของกำหนดให้ใช้เบอร์เดียวทุกเรื่อง (2026-08-20)
 const CONTACT_PHONE_DISPLAY = "056-219299";
 const CONTACT_PHONE_TEL = "056219299";
-// เพดานให้คะแนนต่อเรื่อง (source public) — ค่าเดียวกับ CardOfficail เดิม
-const MAX_RATINGS = 4;
 
 type Complaint = {
   _id: string;
@@ -503,6 +502,19 @@ export default function StatusDetail() {
                             setShowRating(false);
                             setRatingCount((prev) => (prev == null ? prev : prev + 1));
                             loadRatings(complaint._id); // ให้กราฟ/ความเห็นอัปเดตทันที
+                          }}
+                          onQuotaFull={async () => {
+                            // server บอกว่าครบโควตา — count ฝั่ง client เก่า ดึงใหม่ให้การ์ดเปลี่ยนเป็น "ครบแล้ว"
+                            setShowRating(false);
+                            try {
+                              const sj = await fetch(
+                                `/api/satisfaction/count?complaintId=${complaint._id}&source=public`
+                              ).then((r) => r.json());
+                              setRatingCount(sj?.count ?? sj?.data?.count ?? MAX_RATINGS);
+                            } catch {
+                              setRatingCount(MAX_RATINGS);
+                            }
+                            loadRatings(complaint._id);
                           }}
                         />
                       </div>
