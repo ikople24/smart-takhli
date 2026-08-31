@@ -31,6 +31,8 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: String,
     default: 'on',
   },
+  /** กองที่รับผิดชอบ (ref Organization) — ต้องตรงกับ models/Complaint.js (schema ซ้ำสองไฟล์) */
+  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', default: null },
   isConfidential: { type: Boolean, default: false },
   pdpaSensitive: { type: Boolean, default: false },
   pdpaDetailRedactions: {

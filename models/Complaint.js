@@ -13,6 +13,9 @@ const SubmittedReportSchema = new mongoose.Schema({
     lng: { type: Number }
   },
   complaintId : { type: String },
+  /** กองที่รับผิดชอบ (ref Organization) — คัดแยกจากหน้ากองงานรอรับ; null = ยังไม่ระบุกอง
+   *  ⚠️ ฟิลด์นี้ต้องมีใน models/SubmittedReport.js ด้วย (schema ซ้ำสองไฟล์ ชื่อ model เดียวกัน) */
+  organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', default: null },
   status: { type: String },
   officer: { type: String },
   /** ซ่อนการ์ดจากหน้า complaint / status — แอดมินยังเห็นในระบบหลังบ้าน */
