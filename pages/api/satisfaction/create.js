@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   const { complaintId, rating, comment } = req.body;
 
   if (!complaintId || !rating) {
-    return res.status(400).json({ message: "Missing required fields" });
+    return res.status(400).json({ success: false, message: "ข้อมูลไม่ครบถ้วน กรุณาให้คะแนนก่อนส่ง" });
   }
 
   try {
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
     return res.status(201).json({ success: true });
   } catch (error) {
     console.error("Error saving satisfaction:", error);
-    return res.status(500).json({ message: "Server error" });
+    // ข้อความนี้ถูกแสดงตรง ๆ ใน dialog ของประชาชน (SatisfactionForm) — ต้องเป็นภาษาไทย
+    return res.status(500).json({ success: false, message: "ไม่สามารถส่งความคิดเห็นได้ กรุณาลองใหม่อีกครั้ง" });
   }
 }

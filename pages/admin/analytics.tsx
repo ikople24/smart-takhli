@@ -188,7 +188,7 @@ export default function AnalyticsPage() {
             <KpiCard
               title="ความพึงพอใจเฉลี่ย"
               value={summary?.avgSatisfaction ? `${summary.avgSatisfaction} / 5` : '-'}
-              sub={`ผู้แจ้ง ${summary?.satisfactionReporters ?? 0} ราย · ${summary?.totalRatings ?? 0} การประเมิน`}
+              sub={`ตลอดทุกช่วงเวลา · ผู้แจ้ง ${summary?.satisfactionReporters ?? 0} ราย · ${summary?.totalRatings ?? 0} การประเมิน`}
               icon={StarIcon}
               color="bg-warning/10 text-warning"
             />

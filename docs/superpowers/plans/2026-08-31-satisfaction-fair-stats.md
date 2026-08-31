@@ -43,7 +43,7 @@
 - Create: `lib/satisfaction/quota.js`
 - Test: `lib/satisfaction/__tests__/quota.test.js`
 
-- [ ] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
+- [x] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
 
 ```js
 // lib/satisfaction/__tests__/quota.test.js
@@ -75,12 +75,12 @@ describe('quota', () => {
 });
 ```
 
-- [ ] **Step 2: รันให้เห็นว่าล้ม**
+- [x] **Step 2: รันให้เห็นว่าล้ม**
 
 Run: `npx vitest run lib/satisfaction/__tests__/quota.test.js`
 Expected: FAIL — `Failed to resolve import "../quota"`
 
-- [ ] **Step 3: เขียนโค้ดขั้นต่ำ**
+- [x] **Step 3: เขียนโค้ดขั้นต่ำ**
 
 ```js
 // lib/satisfaction/quota.js
@@ -101,12 +101,12 @@ export function publicQuotaFullMessage() {
 }
 ```
 
-- [ ] **Step 4: รันให้ผ่าน**
+- [x] **Step 4: รันให้ผ่าน**
 
 Run: `npx vitest run lib/satisfaction/__tests__/quota.test.js`
 Expected: `4 passed`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current   # ต้องได้ satisfaction-fair-stats
@@ -122,7 +122,7 @@ git commit -m "feat(satisfaction): ค่าคงที่โควตา 4 ค
 - Create: `lib/satisfaction/isoWeek.js`
 - Test: `lib/satisfaction/__tests__/isoWeek.test.js`
 
-- [ ] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
+- [x] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
 
 ```js
 // lib/satisfaction/__tests__/isoWeek.test.js
@@ -159,12 +159,12 @@ describe('isoWeekKey (Asia/Bangkok)', () => {
 });
 ```
 
-- [ ] **Step 2: รันให้เห็นว่าล้ม**
+- [x] **Step 2: รันให้เห็นว่าล้ม**
 
 Run: `npx vitest run lib/satisfaction/__tests__/isoWeek.test.js`
 Expected: FAIL — `Failed to resolve import "../isoWeek"`
 
-- [ ] **Step 3: เขียนโค้ดขั้นต่ำ**
+- [x] **Step 3: เขียนโค้ดขั้นต่ำ**
 
 ```js
 // lib/satisfaction/isoWeek.js
@@ -195,12 +195,12 @@ export function isoWeekKey(date) {
 }
 ```
 
-- [ ] **Step 4: รันให้ผ่าน — ทั้ง TZ ปกติและ TZ=UTC**
+- [x] **Step 4: รันให้ผ่าน — ทั้ง TZ ปกติและ TZ=UTC**
 
 Run: `npx vitest run lib/satisfaction/__tests__/isoWeek.test.js && TZ=UTC npx vitest run lib/satisfaction/__tests__/isoWeek.test.js`
 Expected: `6 passed` ทั้งสองครั้ง
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current
@@ -216,7 +216,7 @@ git commit -m "feat(satisfaction): isoWeekKey แบ่งถังรายส�
 - Create: `lib/satisfaction/fairStats.js`
 - Test: `lib/satisfaction/__tests__/fairStats.test.js`
 
-- [ ] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
+- [x] **Step 1: เขียนเทสที่ยังไม่ผ่าน**
 
 ```js
 // lib/satisfaction/__tests__/fairStats.test.js
@@ -348,12 +348,12 @@ describe('computeFairStats', () => {
 });
 ```
 
-- [ ] **Step 2: รันให้เห็นว่าล้ม**
+- [x] **Step 2: รันให้เห็นว่าล้ม**
 
 Run: `npx vitest run lib/satisfaction/__tests__/fairStats.test.js`
 Expected: FAIL — `Failed to resolve import "../fairStats"`
 
-- [ ] **Step 3: เขียนโค้ด**
+- [x] **Step 3: เขียนโค้ด**
 
 ```js
 // lib/satisfaction/fairStats.js
@@ -458,17 +458,17 @@ export function computeFairStats(ratings, reports = new Map()) {
 }
 ```
 
-- [ ] **Step 4: รันให้ผ่าน**
+- [x] **Step 4: รันให้ผ่าน**
 
 Run: `npx vitest run lib/satisfaction/__tests__/fairStats.test.js`
 Expected: `13 passed`
 
-- [ ] **Step 5: รันเทสทั้งโปรเจกต์ให้แน่ใจว่าไม่กระทบของเดิม**
+- [x] **Step 5: รันเทสทั้งโปรเจกต์ให้แน่ใจว่าไม่กระทบของเดิม**
 
 Run: `npm test`
 Expected: ทุกไฟล์ผ่าน (รวม `lineRating.test.js`, `model.test.js` เดิม)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git branch --show-current
@@ -484,7 +484,7 @@ git commit -m "feat(satisfaction): computeFairStats นับ \"1 ผู้แ�
 - Create: `lib/satisfaction/readStats.js`
 - Modify: `pages/api/satisfaction/stats.js` (แทนทั้งไฟล์)
 
-- [ ] **Step 1: สร้าง I/O helper**
+- [x] **Step 1: สร้าง I/O helper**
 
 ```js
 // lib/satisfaction/readStats.js
@@ -531,7 +531,7 @@ export async function loadSatisfactionStats({ from } = {}) {
 }
 ```
 
-- [ ] **Step 2: แทนทั้งไฟล์ `pages/api/satisfaction/stats.js`**
+- [x] **Step 2: แทนทั้งไฟล์ `pages/api/satisfaction/stats.js`**
 
 ```js
 // GET /api/satisfaction/stats — สถิติรวมสำหรับการ์ด "ความพึงพอใจ" บน /admin/dashboard
@@ -556,17 +556,17 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 3: ทดสอบกับฐานข้อมูลจริง (อ่านอย่างเดียว)**
+- [x] **Step 3: ทดสอบกับฐานข้อมูลจริง (อ่านอย่างเดียว)**
 
 Run (ต้องมี `npm run dev` รันอยู่): `curl -s http://localhost:3000/api/satisfaction/stats`
 Expected: JSON มี `"averageRating":4.85xx`, `"rawAverage":4.40xx`, `"totalRatings":59`, `"ratedComplaints":49`, `"reporters":24`, `"method":"per-reporter"`, `ratingDistribution[1] = 7`, `bySource.public.count + bySource.line.count = 59` (ตัวเลขอาจเพิ่มถ้ามีคะแนนใหม่เข้ามาหลัง 2026-08-31 — ให้ดูว่า `averageRating > rawAverage` และ `reporters < ratedComplaints`)
 
-- [ ] **Step 4: Lint**
+- [x] **Step 4: Lint**
 
 Run: `npx next lint --file lib/satisfaction/readStats.js --file pages/api/satisfaction/stats.js`
 Expected: ไม่มี error
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current
@@ -581,7 +581,7 @@ git commit -m "feat(satisfaction): readStats รวมศูนย์การ�
 **Files:**
 - Modify: `pages/api/analytics/summary.ts`
 
-- [ ] **Step 1: เปลี่ยน import**
+- [x] **Step 1: เปลี่ยน import**
 
 แทน
 ```ts
@@ -593,7 +593,7 @@ import { loadSatisfactionStats } from '@/lib/satisfaction/readStats';
 import { computeFairStats } from '@/lib/satisfaction/fairStats';
 ```
 
-- [ ] **Step 2: แทน aggregate ใน `Promise.all`**
+- [x] **Step 2: แทน aggregate ใน `Promise.all`**
 
 แทนบล็อกนี้
 ```ts
@@ -609,7 +609,7 @@ import { computeFairStats } from '@/lib/satisfaction/fairStats';
 ```
 และเปลี่ยนชื่อตัวแปรที่รับผลใน destructuring จาก `satisfactionAgg` เป็น `satisfactionData`
 
-- [ ] **Step 3: แทนการอ่านผล**
+- [x] **Step 3: แทนการอ่านผล**
 
 แทน
 ```ts
@@ -623,7 +623,7 @@ import { computeFairStats } from '@/lib/satisfaction/fairStats';
     const totalRatings = fair.totalRatings;
 ```
 
-- [ ] **Step 4: เพิ่มฟิลด์ในผลลัพธ์**
+- [x] **Step 4: เพิ่มฟิลด์ในผลลัพธ์**
 
 แทน
 ```ts
@@ -637,7 +637,7 @@ import { computeFairStats } from '@/lib/satisfaction/fairStats';
         satisfactionReporters: fair.reporters,
 ```
 
-- [ ] **Step 5: ตรวจ type + ทดสอบ**
+- [x] **Step 5: ตรวจ type + ทดสอบ**
 
 Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "summary.ts|readStats|fairStats" ; echo "tsc-done"`
 Expected: ไม่มีบรรทัด error ของไฟล์เหล่านี้ (เห็นแค่ `tsc-done`)
@@ -645,7 +645,7 @@ Expected: ไม่มีบรรทัด error ของไฟล์เหล
 Run (login แอดมินในเบราว์เซอร์แล้วเปิด): `http://localhost:3000/api/analytics/summary`
 Expected: `summary.avgSatisfaction` ≈ `4.85`, `summary.satisfactionReporters` = 24, `summary.totalRatings` = 59
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git branch --show-current
@@ -660,7 +660,7 @@ git commit -m "feat(analytics): summary ใช้ค่าเฉลี่ยต�
 **Files:**
 - Modify: `pages/api/analytics/satisfaction.ts` (แทนทั้งไฟล์)
 
-- [ ] **Step 1: แทนทั้งไฟล์**
+- [x] **Step 1: แทนทั้งไฟล์**
 
 ```ts
 // GET /api/analytics/satisfaction?days=30
@@ -736,7 +736,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 ```
 
-- [ ] **Step 2: ตรวจ type + ทดสอบ**
+- [x] **Step 2: ตรวจ type + ทดสอบ**
 
 Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "analytics/satisfaction.ts" ; echo "tsc-done"`
 Expected: เห็นแค่ `tsc-done`
@@ -744,7 +744,7 @@ Expected: เห็นแค่ `tsc-done`
 Run (login แอดมินแล้วเปิด): `http://localhost:3000/api/analytics/satisfaction?days=90`
 Expected: `weeklyTrend` เรียงตาม `label` (เช่น `2026-W24 … 2026-W36`) · สัปดาห์ที่มีคะแนน 1 ดาวหลายเรื่องจากเบอร์เดียว `avgRating` สูงกว่าค่าดิบ (`reporters < count`) · `distribution` รวม = จำนวนคะแนนในช่วง
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git branch --show-current
@@ -760,7 +760,7 @@ git commit -m "feat(analytics): กราฟรายสัปดาห์นั
 - Modify: `lib/satisfaction/record.js`
 - Modify: `pages/api/satisfaction/create.js`
 
-- [ ] **Step 1: import ใน `record.js`**
+- [x] **Step 1: import ใน `record.js`**
 
 ใต้บรรทัด
 ```js
@@ -771,7 +771,7 @@ import { commentWindowStart, sanitizeComment } from "@/lib/satisfaction/lineRati
 import { isPublicQuotaFull } from "@/lib/satisfaction/quota";
 ```
 
-- [ ] **Step 2: แก้ JSDoc + เพิ่มด่านโควตาใน `recordPublicRating`**
+- [x] **Step 2: แก้ JSDoc + เพิ่มด่านโควตาใน `recordPublicRating`**
 
 แทน
 ```js
@@ -813,7 +813,7 @@ export async function recordPublicRating({ complaintId, rating, comment }) {
   if (isPublicQuotaFull(publicCount)) return { ok: false, reason: "quota_exceeded" };
 ```
 
-- [ ] **Step 3: `create.js` ตอบ 429**
+- [x] **Step 3: `create.js` ตอบ 429**
 
 แทนทั้งไฟล์ `pages/api/satisfaction/create.js`
 ```js
@@ -855,7 +855,7 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 4: ทดสอบเส้นทางที่ไม่เขียนข้อมูล**
+- [x] **Step 4: ทดสอบเส้นทางที่ไม่เขียนข้อมูล**
 
 เส้น 429 ทดสอบสดไม่ได้โดยไม่เขียนคะแนนจริงลงฐานข้อมูล production (ไม่มีเรื่องไหนมีครบ 4 คะแนนอยู่ก่อน) — ตรวจด้วยเทส `quota.test.js` + อ่านโค้ดขั้น 2 ว่า `countDocuments` ใช้เงื่อนไขเดียวกับ `count.js` ส่วนเส้นที่ทดสอบสดได้โดยไม่เขียน:
 
@@ -865,7 +865,7 @@ Expected: `404`
 Run: `curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/satisfaction/create -H 'Content-Type: application/json' -d '{"complaintId":"abc","rating":5}'`
 Expected: `404` (id เพี้ยน ไม่ใช่ 500)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current
@@ -882,7 +882,7 @@ git commit -m "fix(satisfaction): บังคับโควตา 4 ครั�
 - Modify: `pages/status/[id].tsx`
 - Modify: `components/complaints/CardOfficail.js`
 
-- [ ] **Step 1: ฟอร์มรับ `onQuotaFull` และแสดงข้อความจาก server**
+- [x] **Step 1: ฟอร์มรับ `onQuotaFull` และแสดงข้อความจาก server**
 
 ใน `components/SatisfactionForm.js` แทน
 ```js
@@ -920,7 +920,7 @@ const SatisfactionForm = ({ onSubmit, onQuotaFull, complaintId, status }) => {
       }
 ```
 
-- [ ] **Step 2: หน้า `/status/[id]` ใช้ค่าคงที่กลาง**
+- [x] **Step 2: หน้า `/status/[id]` ใช้ค่าคงที่กลาง**
 
 ใน `pages/status/[id].tsx` แทน
 ```ts
@@ -938,7 +938,7 @@ const MAX_RATINGS = 4;
 ```
 (ที่เหลือในไฟล์อ้าง `MAX_RATINGS` เหมือนเดิม ไม่ต้องแก้)
 
-- [ ] **Step 3: หน้า `/status/[id]` refetch count เมื่อครบโควตา**
+- [x] **Step 3: หน้า `/status/[id]` refetch count เมื่อครบโควตา**
 
 แทน
 ```tsx
@@ -978,7 +978,7 @@ const MAX_RATINGS = 4;
                         />
 ```
 
-- [ ] **Step 4: `CardOfficail.js` ใช้ค่าคงที่กลาง**
+- [x] **Step 4: `CardOfficail.js` ใช้ค่าคงที่กลาง**
 
 แทน
 ```js
@@ -1005,7 +1005,7 @@ import { MAX_PUBLIC_RATINGS_PER_COMPLAINT } from "@/lib/satisfaction/quota";
             }}
 ```
 
-- [ ] **Step 5: ตรวจ type + lint + ดูหน้าจริง**
+- [x] **Step 5: ตรวจ type + lint + ดูหน้าจริง**
 
 Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "status/\[id\]" ; echo "tsc-done"`
 Expected: เห็นแค่ `tsc-done`
@@ -1015,7 +1015,7 @@ Expected: ไม่มี error
 
 เปิด `http://localhost:3000/status/<id เรื่องที่เสร็จสิ้น>` — การ์ด "ให้คะแนนความพึงพอใจ" ยังแสดง "x/4 ครั้ง" และเปิดฟอร์มได้เหมือนเดิม (ไม่ต้องส่งคะแนนจริง)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git branch --show-current
@@ -1031,7 +1031,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
 - Modify: `pages/admin/dashboard.jsx`
 - Modify: `pages/admin/analytics.tsx`
 
-- [ ] **Step 1: `dashboard.jsx` เก็บตัวเลขดิบเพิ่มใน `calculateStats`**
+- [x] **Step 1: `dashboard.jsx` เก็บตัวเลขดิบเพิ่มใน `calculateStats`**
 
 แทน
 ```js
@@ -1048,7 +1048,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
       satisfactionByLine: satisfactionData.bySource?.line || { count: 0, average: 0 },
 ```
 
-- [ ] **Step 2: `dashboard.jsx` บรรทัดเล็กใต้ headline**
+- [x] **Step 2: `dashboard.jsx` บรรทัดเล็กใต้ headline**
 
 แทน
 ```jsx
@@ -1067,7 +1067,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
             {stats.satisfactionByLine?.count > 0 && (
 ```
 
-- [ ] **Step 3: `analytics.tsx` interface + subtitle**
+- [x] **Step 3: `analytics.tsx` interface + subtitle**
 
 แทน
 ```ts
@@ -1089,7 +1089,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
               sub={`ผู้แจ้ง ${summary?.satisfactionReporters ?? 0} ราย · ${summary?.totalRatings ?? 0} การประเมิน`}
 ```
 
-- [ ] **Step 4: ดูหน้าจริง**
+- [x] **Step 4: ดูหน้าจริง**
 
 เปิด `http://localhost:3000/admin/dashboard` (login แอดมิน): การ์ด "ความพึงพอใจ" แสดง **97.x%** ดาว 5 ดวงเต็ม บรรทัดเล็ก "ทุกช่วงเวลา · ผู้แจ้ง 24 ราย · 59 คะแนน · เฉลี่ยดิบ 4.4 / 5"
 เปิด `http://localhost:3000/admin/analytics`: การ์ด "ความพึงพอใจเฉลี่ย" = **4.85 / 5** subtitle "ผู้แจ้ง 24 ราย · 59 การประเมิน" · กราฟรายสัปดาห์ไม่ดิ่งถึง 1.0 ในสัปดาห์ท้าย ๆ
@@ -1097,7 +1097,7 @@ git commit -m "feat(satisfaction): ฟอร์มรับ 429 + onQuotaFull, �
 Run: `npx next lint --file pages/admin/dashboard.jsx --file pages/admin/analytics.tsx`
 Expected: ไม่มี error ใหม่ (warning เดิมของไฟล์ใหญ่ไม่นับ)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current
@@ -1113,7 +1113,7 @@ git commit -m "feat(admin): การ์ดความพึงพอใจโ�
 - Modify: `docs/modules/satisfaction.md`
 - Modify: `CLAUDE.md`
 
-- [ ] **Step 1: `docs/modules/satisfaction.md` — หัวข้อ API/Model**
+- [x] **Step 1: `docs/modules/satisfaction.md` — หัวข้อ API/Model**
 
 แทนบล็อก
 ```md
@@ -1141,7 +1141,7 @@ git commit -m "feat(admin): การ์ดความพึงพอใจโ�
   (`by-complaint.js` ไม่มี caller ในโค้ดแล้ว แต่ยัง deploy อยู่)
 ```
 
-- [ ] **Step 2: `docs/modules/satisfaction.md` — ตารางโควตา**
+- [x] **Step 2: `docs/modules/satisfaction.md` — ตารางโควตา**
 
 แทนแถว
 ```md
@@ -1152,7 +1152,7 @@ git commit -m "feat(admin): การ์ดความพึงพอใจโ�
 | การ์ดหน้า `/status` | ใครก็ได้ที่เปิดเรื่องนั้น | 4 ครั้ง/เรื่อง — บังคับฝั่ง server ใน `record.js` (2026-08-31) → API ตอบ 429 · ค่าคงที่ `lib/satisfaction/quota.js` | `public` |
 ```
 
-- [ ] **Step 3: `docs/modules/satisfaction.md` — หัวข้อใหม่ก่อน "## Components"**
+- [x] **Step 3: `docs/modules/satisfaction.md` — หัวข้อใหม่ก่อน "## Components"**
 
 แทรกก่อนบรรทัด `## Components (⚠️ ยังอยู่ root — รอเฟส 5)`:
 ```md
@@ -1179,7 +1179,7 @@ git commit -m "feat(admin): การ์ดความพึงพอใจโ�
 
 ```
 
-- [ ] **Step 4: `CLAUDE.md` bullet satisfaction**
+- [x] **Step 4: `CLAUDE.md` bullet satisfaction**
 
 ในหัวข้อ "Feature modules" bullet **User satisfaction** แทนท่อน
 ```md
@@ -1190,7 +1190,7 @@ git commit -m "feat(admin): การ์ดความพึงพอใจโ�
 — **เขียน collection ผ่าน `lib/satisfaction/record.js` ที่เดียวเท่านั้น** อย่าเรียก `Satisfaction.create()` ตรง ๆ ที่อื่น (โควตา 4 ครั้ง/เรื่องบังคับฝั่ง server ที่นี่ ค่าคงที่ใน `lib/satisfaction/quota.js`) · **สถิติรวมนับต่อผู้แจ้ง ("1 ผู้แจ้ง = 1 เสียง") ผ่าน `lib/satisfaction/readStats.js` + `fairStats.js` เท่านั้น — ห้ามคำนวณ `$avg` ดิบเองที่อื่น** (การอ่าน**รายเรื่อง**ยังกระจายที่ `count.js`, `[id].js`, `recent-comments.js`, `pages/api/tasks/pending.ts` — เอนด์พอยต์สาธารณะต้อง `.select()` เสมอ ห้ามคืนทั้ง document เพราะมี `lineUserId`)
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git branch --show-current
@@ -1204,32 +1204,32 @@ git commit -m "docs(satisfaction): กติกาการนับต่อผ
 
 **Files:** ไม่มีการแก้ (เว้นแต่พบปัญหา)
 
-- [ ] **Step 1: เทสทั้งชุด**
+- [x] **Step 1: เทสทั้งชุด**
 
 Run: `npm test`
 Expected: ทุกไฟล์ผ่าน รวมเทสใหม่ 3 ไฟล์ (`quota` 4, `isoWeek` 6, `fairStats` 13)
 
-- [ ] **Step 2: Lint ทั้งโปรเจกต์**
+- [x] **Step 2: Lint ทั้งโปรเจกต์**
 
 Run: `npm run lint`
 Expected: ไม่มี error ใหม่ในไฟล์ที่แตะ
 
-- [ ] **Step 3: Build (ปิด dev ก่อน — build ทับ `.next` ของ dev ทำให้ API ตอบ 500 เงียบ ๆ)**
+- [x] **Step 3: Build (ปิด dev ก่อน — build ทับ `.next` ของ dev ทำให้ API ตอบ 500 เงียบ ๆ)**
 
 Run: หยุด `npm run dev` แล้ว `rm -rf .next && npm run build`
 Expected: `✓ Compiled successfully` ไม่มี type error · เสร็จแล้ว `rm -rf .next` ก่อนเปิด dev ใหม่
 
-- [ ] **Step 4: ตรวจตัวเลขปลายทางอีกครั้งหลัง build**
+- [x] **Step 4: ตรวจตัวเลขปลายทางอีกครั้งหลัง build**
 
 Run: `npm run dev` แล้ว `curl -s http://localhost:3000/api/satisfaction/stats | python3 -m json.tool`
 Expected: `averageRating ≈ 4.85`, `reporters 24`, `totalRatings 59`, `rawAverage ≈ 4.41` (หรือค่าใหม่ถ้ามีคะแนนเพิ่ม — ต้อง `averageRating > rawAverage`)
 
-- [ ] **Step 5: ตรวจสอบสาขาและ log**
+- [x] **Step 5: ตรวจสอบสาขาและ log**
 
 Run: `git branch --show-current && git log --oneline main..HEAD`
 Expected: `satisfaction-fair-stats` และ commit ตาม Task 1–10 (+ spec) ครบ
 
-- [ ] **Step 6: ส่งมอบ** — ใช้ skill `superpowers:finishing-a-development-branch` (เปิด PR เข้า **main** ไม่ใช่ master · merge = live ทันทีบน Railway)
+- [x] **Step 6: ส่งมอบ** — ใช้ skill `superpowers:finishing-a-development-branch` (เปิด PR เข้า **main** ไม่ใช่ master · merge = live ทันทีบน Railway)
 
 ---
 
