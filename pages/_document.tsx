@@ -7,8 +7,9 @@ export default function Document() {
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* IBM Plex Mono ใช้เฉพาะรหัสเรื่อง/พิกัด/เลขหนังสือ ในหน้าจัดการงานเจ้าหน้าที่ (font-tk-mono) */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
         <link rel="icon" href="/favicon.ico" />
