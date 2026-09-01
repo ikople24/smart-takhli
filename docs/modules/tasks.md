@@ -6,16 +6,21 @@
 
 - ที่มาดีไซน์ (hifi): `docs/design_handoff_officer_task_management/README.md`
 - แผน + เหตุผลการตัดสินใจ: `docs/superpowers/plans/2026-08-31-officer-task-management-p1.md`
-- **สถานะ (2026-09-01): เฟส 1–3 (ข้อ 1–6) เสร็จ** — `/admin/my-tasks` (หน้าจอ 1) และ `/admin/task-pool` (หน้าจอ 2) ใช้งานได้จริง
-  · ค้าง: หน้าจอ 3 (รายละเอียด+อัปเดต), มือถือ/LINE hooks · **ต้องรัน `scripts/grant-task-pool-permission.mjs --yes` (13 user)**
+- **สถานะ (2026-09-01): เฟส 1–4 (ข้อ 1–7) เสร็จ** — หน้าจอ 1 `/admin/my-tasks`, หน้าจอ 2 `/admin/task-pool`, หน้าจอ 3 `/admin/my-tasks/[assignmentId]`
+  ใช้งานได้จริง · ค้าง: ข้อ 8 มือถือ/LINE hooks · **ต้องรัน `scripts/grant-task-pool-permission.mjs --yes` (13 user)** · ยังไม่มีใครเห็นหน้าจริงด้วยตา
 
 ## หน้า
 
 - `/admin/my-tasks` — **หน้าจอ 1 โฉมใหม่** (`pages/admin/my-tasks.tsx`): header card · การ์ดเตือน 4 ใบ (คลิก → `?alert=`) ·
   KPI strip · กลุ่มงานของฉัน (`?groupBy=category|organization|priority` regroup ฝั่ง client, จำกลุ่มที่เปิดใน sessionStorage) ·
   right rail (ต้องประสานงานต่อ / รอวัสดุ / ครบกำหนดสัปดาห์นี้) · ปุ่ม "โอน / ส่งต่องาน" (modal) · "รับงานจากกอง"
-  ไป `/admin/task-pool` · ลูกศรใน task row ยังไปหน้า manage-complaints (หน้าจอ 3 ยังไม่มี)
+  ไป `/admin/task-pool` · ลูกศรใน task row / rail → หน้าจอ 3
   · meta ใน `components/Layout.js` เหลือแค่ `title` เพราะหน้ามี header card เอง
+- `/admin/my-tasks/[assignmentId]` — **หน้าจอ 3 รายละเอียดงาน + อัปเดตความคืบหน้า** (`pages/admin/my-tasks/[assignmentId].tsx`, ครอบ
+  `PermissionGuard requiredPath="/admin/my-tasks"` — ยืมสิทธิ์หน้าแม่, ADMIN_META `noSidebar + fullBleed`): header bar ← กลับ + breadcrumb ·
+  การ์ดเรื่อง (ชื่อ/เบอร์ผู้แจ้งเต็ม — เจ้าหน้าที่ต้องติดต่อ ต่างจาก /status ที่ mask) · ภาพ + แผนที่ (`SmallMap` dynamic) · ไทม์ไลน์ (`buildTimeline`) ·
+  แผงอัปเดต: `StatusStepper` (ถอยขั้นถาม Swal เหตุผล, ขั้น "ปิดเรื่อง" เปิด modal ปิดเรื่อง) · `CoordinationBlock` (+ `CoordinationSetModal` / `FollowUpModal` / โทรแล้ว / แจ้ง LINE) ·
+  `BlockedCard` (พัก/เลิกพัก SLA) · บันทึก + `ImageUploads` · ปุ่มปิดเรื่อง (`CloseTaskModal` ≥1 ภาพ + สรุป + วิธีแก้ไขจาก AdminOption) · โอนงาน · เรื่องปิดแล้ว/ไม่ใช่งานของตัวเอง = อ่านอย่างเดียว
 - `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (ค้างเกิน `unclaimedAlertDays`
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
   (`?days=30|90|365|all` default 30 — ถ้ามีเรื่องเก่ากว่านั้น alert bar บอกจำนวนพร้อมลิงก์ดูทั้งหมด) · kanban ต่อคอลัมน์ (กองของตัวเองมีเสมอ,
@@ -28,6 +33,8 @@
 |---|---|
 | `GET /api/tasks/my-kpi?groupBy=category\|organization\|priority&alert=overdue\|due_soon\|coordinating\|blocked` | งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน + derived fields + `kpi` + (ถ้าส่ง groupBy) `groups` — คีย์เดิม (`status`, `daysAssigned`, `resolutionDays`, `actionUrl`) คงไว้ให้หน้าเดิม |
 | `GET /api/tasks/pending` | widget งานค้างเดิม — เปลี่ยนมาใช้ SLA จาก `task_settings` ผ่าน `deriveAssignment` |
+| `GET /api/tasks/[assignmentId]` | หน้าจอ 3: เรื่อง + assignment + derived + ป้าย + ไทม์ไลน์ + `solutionOptions` (AdminOption ของประเภทนั้น) + `canEdit` (เจ้าของ/superadmin) |
+| `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) |
 | `GET /api/tasks/pool?groupBy=&q=&community=&days=&onlyStale=1` | เรื่องที่ยังไม่มี Assignment และยังไม่ปิด (`lib/tasks/loadPool.js`) + derived/ป้าย + `action` ต่อเจ้าหน้าที่ + คอลัมน์ (`groupPool`) + `stale` + `workload` (งานเปิดต่อคน) + `departments` — สิทธิ์ผ่าน `requirePage('/admin/task-pool')` · ไม่คืนชื่อ/เบอร์ผู้แจ้ง |
 | `POST /api/tasks/pool-alert` | สรุปเรื่องค้างเกินเกณฑ์เข้า LINE กลุ่ม (⚠️ โควตา — UI ยืนยันก่อน) |
 | `PATCH /api/tasks/set-department` | คัดแยกกอง `{ complaintId, department }` (ชื่อมาตรฐานเท่านั้น, '' = ล้าง) → audit `complaint_department_set` — README เขียนเป็น `/api/complaints/:id/organization` แต่วางใต้ `complaints/[id]/` ไม่ได้ เพราะชนกับ `[id_card].js` (Next.js ห้าม slug ต่างชื่อใน path เดียวกัน → dev server ล้มทั้งตัว) |
@@ -68,6 +75,7 @@
 | `summary.js` | หน้าจอ 1: `alertCards` (การ์ดเตือน 4 ใบ), `coordinationRail` (รวมตามหน่วยงาน), `blockedRail`, `dueThisWeekRail` |
 | `departments.js` | **ทะเบียนกองมาตรฐาน + alias** (`normalizeDepartment`, `departmentShort`) และ `defaultDepartmentForCategory` (ประเภทเรื่อง → กอง ค่าเสนอแนะ) |
 | `pool.js` | หน้าจอ 2: `poolAction` (claim / not_yours / choose_org), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
+| `timeline.js` | หน้าจอ 3: `buildTimeline` (รับเรื่อง → มอบหมาย → รายการ timeline → ปิดเรื่อง → รายการรออยู่; เรียงเชิงตรรกะก่อนเวลา เพราะข้อมูลเก่า completedAt เป็นวันที่ล้วน), `closeChecklist`, `stageChangePlan`, `blockedUpdate` |
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
 | `types.ts` | TypeScript types ของผลลัพธ์ทั้งหมด |
@@ -81,6 +89,8 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 `TransferTaskModal` (รายชื่อจาก `GET /api/users/get-all-user` จัดกลุ่มตามกอง) · `FollowUpModal`
 
 หน้าจอ 2 (ข้อ 6): `AssignTaskModal` (เจ้าหน้าที่ในกองก่อน เรียงงานน้อย→มาก จาก `workload`) · `DepartmentPickerModal`
+
+หน้าจอ 3 (ข้อ 7): `TaskTimeline` · `BlockedCard` · `CoordinationSetModal` · `CloseTaskModal` (ใช้ `ImageUploads` เดิม + `closeChecklist`)
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
@@ -98,5 +108,8 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   เจ้าหน้าที่ที่โปรไฟล์ไม่ระบุกอง / superadmin รับได้ทุกเรื่อง · "หัวหน้ากอง" (มอบหมายได้) = superadmin หรือ position ตรง `HEAD_POSITION_RE`
   (ผู้อำนวยการ/หัวหน้า/ผอ./ปลัด — ระบบไม่มี role หัวหน้า)
 - ป้าย "เสี่ยงอันตราย" / "อาจต้องประสาน กฟภ." เป็นคำใบ้จาก keyword ในข้อความ (`pool.js`) ไม่ใช่การตัดสิน
+- **แจ้งเตือน LINE ตอนสถานะเรื่องเปลี่ยน/ปิดงานอยู่ที่เดียว `lib/complaintNotify.js`** (`notifyComplaintStatusChanged`) — ใช้ทั้ง `update-status.js` เดิม
+  และ `PATCH /api/tasks/[assignmentId]` ห้าม copy · การบันทึกความคืบหน้าธรรมดา (note/รูป) **ไม่** แจ้ง LINE (โควตา) — แจ้งเฉพาะเมื่อขั้นเปลี่ยนสถานะเรื่อง/ปิดงาน
+- stepper: เดินหน้าทีละขั้น, ถอยต้องมีเหตุผล, ขั้น "ปิดเรื่อง" ต้องผ่าน `close` (ภาพ ≥1 + สรุป) เท่านั้น · รูปความคืบหน้าอยู่ใน timeline, รูปตอนปิดเรื่องรวมเข้า `solutionImages` (หน้า /status + การ์ด LINE ใช้)
 - สี: โทเคน `tk-*` ใน `styles/globals.css` (`@theme`) — **ไม่แตะ `--color-primary` ของ `mytheme`**; ฟอนต์ `font-tk-sans` / `font-tk-mono` (IBM Plex Mono เพิ่มใน `_document.tsx`)
 - ข้อความไทยในป้าย/ปุ่มต้อง `whitespace-nowrap`

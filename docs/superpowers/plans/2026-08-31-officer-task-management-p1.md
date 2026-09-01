@@ -63,3 +63,11 @@ docs/modules/tasks.md
 - ตัดสินใจ: ช่วงเวลา default 30 วัน แต่ alert bar บอกจำนวนเรื่องเก่ากว่านั้นเสมอ · "ร้องซ้ำ" = เบอร์+ประเภท+ชุมชน (เบอร์อย่างเดียวได้ 17 ครั้งจากเบอร์เจ้าหน้าที่)
   · ยังไม่ทำ drag & drop ข้ามคอลัมน์ (README ระบุ desktop) · "รับเป็นผู้ประสาน" รอหน้าจอ 3
 - ค้าง: ข้อ 7 หน้าจอ 3 (รายละเอียด + stepper + coordination set) — ลูกศร task row / หัวเรื่อง pool card ยังไปหน้า manage-complaints · ข้อ 8 มือถือ
+
+## เฟส 4 (2026-09-01) — ข้อ 7 หน้าจอ 3 `/admin/my-tasks/[assignmentId]` ✅
+
+- `lib/tasks/timeline.js` (TDD 14 เทสต์): buildTimeline (เรียงเชิงตรรกะก่อนเวลา — ข้อมูลเก่า completedAt 00:00), closeChecklist, stageChangePlan, blockedUpdate
+- สกัด `lib/complaintNotify.js` จาก `update-status.js` (LINE ผู้แจ้ง + กลุ่ม) ให้ปิดเรื่องจากหน้าจอ 3 ใช้ร่วม — พฤติกรรมเดิมคงไว้
+- API `GET/PATCH /api/tasks/[assignmentId]` (progress / close / blocked) · หน้า + 4 components · ลูกศร task row / rail / pending widget → หน้าจอ 3
+- ตัดสินใจ: ชื่อ/เบอร์ผู้แจ้งแสดงเต็มให้เจ้าหน้าที่ (README วาด mask แต่เจ้าหน้าที่ต้องโทร) · progress ธรรมดาไม่แจ้ง LINE (โควตา) · ไม่ทำ drag/popover ป้าย
+- ค้าง: ข้อ 8 มือถือ (bottom nav/FAB/หน้ามือถือ 3 จอ) + ยังไม่มีใครเห็นหน้าจริง · ยังไม่ `next build`
