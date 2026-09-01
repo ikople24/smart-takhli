@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assignment = (await Assignment.findById(id).lean()) as AssignmentLean | null;
     if (!assignment) return res.status(404).json({ success: false, error: 'ไม่พบงานนี้' });
     const isOwner = String(assignment.userId) === String(officer._id);
-    if (!isOwner && officer.role !== 'superadmin') return res.status(403).json({ success: false, error: 'เลิกทำได้เฉพาะงานของตัวเอง' });
+    if (!isOwner && !auth.isSuperAdmin) return res.status(403).json({ success: false, error: 'เลิกทำได้เฉพาะงานของตัวเอง' });
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว' });
     const ageMin = (Date.now() - new Date(assignment.assignedAt).getTime()) / 60000;
     const hasProgress = (assignment.timeline?.length ?? 0) > 1 || (assignment.solution?.length ?? 0) > 0 || !!assignment.note;

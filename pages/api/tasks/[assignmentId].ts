@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         getTaskSettings(),
       ]);
       const derived = deriveAssignment({ assignment: a, complaint: c ?? {}, settings, now }) as DerivedAssignment;
-      const canEdit = String(a.userId) === String(officer._id) || officer.role === 'superadmin';
+      const canEdit = String(a.userId) === String(officer._id) || auth.isSuperAdmin;
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
       const options = category
@@ -168,7 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assignment = (await Assignment.findById(assignmentId)) as any;
     if (!assignment) return res.status(404).json({ success: false, error: 'ไม่พบงานนี้' });
     const isOwner = String(assignment.userId) === String(officer._id);
-    if (!isOwner && officer.role !== 'superadmin') return res.status(403).json({ success: false, error: 'แก้ไขได้เฉพาะงานของตัวเอง' });
+    if (!isOwner && !auth.isSuperAdmin) return res.status(403).json({ success: false, error: 'แก้ไขได้เฉพาะงานของตัวเอง' });
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว' });
 
     const complaint = (await Complaint.findById(assignment.complaintId).select(COMPLAINT_FIELDS).lean()) as ComplaintLean | null;

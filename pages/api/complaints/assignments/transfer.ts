@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว โอนไม่ได้' });
 
     const isOwner = String(assignment.userId) === String(officer._id);
-    if (!isOwner && officer.role !== 'superadmin') {
+    if (!isOwner && !auth.isSuperAdmin) {
       return res.status(403).json({ success: false, error: 'โอนได้เฉพาะงานของตัวเอง' });
     }
 

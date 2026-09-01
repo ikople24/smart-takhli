@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const now = new Date();
     const settings = await getTaskSettings();
-    const isSuperAdmin = officer.role === 'superadmin';
+    const isSuperAdmin = auth.isSuperAdmin;
     const officerDepartment = normalizeDepartment(officer.department);
     const canAssign = isSuperAdmin || HEAD_POSITION_RE.test(String(officer.position ?? ''));
 
