@@ -7,13 +7,12 @@ import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { loadPoolItems, loadWorkload } from '@/lib/tasks/loadPool';
 import { POOL_GROUP_BY, poolAction, groupPool, staleSummary } from '@/lib/tasks/pool';
 import { DEPARTMENTS, normalizeDepartment } from '@/lib/tasks/departments';
+import { taskPermissions } from '@/lib/tasks/roles';
 import type { GroupBy, PoolColumn, PoolItem } from '@/lib/tasks/types';
 import { requirePage } from './_auth';
 
 export const PAGE_PATH = '/admin/task-pool';
 const DAY_OPTIONS = new Set([30, 90, 365]);
-/** ตำแหน่งที่ถือว่าเป็นหัวหน้ากอง (มอบหมายงานให้คนอื่นได้) — ระบบไม่มี role หัวหน้า จึงดูจากชื่อตำแหน่ง */
-export const HEAD_POSITION_RE = /ผู้อำนวยการ|หัวหน้า|ผอ\.|ปลัด/;
 
 const norm = (v: unknown) => String(v ?? '').trim().toLowerCase();
 
@@ -36,7 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const settings = await getTaskSettings();
     const isSuperAdmin = auth.isSuperAdmin;
     const officerDepartment = normalizeDepartment(officer.department);
-    const canAssign = isSuperAdmin || HEAD_POSITION_RE.test(String(officer.position ?? ''));
+    // หัวหน้ากอง = ติ๊กโดย superadmin (users.isDepartmentHead) หรือตำแหน่งเข้าเกณฑ์ (lib/tasks/roles.js)
+    const perms = taskPermissions({ isSuperAdmin, user: officer });
+    const canAssign = perms.canAssign;
 
     const [{ items: baseItems, olderOutsideWindow, communities }, workload] = await Promise.all([
       loadPoolItems({ settings, now, days }),
@@ -72,6 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         rawDepartment: officer.department ?? '',
         canAssign,
         isSuperAdmin,
+        isHead: perms.isHead,
       },
       settings,
       filters: { groupBy, q, community, days, onlyStale },

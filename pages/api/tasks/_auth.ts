@@ -17,6 +17,9 @@ export interface OfficerUser {
   role?: string;
   appId?: string;
   allowedPages?: string[];
+  isDepartmentHead?: boolean;
+  isActive?: boolean;
+  isArchived?: boolean;
 }
 
 type AuthFail = { ok: false; status: number; message: string };

@@ -20,6 +20,7 @@ import { buildTimeline, closeChecklist, stageChangePlan, blockedUpdate } from '@
 import { STAGE_LABELS, COMPLAINT_STATUS } from '@/lib/tasks/status';
 import { summarizeText, toDate } from '@/lib/tasks/format';
 import { defaultDepartmentForCategory, normalizeDepartment } from '@/lib/tasks/departments';
+import { taskPermissions } from '@/lib/tasks/roles';
 import type { Badge, DerivedAssignment, Stage, StatusPill, TaskDetailResponse, TimelineEntry } from '@/lib/tasks/types';
 import { getOfficer, userModel } from './_auth';
 
@@ -76,7 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         getTaskSettings(),
       ]);
       const derived = deriveAssignment({ assignment: a, complaint: c ?? {}, settings, now }) as DerivedAssignment;
-      const canEdit = String(a.userId) === String(officer._id) || auth.isSuperAdmin;
+      const isOwner = String(a.userId) === String(officer._id);
+      const canEdit = isOwner || auth.isSuperAdmin;
+      const taskDepartment = normalizeDepartment(c?.department) ?? defaultDepartmentForCategory(c?.category ?? '');
+      const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
       const options = category
@@ -93,6 +97,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         success: true,
         now: now.toISOString(),
         canEdit,
+        canTransfer: perms.canTransfer,
+        canRequestTransfer: perms.canRequestTransfer,
+        transferRequest: a.transferRequest?.requestedAt
+          ? { requestedAt: iso(a.transferRequest.requestedAt) ?? '', reason: a.transferRequest.reason ?? '', byName: a.transferRequest.byName ?? '' }
+          : null,
         settings,
         assignment: {
           _id: String(a._id),

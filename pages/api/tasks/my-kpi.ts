@@ -1,5 +1,6 @@
 // pages/api/tasks/my-kpi.ts
-// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked
+// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked&scope=mine|department
+// scope=department (หัวหน้ากอง/superadmin เท่านั้น) = งานของทุกคนในกองเดียวกัน — ใช้โอนงาน/ดูภาระงานทั้งกอง
 // งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน (เปิด + เสร็จ) พร้อม derived fields (lib/tasks/derived.js), KPI strip
 // (lib/tasks/kpi.js) และถ้าส่ง groupBy มาจะจัดกลุ่มให้ด้วย (lib/tasks/groupBy.js) — client จะ regroup เองก็ได้
 // คีย์เดิม (status pending|overdue|completed, daysAssigned, resolutionDays, actionUrl) คงไว้ให้หน้า my-tasks เดิมใช้ต่อ
@@ -13,11 +14,12 @@ import { computeKpi } from '@/lib/tasks/kpi';
 import { GROUP_BY, groupTasks, filterByAlert } from '@/lib/tasks/groupBy';
 import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { summarizeText, toDate } from '@/lib/tasks/format';
-import { defaultDepartmentForCategory } from '@/lib/tasks/departments';
+import { defaultDepartmentForCategory, normalizeDepartment } from '@/lib/tasks/departments';
+import { taskPermissions } from '@/lib/tasks/roles';
 import { loadSatisfactionStatsForComplaints } from '@/lib/satisfaction/readStats';
 import { computeFairStats } from '@/lib/satisfaction/fairStats';
 import type { DerivedAssignment, OfficerTask, GroupBy, AlertKind, Badge, StatusPill, MyKpi } from '@/lib/tasks/types';
-import { getOfficer } from './_auth';
+import { getOfficer, userModel, CURRENT_APP_ID } from './_auth';
 
 interface ComplaintLean {
   _id: mongoose.Types.ObjectId;
@@ -63,6 +65,8 @@ interface AssignmentLean {
     since?: Date | null;
   };
   timeline?: Array<{ at?: Date }>;
+  transferRequest?: { requestedAt?: Date | null; reason?: string; byName?: string };
+  userId: mongoose.Types.ObjectId;
 }
 
 const iso = (v: unknown): string | null => {
@@ -82,8 +86,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const now = new Date();
     const settings = await getTaskSettings();
+    const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer });
+    const scope: 'mine' | 'department' = req.query.scope === 'department' && (perms.isHead || auth.isSuperAdmin) ? 'department' : 'mine';
 
-    const rows = (await Assignment.find({ userId: officer._id })
+    // scope=department: เจ้าหน้าที่ทุกคนในกองเดียวกัน (superadmin ที่ไม่ระบุกอง = ทุกคน)
+    let userIds: mongoose.Types.ObjectId[] = [officer._id];
+    const namesById = new Map<string, string>();
+    if (scope === 'department') {
+      const ownDept = normalizeDepartment(officer.department);
+      const members = (await userModel()
+        .find({ appId: CURRENT_APP_ID, isArchived: { $ne: true } })
+        .select('name department')
+        .lean()) as Array<{ _id: mongoose.Types.ObjectId; name?: string; department?: string }>;
+      const inScope = ownDept || !auth.isSuperAdmin ? members.filter((m) => normalizeDepartment(m.department) === ownDept) : members;
+      userIds = inScope.map((m) => m._id);
+      for (const m of inScope) namesById.set(String(m._id), m.name ?? '');
+      if (!userIds.some((id) => String(id) === String(officer._id))) userIds.push(officer._id);
+    }
+
+    const rows = (await Assignment.find({ userId: { $in: userIds } })
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
@@ -149,6 +170,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           : null,
         actionUrl: `/admin/my-tasks/${String(a._id)}`,
+        assignee: scope === 'department' ? { id: String(a.userId), name: namesById.get(String(a.userId)) ?? '' } : null,
+        transferRequest: a.transferRequest?.requestedAt
+          ? { requestedAt: iso(a.transferRequest.requestedAt) ?? '', reason: a.transferRequest.reason ?? '', byName: a.transferRequest.byName ?? '' }
+          : null,
       };
     });
 
@@ -185,6 +210,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         position: officer.position ?? '',
         role: officer.role ?? 'admin',
       },
+      scope,
+      permissions: { isSuperAdmin: auth.isSuperAdmin, isHead: perms.isHead, canAssign: perms.canAssign, canTransfer: perms.canTransfer },
       settings,
       kpi,
       assignments,

@@ -115,6 +115,24 @@ export interface OfficerTask extends DerivedAssignment {
   coordination: CoordinationInfo | null;
   blocked: BlockedInfo | null;
   actionUrl: string | null;
+  /** เจ้าของงาน (มีเมื่อดู scope=department) */
+  assignee?: { id: string; name: string } | null;
+  /** คำขอโอนงานที่ยังค้าง (รอหัวหน้า) */
+  transferRequest?: TransferRequestInfo | null;
+}
+
+export interface TransferRequestInfo {
+  requestedAt: string;
+  reason: string;
+  byName: string;
+}
+
+/** สิทธิ์ของเจ้าหน้าที่ที่ล็อกอิน (lib/tasks/roles.js#taskPermissions) */
+export interface TaskPermissions {
+  isSuperAdmin: boolean;
+  isHead: boolean;
+  canAssign: boolean;
+  canTransfer: boolean;
 }
 
 export interface TaskGroup<T = OfficerTask> {
@@ -150,6 +168,9 @@ export interface MyKpiResponse {
   success: true;
   now: string;
   officer: { id: string; name: string; department: string; position: string; role: string };
+  /** mine = งานของฉัน · department = งานทั้งกอง (หัวหน้า/superadmin) */
+  scope: 'mine' | 'department';
+  permissions: TaskPermissions;
   settings: TaskSettings;
   kpi: MyKpi;
   assignments: OfficerTask[];
@@ -195,7 +216,7 @@ export interface PoolColumn {
 export interface PoolResponse {
   success: true;
   now: string;
-  officer: { id: string; name: string; department: string | null; rawDepartment: string; canAssign: boolean; isSuperAdmin: boolean };
+  officer: { id: string; name: string; department: string | null; rawDepartment: string; canAssign: boolean; isSuperAdmin: boolean; isHead: boolean };
   settings: TaskSettings;
   filters: { groupBy: GroupBy; q: string; community: string; days: number | null; onlyStale: boolean };
   items: PoolItem[];
@@ -278,6 +299,9 @@ export interface TaskDetailResponse {
   success: true;
   now: string;
   canEdit: boolean;
+  canTransfer: boolean;
+  canRequestTransfer: boolean;
+  transferRequest: TransferRequestInfo | null;
   settings: TaskSettings;
   assignment: {
     _id: string;

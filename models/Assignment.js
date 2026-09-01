@@ -101,6 +101,13 @@ const AssignmentSchema = new mongoose.Schema(
       expectedAt: { type: Date, default: null },
       since: { type: Date, default: null },
     },
+    /** คำขอโอนงานจากเจ้าของงาน (admin ธรรมดาโอนเองไม่ได้ — lib/tasks/roles.js) หัวหน้ากอง/superadmin ย้ายให้แล้วระบบเคลียร์ */
+    transferRequest: {
+      requestedAt: { type: Date, default: null },
+      reason: { type: String, default: '' },
+      byUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      byName: { type: String, default: '' },
+    },
     /** ไทม์ไลน์การดำเนินงาน (หน้าจอ 3) — ล่าสุดอยู่ท้าย array */
     timeline: { type: [TimelineEntrySchema], default: [] },
   },

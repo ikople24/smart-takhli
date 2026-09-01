@@ -32,6 +32,8 @@ type AuditAction =
   | 'assignment_follow_up'
   | 'assignment_unclaimed'
   | 'complaint_department_set'
+  | 'assignment_transfer_requested'
+  | 'department_head_set'
   | 'data_exported'
   | 'login';
 
