@@ -11,7 +11,11 @@ type AuditAction =
   | 'complaint_reassigned'
   | 'complaint_completed'
   | 'permissions_updated'
+  | 'permissions_bulk_updated'
   | 'app_id_assigned'
+  // User repair (หน้า superadmin)
+  | 'user_repaired'
+  | 'user_doc_deleted'
   | 'assignment_created'
   | 'assignment_completed'
   | 'notification_sent'
