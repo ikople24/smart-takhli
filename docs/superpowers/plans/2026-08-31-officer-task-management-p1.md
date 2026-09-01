@@ -43,3 +43,13 @@ docs/modules/tasks.md
 - `daysUnclaimed` = now − createdAt (เรื่องไม่มี assignment) · amber ≥ `unclaimedWarnDays` (3) · แดง/"ค้างเกิน" > `unclaimedAlertDays` (4)
 - `needsCoordination` = มี `coordination.agencyName` และยังไม่ปิด · `isBlocked` = `blocked.isBlocked`
 - `severity` = overdue > due_soon > coordinating > blocked > normal
+
+## เฟส 2 (2026-09-01) — ข้อ 5 หน้าจอ 1 `my-tasks` ✅
+
+- หน้า `pages/admin/my-tasks.tsx` เขียนใหม่ตาม hifi: header card · alert row (กรอง `?alert=`) · KPI strip · กลุ่มงาน (`?groupBy=`) + right rail
+- logic เพิ่ม: `lib/tasks/summary.js` (alertCards / coordinationRail / blockedRail / dueThisWeekRail) + `initials` — TDD 15 เทสต์ใหม่
+- API เพิ่ม: `POST /api/complaints/assignments/transfer`, `POST /api/complaints/coordination` (set / follow_up / notify_line)
+- `kpi.satisfaction` ต่อแล้วผ่าน `readStats.js#loadSatisfactionStatsForComplaints` (PR #145 เข้า main แล้ว)
+- ตัดสินใจ: ปุ่ม "รับงานจากกอง" ชี้ `/admin/manage-complaints` ชั่วคราว (`POOL_HREF`) · ลูกศร task row ไป manage-complaints จนกว่าจะมีหน้าจอ 3
+  · "แจ้ง LINE" ถามยืนยันก่อนเสมอ (โควตา) · ยังไม่ได้ดูหน้าด้วยตา (ไม่มี browser tool) — ตรวจ tsc/lint/CSS/smoke
+- ค้าง: ข้อ 6 (`/admin/task-pool` + `GET /api/tasks/pool` — ต้องทำครบ 4 จุดของ skill adding-admin-page), ข้อ 7 (หน้าจอ 3), ข้อ 8 (มือถือ)

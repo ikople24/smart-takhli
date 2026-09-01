@@ -6,12 +6,16 @@
 
 - ที่มาดีไซน์ (hifi): `docs/design_handoff_officer_task_management/README.md`
 - แผน + เหตุผลการตัดสินใจ: `docs/superpowers/plans/2026-08-31-officer-task-management-p1.md`
-- **สถานะ (2026-08-31): เฟส 1 = ข้อ 1–4 ของ README เสร็จ** (โทเคนสี/ฟอนต์ · schema · derived logic + API · shared components)
-  — หน้าจอ 1–3, API `pool`, responsive/LINE hooks เป็นเฟสถัดไป
+- **สถานะ (2026-09-01): เฟส 1 (ข้อ 1–4) + เฟส 2 (ข้อ 5 หน้าจอ 1) เสร็จ** — `/admin/my-tasks` โฉมใหม่ใช้งานได้จริง
+  (โอนงาน · บันทึกติดตาม · แจ้ง LINE) · ค้าง: หน้าจอ 2 (`task-pool` + API pool), หน้าจอ 3, มือถือ/LINE hooks
 
 ## หน้า
 
-- `/admin/my-tasks` — ยังเป็น UI เดิม (จะถูกแทนด้วยหน้าจอ 1) แต่อ่าน `overdueDays` จาก API แล้ว ไม่ hardcode 7 วัน
+- `/admin/my-tasks` — **หน้าจอ 1 โฉมใหม่** (`pages/admin/my-tasks.tsx`): header card · การ์ดเตือน 4 ใบ (คลิก → `?alert=`) ·
+  KPI strip · กลุ่มงานของฉัน (`?groupBy=category|organization|priority` regroup ฝั่ง client, จำกลุ่มที่เปิดใน sessionStorage) ·
+  right rail (ต้องประสานงานต่อ / รอวัสดุ / ครบกำหนดสัปดาห์นี้) · ปุ่ม "โอน / ส่งต่องาน" (modal) · "รับงานจากกอง"
+  ชี้ไป `/admin/manage-complaints` ชั่วคราวจนกว่าจะมีหน้าจอ 2 (`POOL_HREF`) · ลูกศรใน task row ยังไปหน้า manage-complaints (หน้าจอ 3 ยังไม่มี)
+  · meta ใน `components/Layout.js` เหลือแค่ `title` เพราะหน้ามี header card เอง
 - `/admin/task-pool` — ยังไม่มี (หน้าจอ 2)
 
 ## API (`pages/api/tasks/`)
@@ -23,6 +27,8 @@
 | `GET /api/tasks/settings` · `PUT` (superadmin) | SLA/เกณฑ์เตือน — PUT รับบางฟิลด์ได้ (merge) ลง audit `task_settings_updated` |
 | `pages/api/tasks/_auth.ts` | `getOfficer(req)` (Clerk → users ใน Mongo) · `requireSuperAdmin(req)` |
 | `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints) รับ `role: assignee\|coordinator`, ตั้ง `dueDate` = วันที่แจ้ง + SLA, `stage: received`, timeline `created` |
+| `POST /api/complaints/assignments/transfer` | `{ assignmentId, toUserId, reason }` โอนงาน — เจ้าของงาน/superadmin, เหตุผลบังคับ, ปลายทางต้องเป็น user ของแอปนี้ที่ยังไม่ archive → เปลี่ยน `userId` + timeline `transfer` + audit `complaint_reassigned` |
+| `POST /api/complaints/coordination` | `action: set` (ตั้งหน่วยงาน/เลขหนังสือ/วันส่ง/วันติดตาม) · `follow_up` (บันทึกติดตาม → `followUps[]`, ตั้ง `nextFollowUpAt` = ที่ส่งมา หรือวันนี้ + `followUpEveryDays`, audit `assignment_follow_up`) · `notify_line` (สรุปเข้า LINE กลุ่ม ⚠️ นับโควตาตามสมาชิกกลุ่ม — UI ถามยืนยันก่อน) |
 
 รูปทรง response: `lib/tasks/types.ts` (`MyKpiResponse`, `OfficerTask`, `TaskGroup`, `PoolItem`)
 
@@ -50,14 +56,18 @@
 | `kpi.js` | `computeKpi` (KPI strip) |
 | `groupBy.js` | `groupTasks(items, groupBy)` + `filterByAlert` — ใช้ทั้ง server และ client |
 | `badges.js` | ข้อความ+โทนป้าย: `badgesForAssignment`, `agingPill`, `contextBadges`, `statusPillFor`, `coordinationWaitPill` |
+| `summary.js` | หน้าจอ 1: `alertCards` (การ์ดเตือน 4 ใบ), `coordinationRail` (รวมตามหน่วยงาน), `blockedRail`, `dueThisWeekRail` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
 | `types.ts` | TypeScript types ของผลลัพธ์ทั้งหมด |
 
 ## Components (`components/tasks/`)
 
-`AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupAccordion` (เปิดหลายกลุ่ม, จำใน sessionStorage) ·
+shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupAccordion` (เปิดหลายกลุ่ม, จำใน sessionStorage) ·
 `PoolCard` (ปุ่มตาม `action`: claim / coordinate / choose_org / not_yours) · `StatusStepper` · `CoordinationBlock`
-— ทั้งหมดรับข้อมูลที่ API derive มาแล้ว **ไม่คำนวณเอง**
+
+หน้าจอ 1 (ข้อ 5): `OfficerHeaderCard` · `AlertCards` · `KpiStrip` · `RailCards` (`CoordinationRailCard` / `BlockedRailCard` / `DueThisWeekCard`) ·
+`TransferTaskModal` (รายชื่อจาก `GET /api/users/get-all-user` จัดกลุ่มตามกอง) · `FollowUpModal`
+— ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
 
@@ -67,6 +77,8 @@
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนด้วย `slaPausedMs` + ช่วงที่ยังพัก
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg
-- `kpi.satisfaction = null` จนกว่า `lib/satisfaction/readStats.js` (PR #145) เข้า main — ห้ามคำนวณ `$avg` เอง
+- `kpi.satisfaction` = คะแนนของเรื่องที่เจ้าหน้าที่ถือ นับ "1 ผู้แจ้ง = 1 เสียง" ผ่าน `lib/satisfaction/readStats.js#loadSatisfactionStatsForComplaints`
+  + `computeFairStats` (null เมื่อไม่มีคะแนน) — ห้ามคำนวณ `$avg` เอง; อ่านพลาดไม่ทำให้หน้าล้ม
+- ปุ่ม "แจ้ง LINE" ทุกจุดต้องมี dialog ยืนยัน — 1 push เข้ากลุ่มนับโควตาเท่าจำนวนสมาชิก (โควตา 300/เดือน)
 - สี: โทเคน `tk-*` ใน `styles/globals.css` (`@theme`) — **ไม่แตะ `--color-primary` ของ `mytheme`**; ฟอนต์ `font-tk-sans` / `font-tk-mono` (IBM Plex Mono เพิ่มใน `_document.tsx`)
 - ข้อความไทยในป้าย/ปุ่มต้อง `whitespace-nowrap`
