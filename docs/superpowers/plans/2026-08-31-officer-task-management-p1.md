@@ -79,3 +79,10 @@ docs/modules/tasks.md
 - หัวหน้าเห็น "งานของกอง" (`my-kpi?scope=department`) และโอนงานลูกน้องได้จากปุ่มเดิม
 - cron `pages/api/cron/tasks/stale-digest.ts` (แนะนำ `30 1 * * *` UTC) แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน — ไม่ใช้ LINE (โควตา)
 - ค้าง: ตั้ง cron บน Railway · ย้าย HeadsPanel เข้าหน้าจัดการผู้ใช้เมื่อรีดีไซน์เสร็จ · ข้อ 8 มือถือ
+
+## เฟส 6 (2026-09-01) — ข้อ 8 มือถือ ✅ (ครบทั้ง 8 ข้อของ README)
+
+- `lib/tasks/mobile.js` (TDD 7 เทสต์): ระยะทาง "ใกล้ฉัน", topUrgent (FAB), poolChipCounts
+- `MobileTaskNav` (5 ช่อง + FAB) · `QuickTaskSheet` · `PoolCard variant=mobile` · AlertCards 2×2 · OfficerHeaderCard ย่อ · `GET /api/tasks/pool-count`
+- 3 หน้าใช้ responsive ในไฟล์เดิม (ไม่แยกหน้า): chip+flat list (pool), ปุ่มสถานะเร็ว 2×2 + ถ่ายภาพ + footer ลอย (detail)
+- ค้าง: ดูจริงบนมือถือ (ผมไม่มี browser) · ตั้ง cron · grant script · next build · push/PR

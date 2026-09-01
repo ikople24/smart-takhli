@@ -6,8 +6,8 @@
 
 - ที่มาดีไซน์ (hifi): `docs/design_handoff_officer_task_management/README.md`
 - แผน + เหตุผลการตัดสินใจ: `docs/superpowers/plans/2026-08-31-officer-task-management-p1.md`
-- **สถานะ (2026-09-01): เฟส 1–5 เสร็จ** (ข้อ 1–7 + นโยบายสิทธิ์โอน/มอบหมาย) — หน้าจอ 1 `/admin/my-tasks`, หน้าจอ 2 `/admin/task-pool`, หน้าจอ 3 `/admin/my-tasks/[assignmentId]`
-  ใช้งานได้จริง · ค้าง: ข้อ 8 มือถือ/LINE hooks · **ต้องรัน `scripts/grant-task-pool-permission.mjs --yes` (13 user)** · ยังไม่มีใครเห็นหน้าจริงด้วยตา
+- **สถานะ (2026-09-01): ครบทั้ง 8 ข้อของ README + นโยบายสิทธิ์** (เฟส 1–6) — หน้าจอ 1 `/admin/my-tasks`, หน้าจอ 2 `/admin/task-pool`, หน้าจอ 3 `/admin/my-tasks/[assignmentId]`
+  ใช้งานได้จริงทั้งเดสก์ท็อปและมือถือ · **ต้องรัน `scripts/grant-task-pool-permission.mjs --yes` (13 user)** · ยังไม่มีใครเห็นหน้าจริงด้วยตา
 
 ## หน้า
 
@@ -33,6 +33,7 @@
 |---|---|
 | `GET /api/tasks/my-kpi?groupBy=…&alert=…&scope=mine\|department` | งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน + derived fields + `kpi` + (ถ้าส่ง groupBy) `groups` + `permissions` (isHead/canAssign/canTransfer) · `scope=department` (หัวหน้า/superadmin) = งานทุกคนในกอง พร้อม `assignee` และ `transferRequest` |
 | `GET /api/tasks/pending` | widget งานค้างเดิม — เปลี่ยนมาใช้ SLA จาก `task_settings` ผ่าน `deriveAssignment` |
+| `GET /api/tasks/pool-count` | จำนวนเรื่องในกองงานรอรับ (30 วัน + เก่ากว่านั้น) สำหรับ badge บน bottom nav มือถือ |
 | `GET /api/tasks/heads` · `PUT` (superadmin) | รายชื่อ user + สถานะหัวหน้ากอง · `PUT { userId, isDepartmentHead: true\|false\|null }` (null = กลับไปดูตำแหน่ง) audit `department_head_set` |
 | `POST /api/complaints/assignments/transfer-request` · `DELETE ?assignmentId=` | เจ้าของงานที่โอนเองไม่ได้ "ขอโอนงาน" (เหตุผลบังคับ) → `Assignment.transferRequest` + timeline + แจ้งกระดิ่งถึงหัวหน้ากอง (`digestRecipients`) · DELETE = เจ้าของยกเลิก / หัวหน้าปฏิเสธ |
 | `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) — **ไม่ส่ง LINE** (โควตา) |
@@ -80,6 +81,7 @@
 | `pool.js` | หน้าจอ 2: `poolAction` (claim / not_yours / choose_org), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
 | `roles.js` | **นโยบายสิทธิ์**: `isDepartmentHead(user)` (ติ๊ก `users.isDepartmentHead` มาก่อน, fallback ตำแหน่ง `HEAD_POSITION_RE`), `headsOf`, `taskPermissions` → canAssign / canTransfer (หัวหน้าเฉพาะงานในกอง) / canRequestTransfer |
 | `digest.js` | `buildStaleDigest` (สรุปเรื่องค้างรายกอง + relatedId กันซ้ำรายวัน), `digestRecipients` (หัวหน้ากอง → ไม่มีก็หัวหน้าทุกกอง + superadmin) |
+| `mobile.js` | มือถือ: `haversineKm` / `formatDistanceLabel` / `withDistance` ("ใกล้ฉัน" — พิกัดผู้ใช้อยู่ฝั่ง client ไม่ส่งขึ้น server), `topUrgent` (FAB อัปเดตงานด่วน), `poolChipCounts` |
 | `timeline.js` | หน้าจอ 3: `buildTimeline` (รับเรื่อง → มอบหมาย → รายการ timeline → ปิดเรื่อง → รายการรออยู่; เรียงเชิงตรรกะก่อนเวลา เพราะข้อมูลเก่า completedAt เป็นวันที่ล้วน), `closeChecklist`, `stageChangePlan`, `blockedUpdate` |
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
@@ -96,6 +98,8 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 หน้าจอ 2 (ข้อ 6): `AssignTaskModal` (เจ้าหน้าที่ในกองก่อน เรียงงานน้อย→มาก จาก `workload`) · `DepartmentPickerModal`
 
 หน้าจอ 3 (ข้อ 7): `TaskTimeline` · `BlockedCard` · `CoordinationSetModal` · `CloseTaskModal` (ใช้ `ImageUploads` เดิม + `closeChecklist`)
+
+มือถือ (ข้อ 8): `MobileTaskNav` (bottom nav 5 ช่อง + FAB, แสดง < md) · `QuickTaskSheet` (bottom sheet งานด่วน 5 เรื่อง → หน้าจอ 3) · `PoolCard variant="mobile"` (ปุ่ม "รับงานนี้" + แผนที่ + ระยะทาง) · `AlertCards` มีการ์ด "ต้องจัดการวันนี้" 2×2 · `OfficerHeaderCard` ย่อ
 
 สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง — อยู่ท้ายหน้ากองงานรอรับชั่วคราว จนกว่าหน้าจัดการผู้ใช้จะรีดีไซน์เสร็จ)
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
@@ -122,3 +126,12 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - stepper: เดินหน้าทีละขั้น, ถอยต้องมีเหตุผล, ขั้น "ปิดเรื่อง" ต้องผ่าน `close` (ภาพ ≥1 + สรุป) เท่านั้น · รูปความคืบหน้าอยู่ใน timeline, รูปตอนปิดเรื่องรวมเข้า `solutionImages` (หน้า /status + การ์ด LINE ใช้)
 - สี: โทเคน `tk-*` ใน `styles/globals.css` (`@theme`) — **ไม่แตะ `--color-primary` ของ `mytheme`**; ฟอนต์ `font-tk-sans` / `font-tk-mono` (IBM Plex Mono เพิ่มใน `_document.tsx`)
 - ข้อความไทยในป้าย/ปุ่มต้อง `whitespace-nowrap`
+
+## มือถือ (README § หน้าจอมือถือ)
+
+- `< md` ทั้ง 3 หน้าใช้ layout มือถือด้วย Tailwind responsive (ไม่มีหน้าแยก): งานของฉัน = header ย่อ + "ต้องจัดการวันนี้" 2×2 + กลุ่มงาน (ไม่มี KPI strip) ·
+  กองงานรอรับ = chip แถวเดียว (กองของฉัน / ค้างนาน / ใกล้ฉัน / ทั้งหมด) + flat list การ์ดใหญ่ · รายละเอียดงาน = header chevron+รหัส+pill,
+  ปุ่มสถานะเร็ว 2×2 (ใช้กฎ `stageTransition` เดียวกับ stepper — "เสร็จแล้ว" เปิด modal ปิดเรื่อง), ปุ่ม "ถ่ายภาพ" (`<input capture="environment">` → Cloudinary), footer ปุ่มเดียวลอยล่าง
+- bottom nav `MobileTaskNav` อยู่ในหน้างานของฉัน/กองงานรอรับ (ไม่อยู่ในหน้ารายละเอียด — footer แทน) · FAB → `/admin/my-tasks?quick=1` เปิด `QuickTaskSheet`
+- "ใกล้ฉัน" ขอ geolocation ตอนกดเท่านั้น, คำนวณระยะทางฝั่ง client — ไม่มีการเก็บตำแหน่งเจ้าหน้าที่
+- hit target ≥ 48px ทุกปุ่มหลัก (`min-h-12`), `.touch-feedback` ตอนกด, เผื่อ safe-area ล่างด้วย `env(safe-area-inset-bottom)`
