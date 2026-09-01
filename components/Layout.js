@@ -16,14 +16,8 @@ const ADMIN_META = {
   '/admin/elderly-cards':             { title: 'ข้อมูลผู้สูงอายุ' },
   '/admin/elderly-schedule':          { title: 'ตารางเยี่ยมผู้สูงอายุ' },
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
-  '/admin/my-tasks': {
-    title: 'KPI งานของฉัน',
-    subtitle: 'สรุปภาระงานและผลการดำเนินการ',
-    breadcrumbs: [
-      { label: 'Dashboard', href: '/admin/dashboard' },
-      { label: 'KPI งานของฉัน' },
-    ],
-  },
+  // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
+  '/admin/my-tasks':                  { title: 'งานของฉัน' },
   '/admin/notifications': {
     title: 'การแจ้งเตือน',
     subtitle: 'ดูและจัดการการแจ้งเตือนของคุณ',

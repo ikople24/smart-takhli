@@ -58,7 +58,7 @@ const TopNavbar = ({ onMenuClick } = {}) => {
             <Link
               href="/admin/my-tasks"
               className={`btn btn-ghost btn-sm btn-circle tooltip tooltip-bottom ${isOnMyTasks ? 'text-primary' : ''}`}
-              data-tip="KPI งานของฉัน"
+              data-tip="งานของฉัน"
             >
               <ClipboardDocumentListIcon className="w-5 h-5" />
             </Link>
