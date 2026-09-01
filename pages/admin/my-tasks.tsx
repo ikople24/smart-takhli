@@ -23,6 +23,8 @@ import {
   DueThisWeekCard,
   TransferTaskModal,
   FollowUpModal,
+  MobileTaskNav,
+  QuickTaskSheet,
 } from '@/components/tasks';
 import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload } from '@/components/tasks';
 
@@ -82,6 +84,7 @@ export default function MyTasksPage() {
   const [officersLoading, setOfficersLoading] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [followUpFor, setFollowUpFor] = useState<CoordinationRailItem | null>(null);
+  const [poolCount, setPoolCount] = useState<number | null>(null);
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [busyAgency, setBusyAgency] = useState<string | null>(null);
 
@@ -96,7 +99,7 @@ export default function MyTasksPage() {
   const scope: 'mine' | 'department' = router.query.scope === 'department' ? 'department' : 'mine';
 
   const setQuery = useCallback(
-    (patch: Partial<Record<'groupBy' | 'alert' | 'scope', string | null>>) => {
+    (patch: Partial<Record<'groupBy' | 'alert' | 'scope' | 'quick', string | null>>) => {
       const next: Record<string, string> = {};
       for (const [k, v] of Object.entries({ ...router.query, ...patch })) {
         if (typeof v === 'string' && v) next[k] = v;
@@ -122,6 +125,15 @@ export default function MyTasksPage() {
     if (!user || !router.isReady) return;
     load();
   }, [user, router.isReady, load]);
+
+  // badge กองงานรอรับบน bottom nav มือถือ (ไม่ต้องรอ — พลาดก็แค่ไม่มีเลข)
+  useEffect(() => {
+    if (!user) return;
+    axios.get<{ total: number }>('/api/tasks/pool-count').then((r) => setPoolCount(r.data.total ?? 0)).catch(() => setPoolCount(null));
+  }, [user]);
+
+  // FAB "อัปเดตงานด่วน" → ?quick=1 เปิด bottom sheet (ลิงก์จากหน้าอื่นได้)
+  const quickOpen = router.query.quick === '1';
 
   const openTasks = useMemo<OfficerTask[]>(() => (data?.assignments ?? []).filter((a) => !a.isCompleted), [data]);
   const cards = useMemo(() => (data ? (alertCards(openTasks, data.settings) as AlertCard[]) : []), [openTasks, data]);
@@ -232,8 +244,8 @@ export default function MyTasksPage() {
   const officerName = data?.officer.name || user?.fullName || '';
 
   return (
-    // ล้าง p-6 ของ LayoutAdmin แล้วคุม padding/พื้นหลังเองตามดีไซน์ (22px 24px บน #F6F5FA)
-    <div className="-m-6 min-h-full bg-tk-bg px-6 py-[22px] font-tk-sans text-tk-ink">
+    // ล้าง p-6 ของ LayoutAdmin แล้วคุม padding/พื้นหลังเองตามดีไซน์ (22px 24px บน #F6F5FA) · มือถือเผื่อที่ให้ bottom nav
+    <div className="-m-6 min-h-full bg-tk-bg px-3.5 pt-3 pb-28 font-tk-sans text-tk-ink md:px-6 md:py-[22px]">
       {error && (
         <div className="mb-4 flex items-center gap-3 rounded-[14px] border border-tk-line bg-tk-line-light px-4 py-3 text-[13px] text-tk-ink-3">
           <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-tk-ink-5" strokeWidth={1.8} />
@@ -263,6 +275,7 @@ export default function MyTasksPage() {
             poolHref={POOL_HREF}
             onTransfer={openTransfer}
             transferLabel={canTransfer ? 'โอน / ส่งต่องาน' : 'ขอโอนงาน'}
+            openCount={openTasks.length}
           />
 
           {(data.permissions.isHead || data.permissions.isSuperAdmin) && (
@@ -281,7 +294,8 @@ export default function MyTasksPage() {
 
           <AlertCards cards={cards} active={alert} onSelect={(key) => setQuery({ alert: key })} />
 
-          <KpiStrip kpi={data.kpi} />
+          {/* README มือถือ 1 ไม่มี KPI strip — โชว์ตั้งแต่ md ขึ้นไป */}
+          <KpiStrip kpi={data.kpi} className="hidden md:flex" />
 
           <div className="grid grid-cols-1 gap-[18px] xl:grid-cols-[minmax(0,1fr)_340px]">
             {/* ④ ซ้าย — กลุ่มงานของฉัน */}
@@ -367,6 +381,8 @@ export default function MyTasksPage() {
         onSubmit={submitTransfer}
         onRequest={submitTransferRequest}
       />
+      <MobileTaskNav active="my-tasks" poolCount={poolCount} onFab={() => setQuery({ quick: '1' })} />
+      <QuickTaskSheet open={quickOpen} tasks={openTasks} loading={loading} onClose={() => setQuery({ quick: null })} />
       <FollowUpModal
         open={!!followUpFor}
         agencyName={followUpFor?.agencyName ?? ''}

@@ -12,7 +12,9 @@ import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import clsx from 'clsx';
 import Swal from 'sweetalert2';
-import { ArrowLeftIcon, ArrowPathIcon, ExclamationTriangleIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowPathIcon, CameraIcon, ChevronLeftIcon, ExclamationTriangleIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { uploadToCloudinary } from '@/utils/uploadToCloudinary';
+import { stageTransition } from '@/lib/tasks/status';
 import PermissionGuard from '@/components/PermissionGuard';
 import ImageUploads from '@/components/ImageUploads';
 import type { OfficerTask, Stage, TaskDetailResponse } from '@/lib/tasks/types';
@@ -80,6 +82,8 @@ function TaskDetailContent() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploaderKey, setUploaderKey] = useState(0);
+  const [cameraBusy, setCameraBusy] = useState(false);
+  const cameraRef = React.useRef<HTMLInputElement>(null);
 
   // modals
   const [coordSetOpen, setCoordSetOpen] = useState(false);
@@ -255,21 +259,55 @@ function TaskDetailContent() {
       toast(decline ? 'ปฏิเสธคำขอโอนแล้ว' : 'ยกเลิกคำขอโอนแล้ว');
     }, 'ดำเนินการไม่สำเร็จ');
 
+  /* ── มือถือ: ถ่ายภาพ (input capture) → Cloudinary → แนบกับบันทึก ── */
+  const onCameraFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setCameraBusy(true);
+    try {
+      const url: string | undefined = await uploadToCloudinary(file);
+      if (url) setImages((list) => (list.length >= 3 ? [...list.slice(1), url] : [...list, url]));
+      else toast('อัปโหลดภาพไม่สำเร็จ', 'error');
+    } catch {
+      toast('อัปโหลดภาพไม่สำเร็จ', 'error');
+    } finally {
+      setCameraBusy(false);
+    }
+  };
+
   const c = data?.complaint;
   const a = data?.assignment;
   const d = data?.derived;
+  // ปุ่มสถานะเร็วบนมือถือ (README มือถือ 3) — ใช้กฎเดียวกับ stepper
+  const quickStage = (next: Stage) => {
+    if (!a) return;
+    const t = stageTransition(a.stage, next) as { ok: boolean; direction: string; needsReason: boolean; reason?: string };
+    if (!t.ok) {
+      toast(t.reason ?? 'เปลี่ยนขั้นไม่ได้', 'info');
+      return;
+    }
+    changeStage(next, { direction: t.direction as 'forward' | 'backward', needsReason: t.needsReason });
+  };
   const transferTasks = data ? ([{ _id: data.assignment._id, code: data.complaint.code, title: data.complaint.title } as unknown as OfficerTask]) : [];
 
   return (
-    <div className="h-full overflow-auto bg-tk-bg font-tk-sans text-tk-ink">
-      {/* header bar 56px */}
-      <div className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b border-tk-line bg-tk-surface px-6">
-        <Link href="/admin/my-tasks" className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-tk-primary whitespace-nowrap hover:underline">
-          <ArrowLeftIcon className="h-4 w-4" strokeWidth={2.2} />
-          กลับไปกลุ่มงานของฉัน
+    <div className={clsx('h-full overflow-auto bg-tk-bg font-tk-sans text-tk-ink', editable && 'pb-24 md:pb-0')}>
+      {/* header bar 56px — มือถือ: chevron + รหัส + pill */}
+      <div className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-tk-line bg-tk-surface px-3.5 md:gap-4 md:px-6">
+        <Link href="/admin/my-tasks" className="inline-flex min-h-11 items-center gap-1.5 text-[13.5px] font-semibold text-tk-primary whitespace-nowrap hover:underline" aria-label="กลับไปกลุ่มงานของฉัน">
+          <ChevronLeftIcon className="h-6 w-6 md:hidden" strokeWidth={2.2} />
+          <ArrowLeftIcon className="hidden h-4 w-4 md:block" strokeWidth={2.2} />
+          <span className="hidden md:inline">กลับไปกลุ่มงานของฉัน</span>
         </Link>
         {c && (
-          <nav className="flex min-w-0 items-center gap-2 text-[12.5px] text-tk-ink-5 whitespace-nowrap" aria-label="breadcrumb">
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:hidden">
+            <span className="font-tk-mono text-[13px] text-tk-ink-3">{c.code ?? c._id.slice(-8)}</span>
+            {data && <AlertBadge tone={data.statusPill.tone} size="sm" className="ml-auto">{data.statusPill.label}</AlertBadge>}
+          </div>
+        )}
+        {c && (
+          <nav className="hidden min-w-0 items-center gap-2 text-[12.5px] text-tk-ink-5 whitespace-nowrap md:flex" aria-label="breadcrumb">
             <span>งานของฉัน</span>
             <span aria-hidden>/</span>
             <span className="truncate">{c.category || 'ไม่ระบุประเภท'}</span>
@@ -278,7 +316,7 @@ function TaskDetailContent() {
           </nav>
         )}
         {data && !editable && (
-          <span className="ml-auto rounded-full bg-tk-line-light px-3 py-1 text-[11.5px] font-semibold text-tk-ink-4 whitespace-nowrap">
+          <span className="ml-auto hidden rounded-full bg-tk-line-light px-3 py-1 text-[11.5px] font-semibold text-tk-ink-4 whitespace-nowrap md:inline">
             {data.derived.isCompleted ? 'เรื่องนี้ปิดแล้ว — อ่านอย่างเดียว' : 'ดูอย่างเดียว — ไม่ใช่งานของคุณ'}
           </span>
         )}
@@ -298,15 +336,15 @@ function TaskDetailContent() {
       {loading ? (
         <Skeletons />
       ) : data && c && a && d ? (
-        <div className="grid grid-cols-1 gap-[18px] px-6 py-[22px] xl:grid-cols-[minmax(0,1fr)_430px]">
+        <div className="grid grid-cols-1 gap-3.5 px-3.5 py-3.5 md:gap-[18px] md:px-6 md:py-[22px] xl:grid-cols-[minmax(0,1fr)_430px]">
           {/* ───── ซ้าย ───── */}
           <div className="flex min-w-0 flex-col gap-4">
             {/* a) header card */}
-            <section className={clsx(CARD, 'px-[22px] py-5')}>
+            <section className={clsx(CARD, 'px-4 py-4 md:px-[22px] md:py-5')}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-[21px] font-bold leading-tight">{c.title}</h1>
+                    <h1 className="text-[16.5px] font-bold leading-tight md:text-[21px]">{c.title}</h1>
                     <AlertBadge tone={data.statusPill.tone} size="pill">{data.statusPill.label}</AlertBadge>
                   </div>
                   {data.badges.length > 0 && (
@@ -425,8 +463,21 @@ function TaskDetailContent() {
               <p className="text-[12.5px] text-tk-ink-5">เปลี่ยนขั้นแล้วระบบแจ้งผู้แจ้งทาง LINE (ถ้าผูกไว้) · ปิดเรื่องแจ้งกลุ่มเจ้าหน้าที่ด้วย</p>
             </div>
 
-            <div className="flex flex-col gap-4 px-5 py-[18px]">
+            <div className="flex flex-col gap-4 px-4 py-4 md:px-5 md:py-[18px]">
               <StatusStepper stage={a.stage} onChange={changeStage} disabled={!editable || busy === 'stage'} />
+
+              {/* มือถือ: อัปเดตสถานะเร็ว 2×2 (README มือถือ 3) */}
+              {editable && (
+                <div className="md:hidden">
+                  <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">อัปเดตสถานะเร็ว</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" disabled={!!busy} onClick={() => quickStage('site_visit')} className="touch-feedback min-h-12 rounded-[13px] bg-tk-line-light py-3.5 text-[13.5px] font-semibold text-tk-ink-3 disabled:opacity-60">ลงพื้นที่แล้ว</button>
+                    <button type="button" disabled={!!busy} onClick={() => (a.coordination ? quickStage('coordinating') : setCoordSetOpen(true))} className="touch-feedback min-h-12 rounded-[13px] bg-tk-coord-soft py-3.5 text-[13.5px] font-semibold text-tk-coord-ink disabled:opacity-60">รอหน่วยงานอื่น</button>
+                    <button type="button" disabled={!!busy} onClick={() => document.getElementById('blocked-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="touch-feedback min-h-12 rounded-[13px] bg-tk-blocked-soft py-3.5 text-[13.5px] font-semibold text-tk-blocked-ink disabled:opacity-60">รอวัสดุ / งบ</button>
+                    <button type="button" disabled={!!busy} onClick={() => setCloseOpen(true)} className="touch-feedback min-h-12 rounded-[13px] bg-tk-done-soft py-3.5 text-[13.5px] font-semibold text-tk-done-ink disabled:opacity-60">เสร็จแล้ว</button>
+                  </div>
+                </div>
+              )}
 
               <CoordinationBlock
                 coordination={a.coordination}
@@ -446,7 +497,9 @@ function TaskDetailContent() {
                 </button>
               )}
 
-              <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
+              <div id="blocked-card">
+                <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
+              </div>
 
               {editable && (
                 <>
@@ -462,7 +515,22 @@ function TaskDetailContent() {
                   </div>
                   <div>
                     <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">แนบภาพผลการดำเนินงาน</span>
-                    <ImageUploads key={uploaderKey} maxImages={3} initialImages={[]} onChange={(urls: string[]) => setImages(urls)} onUploadingChange={setUploading} />
+                    {/* มือถือ: ปุ่มถ่ายภาพ (กล้องหลัง) + thumbnail · เดสก์ท็อป: ImageUploads เดิม */}
+                    <div className="flex items-center gap-2 md:hidden">
+                      <button type="button" disabled={cameraBusy} onClick={() => cameraRef.current?.click()} className="touch-feedback inline-flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[13px] bg-tk-primary-tint text-[13.5px] font-semibold text-tk-primary-dark disabled:opacity-60">
+                        <CameraIcon className="h-5 w-5" strokeWidth={2} />
+                        {cameraBusy ? 'กำลังอัปโหลด…' : 'ถ่ายภาพ'}
+                      </button>
+                      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onCameraFile} aria-label="ถ่ายภาพ" />
+                      {images.map((src) => (
+                        <span key={src} className="relative block h-[52px] w-[52px] overflow-hidden rounded-[12px] border border-tk-line">
+                          <Image src={src} alt="" fill sizes="52px" className="object-cover" />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="hidden md:block">
+                      <ImageUploads key={uploaderKey} maxImages={3} initialImages={[]} onChange={(urls: string[]) => setImages(urls)} onUploadingChange={setUploading} />
+                    </div>
                   </div>
                 </>
               )}
@@ -481,16 +549,17 @@ function TaskDetailContent() {
             </div>
 
             {editable && (
-              <div className="flex gap-2.5 border-t border-tk-line-light px-5 py-4">
+              // มือถือ: footer ปุ่มเดียวลอยล่าง (README มือถือ 3) · เดสก์ท็อป: 2 ปุ่มท้าย panel
+              <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2.5 border-t border-tk-line-light bg-tk-surface px-4 pt-3 pb-[max(env(safe-area-inset-bottom),14px)] md:static md:px-5 md:py-4">
                 <button
                   type="button"
-                  disabled={busy === 'progress' || uploading}
+                  disabled={busy === 'progress' || uploading || cameraBusy}
                   onClick={saveProgress}
-                  className="flex-1 rounded-[12px] bg-tk-primary py-[13px] text-[14px] font-semibold text-white shadow-tk-purple whitespace-nowrap transition hover:bg-tk-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                  className="touch-feedback flex-1 rounded-[15px] bg-tk-primary py-[15px] text-[15px] font-semibold text-white shadow-tk-purple whitespace-nowrap transition hover:bg-tk-primary-dark disabled:cursor-not-allowed disabled:opacity-60 md:rounded-[12px] md:py-[13px] md:text-[14px]"
                 >
-                  {uploading ? 'กำลังอัปโหลดภาพ…' : busy === 'progress' ? 'กำลังบันทึก…' : 'บันทึกความคืบหน้า'}
+                  {uploading || cameraBusy ? 'กำลังอัปโหลดภาพ…' : busy === 'progress' ? 'กำลังบันทึก…' : 'บันทึกความคืบหน้า'}
                 </button>
-                <button type="button" disabled={!!busy} onClick={() => setCloseOpen(true)} className="rounded-[12px] bg-tk-done-soft px-[18px] py-[13px] text-[14px] font-semibold text-tk-done whitespace-nowrap transition hover:brightness-95 disabled:opacity-60">
+                <button type="button" disabled={!!busy} onClick={() => setCloseOpen(true)} className="hidden rounded-[12px] bg-tk-done-soft px-[18px] py-[13px] text-[14px] font-semibold text-tk-done whitespace-nowrap transition hover:brightness-95 disabled:opacity-60 md:block">
                   ปิดเรื่อง
                 </button>
               </div>

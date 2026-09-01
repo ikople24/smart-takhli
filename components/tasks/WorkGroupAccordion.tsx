@@ -48,7 +48,7 @@ export function tileForGroup(group: Pick<TaskGroup, 'key' | 'label'>): Tile {
 }
 
 /** ป้ายสรุปของกลุ่ม — เฉพาะที่มี (README: "สรุปเฉพาะที่มี") */
-function GroupBadges({ counts }: { counts: TaskGroup['counts'] }) {
+function GroupBadges({ counts, mobile = false }: { counts: TaskGroup['counts']; mobile?: boolean }) {
   const items: Array<{ severity: Severity; label: string }> = [
     { severity: 'overdue', label: 'เกินกำหนด' },
     { severity: 'due_soon', label: 'ใกล้ครบกำหนด' },
@@ -58,9 +58,9 @@ function GroupBadges({ counts }: { counts: TaskGroup['counts'] }) {
   const visible = items.filter((i) => (counts[i.severity] ?? 0) > 0);
   if (!visible.length) return null;
   return (
-    <div className="ml-[14px] hidden flex-wrap items-center gap-1.5 sm:flex">
+    <div className={clsx('flex-wrap items-center gap-1.5', mobile ? 'mt-1 flex sm:hidden' : 'ml-[14px] hidden sm:flex')}>
       {visible.map((i) => (
-        <AlertBadge key={i.severity} tone={SEVERITY_TONE[i.severity]} size="sm">
+        <AlertBadge key={i.severity} tone={SEVERITY_TONE[i.severity]} size={mobile ? 'xs' : 'sm'}>
           {i.label} {counts[i.severity]}
         </AlertBadge>
       ))}
@@ -202,17 +202,18 @@ export function WorkGroupAccordion({
                 open && 'bg-tk-primary-tint-2'
               )}
             >
-              <span className={clsx('grid h-9 w-9 shrink-0 place-items-center rounded-[11px]', tileCls)}>
+              <span className={clsx('grid h-10 w-10 shrink-0 place-items-center rounded-[12px] sm:h-9 sm:w-9 sm:rounded-[11px]', tileCls)}>
                 <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[14.5px] font-bold text-tk-ink">{group.label}</span>
                 {group.sub && <span className="block truncate text-[11.5px] text-tk-ink-5">{group.sub}</span>}
+                <GroupBadges counts={group.counts} mobile />
               </span>
               <GroupBadges counts={group.counts} />
               <span className="ml-auto flex shrink-0 items-center gap-3">
-                <MiniProgress counts={group.counts} total={group.count} />
-                <span className="text-[12.5px] font-bold text-tk-ink">{group.count}</span>
+                <span className="hidden sm:block"><MiniProgress counts={group.counts} total={group.count} /></span>
+                <span className="text-[17px] font-bold text-tk-ink sm:text-[12.5px]">{group.count}</span>
                 <ChevronDownIcon
                   className={clsx('h-[17px] w-[17px] transition-transform duration-200', open ? 'rotate-180 text-tk-primary' : 'text-tk-ink-6')}
                   strokeWidth={2}

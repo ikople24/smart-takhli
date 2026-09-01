@@ -3,6 +3,7 @@
 // ข้อความ aging pill / context badges มาจาก lib/tasks/badges.js (ใส่มาใน item แล้ว)
 import React from 'react';
 import clsx from 'clsx';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 import type { PoolItem } from '@/lib/tasks/types';
 import { AlertBadge } from './AlertBadge';
 
@@ -24,13 +25,19 @@ export interface PoolCardProps {
   onChooseOrg?: (item: PoolItem) => void;
   /** คลิกหัวเรื่อง → ดูรายละเอียด */
   onOpen?: (item: PoolItem) => void;
+  /** mobile = การ์ดใหญ่ + ปุ่ม "รับงานนี้" + ปุ่มแผนที่ (README มือถือ 2) */
+  variant?: 'desktop' | 'mobile';
   className?: string;
 }
 
 const BTN = 'rounded-[9px] py-2 text-[12.5px] font-semibold whitespace-nowrap transition active:scale-[.98] disabled:cursor-not-allowed';
+const BTN_MOBILE = 'rounded-[13px] py-[13px] text-[14px] font-semibold whitespace-nowrap transition active:scale-[.98] disabled:cursor-not-allowed';
 
-export function PoolCard({ item, action, canAssign = false, busy = false, onClaim, onAssign, onCoordinate, onChooseOrg, onOpen, className }: PoolCardProps) {
+export function PoolCard({ item, action, canAssign = false, busy = false, onClaim, onAssign, onCoordinate, onChooseOrg, onOpen, variant = 'desktop', className }: PoolCardProps) {
   const highlight = item.isUrgent || item.isStale;
+  const mobile = variant === 'mobile';
+  const btn = mobile ? BTN_MOBILE : BTN;
+  const mapHref = item.location ? `https://www.google.com/maps?q=${item.location.lat},${item.location.lng}` : null;
 
   let buttons: React.ReactNode;
   switch (action) {
@@ -41,12 +48,12 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
             type="button"
             disabled={busy}
             onClick={() => onClaim?.(item)}
-            className={clsx(BTN, 'flex-1 text-white', item.isUrgent ? 'bg-tk-overdue hover:brightness-95' : 'bg-tk-primary hover:bg-tk-primary-dark')}
+            className={clsx(btn, 'flex-1 text-white', item.isUrgent ? 'bg-tk-overdue hover:brightness-95' : 'bg-tk-primary hover:bg-tk-primary-dark')}
           >
-            {item.isUrgent ? 'รับงานด่วน' : 'รับงาน'}
+            {item.isUrgent ? 'รับงานด่วน' : mobile ? 'รับงานนี้' : 'รับงาน'}
           </button>
           {canAssign && (
-            <button type="button" disabled={busy} onClick={() => onAssign?.(item)} className={clsx(BTN, 'bg-tk-bg px-[11px] text-tk-ink-4 hover:bg-tk-line-light')}>
+            <button type="button" disabled={busy} onClick={() => onAssign?.(item)} className={clsx(btn, 'bg-tk-bg px-[11px] text-tk-ink-4 hover:bg-tk-line-light')}>
               มอบหมาย
             </button>
           )}
@@ -55,21 +62,21 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
       break;
     case 'coordinate':
       buttons = (
-        <button type="button" disabled={busy} onClick={() => onCoordinate?.(item)} className={clsx(BTN, 'flex-1 bg-tk-coord-soft text-tk-coord-ink hover:bg-tk-coord-btn')}>
+        <button type="button" disabled={busy} onClick={() => onCoordinate?.(item)} className={clsx(btn, 'flex-1 bg-tk-coord-soft text-tk-coord-ink hover:bg-tk-coord-btn')}>
           รับเป็นผู้ประสาน
         </button>
       );
       break;
     case 'choose_org':
       buttons = (
-        <button type="button" disabled={busy} onClick={() => onChooseOrg?.(item)} className={clsx(BTN, 'flex-1 bg-tk-ink-3 text-white hover:bg-tk-ink-2')}>
+        <button type="button" disabled={busy} onClick={() => onChooseOrg?.(item)} className={clsx(btn, 'flex-1 bg-tk-ink-3 text-white hover:bg-tk-ink-2')}>
           เลือกกอง
         </button>
       );
       break;
     default:
       buttons = (
-        <button type="button" disabled title="เฉพาะเจ้าหน้าที่ในกองนี้" className={clsx(BTN, 'flex-1 bg-tk-bg text-tk-ink-4 opacity-80')}>
+        <button type="button" disabled title="เฉพาะเจ้าหน้าที่ในกองนี้" className={clsx(btn, 'flex-1 bg-tk-bg text-tk-ink-4 opacity-80')}>
           ไม่ใช่กองของคุณ
         </button>
       );
@@ -78,7 +85,7 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
   return (
     <article
       className={clsx(
-        'rounded-[13px] border p-3 transition duration-150 hover:-translate-y-px hover:shadow-tk-md',
+        mobile ? 'rounded-[18px] border px-[15px] py-3.5' : 'rounded-[13px] border p-3 transition duration-150 hover:-translate-y-px hover:shadow-tk-md',
         highlight ? 'border-tk-overdue-line bg-tk-overdue-tint' : 'border-tk-line bg-tk-surface',
         className
       )}
@@ -102,6 +109,7 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
 
       <p className="mt-[5px] text-[11.5px] text-tk-ink-5">
         {[item.category, item.community].filter(Boolean).join(' · ') || '—'}
+        {item.distanceLabel && <span className="ml-1.5 font-semibold text-tk-blue">· {item.distanceLabel}</span>}
       </p>
 
       {item.contextBadges.length > 0 && (
@@ -114,7 +122,14 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
         </div>
       )}
 
-      <div className="mt-2.5 flex gap-[7px]">{buttons}</div>
+      <div className="mt-2.5 flex gap-[7px]">
+        {buttons}
+        {mobile && mapHref && (
+          <a href={mapHref} target="_blank" rel="noreferrer" aria-label="เปิดแผนที่" className="touch-feedback grid h-[52px] w-[52px] shrink-0 place-items-center rounded-[13px] bg-tk-bg text-tk-ink-3">
+            <MapPinIcon className="h-5 w-5" strokeWidth={2} />
+          </a>
+        )}
+      </div>
     </article>
   );
 }

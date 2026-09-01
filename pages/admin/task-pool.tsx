@@ -11,8 +11,9 @@ import Swal from 'sweetalert2';
 import { ArrowPathIcon, BellAlertIcon, ExclamationTriangleIcon, FunnelIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import PermissionGuard from '@/components/PermissionGuard';
 import type { GroupBy, PoolColumn, PoolItem, PoolResponse } from '@/lib/tasks/types';
-import { POOL_GROUP_BY } from '@/lib/tasks/pool';
-import { PoolCard, AssignTaskModal, DepartmentPickerModal, HeadsPanel } from '@/components/tasks';
+import { POOL_GROUP_BY, sortPoolItems } from '@/lib/tasks/pool';
+import { withDistance, poolChipCounts } from '@/lib/tasks/mobile';
+import { PoolCard, AssignTaskModal, DepartmentPickerModal, HeadsPanel, MobileTaskNav } from '@/components/tasks';
 import type { OfficerOption } from '@/components/tasks';
 
 const GROUP_LABELS: Record<GroupBy, string> = { organization: 'ตามกอง', category: 'ตามประเภทเรื่อง', priority: 'ตามความเร่งด่วน' };
@@ -93,6 +94,10 @@ function TaskPoolContent() {
   const [officers, setOfficers] = useState<OfficerOption[]>([]);
   const [officersLoading, setOfficersLoading] = useState(false);
   const [alerting, setAlerting] = useState(false);
+  // มือถือ (README มือถือ 2): chip กองของฉัน / ค้างนาน / ใกล้ฉัน / ทั้งหมด + flat list
+  const [mobileFilter, setMobileFilter] = useState<'mine' | 'stale' | 'near' | 'all' | null>(null);
+  const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
 
   // ตัวกรองอยู่ใน URL (แชร์ลิงก์/กด back ได้)
   const groupBy: GroupBy = (POOL_GROUP_BY as readonly string[]).includes(String(router.query.groupBy)) ? (router.query.groupBy as GroupBy) : 'organization';
@@ -137,6 +142,41 @@ function TaskPoolContent() {
     [data, hidden]
   );
   const visibleTotal = columns.reduce((s, c) => s + c.count, 0);
+
+  const visibleItems = useMemo<PoolItem[]>(() => (data?.items ?? []).filter((i) => !hidden.has(i._id)), [data, hidden]);
+  const chipCounts = useMemo(() => poolChipCounts(visibleItems, { officerDepartment: data?.officer.department ?? null }), [visibleItems, data]);
+  const effectiveMobileFilter = mobileFilter ?? (data?.officer.department ? 'mine' : 'all');
+  const mobileList = useMemo<PoolItem[]>(() => {
+    let list = visibleItems;
+    if (effectiveMobileFilter === 'mine' && data?.officer.department) list = list.filter((i) => i.department === data.officer.department);
+    if (effectiveMobileFilter === 'stale') list = list.filter((i) => i.isStale);
+    if (effectiveMobileFilter === 'near') return withDistance(list, origin) as PoolItem[];
+    return sortPoolItems(list) as PoolItem[];
+  }, [visibleItems, effectiveMobileFilter, data, origin]);
+
+  const locateMe = () => {
+    if (origin) {
+      setMobileFilter('near');
+      return;
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      toast('อุปกรณ์นี้ไม่รองรับตำแหน่ง', 'info');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setMobileFilter('near');
+        setLocating(false);
+      },
+      () => {
+        toast('ขอตำแหน่งไม่สำเร็จ — เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์', 'error');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   const ensureOfficers = async () => {
     if (officers.length) return;
@@ -247,16 +287,16 @@ function TaskPoolContent() {
   const stale = data?.stale;
 
   return (
-    <div className="-m-6 min-h-full bg-tk-bg px-6 py-[22px] font-tk-sans text-tk-ink">
+    <div className="-m-6 min-h-full bg-tk-bg px-3.5 pt-3 pb-28 font-tk-sans text-tk-ink md:px-6 md:py-[22px]">
       <div className="flex flex-col gap-4">
         {/* 1. Page title */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-bold leading-tight">กองงานรอรับ</h1>
-            <p className="mt-1 text-[13.5px] text-tk-ink-4">เรื่องที่ยังไม่มีเจ้าหน้าที่รับผิดชอบ — กดรับงานเพื่อย้ายเข้ากลุ่มงานของคุณ</p>
+            <h1 className="text-[21px] font-bold leading-tight md:text-[22px]">กองงานรอรับ</h1>
+            <p className="mt-1 text-[13.5px] text-tk-ink-4"><span className="md:hidden">{visibleTotal} เรื่องยังไม่มีเจ้าของ</span><span className="hidden md:inline">เรื่องที่ยังไม่มีเจ้าหน้าที่รับผิดชอบ — กดรับงานเพื่อย้ายเข้ากลุ่มงานของคุณ</span></p>
           </div>
           {data && (
-            <p className="text-[12.5px] text-tk-ink-6">
+            <p className="hidden text-[12.5px] text-tk-ink-6 md:block">
               {visibleTotal} เรื่องยังไม่มีเจ้าของ
               {data.officer.department ? ` · กองของคุณ: ${data.officer.department}` : ' · โปรไฟล์ยังไม่ระบุกอง — รับได้ทุกเรื่อง'}
               {data.officer.canAssign ? ' · คุณมอบหมายงานได้' : ''}
@@ -313,8 +353,27 @@ function TaskPoolContent() {
           </div>
         )}
 
-        {/* 3. Tabs + filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* มือถือ: chip แถวเดียว scroll แนวนอน */}
+        {data && (
+          <div className="no-scrollbar -mx-3.5 flex gap-2 overflow-x-auto px-3.5 md:hidden" role="radiogroup" aria-label="ตัวกรอง">
+            {([
+              ...(data.officer.department ? [['mine', `กองของฉัน ${chipCounts.mine}`]] : []),
+              ['stale', `ค้างนาน ${chipCounts.stale}`],
+              ['near', locating ? 'กำลังหาตำแหน่ง…' : 'ใกล้ฉัน'],
+              ['all', `ทั้งหมด ${chipCounts.all}`],
+            ] as Array<['mine' | 'stale' | 'near' | 'all', string]>).map(([key, label]) => {
+              const on = effectiveMobileFilter === key;
+              return (
+                <button key={key} type="button" role="radio" aria-checked={on} onClick={() => (key === 'near' ? locateMe() : setMobileFilter(key))} className={clsx('touch-feedback min-h-10 shrink-0 rounded-full px-3.5 text-[12.5px] font-semibold whitespace-nowrap transition', on ? 'bg-tk-primary text-white' : 'bg-tk-surface text-tk-ink-4 shadow-tk-xs')}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 3. Tabs + filters (เดสก์ท็อป) */}
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
           <div className="flex gap-1.5 rounded-[11px] bg-tk-surface p-1 shadow-tk-xs" role="radiogroup" aria-label="แบ่งคอลัมน์ตาม">
             {(POOL_GROUP_BY as readonly GroupBy[]).map((key) => {
               const on = key === groupBy;
@@ -350,7 +409,20 @@ function TaskPoolContent() {
           </div>
         </div>
 
-        {/* 4. Kanban */}
+        {/* มือถือ: flat list */}
+        {!loading && data && visibleTotal > 0 && (
+          <div className="flex flex-col gap-2.5 md:hidden">
+            {mobileList.length === 0 ? (
+              <p className="rounded-2xl bg-tk-surface px-4 py-8 text-center text-[13px] text-tk-ink-5">ไม่มีเรื่องตามตัวกรองนี้</p>
+            ) : (
+              mobileList.map((item) => (
+                <PoolCard key={item._id} item={item} action={item.action} canAssign={data.officer.canAssign} busy={busyId === item._id} variant="mobile" onClaim={claim} onAssign={(it) => { setAssignFor(it); ensureOfficers(); }} onChooseOrg={setDeptFor} />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 4. Kanban (เดสก์ท็อป) */}
         {loading ? (
           <Skeletons />
         ) : data && visibleTotal === 0 ? (
@@ -359,7 +431,7 @@ function TaskPoolContent() {
             {(q || community || onlyStale) && <p className="mt-1 text-[12.5px] text-tk-ink-5">ลองล้างตัวกรอง หรือขยายช่วงเวลา</p>}
           </div>
         ) : data ? (
-          <div className="grid gap-3.5 grid-cols-[repeat(auto-fill,minmax(250px,1fr))]">
+          <div className="hidden gap-3.5 grid-cols-[repeat(auto-fill,minmax(250px,1fr))] md:grid">
             {columns.map((col) => {
               const open = expanded[col.key] === true;
               const visible = open ? col.items : col.items.slice(0, PREVIEW_PER_COLUMN);
@@ -401,6 +473,8 @@ function TaskPoolContent() {
 
         {data?.officer.isSuperAdmin && <HeadsPanel />}
       </div>
+
+      <MobileTaskNav active="task-pool" poolCount={visibleTotal} onFab={() => router.push('/admin/my-tasks?quick=1')} />
 
       <AssignTaskModal open={!!assignFor} item={assignFor} officers={officers} officersLoading={officersLoading} workload={data?.workload ?? {}} submitting={!!assignFor && busyId === assignFor._id} onClose={() => setAssignFor(null)} onSubmit={assign} />
       <DepartmentPickerModal open={!!deptFor} item={deptFor} departments={data?.departments ?? []} submitting={!!deptFor && busyId === deptFor._id} onClose={() => setDeptFor(null)} onSubmit={setDepartment} />
