@@ -156,17 +156,56 @@ export interface MyKpiResponse {
   groups?: TaskGroup[];
 }
 
-/** หนึ่งการ์ดในกองงานรอรับ (ใช้โดย PoolCard — API pool มาในเฟสถัดไป) */
+/** หนึ่งการ์ดในกองงานรอรับ — GET /api/tasks/pool (derive แล้ว: deriveUnclaimed + badges + department) */
 export interface PoolItem extends DerivedUnclaimed {
   _id: string;
   code: string | null;
   title: string;
   category: string;
   community: string;
+  /** กองที่รับผิดชอบ (ชื่อมาตรฐาน) — null = ยังไม่ระบุกอง */
   department: string | null;
+  /** manual = เจ้าหน้าที่คัดแยก · category = เดาจากประเภทเรื่อง */
+  departmentSource: 'manual' | 'category' | null;
   createdAt: string;
+  imageCount: number;
+  hasLocation: boolean;
+  repeatCount: number;
+  possibleAgency: string | null;
+  isDangerous: boolean;
   agingPill: Badge | null;
   contextBadges: Badge[];
+  /** ปุ่มบนการ์ดสำหรับเจ้าหน้าที่ที่ล็อกอิน (lib/tasks/pool.js#poolAction) */
+  action: 'claim' | 'not_yours' | 'choose_org';
+}
+
+export interface PoolColumn {
+  key: string;
+  label: string;
+  fullName?: string;
+  count: number;
+  maxDays: number | null;
+  maxDaysTone: 'overdue' | 'due' | 'neutral';
+  tone: BadgeTone | 'primary';
+  isOwn?: boolean;
+  isUnassigned?: boolean;
+  items: PoolItem[];
+}
+
+export interface PoolResponse {
+  success: true;
+  now: string;
+  officer: { id: string; name: string; department: string | null; rawDepartment: string; canAssign: boolean; isSuperAdmin: boolean };
+  settings: TaskSettings;
+  filters: { groupBy: GroupBy; q: string; community: string; days: number | null; onlyStale: boolean };
+  items: PoolItem[];
+  columns: PoolColumn[];
+  stale: { count: number; maxDays: number | null; community: string; urgentCount: number; olderOutsideWindow: number };
+  total: number;
+  communities: string[];
+  departments: Array<{ name: string; short: string }>;
+  /** จำนวนงานเปิดที่แต่ละเจ้าหน้าที่ถืออยู่ (สำหรับ modal มอบหมาย) */
+  workload: Record<string, number>;
 }
 
 /* ── ผลของ lib/tasks/summary.js (หน้าจอ 1) ── */

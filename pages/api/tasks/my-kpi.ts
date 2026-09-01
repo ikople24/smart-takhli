@@ -7,13 +7,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import mongoose from 'mongoose';
 import Assignment from '@/models/Assignment';
 import '@/models/Complaint';
-import '@/models/Organization';
 import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { deriveAssignment } from '@/lib/tasks/derived';
 import { computeKpi } from '@/lib/tasks/kpi';
 import { GROUP_BY, groupTasks, filterByAlert } from '@/lib/tasks/groupBy';
 import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { summarizeText, toDate } from '@/lib/tasks/format';
+import { defaultDepartmentForCategory } from '@/lib/tasks/departments';
 import { loadSatisfactionStatsForComplaints } from '@/lib/satisfaction/readStats';
 import { computeFairStats } from '@/lib/satisfaction/fairStats';
 import type { DerivedAssignment, OfficerTask, GroupBy, AlertKind, Badge, StatusPill, MyKpi } from '@/lib/tasks/types';
@@ -31,7 +31,8 @@ interface ComplaintLean {
   location?: { lat?: number; lng?: number };
   createdAt?: Date;
   updatedAt?: Date;
-  organizationId?: { _id: mongoose.Types.ObjectId; name?: string } | null;
+  /** กองที่คัดแยกแล้ว (ชื่อมาตรฐาน) — '' = ยังไม่ระบุ */
+  department?: string;
 }
 
 interface AssignmentLean {
@@ -86,8 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'complaintId fullName detail category status community images location createdAt updatedAt organizationId',
-        populate: { path: 'organizationId', model: 'Organization', select: 'name' },
+        select: 'complaintId fullName detail category status community images location createdAt updatedAt department',
       })
       .sort({ assignedAt: -1 })
       .lean()) as unknown as AssignmentLean[];
@@ -116,7 +116,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: [c?.fullName ? `ผู้แจ้ง: ${c.fullName}` : null, c?.community || null].filter(Boolean).join(' · ') || undefined,
         category: c?.category ?? '',
         community: c?.community ?? '',
-        department: c?.organizationId?.name || officerDepartment,
+        // กองของเรื่อง: ที่คัดแยกไว้ → เดาจากประเภท → กองของเจ้าหน้าที่เอง (ใช้จัดกลุ่ม "ตามกอง")
+        department: c?.department || defaultDepartmentForCategory(c?.category) || officerDepartment,
         complaintStatus: c?.status ?? '',
         status: derived.isCompleted ? 'completed' : derived.isOverdue ? 'overdue' : 'pending',
         assignedAt: iso(a.assignedAt) ?? new Date(0).toISOString(),

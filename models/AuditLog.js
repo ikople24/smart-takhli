@@ -43,6 +43,8 @@ const AuditLogSchema = new mongoose.Schema({
       // Officer tasks
       'task_settings_updated',
       'assignment_follow_up',
+      'assignment_unclaimed',
+      'complaint_department_set',
       // General
       'data_exported',
       'login',

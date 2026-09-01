@@ -6,6 +6,7 @@ import type { NextApiRequest } from 'next';
 import mongoose from 'mongoose';
 import { getAuth, clerkClient } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/dbConnect';
+import { hasPermission, type Role } from '@/lib/permissions';
 
 export interface OfficerUser {
   _id: mongoose.Types.ObjectId;
@@ -54,4 +55,15 @@ export async function requireSuperAdmin(req: NextApiRequest): Promise<AuthFail |
     console.error('[tasks] clerk lookup failed:', err);
     return { ok: false, status: 403, message: 'Forbidden' };
   }
+}
+
+/** เหมือน getOfficer แต่ตรวจสิทธิ์หน้าเพิ่ม (allowedPages ใน Mongo / DEFAULT_PERMISSIONS / superadmin) ผ่าน hasPermission ที่เดียว */
+export async function requirePage(req: NextApiRequest, pagePath: string): Promise<AuthFail | OfficerOk> {
+  const auth = await getOfficer(req);
+  if (!auth.ok) return auth;
+  const role = (auth.officer.role as Role) || 'admin';
+  if (!hasPermission(role, auth.officer.allowedPages, pagePath)) {
+    return { ok: false, status: 403, message: 'No page access' };
+  }
+  return auth;
 }
