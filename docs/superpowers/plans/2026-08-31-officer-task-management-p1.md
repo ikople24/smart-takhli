@@ -86,3 +86,4 @@ docs/modules/tasks.md
 - `MobileTaskNav` (5 ช่อง + FAB) · `QuickTaskSheet` · `PoolCard variant=mobile` · AlertCards 2×2 · OfficerHeaderCard ย่อ · `GET /api/tasks/pool-count`
 - 3 หน้าใช้ responsive ในไฟล์เดิม (ไม่แยกหน้า): chip+flat list (pool), ปุ่มสถานะเร็ว 2×2 + ถ่ายภาพ + footer ลอย (detail)
 - ค้าง: ดูจริงบนมือถือ (ผมไม่มี browser) · ตั้ง cron · grant script · next build · push/PR
+- ปรับตาม feedback 2026-09-01: ย้าย HeadsPanel ไป `/admin/superadmin/department-heads` (การบริหารระบบ) · ตัด ADMIN_META title ของ task-pool (ชื่อซ้ำ h1) · แก้ alert bar มือถือถูกบีบ

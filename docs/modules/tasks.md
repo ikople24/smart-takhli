@@ -25,7 +25,7 @@
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
   (`?days=30|90|365|all` default 30 — ถ้ามีเรื่องเก่ากว่านั้น alert bar บอกจำนวนพร้อมลิงก์ดูทั้งหมด) · kanban ต่อคอลัมน์ (กองของตัวเองมีเสมอ,
   "ยังไม่ระบุกอง" dashed ท้ายสุด) · การ์ด: รับงาน (optimistic + toast "เลิกทำ" 5 วิ) / มอบหมาย (หัวหน้ากอง) / เลือกกอง / ไม่ใช่กองของคุณ
-  · ลงทะเบียนครบ 4 จุด (ALL_PAGES + DEFAULT_PERMISSIONS admin + navigationItems + ADMIN_META) + `scripts/grant-task-pool-permission.mjs`
+  · ลงทะเบียนครบ (ALL_PAGES + DEFAULT_PERMISSIONS admin + navigationItems; **ไม่ใส่ ADMIN_META title** เพราะหน้ามี h1 เอง — ไม่งั้นชื่อซ้ำ) + `scripts/grant-task-pool-permission.mjs`
 
 ## API (`pages/api/tasks/`)
 
@@ -101,7 +101,7 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 
 มือถือ (ข้อ 8): `MobileTaskNav` (bottom nav 5 ช่อง + FAB, แสดง < md) · `QuickTaskSheet` (bottom sheet งานด่วน 5 เรื่อง → หน้าจอ 3) · `PoolCard variant="mobile"` (ปุ่ม "รับงานนี้" + แผนที่ + ระยะทาง) · `AlertCards` มีการ์ด "ต้องจัดการวันนี้" 2×2 · `OfficerHeaderCard` ย่อ
 
-สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง — อยู่ท้ายหน้ากองงานรอรับชั่วคราว จนกว่าหน้าจัดการผู้ใช้จะรีดีไซน์เสร็จ)
+สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง) — ใช้ที่หน้า **`/admin/superadmin/department-heads`** (การบริหารระบบ · `SUPERADMIN_ONLY_PAGES`)
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
@@ -117,7 +117,7 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - ปุ่ม "แจ้ง LINE" ทุกจุดต้องมี dialog ยืนยัน — 1 push เข้ากลุ่มนับโควตาเท่าจำนวนสมาชิก (โควตา 300/เดือน)
 - **นโยบายสิทธิ์ (ตกลง 2026-09-01):** admin ธรรมดา *รับงาน* จากกองเองได้ แต่ **โอน/มอบหมายได้เฉพาะหัวหน้ากอง (งานในกองตัวเอง) และ superadmin** ·
   เจ้าของงานที่โอนเองไม่ได้ใช้ "ขอโอนงาน" (แจ้งกระดิ่งหัวหน้า) · หัวหน้าเห็น "งานของกอง" ในหน้างานของฉัน · เรื่องค้างไม่มีคนรับแจ้งหัวหน้าทุกเช้าทางกระดิ่ง (cron)
-  · หัวหน้ากอง = `users.isDepartmentHead` (superadmin ติ๊ก) หรือถ้าไม่ตั้งดูจากตำแหน่ง — ทุกจุดผ่าน `lib/tasks/roles.js`
+  · หัวหน้ากอง = `users.isDepartmentHead` (superadmin ติ๊กที่ `/admin/superadmin/department-heads`) หรือถ้าไม่ตั้งดูจากตำแหน่ง — ทุกจุดผ่าน `lib/tasks/roles.js`
 - "กอง" ของเรื่อง = `complaint.department` ที่คัดแยก (manual) → ถ้าไม่มีใช้ `defaultDepartmentForCategory` (category) → ไม่ได้ = ยังไม่ระบุกอง;
   เจ้าหน้าที่ที่โปรไฟล์ไม่ระบุกอง / superadmin รับได้ทุกเรื่อง
 - ป้าย "เสี่ยงอันตราย" / "อาจต้องประสาน กฟภ." เป็นคำใบ้จาก keyword ในข้อความ (`pool.js`) ไม่ใช่การตัดสิน

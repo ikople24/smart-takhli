@@ -1,6 +1,6 @@
 // components/tasks/HeadsPanel.tsx
 // แผง "ตั้งค่าหัวหน้ากอง" (superadmin) — ติ๊กว่าใครเป็นหัวหน้ากอง (มอบหมาย/โอนงานได้) แทนการเดาจากตำแหน่ง
-// อยู่ในหน้ากองงานรอรับชั่วคราว จนกว่าหน้าจัดการผู้ใช้ของ superadmin จะรีดีไซน์เสร็จ → GET/PUT /api/tasks/heads
+// ใช้ที่หน้า /admin/superadmin/department-heads (การบริหารระบบ) → GET/PUT /api/tasks/heads
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
@@ -23,8 +23,8 @@ interface HeadUser {
 
 const BTN = 'rounded-[8px] px-2.5 py-1 text-[11.5px] font-semibold whitespace-nowrap transition disabled:opacity-50';
 
-export function HeadsPanel({ className }: { className?: string }) {
-  const [open, setOpen] = useState(false);
+export function HeadsPanel({ className, defaultOpen = false, standalone = false }: { className?: string; defaultOpen?: boolean; standalone?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [users, setUsers] = useState<HeadUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -71,16 +71,16 @@ export function HeadsPanel({ className }: { className?: string }) {
 
   return (
     <section className={clsx('rounded-2xl border border-tk-line bg-tk-surface', className)}>
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <button type="button" onClick={() => !standalone && setOpen((v) => !v)} aria-expanded={open} className={clsx('flex w-full items-center gap-3 px-4 py-3 text-left', standalone && 'cursor-default')}>
         <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-tk-primary-tint text-tk-primary">
           <UserGroupIcon className="h-4 w-4" strokeWidth={2} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-bold text-tk-ink">ตั้งค่าหัวหน้ากอง <span className="text-[11px] font-medium text-tk-ink-5">(superadmin)</span></span>
+          <span className="block text-[13.5px] font-bold text-tk-ink">ตั้งค่าหัวหน้ากอง{!standalone && <span className="text-[11px] font-medium text-tk-ink-5"> (superadmin)</span>}</span>
           <span className="block text-[11.5px] text-tk-ink-5">หัวหน้ากองเท่านั้นที่มอบหมาย/โอนงานได้ — ไม่ตั้งค่า ระบบดูจากตำแหน่ง (ผู้อำนวยการ / หัวหน้า / ผอ. / ปลัด)</span>
         </span>
         {users.length > 0 && <span className="text-[12px] font-semibold text-tk-ink-4 whitespace-nowrap">หัวหน้า {headCount} คน</span>}
-        <ChevronDownIcon className={clsx('h-4 w-4 text-tk-ink-6 transition-transform', open && 'rotate-180')} strokeWidth={2} />
+        {!standalone && <ChevronDownIcon className={clsx('h-4 w-4 text-tk-ink-6 transition-transform', open && 'rotate-180')} strokeWidth={2} />}
       </button>
       {open && (
         <div className="border-t border-tk-line-light px-4 py-3">

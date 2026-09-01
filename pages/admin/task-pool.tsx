@@ -13,7 +13,7 @@ import PermissionGuard from '@/components/PermissionGuard';
 import type { GroupBy, PoolColumn, PoolItem, PoolResponse } from '@/lib/tasks/types';
 import { POOL_GROUP_BY, sortPoolItems } from '@/lib/tasks/pool';
 import { withDistance, poolChipCounts } from '@/lib/tasks/mobile';
-import { PoolCard, AssignTaskModal, DepartmentPickerModal, HeadsPanel, MobileTaskNav } from '@/components/tasks';
+import { PoolCard, AssignTaskModal, DepartmentPickerModal, MobileTaskNav } from '@/components/tasks';
 import type { OfficerOption } from '@/components/tasks';
 
 const GROUP_LABELS: Record<GroupBy, string> = { organization: 'ตามกอง', category: 'ตามประเภทเรื่อง', priority: 'ตามความเร่งด่วน' };
@@ -471,8 +471,6 @@ function TaskPoolContent() {
             })}
           </div>
         ) : null}
-
-        {data?.officer.isSuperAdmin && <HeadsPanel />}
       </div>
 
       <MobileTaskNav active="task-pool" poolCount={visibleTotal} onFab={() => router.push('/admin/my-tasks?quick=1')} />
