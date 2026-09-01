@@ -58,7 +58,7 @@ docs/modules/tasks.md
 
 - ข้อมูลจริงเปลี่ยนสมมติฐาน README: `organizations` มีแค่ตัวเทศบาล → ใช้ `Complaint.department` (ชื่อกองมาตรฐาน) แทน `organizationId`
   + ทะเบียนกอง `lib/tasks/departments.js` (alias จาก `users.department` ที่สะกดไม่ตรงกัน) + mapping ประเภท→กอง (ค่าเสนอแนะ)
-- `lib/tasks/pool.js` (TDD 18 เทสต์) + `loadPool.js` (I/O) · API `GET /api/tasks/pool`, `POST pool-alert`, `PATCH complaints/[id]/department`, `DELETE assignments/[id]` (เลิกทำ)
+- `lib/tasks/pool.js` (TDD 18 เทสต์) + `loadPool.js` (I/O) · API `GET /api/tasks/pool`, `POST pool-alert`, `PATCH tasks/set-department` (ย้ายจาก `complaints/[id]/…` เพราะชน slug `[id_card].js` — dev server ล้ม), `DELETE assignments/[id]` (เลิกทำ)
 - หน้า `/admin/task-pool` ลงทะเบียนครบ 4 จุด + `scripts/grant-task-pool-permission.mjs` (dry-run พบ 13 user — **รอเจ้าของรัน --yes**)
 - ตัดสินใจ: ช่วงเวลา default 30 วัน แต่ alert bar บอกจำนวนเรื่องเก่ากว่านั้นเสมอ · "ร้องซ้ำ" = เบอร์+ประเภท+ชุมชน (เบอร์อย่างเดียวได้ 17 ครั้งจากเบอร์เจ้าหน้าที่)
   · ยังไม่ทำ drag & drop ข้ามคอลัมน์ (README ระบุ desktop) · "รับเป็นผู้ประสาน" รอหน้าจอ 3

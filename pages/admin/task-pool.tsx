@@ -210,7 +210,7 @@ function TaskPoolContent() {
     if (!deptFor) return;
     setBusyId(deptFor._id);
     try {
-      await axios.patch(`/api/complaints/${deptFor._id}/department`, { department });
+      await axios.patch('/api/tasks/set-department', { complaintId: deptFor._id, department });
       setDeptFor(null);
       toast(`ย้ายไป ${department} แล้ว`);
       await load(true);
