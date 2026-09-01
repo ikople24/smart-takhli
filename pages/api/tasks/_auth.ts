@@ -27,7 +27,9 @@ const UserSchema = new mongoose.Schema(
   { collection: 'users', strict: false }
 );
 
-function userModel() {
+export const CURRENT_APP_ID = process.env.NEXT_PUBLIC_APP_ID || 'smart-takhli';
+
+export function userModel() {
   return mongoose.models.User || mongoose.model('User', UserSchema);
 }
 

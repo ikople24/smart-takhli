@@ -140,7 +140,10 @@ export interface MyKpi {
   completionRate: number;
   onTimeRate: number | null;
   avgResolutionDays: number | null;
+  /** คะแนนเฉลี่ยแบบ 1 ผู้แจ้ง = 1 เสียง ของเรื่องที่เจ้าหน้าที่ถือ — null เมื่อยังไม่มีคะแนน */
   satisfaction: number | null;
+  satisfactionCount?: number;
+  satisfactionReporters?: number;
 }
 
 export interface MyKpiResponse {
@@ -164,4 +167,48 @@ export interface PoolItem extends DerivedUnclaimed {
   createdAt: string;
   agingPill: Badge | null;
   contextBadges: Badge[];
+}
+
+/* ── ผลของ lib/tasks/summary.js (หน้าจอ 1) ── */
+
+export interface AlertCard {
+  key: AlertKind;
+  tone: BadgeTone;
+  label: string;
+  count: number;
+  caption: string;
+}
+
+export interface CoordinationRailItem {
+  agencyName: string;
+  count: number;
+  maxWaitDays: number | null;
+  waitPill: Badge | null;
+  latestSentAt: string | null;
+  nextFollowUpAt: string | null;
+  followUpDue: boolean;
+  asCoordinator: boolean;
+  tasks: Array<{ _id: string; code: string | null; title: string; actionUrl: string | null; role: AssignmentRole }>;
+}
+
+export interface BlockedRailItem {
+  _id: string;
+  code: string | null;
+  title: string;
+  itemName: string;
+  purchaseRefNo: string;
+  expectedAt: string | null;
+  since: string | null;
+  actionUrl: string | null;
+}
+
+export interface DueThisWeekItem {
+  _id: string;
+  code: string | null;
+  title: string;
+  dueDate: string | null;
+  daysToDue: number;
+  tone: 'overdue' | 'due' | 'neutral';
+  caption: string;
+  actionUrl: string | null;
 }

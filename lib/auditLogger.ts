@@ -25,6 +25,7 @@ type AuditAction =
   | 'garbage_communities_mapped'
   // Officer tasks
   | 'task_settings_updated'
+  | 'assignment_follow_up'
   | 'data_exported'
   | 'login';
 

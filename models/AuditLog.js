@@ -38,6 +38,7 @@ const AuditLogSchema = new mongoose.Schema({
       'garbage_communities_mapped',
       // Officer tasks
       'task_settings_updated',
+      'assignment_follow_up',
       // General
       'data_exported',
       'login',

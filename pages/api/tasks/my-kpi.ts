@@ -14,7 +14,9 @@ import { computeKpi } from '@/lib/tasks/kpi';
 import { GROUP_BY, groupTasks, filterByAlert } from '@/lib/tasks/groupBy';
 import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { summarizeText, toDate } from '@/lib/tasks/format';
-import type { DerivedAssignment, OfficerTask, GroupBy, AlertKind, Badge, StatusPill } from '@/lib/tasks/types';
+import { loadSatisfactionStatsForComplaints } from '@/lib/satisfaction/readStats';
+import { computeFairStats } from '@/lib/satisfaction/fairStats';
+import type { DerivedAssignment, OfficerTask, GroupBy, AlertKind, Badge, StatusPill, MyKpi } from '@/lib/tasks/types';
 import { getOfficer } from './_auth';
 
 interface ComplaintLean {
@@ -149,7 +151,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    const kpi = computeKpi(assignments, { now });
+    const kpi = computeKpi(assignments, { now }) as MyKpi;
+
+    // ความพึงพอใจของเจ้าหน้าที่คนนี้ — คะแนนของเรื่องที่เขาถือ นับ "1 ผู้แจ้ง = 1 เสียง" (lib/satisfaction/fairStats.js)
+    // อ่านพลาดไม่ทำให้ทั้งหน้าล้ม — ช่องนี้แสดง "–" แทน
+    try {
+      const complaintIds = assignments.map((a) => a.complaintId).filter((id): id is string => !!id);
+      const { ratings, reports } = await loadSatisfactionStatsForComplaints(complaintIds);
+      const fair = computeFairStats(ratings, reports);
+      kpi.satisfaction = fair.totalRatings > 0 ? fair.averageRating : null;
+      kpi.satisfactionCount = fair.totalRatings;
+      kpi.satisfactionReporters = fair.reporters;
+    } catch (err) {
+      console.error('[tasks] satisfaction kpi failed:', err);
+    }
 
     // จัดกลุ่มเฉพาะงานที่ยังเปิด (กลุ่มงานของฉัน = งานที่ถืออยู่) — กรองตามการ์ดเตือนถ้าส่ง alert มา
     const groupByRaw = typeof req.query.groupBy === 'string' ? req.query.groupBy : '';
