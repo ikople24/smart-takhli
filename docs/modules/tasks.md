@@ -6,7 +6,7 @@
 
 - ที่มาดีไซน์ (hifi): `docs/design_handoff_officer_task_management/README.md`
 - แผน + เหตุผลการตัดสินใจ: `docs/superpowers/plans/2026-08-31-officer-task-management-p1.md`
-- **สถานะ (2026-09-01): เฟส 1–4 (ข้อ 1–7) เสร็จ** — หน้าจอ 1 `/admin/my-tasks`, หน้าจอ 2 `/admin/task-pool`, หน้าจอ 3 `/admin/my-tasks/[assignmentId]`
+- **สถานะ (2026-09-01): เฟส 1–5 เสร็จ** (ข้อ 1–7 + นโยบายสิทธิ์โอน/มอบหมาย) — หน้าจอ 1 `/admin/my-tasks`, หน้าจอ 2 `/admin/task-pool`, หน้าจอ 3 `/admin/my-tasks/[assignmentId]`
   ใช้งานได้จริง · ค้าง: ข้อ 8 มือถือ/LINE hooks · **ต้องรัน `scripts/grant-task-pool-permission.mjs --yes` (13 user)** · ยังไม่มีใครเห็นหน้าจริงด้วยตา
 
 ## หน้า
@@ -31,8 +31,11 @@
 
 | endpoint | หน้าที่ |
 |---|---|
-| `GET /api/tasks/my-kpi?groupBy=category\|organization\|priority&alert=overdue\|due_soon\|coordinating\|blocked` | งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน + derived fields + `kpi` + (ถ้าส่ง groupBy) `groups` — คีย์เดิม (`status`, `daysAssigned`, `resolutionDays`, `actionUrl`) คงไว้ให้หน้าเดิม |
+| `GET /api/tasks/my-kpi?groupBy=…&alert=…&scope=mine\|department` | งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน + derived fields + `kpi` + (ถ้าส่ง groupBy) `groups` + `permissions` (isHead/canAssign/canTransfer) · `scope=department` (หัวหน้า/superadmin) = งานทุกคนในกอง พร้อม `assignee` และ `transferRequest` |
 | `GET /api/tasks/pending` | widget งานค้างเดิม — เปลี่ยนมาใช้ SLA จาก `task_settings` ผ่าน `deriveAssignment` |
+| `GET /api/tasks/heads` · `PUT` (superadmin) | รายชื่อ user + สถานะหัวหน้ากอง · `PUT { userId, isDepartmentHead: true\|false\|null }` (null = กลับไปดูตำแหน่ง) audit `department_head_set` |
+| `POST /api/complaints/assignments/transfer-request` · `DELETE ?assignmentId=` | เจ้าของงานที่โอนเองไม่ได้ "ขอโอนงาน" (เหตุผลบังคับ) → `Assignment.transferRequest` + timeline + แจ้งกระดิ่งถึงหัวหน้ากอง (`digestRecipients`) · DELETE = เจ้าของยกเลิก / หัวหน้าปฏิเสธ |
+| `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) — **ไม่ส่ง LINE** (โควตา) |
 | `GET /api/tasks/[assignmentId]` | หน้าจอ 3: เรื่อง + assignment + derived + ป้าย + ไทม์ไลน์ + `solutionOptions` (AdminOption ของประเภทนั้น) + `canEdit` (เจ้าของ/superadmin) |
 | `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) |
 | `GET /api/tasks/pool?groupBy=&q=&community=&days=&onlyStale=1` | เรื่องที่ยังไม่มี Assignment และยังไม่ปิด (`lib/tasks/loadPool.js`) + derived/ป้าย + `action` ต่อเจ้าหน้าที่ + คอลัมน์ (`groupPool`) + `stale` + `workload` (งานเปิดต่อคน) + `departments` — สิทธิ์ผ่าน `requirePage('/admin/task-pool')` · ไม่คืนชื่อ/เบอร์ผู้แจ้ง |
@@ -75,6 +78,8 @@
 | `summary.js` | หน้าจอ 1: `alertCards` (การ์ดเตือน 4 ใบ), `coordinationRail` (รวมตามหน่วยงาน), `blockedRail`, `dueThisWeekRail` |
 | `departments.js` | **ทะเบียนกองมาตรฐาน + alias** (`normalizeDepartment`, `departmentShort`) และ `defaultDepartmentForCategory` (ประเภทเรื่อง → กอง ค่าเสนอแนะ) |
 | `pool.js` | หน้าจอ 2: `poolAction` (claim / not_yours / choose_org), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
+| `roles.js` | **นโยบายสิทธิ์**: `isDepartmentHead(user)` (ติ๊ก `users.isDepartmentHead` มาก่อน, fallback ตำแหน่ง `HEAD_POSITION_RE`), `headsOf`, `taskPermissions` → canAssign / canTransfer (หัวหน้าเฉพาะงานในกอง) / canRequestTransfer |
+| `digest.js` | `buildStaleDigest` (สรุปเรื่องค้างรายกอง + relatedId กันซ้ำรายวัน), `digestRecipients` (หัวหน้ากอง → ไม่มีก็หัวหน้าทุกกอง + superadmin) |
 | `timeline.js` | หน้าจอ 3: `buildTimeline` (รับเรื่อง → มอบหมาย → รายการ timeline → ปิดเรื่อง → รายการรออยู่; เรียงเชิงตรรกะก่อนเวลา เพราะข้อมูลเก่า completedAt เป็นวันที่ล้วน), `closeChecklist`, `stageChangePlan`, `blockedUpdate` |
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
@@ -91,6 +96,8 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 หน้าจอ 2 (ข้อ 6): `AssignTaskModal` (เจ้าหน้าที่ในกองก่อน เรียงงานน้อย→มาก จาก `workload`) · `DepartmentPickerModal`
 
 หน้าจอ 3 (ข้อ 7): `TaskTimeline` · `BlockedCard` · `CoordinationSetModal` · `CloseTaskModal` (ใช้ `ImageUploads` เดิม + `closeChecklist`)
+
+สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง — อยู่ท้ายหน้ากองงานรอรับชั่วคราว จนกว่าหน้าจัดการผู้ใช้จะรีดีไซน์เสร็จ)
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
@@ -104,9 +111,11 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - `kpi.satisfaction` = คะแนนของเรื่องที่เจ้าหน้าที่ถือ นับ "1 ผู้แจ้ง = 1 เสียง" ผ่าน `lib/satisfaction/readStats.js#loadSatisfactionStatsForComplaints`
   + `computeFairStats` (null เมื่อไม่มีคะแนน) — ห้ามคำนวณ `$avg` เอง; อ่านพลาดไม่ทำให้หน้าล้ม
 - ปุ่ม "แจ้ง LINE" ทุกจุดต้องมี dialog ยืนยัน — 1 push เข้ากลุ่มนับโควตาเท่าจำนวนสมาชิก (โควตา 300/เดือน)
+- **นโยบายสิทธิ์ (ตกลง 2026-09-01):** admin ธรรมดา *รับงาน* จากกองเองได้ แต่ **โอน/มอบหมายได้เฉพาะหัวหน้ากอง (งานในกองตัวเอง) และ superadmin** ·
+  เจ้าของงานที่โอนเองไม่ได้ใช้ "ขอโอนงาน" (แจ้งกระดิ่งหัวหน้า) · หัวหน้าเห็น "งานของกอง" ในหน้างานของฉัน · เรื่องค้างไม่มีคนรับแจ้งหัวหน้าทุกเช้าทางกระดิ่ง (cron)
+  · หัวหน้ากอง = `users.isDepartmentHead` (superadmin ติ๊ก) หรือถ้าไม่ตั้งดูจากตำแหน่ง — ทุกจุดผ่าน `lib/tasks/roles.js`
 - "กอง" ของเรื่อง = `complaint.department` ที่คัดแยก (manual) → ถ้าไม่มีใช้ `defaultDepartmentForCategory` (category) → ไม่ได้ = ยังไม่ระบุกอง;
-  เจ้าหน้าที่ที่โปรไฟล์ไม่ระบุกอง / superadmin รับได้ทุกเรื่อง · "หัวหน้ากอง" (มอบหมายได้) = superadmin หรือ position ตรง `HEAD_POSITION_RE`
-  (ผู้อำนวยการ/หัวหน้า/ผอ./ปลัด — ระบบไม่มี role หัวหน้า)
+  เจ้าหน้าที่ที่โปรไฟล์ไม่ระบุกอง / superadmin รับได้ทุกเรื่อง
 - ป้าย "เสี่ยงอันตราย" / "อาจต้องประสาน กฟภ." เป็นคำใบ้จาก keyword ในข้อความ (`pool.js`) ไม่ใช่การตัดสิน
 - **แจ้งเตือน LINE ตอนสถานะเรื่องเปลี่ยน/ปิดงานอยู่ที่เดียว `lib/complaintNotify.js`** (`notifyComplaintStatusChanged`) — ใช้ทั้ง `update-status.js` เดิม
   และ `PATCH /api/tasks/[assignmentId]` ห้าม copy · การบันทึกความคืบหน้าธรรมดา (note/รูป) **ไม่** แจ้ง LINE (โควตา) — แจ้งเฉพาะเมื่อขั้นเปลี่ยนสถานะเรื่อง/ปิดงาน

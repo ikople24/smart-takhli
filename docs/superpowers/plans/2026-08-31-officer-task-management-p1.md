@@ -71,3 +71,11 @@ docs/modules/tasks.md
 - API `GET/PATCH /api/tasks/[assignmentId]` (progress / close / blocked) · หน้า + 4 components · ลูกศร task row / rail / pending widget → หน้าจอ 3
 - ตัดสินใจ: ชื่อ/เบอร์ผู้แจ้งแสดงเต็มให้เจ้าหน้าที่ (README วาด mask แต่เจ้าหน้าที่ต้องโทร) · progress ธรรมดาไม่แจ้ง LINE (โควตา) · ไม่ทำ drag/popover ป้าย
 - ค้าง: ข้อ 8 มือถือ (bottom nav/FAB/หน้ามือถือ 3 จอ) + ยังไม่มีใครเห็นหน้าจริง · ยังไม่ `next build`
+
+## เฟส 5 (2026-09-01) — นโยบายสิทธิ์โอน/มอบหมาย (เจ้าของสั่ง: กันโอนกันมั่ว / ไม่มีใครรับ) ✅
+
+- `lib/tasks/roles.js` + `digest.js` (TDD 15 เทสต์) · `users.isDepartmentHead` (superadmin ติ๊กผ่าน `HeadsPanel` + `GET/PUT /api/tasks/heads`) fallback ตำแหน่ง
+- โอนงาน: เฉพาะหัวหน้ากอง (งานในกอง) / superadmin · admin ธรรมดา "ขอโอนงาน" (`transfer-request` → กระดิ่งหัวหน้า) · โอนแล้วแจ้งผู้รับทางกระดิ่ง
+- หัวหน้าเห็น "งานของกอง" (`my-kpi?scope=department`) และโอนงานลูกน้องได้จากปุ่มเดิม
+- cron `pages/api/cron/tasks/stale-digest.ts` (แนะนำ `30 1 * * *` UTC) แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน — ไม่ใช้ LINE (โควตา)
+- ค้าง: ตั้ง cron บน Railway · ย้าย HeadsPanel เข้าหน้าจัดการผู้ใช้เมื่อรีดีไซน์เสร็จ · ข้อ 8 มือถือ
