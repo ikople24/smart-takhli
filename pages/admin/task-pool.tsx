@@ -317,11 +317,12 @@ function TaskPoolContent() {
 
         {/* 2. Alert bar (แดง) */}
         {stale && (stale.count > 0 || stale.olderOutsideWindow > 0) && (
-          <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] border border-tk-overdue-line bg-tk-overdue-soft px-[18px] py-3.5">
+          <div className="flex flex-wrap items-center gap-3 rounded-[15px] border border-tk-overdue-line bg-tk-overdue-soft px-3.5 py-3 md:gap-3.5 md:rounded-[14px] md:px-[18px] md:py-3.5">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-tk-surface" aria-hidden>
               <ExclamationTriangleIcon className="h-5 w-5 text-tk-overdue" strokeWidth={2} />
             </span>
-            <div className="min-w-0 flex-1">
+            {/* มือถือ: ข้อความกินความกว้างที่เหลือของแถวแรก ปุ่มไปแถวถัดไป — ห้ามใช้ flex-1 min-w-0 คู่กับปุ่มที่ไม่หด ไม่งั้นข้อความถูกบีบเป็นคำละบรรทัด */}
+            <div className="min-w-0 flex-1 basis-[calc(100%-48px)] md:basis-auto">
               <div className="text-[14.5px] font-bold text-tk-overdue-ink">
                 {stale.count > 0 ? `${stale.count} เรื่องค้างไม่มีคนรับเกิน ${data!.settings.unclaimedAlertDays} วัน` : `มีเรื่องค้างเก่ากว่าช่วงที่แสดง ${stale.olderOutsideWindow} เรื่อง`}
               </div>
@@ -340,11 +341,11 @@ function TaskPoolContent() {
               </div>
             </div>
             {stale.count > 0 && (
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setQuery({ stale: onlyStale ? null : '1' })} className={clsx('rounded-[11px] px-[15px] py-[9px] text-[13px] font-semibold whitespace-nowrap transition', onlyStale ? 'bg-tk-overdue-ink text-white' : 'bg-tk-overdue text-white hover:brightness-95')}>
+              <div className="flex w-full gap-2 md:w-auto">
+                <button type="button" onClick={() => { setQuery({ stale: onlyStale ? null : '1' }); setMobileFilter(onlyStale ? null : 'stale'); }} className={clsx('touch-feedback min-h-11 flex-1 rounded-[11px] px-[15px] py-[9px] text-[13px] font-semibold whitespace-nowrap transition md:flex-none', onlyStale ? 'bg-tk-overdue-ink text-white' : 'bg-tk-overdue text-white hover:brightness-95')}>
                   {onlyStale ? 'แสดงทั้งหมด' : 'ดูเฉพาะที่ค้าง'}
                 </button>
-                <button type="button" disabled={alerting} onClick={notifyHeads} className="inline-flex items-center gap-1.5 rounded-[11px] bg-tk-surface px-[15px] py-[9px] text-[13px] font-semibold text-tk-overdue-ink whitespace-nowrap transition hover:bg-tk-overdue-tint disabled:opacity-60">
+                <button type="button" disabled={alerting} onClick={notifyHeads} className="touch-feedback inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] bg-tk-surface px-[15px] py-[9px] text-[13px] font-semibold text-tk-overdue-ink whitespace-nowrap transition hover:bg-tk-overdue-tint disabled:opacity-60 md:flex-none">
                   <BellAlertIcon className="h-4 w-4" strokeWidth={2} />
                   แจ้งเตือนหัวหน้ากอง
                 </button>

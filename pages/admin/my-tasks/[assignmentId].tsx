@@ -356,7 +356,7 @@ function TaskDetailContent() {
                     </div>
                   )}
                 </div>
-                <div className="shrink-0 text-right">
+                <div className="w-full shrink-0 border-t border-tk-line-light pt-3 md:w-auto md:border-0 md:pt-0 md:text-right">
                   <div className="text-[11.5px] text-tk-ink-6">ผู้รับผิดชอบ</div>
                   <div className="text-[13.5px] font-semibold">{a.assignee ? [a.assignee.name, a.assignee.department].filter(Boolean).join(' · ') : '—'}</div>
                   {a.role === 'coordinator' && <div className="text-[11.5px] text-tk-coord-ink">รับเป็นผู้ประสานงาน</div>}
@@ -371,7 +371,7 @@ function TaskDetailContent() {
 
               {data.transferRequest && (
                 <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-tk-due bg-tk-due-soft px-4 py-3 text-[12.5px]">
-                  <div className="min-w-0 flex-1">
+                  <div className="w-full min-w-0 md:w-auto md:flex-1">
                     <div className="font-bold text-tk-due-ink">ขอโอนงาน — {data.transferRequest.byName || 'เจ้าของงาน'} · {formatThaiDate(data.transferRequest.requestedAt)}</div>
                     <div className="text-tk-ink-2">เหตุผล: {data.transferRequest.reason}</div>
                   </div>
