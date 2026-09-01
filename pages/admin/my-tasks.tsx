@@ -275,7 +275,7 @@ export default function MyTasksPage() {
                   </button>
                 ))}
               </div>
-              {scope === 'department' && <span className="text-tk-ink-6">โอนงานของทุกคนในกองได้จากปุ่ม "โอน / ส่งต่องาน"</span>}
+              {scope === 'department' && <span className="text-tk-ink-6">โอนงานของทุกคนในกองได้จากปุ่ม “โอน / ส่งต่องาน”</span>}
             </div>
           )}
 
