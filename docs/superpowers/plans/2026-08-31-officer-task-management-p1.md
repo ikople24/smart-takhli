@@ -53,3 +53,13 @@ docs/modules/tasks.md
 - ตัดสินใจ: ปุ่ม "รับงานจากกอง" ชี้ `/admin/manage-complaints` ชั่วคราว (`POOL_HREF`) · ลูกศร task row ไป manage-complaints จนกว่าจะมีหน้าจอ 3
   · "แจ้ง LINE" ถามยืนยันก่อนเสมอ (โควตา) · ยังไม่ได้ดูหน้าด้วยตา (ไม่มี browser tool) — ตรวจ tsc/lint/CSS/smoke
 - ค้าง: ข้อ 6 (`/admin/task-pool` + `GET /api/tasks/pool` — ต้องทำครบ 4 จุดของ skill adding-admin-page), ข้อ 7 (หน้าจอ 3), ข้อ 8 (มือถือ)
+
+## เฟส 3 (2026-09-01) — ข้อ 6 หน้าจอ 2 `task-pool` ✅
+
+- ข้อมูลจริงเปลี่ยนสมมติฐาน README: `organizations` มีแค่ตัวเทศบาล → ใช้ `Complaint.department` (ชื่อกองมาตรฐาน) แทน `organizationId`
+  + ทะเบียนกอง `lib/tasks/departments.js` (alias จาก `users.department` ที่สะกดไม่ตรงกัน) + mapping ประเภท→กอง (ค่าเสนอแนะ)
+- `lib/tasks/pool.js` (TDD 18 เทสต์) + `loadPool.js` (I/O) · API `GET /api/tasks/pool`, `POST pool-alert`, `PATCH complaints/[id]/department`, `DELETE assignments/[id]` (เลิกทำ)
+- หน้า `/admin/task-pool` ลงทะเบียนครบ 4 จุด + `scripts/grant-task-pool-permission.mjs` (dry-run พบ 13 user — **รอเจ้าของรัน --yes**)
+- ตัดสินใจ: ช่วงเวลา default 30 วัน แต่ alert bar บอกจำนวนเรื่องเก่ากว่านั้นเสมอ · "ร้องซ้ำ" = เบอร์+ประเภท+ชุมชน (เบอร์อย่างเดียวได้ 17 ครั้งจากเบอร์เจ้าหน้าที่)
+  · ยังไม่ทำ drag & drop ข้ามคอลัมน์ (README ระบุ desktop) · "รับเป็นผู้ประสาน" รอหน้าจอ 3
+- ค้าง: ข้อ 7 หน้าจอ 3 (รายละเอียด + stepper + coordination set) — ลูกศร task row / หัวเรื่อง pool card ยังไปหน้า manage-complaints · ข้อ 8 มือถือ
