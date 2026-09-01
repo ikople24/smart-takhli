@@ -26,8 +26,7 @@ import {
 } from '@/components/tasks';
 import type { OfficerOption, TransferPayload, FollowUpPayload } from '@/components/tasks';
 
-// หน้าจอ 2 (/admin/task-pool) ยังไม่มี — ชั่วคราวชี้ไปหน้าร้องเรียนเดิมที่รับงานได้; เปลี่ยนเมื่อทำข้อ 6
-const POOL_HREF = '/admin/manage-complaints';
+const POOL_HREF = '/admin/task-pool';
 
 const GROUP_LABELS: Record<GroupBy, string> = {
   category: 'ตามประเภทเรื่อง',

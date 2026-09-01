@@ -153,6 +153,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/task-pool',
+    label: 'กองงานรอรับ',
+    icon: '📥',
+    description: 'เรื่องร้องเรียนที่ยังไม่มีเจ้าหน้าที่รับผิดชอบ — รับงาน / มอบหมาย / คัดแยกกอง',
+    category: 'management'
+  },
+  {
     path: '/admin/notifications',
     label: 'การแจ้งเตือน',
     icon: '🔔',
@@ -228,6 +235,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/register-user',
     '/admin/dashboard',
     '/admin/my-tasks',
+    '/admin/task-pool', // คู่กับ my-tasks — เจ้าหน้าที่ทุกคนต้องรับงานจากกองได้
     '/admin/notifications',
     '/admin/smart-light',
     '/admin/smart-waste',

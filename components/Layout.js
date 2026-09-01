@@ -18,6 +18,7 @@ const ADMIN_META = {
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
   // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
   '/admin/my-tasks':                  { title: 'งานของฉัน' },
+  '/admin/task-pool':                 { title: 'กองงานรอรับ' },
   '/admin/notifications': {
     title: 'การแจ้งเตือน',
     subtitle: 'ดูและจัดการการแจ้งเตือนของคุณ',

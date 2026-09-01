@@ -20,3 +20,5 @@ export { TransferTaskModal } from './TransferTaskModal';
 export type { OfficerOption, TransferPayload } from './TransferTaskModal';
 export { FollowUpModal } from './FollowUpModal';
 export type { FollowUpPayload, FollowUpChannel } from './FollowUpModal';
+export { AssignTaskModal } from './AssignTaskModal';
+export { DepartmentPickerModal } from './DepartmentPickerModal';
