@@ -14,9 +14,11 @@ export interface OfficerHeaderCardProps {
   poolHref: string;
   onTransfer?: () => void;
   transferDisabled?: boolean;
+  /** 'โอน / ส่งต่องาน' (หัวหน้า) หรือ 'ขอโอนงาน' (admin ธรรมดา) */
+  transferLabel?: string;
 }
 
-export function OfficerHeaderCard({ name, position, department, code, poolHref, onTransfer, transferDisabled }: OfficerHeaderCardProps) {
+export function OfficerHeaderCard({ name, position, department, code, poolHref, onTransfer, transferDisabled, transferLabel = 'โอน / ส่งต่องาน' }: OfficerHeaderCardProps) {
   const meta = [position, department].filter(Boolean);
   return (
     <section
@@ -56,7 +58,7 @@ export function OfficerHeaderCard({ name, position, department, code, poolHref, 
           className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-4 py-2.5 text-[13px] font-semibold whitespace-nowrap transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ArrowsRightLeftIcon className="h-4 w-4" strokeWidth={2} />
-          โอน / ส่งต่องาน
+          {transferLabel}
         </button>
         <Link
           href={poolHref}

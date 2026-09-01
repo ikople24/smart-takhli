@@ -29,7 +29,7 @@ import {
   CloseTaskModal,
   TransferTaskModal,
 } from '@/components/tasks';
-import type { OfficerOption, TransferPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload } from '@/components/tasks';
+import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload } from '@/components/tasks';
 
 const SmallMap = dynamic(() => import('@/components/SmallMap'), { ssr: false, loading: () => <div className="skeleton h-28 rounded-[11px]" /> });
 
@@ -86,6 +86,7 @@ function TaskDetailContent() {
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [transferMode, setTransferMode] = useState<'transfer' | 'request'>('transfer');
   const [officers, setOfficers] = useState<OfficerOption[]>([]);
   const [officersLoading, setOfficersLoading] = useState(false);
 
@@ -218,10 +219,11 @@ function TaskDetailContent() {
     }, 'ส่ง LINE ไม่สำเร็จ');
   };
 
-  /* ── โอนงาน ── */
-  const openTransfer = async () => {
+  /* ── โอนงาน (หัวหน้า/superadmin) · ขอโอน (เจ้าของงาน) ── */
+  const openTransfer = async (mode: 'transfer' | 'request') => {
+    setTransferMode(mode);
     setTransferOpen(true);
-    if (officers.length) return;
+    if (mode === 'request' || officers.length) return;
     setOfficersLoading(true);
     try {
       const { data: list } = await axios.get<OfficerOption[]>('/api/users/get-all-user');
@@ -239,6 +241,19 @@ function TaskDetailContent() {
       await Swal.fire({ icon: 'success', title: `โอนงานให้ ${res?.assignment?.toUserName || 'เจ้าหน้าที่'} แล้ว`, timer: 1600, showConfirmButton: false });
       router.push('/admin/my-tasks');
     }, 'โอนงานไม่สำเร็จ');
+
+  const submitTransferRequest = (payload: TransferRequestPayload) =>
+    run('transfer-request', async () => {
+      const { data: res } = await axios.post('/api/complaints/assignments/transfer-request', payload);
+      setTransferOpen(false);
+      toast(`ส่งคำขอโอนแล้ว — แจ้งหัวหน้ากอง ${res?.notified ?? 0} คน`);
+    }, 'ส่งคำขอไม่สำเร็จ');
+
+  const cancelTransferRequest = (decline: boolean) =>
+    run('transfer-request', async () => {
+      await axios.delete('/api/complaints/assignments/transfer-request', { params: { assignmentId: id } });
+      toast(decline ? 'ปฏิเสธคำขอโอนแล้ว' : 'ยกเลิกคำขอโอนแล้ว');
+    }, 'ดำเนินการไม่สำเร็จ');
 
   const c = data?.complaint;
   const a = data?.assignment;
@@ -307,11 +322,32 @@ function TaskDetailContent() {
                   <div className="text-[11.5px] text-tk-ink-6">ผู้รับผิดชอบ</div>
                   <div className="text-[13.5px] font-semibold">{a.assignee ? [a.assignee.name, a.assignee.department].filter(Boolean).join(' · ') : '—'}</div>
                   {a.role === 'coordinator' && <div className="text-[11.5px] text-tk-coord-ink">รับเป็นผู้ประสานงาน</div>}
-                  {editable && (
-                    <button type="button" onClick={openTransfer} className="mt-1 text-[12px] font-semibold text-tk-primary hover:underline">โอนงาน</button>
+                  {!data.derived.isCompleted && data.canTransfer && (
+                    <button type="button" onClick={() => openTransfer('transfer')} className="mt-1 text-[12px] font-semibold text-tk-primary hover:underline">โอนงาน</button>
+                  )}
+                  {!data.derived.isCompleted && !data.canTransfer && data.canRequestTransfer && !data.transferRequest && (
+                    <button type="button" onClick={() => openTransfer('request')} className="mt-1 text-[12px] font-semibold text-tk-primary hover:underline">ขอโอนงาน</button>
                   )}
                 </div>
               </div>
+
+              {data.transferRequest && (
+                <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-tk-due bg-tk-due-soft px-4 py-3 text-[12.5px]">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-tk-due-ink">ขอโอนงาน — {data.transferRequest.byName || 'เจ้าของงาน'} · {formatThaiDate(data.transferRequest.requestedAt)}</div>
+                    <div className="text-tk-ink-2">เหตุผล: {data.transferRequest.reason}</div>
+                  </div>
+                  {data.canTransfer && (
+                    <>
+                      <button type="button" disabled={!!busy} onClick={() => openTransfer('transfer')} className="rounded-[9px] bg-tk-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-tk-primary-dark disabled:opacity-60">โอนให้คนอื่น</button>
+                      <button type="button" disabled={!!busy} onClick={() => cancelTransferRequest(true)} className="rounded-[9px] bg-tk-surface px-3 py-1.5 text-[12px] font-semibold text-tk-ink-4 hover:bg-tk-line-light disabled:opacity-60">ปฏิเสธ</button>
+                    </>
+                  )}
+                  {!data.canTransfer && data.canEdit && (
+                    <button type="button" disabled={!!busy} onClick={() => cancelTransferRequest(false)} className="rounded-[9px] bg-tk-surface px-3 py-1.5 text-[12px] font-semibold text-tk-ink-4 hover:bg-tk-line-light disabled:opacity-60">ยกเลิกคำขอ</button>
+                  )}
+                </div>
+              )}
 
               <div className="mt-5 grid grid-cols-2 gap-4 border-t border-tk-line-light pt-[18px] md:grid-cols-4">
                 <Meta label="ผู้แจ้ง">{c.reporterName || '—'}</Meta>
@@ -476,14 +512,16 @@ function TaskDetailContent() {
       <CloseTaskModal open={closeOpen} options={data?.solutionOptions ?? []} submitting={busy === 'close'} onClose={() => setCloseOpen(false)} onSubmit={closeTask} />
       <TransferTaskModal
         open={transferOpen}
+        mode={transferMode}
         tasks={transferTasks}
         initialTaskId={data?.assignment._id ?? null}
         officers={officers}
         officersLoading={officersLoading}
         selfId={a?.assignee?.id ?? ''}
-        submitting={busy === 'transfer'}
+        submitting={busy === 'transfer' || busy === 'transfer-request'}
         onClose={() => setTransferOpen(false)}
         onSubmit={submitTransfer}
+        onRequest={submitTransferRequest}
       />
     </div>
   );

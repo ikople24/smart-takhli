@@ -87,6 +87,16 @@ export function TaskRow({ task, href, onOpen, className }: TaskRowProps) {
               {b.label}
             </AlertBadge>
           ))}
+          {task.transferRequest && (
+            <AlertBadge tone="due" size="md" title={`ขอโอน: ${task.transferRequest.reason}`}>
+              ขอโอนงาน
+            </AlertBadge>
+          )}
+          {task.assignee?.name && (
+            <AlertBadge tone="neutral" size="md" title="ผู้รับผิดชอบ">
+              {task.assignee.name}
+            </AlertBadge>
+          )}
         </div>
         <MetaLine task={task} />
       </div>

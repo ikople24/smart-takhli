@@ -24,7 +24,7 @@ import {
   TransferTaskModal,
   FollowUpModal,
 } from '@/components/tasks';
-import type { OfficerOption, TransferPayload, FollowUpPayload } from '@/components/tasks';
+import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload } from '@/components/tasks';
 
 const POOL_HREF = '/admin/task-pool';
 
@@ -77,6 +77,7 @@ export default function MyTasksPage() {
 
   // สถานะโอนงาน / บันทึกติดตาม
   const [transferOpen, setTransferOpen] = useState(false);
+  const [transferMode, setTransferMode] = useState<'transfer' | 'request'>('transfer');
   const [officers, setOfficers] = useState<OfficerOption[]>([]);
   const [officersLoading, setOfficersLoading] = useState(false);
   const [transferring, setTransferring] = useState(false);
@@ -91,9 +92,11 @@ export default function MyTasksPage() {
   const alert: AlertKind | null = (ALERT_KINDS as string[]).includes(String(router.query.alert))
     ? (router.query.alert as AlertKind)
     : null;
+  // scope=department: หัวหน้ากอง/superadmin เห็นงานทั้งกอง (API ตรวจสิทธิ์ซ้ำ)
+  const scope: 'mine' | 'department' = router.query.scope === 'department' ? 'department' : 'mine';
 
   const setQuery = useCallback(
-    (patch: Partial<Record<'groupBy' | 'alert', string | null>>) => {
+    (patch: Partial<Record<'groupBy' | 'alert' | 'scope', string | null>>) => {
       const next: Record<string, string> = {};
       for (const [k, v] of Object.entries({ ...router.query, ...patch })) {
         if (typeof v === 'string' && v) next[k] = v;
@@ -106,19 +109,19 @@ export default function MyTasksPage() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const { data: res } = await axios.get<MyKpiResponse>('/api/tasks/my-kpi');
+      const { data: res } = await axios.get<MyKpiResponse>('/api/tasks/my-kpi', { params: { scope } });
       setData(res);
     } catch (err) {
       setError(errorMessage(err, 'โหลดข้อมูลงานไม่สำเร็จ'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !router.isReady) return;
     load();
-  }, [user, load]);
+  }, [user, router.isReady, load]);
 
   const openTasks = useMemo<OfficerTask[]>(() => (data?.assignments ?? []).filter((a) => !a.isCompleted), [data]);
   const cards = useMemo(() => (data ? (alertCards(openTasks, data.settings) as AlertCard[]) : []), [openTasks, data]);
@@ -130,14 +133,16 @@ export default function MyTasksPage() {
   const blocked = useMemo(() => blockedRail(openTasks) as BlockedRailItem[], [openTasks]);
   const dueThisWeek = useMemo(() => dueThisWeekRail(openTasks) as DueThisWeekItem[], [openTasks]);
 
-  /* ── โอน / ส่งต่องาน ── */
+  /* ── โอน / ส่งต่องาน (หัวหน้า/superadmin) หรือ ขอโอน (admin ธรรมดา) ── */
+  const canTransfer = !!data?.permissions.canTransfer;
   const openTransfer = async () => {
     if (!openTasks.length) {
       toast('ยังไม่มีงานที่ถืออยู่ให้โอน', 'info');
       return;
     }
+    setTransferMode(canTransfer ? 'transfer' : 'request');
     setTransferOpen(true);
-    if (officers.length) return;
+    if (!canTransfer || officers.length) return;
     setOfficersLoading(true);
     try {
       const { data: list } = await axios.get<OfficerOption[]>('/api/users/get-all-user');
@@ -158,6 +163,20 @@ export default function MyTasksPage() {
       await load();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'โอนงานไม่สำเร็จ', text: errorMessage(err, 'ลองใหม่อีกครั้ง') });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  const submitTransferRequest = async (payload: TransferRequestPayload) => {
+    setTransferring(true);
+    try {
+      const { data: res } = await axios.post('/api/complaints/assignments/transfer-request', payload);
+      setTransferOpen(false);
+      toast(`ส่งคำขอโอนแล้ว — แจ้งหัวหน้ากอง ${res?.notified ?? 0} คน`);
+      await load();
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'ส่งคำขอไม่สำเร็จ', text: errorMessage(err, 'ลองใหม่อีกครั้ง') });
     } finally {
       setTransferring(false);
     }
@@ -243,7 +262,22 @@ export default function MyTasksPage() {
             department={data.officer.department}
             poolHref={POOL_HREF}
             onTransfer={openTransfer}
+            transferLabel={canTransfer ? 'โอน / ส่งต่องาน' : 'ขอโอนงาน'}
           />
+
+          {(data.permissions.isHead || data.permissions.isSuperAdmin) && (
+            <div className="-mt-2 flex items-center gap-2 text-[12.5px] text-tk-ink-5">
+              <span>มุมมอง:</span>
+              <div className="flex gap-1 rounded-[10px] bg-tk-surface p-1 shadow-tk-xs" role="radiogroup" aria-label="มุมมอง">
+                {([['mine', 'งานของฉัน'], ['department', data.officer.department ? `งานของ${data.officer.department}` : 'งานทั้งหมด']] as const).map(([key, label]) => (
+                  <button key={key} type="button" role="radio" aria-checked={scope === key} onClick={() => setQuery({ scope: key === 'mine' ? null : key })} className={clsx('rounded-lg px-3 py-1 text-[12px] whitespace-nowrap transition', scope === key ? 'bg-tk-primary font-semibold text-white' : 'font-medium text-tk-ink-4 hover:text-tk-ink')}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {scope === 'department' && <span className="text-tk-ink-6">โอนงานของทุกคนในกองได้จากปุ่ม "โอน / ส่งต่องาน"</span>}
+            </div>
+          )}
 
           <AlertCards cards={cards} active={alert} onSelect={(key) => setQuery({ alert: key })} />
 
@@ -323,13 +357,15 @@ export default function MyTasksPage() {
 
       <TransferTaskModal
         open={transferOpen}
-        tasks={openTasks}
+        mode={transferMode}
+        tasks={transferMode === 'request' ? openTasks.filter((t) => !t.assignee || t.assignee.id === data?.officer.id) : openTasks}
         officers={officers}
         officersLoading={officersLoading}
         selfId={data?.officer.id ?? ''}
         submitting={transferring}
         onClose={() => setTransferOpen(false)}
         onSubmit={submitTransfer}
+        onRequest={submitTransferRequest}
       />
       <FollowUpModal
         open={!!followUpFor}

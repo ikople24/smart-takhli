@@ -12,7 +12,7 @@ import { ArrowPathIcon, BellAlertIcon, ExclamationTriangleIcon, FunnelIcon, Magn
 import PermissionGuard from '@/components/PermissionGuard';
 import type { GroupBy, PoolColumn, PoolItem, PoolResponse } from '@/lib/tasks/types';
 import { POOL_GROUP_BY } from '@/lib/tasks/pool';
-import { PoolCard, AssignTaskModal, DepartmentPickerModal } from '@/components/tasks';
+import { PoolCard, AssignTaskModal, DepartmentPickerModal, HeadsPanel } from '@/components/tasks';
 import type { OfficerOption } from '@/components/tasks';
 
 const GROUP_LABELS: Record<GroupBy, string> = { organization: 'ตามกอง', category: 'ตามประเภทเรื่อง', priority: 'ตามความเร่งด่วน' };
@@ -259,6 +259,7 @@ function TaskPoolContent() {
             <p className="text-[12.5px] text-tk-ink-6">
               {visibleTotal} เรื่องยังไม่มีเจ้าของ
               {data.officer.department ? ` · กองของคุณ: ${data.officer.department}` : ' · โปรไฟล์ยังไม่ระบุกอง — รับได้ทุกเรื่อง'}
+              {data.officer.canAssign ? ' · คุณมอบหมายงานได้' : ''}
             </p>
           )}
         </div>
@@ -397,6 +398,8 @@ function TaskPoolContent() {
             })}
           </div>
         ) : null}
+
+        {data?.officer.isSuperAdmin && <HeadsPanel />}
       </div>
 
       <AssignTaskModal open={!!assignFor} item={assignFor} officers={officers} officersLoading={officersLoading} workload={data?.workload ?? {}} submitting={!!assignFor && busyId === assignFor._id} onClose={() => setAssignFor(null)} onSubmit={assign} />

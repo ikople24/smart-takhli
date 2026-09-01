@@ -19,6 +19,11 @@ export interface TransferPayload {
   reason: string;
 }
 
+export interface TransferRequestPayload {
+  assignmentId: string;
+  reason: string;
+}
+
 export interface TransferTaskModalProps {
   open: boolean;
   tasks: OfficerTask[];
@@ -28,14 +33,17 @@ export interface TransferTaskModalProps {
   /** _id ของเจ้าหน้าที่ที่ล็อกอิน — ตัดออกจากรายชื่อปลายทาง */
   selfId: string;
   submitting?: boolean;
+  /** transfer = หัวหน้ากอง/superadmin ย้ายงานได้เอง · request = เจ้าของงานขอให้หัวหน้าโอน (ไม่มีช่องเลือกปลายทาง) */
+  mode?: 'transfer' | 'request';
   onClose: () => void;
   onSubmit: (payload: TransferPayload) => void;
+  onRequest?: (payload: TransferRequestPayload) => void;
 }
 
 const FIELD = 'w-full rounded-[12px] border border-tk-line bg-tk-surface px-3.5 py-2.5 text-[13.5px] text-tk-ink outline-none transition focus:border-tk-primary focus:ring-2 focus:ring-tk-primary/20';
 const LABEL = 'mb-1.5 block text-[12px] font-semibold text-tk-ink-4';
 
-export function TransferTaskModal({ open, tasks, initialTaskId, officers, officersLoading, selfId, submitting, onClose, onSubmit }: TransferTaskModalProps) {
+export function TransferTaskModal({ open, tasks, initialTaskId, officers, officersLoading, selfId, submitting, mode = 'transfer', onClose, onSubmit, onRequest }: TransferTaskModalProps) {
   const [assignmentId, setAssignmentId] = useState('');
   const [toUserId, setToUserId] = useState('');
   const [reason, setReason] = useState('');
@@ -49,37 +57,42 @@ export function TransferTaskModal({ open, tasks, initialTaskId, officers, office
     setTouched(false);
   }, [open, initialTaskId, tasks]);
 
-  // รายชื่อปลายทางจัดกลุ่มตามกอง — ตัดตัวเอง/คนที่ถูกระงับออก
+  // รายชื่อปลายทางจัดกลุ่มตามกอง — ตัดเจ้าของงานปัจจุบัน/คนที่ถูกระงับออก (หัวหน้าโอนงานลูกน้องมาให้ตัวเองได้)
+  const currentOwnerId = tasks.find((t) => t._id === assignmentId)?.assignee?.id ?? selfId;
   const groups = useMemo(() => {
     const map = new Map<string, OfficerOption[]>();
     for (const o of officers) {
-      if (o._id === selfId || o.isActive === false) continue;
+      if (o._id === currentOwnerId || o.isActive === false) continue;
       const key = o.department?.trim() || 'ไม่ระบุกอง';
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(o);
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'th'));
-  }, [officers, selfId]);
+  }, [officers, currentOwnerId]);
 
   if (!open) return null;
 
+  const isRequest = mode === 'request';
   const reasonOk = reason.trim().length > 0;
-  const canSubmit = !!assignmentId && !!toUserId && reasonOk && !submitting;
+  const canSubmit = !!assignmentId && (isRequest || !!toUserId) && reasonOk && !submitting;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (!canSubmit) return;
-    onSubmit({ assignmentId, toUserId, reason: reason.trim() });
+    if (isRequest) onRequest?.({ assignmentId, reason: reason.trim() });
+    else onSubmit({ assignmentId, toUserId, reason: reason.trim() });
   };
 
   return (
-    <dialog className="modal modal-open font-tk-sans" aria-label="โอน / ส่งต่องาน">
+    <dialog className="modal modal-open font-tk-sans" aria-label={isRequest ? 'ขอโอนงาน' : 'โอน / ส่งต่องาน'}>
       <form onSubmit={submit} className="modal-box max-w-md rounded-[18px] bg-tk-surface p-0 text-tk-ink shadow-tk-xl">
         <div className="flex items-center justify-between border-b border-tk-line-light px-5 py-4">
           <div>
-            <h3 className="text-[16px] font-bold">โอน / ส่งต่องาน</h3>
-            <p className="text-[12px] text-tk-ink-5">งานจะย้ายไปอยู่ในกลุ่มงานของผู้รับทันที และบันทึกลงประวัติ</p>
+            <h3 className="text-[16px] font-bold">{isRequest ? 'ขอโอนงาน' : 'โอน / ส่งต่องาน'}</h3>
+            <p className="text-[12px] text-tk-ink-5">
+              {isRequest ? 'หัวหน้ากองจะได้รับแจ้งและเป็นคนย้ายงานให้ — งานยังอยู่กับคุณจนกว่าจะโอน' : 'งานจะย้ายไปอยู่ในกลุ่มงานของผู้รับทันที และบันทึกลงประวัติ'}
+            </p>
           </div>
           <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-tk-ink-5 hover:bg-tk-bg" aria-label="ปิด">
             <XMarkIcon className="h-5 w-5" strokeWidth={2} />
@@ -93,12 +106,13 @@ export function TransferTaskModal({ open, tasks, initialTaskId, officers, office
               {tasks.length === 0 && <option value="">— ไม่มีงานที่โอนได้ —</option>}
               {tasks.map((t) => (
                 <option key={t._id} value={t._id}>
-                  {t.code ? `${t.code} · ` : ''}{t.title}
+                  {t.code ? `${t.code} · ` : ''}{t.title}{t.assignee?.name ? ` — ${t.assignee.name}` : ''}
                 </option>
               ))}
             </select>
           </div>
 
+          {!isRequest && (
           <div>
             <label className={LABEL} htmlFor="transfer-to">โอนให้</label>
             <select id="transfer-to" className={FIELD} value={toUserId} onChange={(e) => setToUserId(e.target.value)} disabled={officersLoading}>
@@ -115,6 +129,7 @@ export function TransferTaskModal({ open, tasks, initialTaskId, officers, office
             </select>
             {touched && !toUserId && <p className="mt-1 text-[11.5px] text-tk-overdue-ink">เลือกเจ้าหน้าที่ปลายทาง</p>}
           </div>
+          )}
 
           <div>
             <label className={LABEL} htmlFor="transfer-reason">เหตุผลการโอน <span className="text-tk-overdue-ink">*</span></label>
@@ -138,7 +153,7 @@ export function TransferTaskModal({ open, tasks, initialTaskId, officers, office
             disabled={!canSubmit}
             className="flex-1 rounded-[12px] bg-tk-primary py-2.5 text-[13.5px] font-semibold text-white shadow-tk-purple transition hover:bg-tk-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'กำลังโอน…' : 'โอนงาน'}
+            {submitting ? 'กำลังส่ง…' : isRequest ? 'ส่งคำขอโอน' : 'โอนงาน'}
           </button>
         </div>
       </form>
