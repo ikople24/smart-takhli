@@ -19,6 +19,8 @@ const ADMIN_META = {
   // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
   '/admin/my-tasks':                  { title: 'งานของฉัน' },
   '/admin/task-pool':                 { title: 'กองงานรอรับ' },
+  // หน้าจอ 3 รายละเอียดงาน — full-page: ไม่มี sidebar/sub-header (หน้ามี header bar ← กลับ + breadcrumb เอง)
+  '/admin/my-tasks/[assignmentId]':   { title: 'รายละเอียดงาน', noSidebar: true, fullBleed: true },
   '/admin/notifications': {
     title: 'การแจ้งเตือน',
     subtitle: 'ดูและจัดการการแจ้งเตือนของคุณ',
