@@ -191,6 +191,10 @@ export interface PoolItem extends DerivedUnclaimed {
   createdAt: string;
   imageCount: number;
   hasLocation: boolean;
+  location: { lat: number; lng: number } | null;
+  /** เติมฝั่ง client เมื่อกด "ใกล้ฉัน" (lib/tasks/mobile.js#withDistance) */
+  distanceKm?: number | null;
+  distanceLabel?: string | null;
   repeatCount: number;
   possibleAgency: string | null;
   isDangerous: boolean;
