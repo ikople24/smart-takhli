@@ -251,3 +251,73 @@ export interface DueThisWeekItem {
   caption: string;
   actionUrl: string | null;
 }
+
+/* ── หน้าจอ 3: GET /api/tasks/[assignmentId] ── */
+
+export type TimelineKind = 'received' | 'assigned' | 'created' | 'note' | 'stage' | 'coordination' | 'follow_up' | 'blocked' | 'unblocked' | 'transfer' | 'closed' | 'pending';
+
+export interface TimelineEntry {
+  key: string;
+  kind: TimelineKind;
+  tone: BadgeTone;
+  title: string;
+  detail?: string;
+  at: string | null;
+  by?: string;
+  images?: string[];
+  pending: boolean;
+}
+
+export interface SolutionOption {
+  _id: string;
+  label: string;
+  iconUrl?: string;
+}
+
+export interface TaskDetailResponse {
+  success: true;
+  now: string;
+  canEdit: boolean;
+  settings: TaskSettings;
+  assignment: {
+    _id: string;
+    stage: Stage;
+    role: AssignmentRole;
+    assignedAt: string;
+    completedAt: string | null;
+    updatedAt: string | null;
+    dueDate: string | null;
+    slaPausedAt: string | null;
+    note: string;
+    solution: string[];
+    solutionImages: string[];
+    coordination: CoordinationInfo | null;
+    blocked: BlockedInfo | null;
+    assignee: { id: string; name: string; department: string; position: string } | null;
+  };
+  complaint: {
+    _id: string;
+    code: string | null;
+    title: string;
+    detail: string;
+    category: string;
+    community: string;
+    problems: string[];
+    images: string[];
+    location: { lat: number; lng: number } | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    status: string;
+    department: string | null;
+    reporterName: string;
+    reporterPhone: string;
+    isConfidential: boolean;
+    pdpaSensitive: boolean;
+    hasLine: boolean;
+  };
+  derived: DerivedAssignment;
+  badges: Badge[];
+  statusPill: StatusPill;
+  timeline: TimelineEntry[];
+  solutionOptions: SolutionOption[];
+}

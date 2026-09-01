@@ -2,24 +2,10 @@
 import dbConnect from "@/lib/dbConnect";
 import SubmittedReport from "@/models/SubmittedReport";
 import Assignment from "@/models/Assignment";
-import mongoose from "mongoose";
 import { logAuditEvent } from "@/lib/auditLogger";
-import {
-  linePush,
-  lineNotifyAdminGroup,
-  formatStatusMessage,
-  formatClosedMessage,
-  buildMessages,
-} from "@/lib/lineMessaging";
-import { findLineRating } from "@/lib/satisfaction/record";
 import { getAuth } from "@clerk/nextjs/server";
-
-// สถานะที่ถือว่า "ปิดงาน" — ตรงกับปุ่มปิดเรื่องใน manage-complaints.jsx
-const CLOSED_STATUS = "ดำเนินการเสร็จสิ้น";
-
-// schema ย่อ inline สำหรับ lookup ชื่อ officer (เลี่ยง model conflict ระหว่าง handlers)
-const UserNameSchema = new mongoose.Schema({ name: String }, { collection: "users", strict: false });
-const User = mongoose.models.User || mongoose.model("User", UserNameSchema);
+// การแจ้งเตือน LINE (ผู้แจ้ง + กลุ่มเจ้าหน้าที่) อยู่ที่เดียวใน lib/complaintNotify.js — ใช้ร่วมกับหน้าจอ 3 งานเจ้าหน้าที่
+import { notifyComplaintStatusChanged, CLOSED_STATUS } from "@/lib/complaintNotify";
 
 export default async function handler(req, res) {
   await dbConnect();
@@ -69,91 +55,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // LINE push notification — ถ้า user เคยติดต่อผ่าน LINE Bot มาก่อน
-      if (existing?.lineUserId) {
-        // ปิดงาน: ใช้รูปผลงานหลังแก้ไข + แนบรายละเอียดการแก้ไขจาก assignment
-        // สถานะอื่น: ใช้รูปตอนแจ้งตามเดิม
-        const solutionImage =
-          status === CLOSED_STATUS && Array.isArray(closingAssignment?.solutionImages)
-            ? (closingAssignment.solutionImages.find((u) => u?.startsWith("https://")) ?? null)
-            : null;
-        const complaintImage = Array.isArray(existing.images)
-          ? (existing.images.find((u) => u?.startsWith("https://")) ?? null)
-          : null;
-
-        // เคยให้คะแนนไว้แล้วหรือยัง — เคยแล้วการ์ดจะโชว์คะแนนเดิมแทนปุ่ม
-        // ปิดงานสำเร็จไปแล้วตอนนี้ ห้ามให้การอ่านคะแนนพลาดแล้วทำให้ทั้ง request 500
-        // (หน้าแอดมินจะขึ้น "เกิดข้อผิดพลาดในการปิดเรื่อง" ทั้งที่ปิดสำเร็จ)
-        const existingRating =
-          status === CLOSED_STATUS
-            ? await findLineRating({
-                complaintObjectId: existing._id,
-                lineUserId: existing.lineUserId,
-              }).catch((err) => {
-                console.error("[LINE] findLineRating failed:", err);
-                return null;
-              })
-            : null;
-
-        linePush(
-          existing.lineUserId,
-          buildMessages(
-            formatStatusMessage({
-              // ไม่ใส่ชื่อผู้แจ้ง — การ์ดฝั่งประชาชนใช้นโยบายเดียวกับเว็บ /status
-              // (การผูก lineUserId เป็น first-come จากการพิมพ์เลขเรื่องที่ไล่เดาได้
-              //  ปลายทางจึงไม่การันตีว่าเป็นเจ้าของเรื่องจริง)
-              complaintId: updated.complaintId || String(complaintId),
-              category: existing.category,
-              status,
-              updatedAt: updated.updatedAt,
-              ...(status === CLOSED_STATUS
-                ? {
-                    solution: closingAssignment?.solution,
-                    note: closingAssignment?.note,
-                    // แถบดาวรับเฉพาะเลขเรื่องรูปแบบ TKC-xxxx — ถ้า fallback เป็น ObjectId
-                    // parseRatingPostback จะตีกลับ คนกดดาวแล้วบอทเงียบสนิท
-                    // ไม่มีเลขเรื่องก็ไม่ต้องแนบแถบดาว (การ์ดยังส่งได้ตามปกติ)
-                    ...(updated.complaintId
-                      ? {
-                          rating: {
-                            complaintCode: updated.complaintId,
-                            current: existingRating?.rating ?? null,
-                          },
-                        }
-                      : {}),
-                  }
-                : {}),
-            }),
-            solutionImage ?? complaintImage
-          )
-        ).catch((err) => console.error("[LINE] Push failed:", err));
-      }
-
-      // แจ้งกลุ่ม LINE เจ้าหน้าที่เมื่อปิดงาน — fire-and-forget (ไม่ block response)
-      if (status === CLOSED_STATUS) {
-        (async () => {
-          try {
-            let officerName = "เจ้าหน้าที่";
-            // reuse assignment ที่ guard ดึงไว้แล้ว (status นี้การันตีว่ามี assignment)
-            if (closingAssignment?.userId) {
-              const officer = await User.findById(closingAssignment.userId).select("name").lean();
-              if (officer?.name) officerName = officer.name;
-            }
-
-            await lineNotifyAdminGroup([
-              formatClosedMessage({
-                complaintId: updated.complaintId || String(complaintId),
-                community: existing?.community || "-",
-                fullName: existing?.isConfidential ? "ไม่เปิดเผย" : (existing?.fullName || "ไม่ระบุ"),
-                officerName,
-                closedAt: updated.updatedAt,
-              }),
-            ]);
-          } catch (err) {
-            console.error("[LINE] close notify failed:", err);
-          }
-        })();
-      }
+      // แจ้งเตือน LINE ผู้แจ้ง (ถ้าผูกไว้) + กลุ่มเจ้าหน้าที่เมื่อปิดงาน — fire-and-forget (ไม่ block response)
+      notifyComplaintStatusChanged({ existing, updated, status, closingAssignment });
 
       res.status(200).json(updated);
     } catch (err) {

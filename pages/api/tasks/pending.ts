@@ -100,7 +100,7 @@ export default async function handler(
           priority: isOverdue ? 'high' : 'medium',
           assignedAt: assignment.assignedAt,
           dueDate: derived.dueDate ? new Date(derived.dueDate) : undefined,
-          actionUrl: `/admin/manage-complaints?complaintId=${String(complaint._id)}`,
+          actionUrl: `/admin/my-tasks/${String(assignment._id)}`,
           metadata: {
             complaintId: complaint._id,
           },

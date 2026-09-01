@@ -148,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               since: iso(a.blocked.since) ?? iso(a.slaPausedAt),
             }
           : null,
-        actionUrl: c ? `/admin/manage-complaints?complaintId=${String(c._id)}` : null,
+        actionUrl: `/admin/my-tasks/${String(a._id)}`,
       };
     });
 
