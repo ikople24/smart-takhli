@@ -1,10 +1,19 @@
-// GET /api/analytics/satisfaction?days=30
-// แนวโน้มความพึงพอใจรายสัปดาห์ — สำหรับ Area Chart
+// GET /api/analytics/satisfaction?days=90 (ค่าเริ่มต้น 90, สูงสุด 365)
+// แนวโน้มความพึงพอใจรายสัปดาห์ (ISO week เวลา Bangkok) — สำหรับ Area Chart
+// avgRating ต่อสัปดาห์นับแบบ "1 ผู้แจ้ง = 1 เสียง" เหมือน headline บนแดชบอร์ด
+// (ไม่งั้นกราฟจะดิ่งค้านกับตัวเลขรวม) · count และ distribution เป็นจำนวนครั้งดิบ
+// แบ่งถังใน JS แทน $isoWeek เพราะกติกาต่อผู้แจ้งต้อง join เบอร์โทร — ข้อมูล ~60 แถว/ช่วง ทำใน JS พอ
+// (ของเดิมยังผสม $year ปฏิทินกับ $isoWeek ทำให้ label ช่วงปีใหม่เพี้ยน — isoWeekKey ใช้ ISO week-year ที่ถูก)
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from '@clerk/nextjs/server';
-import dbConnect from '@/lib/dbConnect';
-import Satisfaction from '@/models/Satisfaction';
+import { loadSatisfactionStats } from '@/lib/satisfaction/readStats';
+import { computeFairStats } from '@/lib/satisfaction/fairStats';
+import { isoWeekKey } from '@/lib/satisfaction/isoWeek';
+
+// ชนิดข้อมูลอนุมานจาก JSDoc ของ readStats.js — ถ้ารูปข้อมูลเปลี่ยนที่นั่น ไฟล์นี้จะ compile ไม่ผ่านแทนที่จะพังตอนรัน
+type RatingRow = Awaited<ReturnType<typeof loadSatisfactionStats>>['ratings'][number];
+type Bucket = { year: number; week: number; label: string; rows: RatingRow[] };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -12,64 +21,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { userId } = getAuth(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-  const days = Math.min(parseInt(req.query.days as string) || 90, 365);
+  const days = Math.min(Math.max(parseInt(req.query.days as string, 10) || 90, 1), 365);
   const from = new Date();
   from.setDate(from.getDate() - days);
 
   try {
-    await dbConnect();
+    const { ratings, reports } = await loadSatisfactionStats({ from });
 
-    // จัดกลุ่มรายสัปดาห์ เพื่อให้ข้อมูลกระชับขึ้น
-    const weeklyTrend = await Satisfaction.aggregate([
-      { $match: { createdAt: { $gte: from } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: { date: '$createdAt', timezone: 'Asia/Bangkok' } },
-            week: { $isoWeek: { date: '$createdAt', timezone: 'Asia/Bangkok' } },
-          },
-          avgRating: { $avg: '$rating' },
-          count: { $sum: 1 },
-          distribution: {
-            $push: '$rating',
-          },
-        },
-      },
-      { $sort: { '_id.year': 1, '_id.week': 1 } },
-      {
-        $project: {
-          _id: 0,
-          year: '$_id.year',
-          week: '$_id.week',
-          avgRating: { $round: ['$avgRating', 2] },
-          count: 1,
-          label: {
-            $concat: [
-              { $toString: '$_id.year' },
-              '-W',
-              {
-                $cond: [
-                  { $lt: ['$_id.week', 10] },
-                  { $concat: ['0', { $toString: '$_id.week' }] },
-                  { $toString: '$_id.week' },
-                ],
-              },
-            ],
-          },
-        },
-      },
-    ]);
+    // แบ่งถังรายสัปดาห์ แล้วใช้กติกาเดียวกับ headline ต่อถัง
+    const buckets = new Map<string, Bucket>();
+    for (const r of ratings) {
+      // แถวที่ไม่มี/เพี้ยน createdAt ไม่เข้ากราฟ (กันถัง "NaN-WNaN" — schema มี default จึงแทบไม่เกิด)
+      if (!r.createdAt || !Number.isFinite(new Date(r.createdAt).getTime())) continue;
+      const k = isoWeekKey(r.createdAt);
+      let b = buckets.get(k.label);
+      if (!b) {
+        b = { year: k.year, week: k.week, label: k.label, rows: [] };
+        buckets.set(k.label, b);
+      }
+      b.rows.push(r);
+    }
+    const weeklyTrend = [...buckets.values()]
+      .sort((a, b) => a.year - b.year || a.week - b.week)
+      .map(({ year, week, label, rows }) => {
+        const s = computeFairStats(rows, reports);
+        return {
+          year,
+          week,
+          label,
+          avgRating: Math.round(s.averageRating * 100) / 100,
+          count: s.totalRatings,
+          reporters: s.reporters,
+        };
+      });
 
-    // สรุปรายดาว
-    const distributionAgg = await Satisfaction.aggregate([
-      { $match: { createdAt: { $gte: from } } },
-      { $group: { _id: '$rating', count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
-    const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    distributionAgg.forEach((d: { _id: number; count: number }) => {
-      distribution[d._id] = d.count;
-    });
+    // สรุปรายดาวของช่วงเวลา — จำนวนครั้งดิบ (ไม่ซ่อน 1 ดาว)
+    const { ratingDistribution: distribution } = computeFairStats(ratings, reports);
 
     return res.status(200).json({
       success: true,

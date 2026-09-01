@@ -3,7 +3,9 @@ import Swal from "sweetalert2";
 import { z } from "zod";
 import { Star, Send } from "lucide-react";
 
-const SatisfactionForm = ({ onSubmit, complaintId, status }) => {
+// onQuotaFull: server ตอบ 429 (ครบ 4 ครั้ง/เรื่อง) — ผู้เรียกใช้ refetch count แล้วซ่อนฟอร์ม
+// (อย่าเรียก onSubmit ในกรณีนี้ — หน้า /status ใช้ onSubmit บวก count +1 ซึ่งผิดความหมาย)
+const SatisfactionForm = ({ onSubmit, onQuotaFull, complaintId, status }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -82,8 +84,15 @@ const SatisfactionForm = ({ onSubmit, complaintId, status }) => {
       if (res.ok) {
         Swal.fire("ส่งสำเร็จ", "ขอบคุณสำหรับความคิดเห็นของคุณ", "success");
         if (onSubmit) onSubmit();
+      } else if (res.status === 429) {
+        // ครบโควตาแล้ว (count ฝั่ง client เก่า) — ข้อความจาก server ระบุจำนวนครั้ง
+        const body = await res.json().catch(() => null);
+        Swal.fire("ประเมินครบแล้ว", body?.message || "เรื่องนี้ได้รับการประเมินครบแล้ว", "info");
+        if (onQuotaFull) onQuotaFull();
       } else {
-        Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถส่งความคิดเห็นได้", "error");
+        // 404/409 มีข้อความไทยจาก server อยู่แล้ว — ใช้แทนข้อความกลาง ๆ
+        const body = await res.json().catch(() => null);
+        Swal.fire("เกิดข้อผิดพลาด", body?.message || "ไม่สามารถส่งความคิดเห็นได้", "error");
       }
     } catch (err) {
       console.error(err);

@@ -6,7 +6,8 @@ import { getAuth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/dbConnect';
 import SubmittedReport from '@/models/SubmittedReport';
 import Assignment from '@/models/Assignment';
-import Satisfaction from '@/models/Satisfaction';
+import { loadSatisfactionStats } from '@/lib/satisfaction/readStats';
+import { computeFairStats } from '@/lib/satisfaction/fairStats';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -22,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       statusCounts,
       totalAssignments,
       completedAssignments,
-      satisfactionAgg,
+      satisfactionData,
       resolutionAgg,
     ] = await Promise.all([
       SubmittedReport.countDocuments({}),
@@ -36,10 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       Assignment.countDocuments({ completedAt: { $exists: true } }),
 
-      // คะแนนความพึงพอใจเฉลี่ย
-      Satisfaction.aggregate([
-        { $group: { _id: null, avg: { $avg: '$rating' }, total: { $sum: 1 } } },
-      ]),
+      // คะแนนความพึงพอใจ — นับต่อผู้แจ้ง (lib/satisfaction/fairStats.js) ให้ตรงกับการ์ดแดชบอร์ด
+      loadSatisfactionStats(),
 
       // เวลาเฉลี่ยในการแก้ไข (วัน)
       Assignment.aggregate([
@@ -63,8 +62,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       statusMap[s._id] = s.count;
     });
 
-    const avgSatisfaction = satisfactionAgg[0]?.avg ?? null;
-    const totalRatings = satisfactionAgg[0]?.total ?? 0;
+    const fair = computeFairStats(satisfactionData.ratings, satisfactionData.reports);
+    const avgSatisfaction = fair.totalRatings > 0 ? fair.averageRating : null;
+    const totalRatings = fair.totalRatings;
     const avgResolutionDays = resolutionAgg[0]?.avgResolutionMs
       ? Math.round(resolutionAgg[0].avgResolutionMs / (1000 * 60 * 60 * 24))
       : null;
@@ -81,8 +81,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           totalAssignments > 0
             ? Math.round((completedAssignments / totalAssignments) * 100)
             : 0,
-        avgSatisfaction: avgSatisfaction ? parseFloat(avgSatisfaction.toFixed(2)) : null,
+        avgSatisfaction: avgSatisfaction != null ? parseFloat(avgSatisfaction.toFixed(2)) : null,
         totalRatings,
+        // จำนวนผู้แจ้ง (เจ้าของเรื่อง) ที่ต่างกันในเรื่องที่มีคะแนน — ไม่ใช่จำนวนคนที่กดให้ดาว
+        satisfactionReporters: fair.reporters,
         avgResolutionDays,
       },
     });
