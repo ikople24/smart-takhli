@@ -23,6 +23,7 @@ export type { FollowUpPayload, FollowUpChannel } from './FollowUpModal';
 export { AssignTaskModal } from './AssignTaskModal';
 export { DepartmentPickerModal } from './DepartmentPickerModal';
 export { TaskTimeline } from './TaskTimeline';
+export { SolutionChips } from './SolutionChips';
 export { BlockedCard } from './BlockedCard';
 export type { BlockedPayload } from './BlockedCard';
 export { CoordinationSetModal } from './CoordinationSetModal';

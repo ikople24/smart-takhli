@@ -30,6 +30,7 @@ import {
   TaskTimeline,
   CloseTaskModal,
   TransferTaskModal,
+  SolutionChips,
 } from '@/components/tasks';
 import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload } from '@/components/tasks';
 
@@ -80,6 +81,8 @@ function TaskDetailContent() {
   // ร่างบันทึกความคืบหน้า
   const [note, setNote] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  // วิธีการแก้ไข (chip) — เลือก/แก้ได้ตลอดเหมือน modal เดิม บันทึกเมื่อกดบันทึกความคืบหน้า
+  const [solution, setSolution] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploaderKey, setUploaderKey] = useState(0);
   const [cameraBusy, setCameraBusy] = useState(false);
@@ -100,6 +103,7 @@ function TaskDetailContent() {
     try {
       const { data: res } = await axios.get<TaskDetailResponse>(`/api/tasks/${id}`);
       setData(res);
+      setSolution(res.assignment.solution ?? []);
     } catch (err) {
       setError(errorMessage(err, 'โหลดรายละเอียดงานไม่สำเร็จ'));
     } finally {
@@ -129,11 +133,14 @@ function TaskDetailContent() {
   /* ── บันทึกความคืบหน้า ── */
   const saveProgress = () =>
     run('progress', async () => {
-      if (!note.trim() && images.length === 0) {
-        toast('พิมพ์บันทึกหรือแนบภาพก่อน', 'info');
+      // ส่ง solution เฉพาะตอนเปลี่ยน — ไม่งั้นไทม์ไลน์จะมีบรรทัด 'วิธีแก้ไข' ซ้ำทุกครั้ง
+      const currentSolution = data?.assignment.solution ?? [];
+      const solutionChanged = JSON.stringify([...solution].sort()) !== JSON.stringify([...currentSolution].sort());
+      if (!note.trim() && images.length === 0 && !solutionChanged) {
+        toast('พิมพ์บันทึก แนบภาพ หรือเลือกวิธีการแก้ไขก่อน', 'info');
         return;
       }
-      await axios.patch(`/api/tasks/${id}`, { action: 'progress', note: note.trim(), images });
+      await axios.patch(`/api/tasks/${id}`, { action: 'progress', note: note.trim(), images, ...(solutionChanged ? { solution } : {}) });
       setNote('');
       setImages([]);
       setUploaderKey((k) => k + 1);
@@ -503,6 +510,12 @@ function TaskDetailContent() {
 
               {editable && (
                 <>
+                  {(data.solutionOptions.length > 0 || solution.length > 0) && (
+                    <div>
+                      <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">วิธีการแก้ไข (เลือกได้หลายข้อ — บันทึกพร้อมความคืบหน้า)</span>
+                      <SolutionChips options={data.solutionOptions} value={solution} onChange={setSolution} />
+                    </div>
+                  )}
                   <div>
                     <label className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4" htmlFor="progress-note">บันทึกการดำเนินงานวันนี้</label>
                     <textarea
@@ -533,6 +546,12 @@ function TaskDetailContent() {
                     </div>
                   </div>
                 </>
+              )}
+              {!editable && a.solution.length > 0 && (
+                <div>
+                  <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">วิธีการแก้ไข</span>
+                  <SolutionChips options={data.solutionOptions} value={a.solution} disabled />
+                </div>
               )}
               {!editable && a.solutionImages.length > 0 && (
                 <div>
@@ -578,7 +597,7 @@ function TaskDetailContent() {
         onClose={() => setFollowUpOpen(false)}
         onSubmit={logFollowUp}
       />
-      <CloseTaskModal open={closeOpen} options={data?.solutionOptions ?? []} submitting={busy === 'close'} onClose={() => setCloseOpen(false)} onSubmit={closeTask} />
+      <CloseTaskModal open={closeOpen} options={data?.solutionOptions ?? []} initialSolution={solution} submitting={busy === 'close'} onClose={() => setCloseOpen(false)} onSubmit={closeTask} />
       <TransferTaskModal
         open={transferOpen}
         mode={transferMode}

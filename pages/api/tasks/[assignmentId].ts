@@ -83,9 +83,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
-      const options = category
-        ? ((await AdminOption.find({ menu_category: category }).select('label icon_url active').lean()) as unknown as Array<{ _id: unknown; label: string; icon_url?: string; active?: boolean }>)
-        : [];
+      // ตัวเลือกของประเภทนี้ + ค่าที่เรื่องนี้เคยเลือกไว้ (เหมือน UpdateAssignmentModal เดิม — ประเภทเรื่องอาจถูกแก้ทีหลัง)
+      const chosen = Array.isArray(a.solution) ? a.solution : [];
+      const options = (await AdminOption.find(
+        category ? { $or: [{ menu_category: category }, { label: { $in: chosen } }] } : { label: { $in: chosen } }
+      )
+        .select('label icon_url active')
+        .lean()) as unknown as Array<{ _id: unknown; label: string; icon_url?: string; active?: boolean }>;
       const coord = a.coordination ?? {};
       const followUps: Array<{ at?: Date }> = Array.isArray(coord.followUps) ? coord.followUps : [];
       const lastFollowUp = followUps.reduce((best: Date | null, f) => {
@@ -212,7 +216,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const images = httpsList(body.images);
       const stage = str(body.stage) as Stage | '';
       const reason = str(body.reason);
-      if (!note && !images.length && !stage) return res.status(400).json({ success: false, error: 'ไม่มีอะไรให้บันทึก' });
+      // วิธีการแก้ไข (chip AdminOption) — ส่งมาเฉพาะตอนเปลี่ยน แทนที่ค่าเดิมทั้งชุด (พฤติกรรมเดียวกับ modal เดิม)
+      const solution = Array.isArray(body.solution) ? body.solution.map((v: unknown) => str(v)).filter(Boolean) : null;
+      if (!note && !images.length && !stage && solution === null) return res.status(400).json({ success: false, error: 'ไม่มีอะไรให้บันทึก' });
 
       let plan: ReturnType<typeof stageChangePlan> | null = null;
       if (stage) {
@@ -221,8 +227,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (plan.needsReason && !reason) return res.status(400).json({ success: false, error: 'ถอยขั้นต้องระบุเหตุผล' });
         if (plan.closes) return res.status(400).json({ success: false, error: 'ปิดเรื่องผ่านปุ่ม "ปิดเรื่อง" (ต้องมีภาพผลงาน + บันทึกสรุป)' });
       }
-      if (note || images.length) {
-        assignment.timeline.push({ at: now, kind: 'note', text: note || 'แนบภาพความคืบหน้า', images, byUserId: officer._id, byName });
+      if (solution !== null) assignment.solution = solution;
+      if (note || images.length || solution !== null) {
+        const solutionText = solution !== null ? `วิธีแก้ไข: ${solution.join(', ') || '—'}` : '';
+        const text = [note, solutionText].filter(Boolean).join(' · ') || 'แนบภาพความคืบหน้า';
+        assignment.timeline.push({ at: now, kind: 'note', text, images, byUserId: officer._id, byName });
       }
       if (stage && plan) {
         assignment.stage = stage;
