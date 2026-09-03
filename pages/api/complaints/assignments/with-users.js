@@ -1,7 +1,14 @@
 import dbConnect from "@/lib/dbConnect";
 import Assignment from "@/models/Assignment";
+import { getAuth } from "@clerk/nextjs/server";
 
 export default async function handler(req, res) {
+  // ใช้โดยหน้าแดชบอร์ดแอดมินเท่านั้น — ต้องล็อกอิน (เดิมเปิดสาธารณะ ทั้งที่คืน assignment เต็ม + ข้อมูล user)
+  const { userId } = getAuth(req);
+  if (!userId) {
+    return res.status(401).json({ success: false, error: "Unauthorized" });
+  }
+
   await dbConnect();
 
   if (req.method !== "GET") {
