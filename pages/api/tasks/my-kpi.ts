@@ -92,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // scope=department: เจ้าหน้าที่ทุกคนในกองเดียวกัน (superadmin ที่ไม่ระบุกอง = ทุกคน)
     let userIds: mongoose.Types.ObjectId[] = [officer._id];
     const namesById = new Map<string, string>();
+    const deptById = new Map<string, string>();
     if (scope === 'department') {
       const ownDept = normalizeDepartment(officer.department);
       const members = (await userModel()
@@ -100,11 +101,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .lean()) as Array<{ _id: mongoose.Types.ObjectId; name?: string; department?: string }>;
       const inScope = ownDept || !auth.isSuperAdmin ? members.filter((m) => normalizeDepartment(m.department) === ownDept) : members;
       userIds = inScope.map((m) => m._id);
-      for (const m of inScope) namesById.set(String(m._id), m.name ?? '');
+      for (const m of inScope) {
+        namesById.set(String(m._id), m.name ?? '');
+        deptById.set(String(m._id), normalizeDepartment(m.department) ?? '');
+      }
       if (!userIds.some((id) => String(id) === String(officer._id))) userIds.push(officer._id);
     }
 
-    const rows = (await Assignment.find({ userId: { $in: userIds } })
+    const allRows = (await Assignment.find({ userId: { $in: userIds } })
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
@@ -112,6 +116,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       .sort({ assignedAt: -1 })
       .lean()) as unknown as AssignmentLean[];
+
+    // ซากงาน: เรื่องต้นทางถูกลบไปแล้ว (populate เป็น null) — ไม่ใช่งานจริง ไม่แสดง/ไม่นับ KPI
+    // (ตั้งแต่ 2026-09-03 การลบเรื่องจะลบ assignment ตามด้วย — แถวเก่าล้างด้วย scripts/cleanup-orphan-assignments.mjs)
+    const rows = allRows.filter((a) => a.complaintId);
 
     const officerDepartment = officer.department ?? '';
 
@@ -137,8 +145,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         description: [c?.fullName ? `ผู้แจ้ง: ${c.fullName}` : null, c?.community || null].filter(Boolean).join(' · ') || undefined,
         category: c?.category ?? '',
         community: c?.community ?? '',
-        // กองของเรื่อง: ที่คัดแยกไว้ → เดาจากประเภท → กองของเจ้าหน้าที่เอง (ใช้จัดกลุ่ม "ตามกอง")
-        department: c?.department || defaultDepartmentForCategory(c?.category) || officerDepartment,
+        // กองของเรื่อง: ที่คัดแยกไว้ → เดาจากประเภท → กองของ "เจ้าของงาน" (scope กอง — ไม่ใช่กองของคนดู) → กองของผู้เรียก
+        department: c?.department || defaultDepartmentForCategory(c?.category) || deptById.get(String(a.userId)) || officerDepartment,
         complaintStatus: c?.status ?? '',
         status: derived.isCompleted ? 'completed' : derived.isOverdue ? 'overdue' : 'pending',
         assignedAt: iso(a.assignedAt) ?? new Date(0).toISOString(),
