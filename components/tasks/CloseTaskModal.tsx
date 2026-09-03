@@ -2,12 +2,11 @@
 // modal "ปิดเรื่อง" (README หน้าจอ 3): ต้องมี ≥1 ภาพผลงาน + บันทึกสรุป · เลือกวิธีแก้ไขจาก AdminOption ของประเภทเรื่อง
 // → PATCH /api/tasks/[assignmentId] { action: 'close' } (เซิร์ฟเวอร์เช็ค closeChecklist ซ้ำอีกชั้น)
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
-import clsx from 'clsx';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import ImageUploads from '@/components/ImageUploads';
 import type { SolutionOption } from '@/lib/tasks/types';
 import { closeChecklist } from '@/lib/tasks/timeline';
+import { SolutionChips } from './SolutionChips';
 
 export interface ClosePayload {
   note: string;
@@ -18,12 +17,14 @@ export interface ClosePayload {
 export interface CloseTaskModalProps {
   open: boolean;
   options: SolutionOption[];
+  /** วิธีแก้ไขที่เลือกไว้แล้วระหว่างดำเนินงาน — prefill */
+  initialSolution?: string[];
   submitting?: boolean;
   onClose: () => void;
   onSubmit: (payload: ClosePayload) => void;
 }
 
-export function CloseTaskModal({ open, options, submitting, onClose, onSubmit }: CloseTaskModalProps) {
+export function CloseTaskModal({ open, options, initialSolution = [], submitting, onClose, onSubmit }: CloseTaskModalProps) {
   const [note, setNote] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [solution, setSolution] = useState<string[]>([]);
@@ -35,9 +36,10 @@ export function CloseTaskModal({ open, options, submitting, onClose, onSubmit }:
     if (!open) return;
     setNote('');
     setImages([]);
-    setSolution([]);
+    setSolution(initialSolution);
     setTouched(false);
     setUploaderKey((k) => k + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;
@@ -65,26 +67,10 @@ export function CloseTaskModal({ open, options, submitting, onClose, onSubmit }:
         </div>
 
         <div className="flex flex-col gap-4 px-5 py-4">
-          {options.length > 0 && (
+          {(options.length > 0 || solution.length > 0) && (
             <div>
               <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">วิธีการแก้ไข (เลือกได้หลายข้อ)</span>
-              <div className="flex flex-wrap gap-1.5">
-                {options.map((o) => {
-                  const on = solution.includes(o.label);
-                  return (
-                    <button
-                      key={o._id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setSolution((s) => (on ? s.filter((x) => x !== o.label) : [...s, o.label]))}
-                      className={clsx('inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition', on ? 'border-tk-done bg-tk-done-soft text-tk-done-ink' : 'border-tk-line text-tk-ink-3 hover:border-tk-done')}
-                    >
-                      {o.iconUrl && <Image src={o.iconUrl} alt="" width={18} height={18} className="h-[18px] w-[18px] object-contain" />}
-                      {o.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <SolutionChips options={options} value={solution} onChange={setSolution} tone="done" />
             </div>
           )}
 
