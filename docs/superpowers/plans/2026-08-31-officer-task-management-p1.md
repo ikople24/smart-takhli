@@ -87,3 +87,10 @@ docs/modules/tasks.md
 - 3 หน้าใช้ responsive ในไฟล์เดิม (ไม่แยกหน้า): chip+flat list (pool), ปุ่มสถานะเร็ว 2×2 + ถ่ายภาพ + footer ลอย (detail)
 - ค้าง: ดูจริงบนมือถือ (ผมไม่มี browser) · ตั้ง cron · grant script · next build · push/PR
 - ปรับตาม feedback 2026-09-01: ย้าย HeadsPanel ไป `/admin/superadmin/department-heads` (การบริหารระบบ) · ตัด ADMIN_META title ของ task-pool (ชื่อซ้ำ h1) · แก้ alert bar มือถือถูกบีบ
+
+## เฟส 7 (2026-09-02) — จัดระเบียบความซ้ำซ้อนกับหน้าการร้องเรียน (เจ้าของสั่งทำครบ 4 ข้อ) ✅
+
+1. บังคับล็อกอิน `assignments/create` + `update-status` (เดิมยิงตรงได้ไม่ต้องล็อกอิน) · ลบ `assignments/update` ที่ไม่มี auth
+2. ปุ่ม "อัพเดท" ใน manage-complaints → หน้าจอ 3 · ลบ `UpdateAssignmentModal` (ทางเขียนเดียว)
+3. ปิดเรื่องจากหน้าทะเบียนตั้ง `assignment.completedAt/stage` + timeline (KPI สม่ำเสมอ)
+4. กติกาที่ server ใน create: `canClaim` (กองเดียวกัน, TDD) · มอบหมาย = หัวหน้า/superadmin · 409 กันรับซ้ำ

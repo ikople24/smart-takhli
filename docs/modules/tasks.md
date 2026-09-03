@@ -45,7 +45,7 @@
 | `DELETE /api/complaints/assignments/[id]` | "เลิกทำ" การรับงาน — เจ้าของ/superadmin, ภายใน 15 นาที, ยังไม่มีความคืบหน้า → audit `assignment_unclaimed` |
 | `GET /api/tasks/settings` · `PUT` (superadmin) | SLA/เกณฑ์เตือน — PUT รับบางฟิลด์ได้ (merge) ลง audit `task_settings_updated` |
 | `pages/api/tasks/_auth.ts` | `getOfficer(req)` (Clerk → users ใน Mongo) · `requireSuperAdmin(req)` |
-| `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints) รับ `role: assignee\|coordinator`, ตั้ง `dueDate` = วันที่แจ้ง + SLA, `stage: received`, timeline `created` |
+| `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints — ใช้ทั้งกองงานรอรับและหน้าการร้องเรียน) **บังคับล็อกอิน + กติกาฝั่ง server (2026-09-02)**: รับเอง → `canClaim` (กองเดียวกัน) · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin · เรื่องที่มี assignment เปิดค้าง → 409 กันรับซ้ำ · ตั้ง `dueDate`/`stage`/timeline `created` |
 | `POST /api/complaints/assignments/transfer` | `{ assignmentId, toUserId, reason }` โอนงาน — เจ้าของงาน/superadmin, เหตุผลบังคับ, ปลายทางต้องเป็น user ของแอปนี้ที่ยังไม่ archive → เปลี่ยน `userId` + timeline `transfer` + audit `complaint_reassigned` |
 | `POST /api/complaints/coordination` | `action: set` (ตั้งหน่วยงาน/เลขหนังสือ/วันส่ง/วันติดตาม) · `follow_up` (บันทึกติดตาม → `followUps[]`, ตั้ง `nextFollowUpAt` = ที่ส่งมา หรือวันนี้ + `followUpEveryDays`, audit `assignment_follow_up`) · `notify_line` (สรุปเข้า LINE กลุ่ม ⚠️ นับโควตาตามสมาชิกกลุ่ม — UI ถามยืนยันก่อน) |
 
@@ -135,3 +135,11 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - bottom nav `MobileTaskNav` อยู่ในหน้างานของฉัน/กองงานรอรับ (ไม่อยู่ในหน้ารายละเอียด — footer แทน) · FAB → `/admin/my-tasks?quick=1` เปิด `QuickTaskSheet`
 - "ใกล้ฉัน" ขอ geolocation ตอนกดเท่านั้น, คำนวณระยะทางฝั่ง client — ไม่มีการเก็บตำแหน่งเจ้าหน้าที่
 - hit target ≥ 48px ทุกปุ่มหลัก (`min-h-12`), `.touch-feedback` ตอนกด, เผื่อ safe-area ล่างด้วย `env(safe-area-inset-bottom)`
+
+## ความสัมพันธ์กับหน้าการร้องเรียน (`/admin/manage-complaints`) — จัดระเบียบ 2026-09-02
+
+- หน้าการร้องเรียน = **ทะเบียน + PDPA + export + ลบ** · โมดูลนี้ = งานรายวันของเจ้าหน้าที่ — ไม่ซ้ำหน้าที่กัน
+- ปุ่ม "อัพเดท" ในหน้าการร้องเรียนพามาหน้าจอ 3 (`/admin/my-tasks/[assignmentId]`) — `UpdateAssignmentModal` + `PUT assignments/update` **ปลดระวางแล้ว** (ทางเขียนเดียว)
+- ปุ่ม "รับเรื่อง" ใช้ endpoint เดียวกับกองงานรอรับ → กติกากอง/กันรับซ้ำบังคับที่ server ครอบทั้งสองหน้า
+- ปิดเรื่องจากหน้าทะเบียน (`update-status`) ตั้ง `assignment.completedAt`/`stage: closed` + timeline ให้ด้วย → KPI นับสม่ำเสมอ
+- `assignments/create` และ `update-status` บังคับล็อกอินแล้ว (เดิมยิงตรงได้โดยไม่ล็อกอิน)

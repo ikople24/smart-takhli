@@ -13,6 +13,8 @@ export default async function handler(req, res) {
   if (req.method === "PUT") {
     const { complaintId, status } = req.body;
     const { userId } = getAuth(req);
+    // endpoint นี้เปลี่ยนสถานะ + ยิง LINE — ต้องล็อกอินเสมอ (เดิมไม่บังคับ, ปิดช่องโหว่ 2026-09-02)
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     try {
       // ดึงสถานะเดิมก่อน update เพื่อส่งใน audit log
@@ -40,6 +42,18 @@ export default async function handler(req, res) {
       );
 
       if (!updated) return res.status(404).json({ message: "ไม่พบข้อมูล" });
+
+      // ปิดจากหน้าทะเบียน: ปิด assignment ให้ด้วย (ถ้ายังไม่ปิด) — ไม่งั้น KPI เสร็จตามกำหนด/เฉลี่ยวันของเจ้าหน้าที่ไม่นับเรื่องนี้
+      // ({ completedAt: null } ใน Mongo จับทั้งค่า null และฟิลด์ที่ไม่มี)
+      if (status === CLOSED_STATUS && closingAssignment && !closingAssignment.completedAt) {
+        await Assignment.updateOne(
+          { _id: closingAssignment._id, completedAt: null },
+          {
+            $set: { completedAt: updated.updatedAt, stage: "closed" },
+            $push: { timeline: { at: updated.updatedAt, kind: "closed", text: "ปิดเรื่องจากหน้าจัดการเรื่องร้องเรียน" } },
+          }
+        );
+      }
 
       // Audit log (fire-and-forget)
       if (userId) {
