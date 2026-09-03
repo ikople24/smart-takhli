@@ -231,6 +231,8 @@ export interface PoolResponse {
   departments: Array<{ name: string; short: string }>;
   /** จำนวนงานเปิดที่แต่ละเจ้าหน้าที่ถืออยู่ (สำหรับ modal มอบหมาย) */
   workload: Record<string, number>;
+  /** งาน "กำลังดำเนินการ" (มีเจ้าของแล้ว) แยกตามกอง — โชว์ใต้หัวคอลัมน์ */
+  inProgressByDepartment: Record<string, number>;
 }
 
 /* ── ผลของ lib/tasks/summary.js (หน้าจอ 1) ── */

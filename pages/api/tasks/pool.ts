@@ -4,7 +4,7 @@
 // สิทธิ์: ต้องเข้าหน้า /admin/task-pool ได้ (requirePage) · ไม่คืนชื่อ/เบอร์ผู้แจ้ง (repeatCount นับฝั่ง server)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTaskSettings } from '@/lib/tasks/loadSettings';
-import { loadPoolItems, loadWorkload } from '@/lib/tasks/loadPool';
+import { loadPoolItems, loadWorkload, loadInProgressByDepartment } from '@/lib/tasks/loadPool';
 import { POOL_GROUP_BY, poolAction, groupPool, staleSummary } from '@/lib/tasks/pool';
 import { DEPARTMENTS, normalizeDepartment } from '@/lib/tasks/departments';
 import { taskPermissions } from '@/lib/tasks/roles';
@@ -26,8 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const groupBy = ((POOL_GROUP_BY as readonly string[]).includes(groupByRaw) ? groupByRaw : 'organization') as GroupBy;
   const q = String(req.query.q ?? '').trim();
   const community = String(req.query.community ?? '').trim();
-  const daysRaw = String(req.query.days ?? '30');
-  const days = daysRaw === 'all' ? null : DAY_OPTIONS.has(Number(daysRaw)) ? Number(daysRaw) : 30;
+  // default = ทั้งหมด (เจ้าของยืนยัน 2026-09-02: หน้านี้ต้องเห็นทุกเรื่อง) — ส่ง 30/90/365 มาเพื่อแคบเอง
+  const daysRaw = String(req.query.days ?? 'all');
+  const days = DAY_OPTIONS.has(Number(daysRaw)) ? Number(daysRaw) : null;
   const onlyStale = req.query.onlyStale === '1' || req.query.onlyStale === 'true';
 
   try {
@@ -39,9 +40,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const perms = taskPermissions({ isSuperAdmin, user: officer });
     const canAssign = perms.canAssign;
 
-    const [{ items: baseItems, olderOutsideWindow, communities }, workload] = await Promise.all([
+    const [{ items: baseItems, olderOutsideWindow, communities }, workload, inProgressByDepartment] = await Promise.all([
       loadPoolItems({ settings, now, days }),
       loadWorkload(),
+      loadInProgressByDepartment(),
     ]);
 
     const items = (baseItems as Array<Omit<PoolItem, 'action'>>).map((it) => ({
@@ -60,7 +62,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return true;
     });
 
-    const columns = groupPool(filtered, groupBy, { officerDepartment, settings }) as PoolColumn[];
+    // กองที่มีงานกำลังดำเนินการ → มีคอลัมน์เสมอ (ไม่งั้นกองที่รับงานหมดแล้วหายไปทั้ง tab — ผู้ใช้งง)
+    const columns = groupPool(filtered, groupBy, { officerDepartment, settings, activeDepartments: Object.keys(inProgressByDepartment) }) as PoolColumn[];
     const stale = { ...staleSummary(filtered), olderOutsideWindow };
 
     return res.status(200).json({
@@ -84,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       communities,
       departments: DEPARTMENTS.map((d) => ({ name: d.name, short: d.short })),
       workload,
+      inProgressByDepartment,
     });
   } catch (err) {
     console.error('[tasks] pool failed:', err);

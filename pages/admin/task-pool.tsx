@@ -5,6 +5,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useUser } from '@clerk/nextjs';
+import Link from 'next/link';
 import axios from 'axios';
 import clsx from 'clsx';
 import Swal from 'sweetalert2';
@@ -18,10 +19,10 @@ import type { OfficerOption } from '@/components/tasks';
 
 const GROUP_LABELS: Record<GroupBy, string> = { organization: 'ตามกอง', category: 'ตามประเภทเรื่อง', priority: 'ตามความเร่งด่วน' };
 const DAY_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'ทุกช่วงเวลา' },
   { value: '30', label: '30 วันล่าสุด' },
   { value: '90', label: '90 วันล่าสุด' },
   { value: '365', label: '1 ปีล่าสุด' },
-  { value: 'all', label: 'ทั้งหมด' },
 ];
 const PREVIEW_PER_COLUMN = 6;
 
@@ -102,7 +103,8 @@ function TaskPoolContent() {
   // ตัวกรองอยู่ใน URL (แชร์ลิงก์/กด back ได้)
   const groupBy: GroupBy = (POOL_GROUP_BY as readonly string[]).includes(String(router.query.groupBy)) ? (router.query.groupBy as GroupBy) : 'organization';
   const community = typeof router.query.community === 'string' ? router.query.community : '';
-  const days = typeof router.query.days === 'string' && DAY_OPTIONS.some((d) => d.value === router.query.days) ? router.query.days : '30';
+  // default = ทุกช่วงเวลา (เจ้าของยืนยัน: หน้านี้ต้องเห็นทุกเรื่อง)
+  const days = typeof router.query.days === 'string' && DAY_OPTIONS.some((d) => d.value === router.query.days) ? router.query.days : 'all';
   const onlyStale = router.query.stale === '1';
 
   const setQuery = useCallback(
@@ -145,7 +147,8 @@ function TaskPoolContent() {
 
   const visibleItems = useMemo<PoolItem[]>(() => (data?.items ?? []).filter((i) => !hidden.has(i._id)), [data, hidden]);
   const chipCounts = useMemo(() => poolChipCounts(visibleItems, { officerDepartment: data?.officer.department ?? null }), [visibleItems, data]);
-  const effectiveMobileFilter = mobileFilter ?? (data?.officer.department ? 'mine' : 'all');
+  // default มือถือ = ทั้งหมด (เห็นทุกเรื่องก่อน แล้วค่อยกรองเอง)
+  const effectiveMobileFilter = mobileFilter ?? 'all';
   const mobileList = useMemo<PoolItem[]>(() => {
     let list = visibleItems;
     if (effectiveMobileFilter === 'mine' && data?.officer.department) list = list.filter((i) => i.department === data.officer.department);
@@ -294,6 +297,12 @@ function TaskPoolContent() {
           <div>
             <h1 className="text-[21px] font-bold leading-tight md:text-[22px]">กองงานรอรับ</h1>
             <p className="mt-1 text-[13.5px] text-tk-ink-4"><span className="md:hidden">{visibleTotal} เรื่องยังไม่มีเจ้าของ</span><span className="hidden md:inline">เรื่องที่ยังไม่มีเจ้าหน้าที่รับผิดชอบ — กดรับงานเพื่อย้ายเข้ากลุ่มงานของคุณ</span></p>
+            <p className="mt-0.5 text-[12px] text-tk-ink-6">
+              เรื่องที่มีคนรับแล้วไม่อยู่หน้านี้ — ดูที่{' '}
+              <Link href={data?.officer.isHead || data?.officer.isSuperAdmin ? '/admin/my-tasks?scope=department&groupBy=organization' : '/admin/my-tasks'} className="font-semibold text-tk-primary hover:underline">
+                {data?.officer.isHead || data?.officer.isSuperAdmin ? 'งานของกอง' : 'งานของฉัน'}
+              </Link>
+            </p>
           </div>
           {data && (
             <p className="hidden text-[12.5px] text-tk-ink-6 md:block">
@@ -396,7 +405,7 @@ function TaskPoolContent() {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <select value={days} onChange={(e) => setQuery({ days: e.target.value === '30' ? null : e.target.value })} className="rounded-[11px] border border-tk-line bg-tk-surface px-3 py-2 text-[13px] text-tk-ink outline-none" aria-label="ช่วงเวลา">
+            <select value={days} onChange={(e) => setQuery({ days: e.target.value === 'all' ? null : e.target.value })} className="rounded-[11px] border border-tk-line bg-tk-surface px-3 py-2 text-[13px] text-tk-ink outline-none" aria-label="ช่วงเวลา">
               {DAY_OPTIONS.map((d) => (
                 <option key={d.value} value={d.value}>{d.label}</option>
               ))}
@@ -446,8 +455,21 @@ function TaskPoolContent() {
                       <span className={clsx('ml-auto rounded-full px-2 py-0.5 text-[12.5px] font-bold', COUNT_PILL[col.tone] ?? COUNT_PILL.neutral)}>{col.count}</span>
                     </div>
                     <div className={clsx('mt-1 text-[11.5px] font-semibold', col.isUnassigned && col.count > 0 ? 'text-tk-overdue-ink' : MAX_DAYS_INK[col.maxDaysTone])}>
-                      {col.count === 0 ? (col.isOwn ? 'ไม่มีเรื่องค้าง — เคลียร์แล้ว' : 'ไม่มีเรื่อง') : col.isUnassigned ? 'ต้องคัดแยกก่อนมอบหมาย' : `ค้างนานสุด ${col.maxDays ?? 0} วัน`}
+                      {col.count === 0 ? (col.isOwn ? 'ไม่มีเรื่องค้าง — เคลียร์แล้ว' : 'ไม่มีเรื่องค้างรับ') : col.isUnassigned ? 'ต้องคัดแยกก่อนมอบหมาย' : `ค้างนานสุด ${col.maxDays ?? 0} วัน`}
                     </div>
+                    {(() => {
+                      const inProgress = data?.inProgressByDepartment?.[col.fullName ?? col.key] ?? 0;
+                      if (!inProgress || col.isUnassigned) return null;
+                      const canSee = data?.officer.isHead || data?.officer.isSuperAdmin;
+                      const text = `กำลังดำเนินการ ${inProgress} เรื่อง`;
+                      return canSee ? (
+                        <Link href="/admin/my-tasks?scope=department&groupBy=organization" className="mt-0.5 block text-[11px] text-tk-ink-6 underline-offset-2 hover:text-tk-primary hover:underline">
+                          {text} →
+                        </Link>
+                      ) : (
+                        <div className="mt-0.5 text-[11px] text-tk-ink-6">{text}</div>
+                      );
+                    })()}
                   </header>
                   {visible.map((item) => (
                     <PoolCard

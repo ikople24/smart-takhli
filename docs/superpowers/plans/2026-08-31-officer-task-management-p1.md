@@ -94,3 +94,4 @@ docs/modules/tasks.md
 2. ปุ่ม "อัพเดท" ใน manage-complaints → หน้าจอ 3 · ลบ `UpdateAssignmentModal` (ทางเขียนเดียว)
 3. ปิดเรื่องจากหน้าทะเบียนตั้ง `assignment.completedAt/stage` + timeline (KPI สม่ำเสมอ)
 4. กติกาที่ server ใน create: `canClaim` (กองเดียวกัน, TDD) · มอบหมาย = หัวหน้า/superadmin · 409 กันรับซ้ำ
+- feedback 2026-09-02: กองงานรอรับ default แสดงทุกเรื่อง/ทุกช่วงเวลา (เดิม 30 วัน) ทั้งเดสก์ท็อป+มือถือ · คอลัมน์กองที่มีงานกำลังดำเนินการโผล่เสมอ + ตัวเลขลิงก์ไป 'งานของกอง' (`loadInProgressByDepartment`)

@@ -23,7 +23,7 @@
   `BlockedCard` (พัก/เลิกพัก SLA) · บันทึก + `ImageUploads` · ปุ่มปิดเรื่อง (`CloseTaskModal` ≥1 ภาพ + สรุป + วิธีแก้ไขจาก AdminOption) · โอนงาน · เรื่องปิดแล้ว/ไม่ใช่งานของตัวเอง = อ่านอย่างเดียว
 - `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (ค้างเกิน `unclaimedAlertDays`
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
-  (`?days=30|90|365|all` default 30 — ถ้ามีเรื่องเก่ากว่านั้น alert bar บอกจำนวนพร้อมลิงก์ดูทั้งหมด) · kanban ต่อคอลัมน์ (กองของตัวเองมีเสมอ,
+  (`?days=all|30|90|365` **default ทั้งหมด — เจ้าของยืนยันหน้านี้ต้องเห็นทุกเรื่อง**) · kanban ต่อคอลัมน์ (กองของตัวเอง + **กองที่มีงานกำลังดำเนินการมีคอลัมน์เสมอ** พร้อมบรรทัด "กำลังดำเนินการ N เรื่อง" ลิงก์ไปงานของกอง — เรื่องที่มีคนรับแล้วไม่อยู่หน้านี้,
   "ยังไม่ระบุกอง" dashed ท้ายสุด) · การ์ด: รับงาน (optimistic + toast "เลิกทำ" 5 วิ) / มอบหมาย (หัวหน้ากอง) / เลือกกอง / ไม่ใช่กองของคุณ
   · ลงทะเบียนครบ (ALL_PAGES + DEFAULT_PERMISSIONS admin + navigationItems; **ไม่ใส่ ADMIN_META title** เพราะหน้ามี h1 เอง — ไม่งั้นชื่อซ้ำ) + `scripts/grant-task-pool-permission.mjs`
 

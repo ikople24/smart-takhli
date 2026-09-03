@@ -12,8 +12,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.message, total: 0, stale: 0 });
   try {
     const settings = await getTaskSettings();
-    const { items, olderOutsideWindow } = await loadPoolItems({ settings, days: 30 });
-    return res.status(200).json({ success: true, total: items.length + olderOutsideWindow, stale: items.filter((i) => i.isStale).length + olderOutsideWindow });
+    const { items } = await loadPoolItems({ settings, days: null });
+    return res.status(200).json({ success: true, total: items.length, stale: items.filter((i) => i.isStale).length });
   } catch (err) {
     console.error('[tasks] pool-count failed:', err);
     return res.status(500).json({ success: false, error: 'นับไม่สำเร็จ', total: 0, stale: 0 });
