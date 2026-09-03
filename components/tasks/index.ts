@@ -1,0 +1,35 @@
+// components/tasks — shared components ของหน้าจัดการงานเจ้าหน้าที่ (README § ลำดับงาน ข้อ 4)
+// ใช้โทเคน tk-* (styles/globals.css) และ logic จาก lib/tasks/* — ห้ามคำนวณ derived fields ในนี้
+export { AlertBadge, TONE_CLASSES, TONE_DOT_CLASSES, SEVERITY_TONE } from './AlertBadge';
+export type { AlertBadgeProps } from './AlertBadge';
+export { TaskRow, SEVERITY_BAR_CLASSES } from './TaskRow';
+export type { TaskRowProps } from './TaskRow';
+export { WorkGroupAccordion, tileForGroup } from './WorkGroupAccordion';
+export type { WorkGroupAccordionProps } from './WorkGroupAccordion';
+export { PoolCard } from './PoolCard';
+export type { PoolCardProps, PoolAction } from './PoolCard';
+export { StatusStepper } from './StatusStepper';
+export type { StatusStepperProps } from './StatusStepper';
+export { CoordinationBlock } from './CoordinationBlock';
+export type { CoordinationBlockProps } from './CoordinationBlock';
+export { OfficerHeaderCard } from './OfficerHeaderCard';
+export { AlertCards } from './AlertCards';
+export { KpiStrip } from './KpiStrip';
+export { CoordinationRailCard, BlockedRailCard, DueThisWeekCard } from './RailCards';
+export { TransferTaskModal } from './TransferTaskModal';
+export type { OfficerOption, TransferPayload, TransferRequestPayload } from './TransferTaskModal';
+export { FollowUpModal } from './FollowUpModal';
+export type { FollowUpPayload, FollowUpChannel } from './FollowUpModal';
+export { AssignTaskModal } from './AssignTaskModal';
+export { DepartmentPickerModal } from './DepartmentPickerModal';
+export { TaskTimeline } from './TaskTimeline';
+export { BlockedCard } from './BlockedCard';
+export type { BlockedPayload } from './BlockedCard';
+export { CoordinationSetModal } from './CoordinationSetModal';
+export type { CoordinationSetPayload } from './CoordinationSetModal';
+export { CloseTaskModal } from './CloseTaskModal';
+export type { ClosePayload } from './CloseTaskModal';
+export { HeadsPanel } from './HeadsPanel';
+export { MobileTaskNav } from './MobileTaskNav';
+export type { MobileNavKey } from './MobileTaskNav';
+export { QuickTaskSheet } from './QuickTaskSheet';

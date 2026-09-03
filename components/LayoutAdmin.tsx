@@ -23,6 +23,7 @@ const navigationItems = [
   // ภาพรวม
   { label: 'Dashboard',          href: '/admin/dashboard',                icon: '📊', group: 'ภาพรวม' },
   { label: 'งานของฉัน',         href: '/admin/my-tasks',                 icon: '✅', group: 'ภาพรวม' },
+  { label: 'กองงานรอรับ',       href: '/admin/task-pool',                icon: '📥', group: 'ภาพรวม' },
   { label: 'การแจ้งเตือน',     href: '/admin/notifications',             icon: '🔔', group: 'ภาพรวม' },
   // แก้โปรไฟล์ของตัวเองเท่านั้น (ไม่ใช่หน้าจัดการผู้ใช้คนอื่น) — จึงไม่อยู่กลุ่ม 'ตั้งค่า'
   { label: 'ข้อมูลส่วนตัว',    href: '/admin/register-user',             icon: '👤', group: 'ภาพรวม' },

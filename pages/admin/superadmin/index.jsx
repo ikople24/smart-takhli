@@ -224,6 +224,7 @@ export default function SuperAdminPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <a href="/admin/superadmin/department-heads" className="btn btn-sm btn-outline border-slate-300 text-slate-600">👥 หัวหน้ากอง</a>
             <a href="/admin/superadmin/line-settings" className="btn btn-sm btn-outline border-slate-300 text-slate-600">💬 ตั้งค่า LINE</a>
             <a href="/admin/superadmin/audit-log" className="btn btn-sm btn-outline border-slate-300 text-slate-600">📜 Audit Log</a>
           </div>

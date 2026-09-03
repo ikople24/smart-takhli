@@ -1057,3 +1057,119 @@ body.survey-form-open .app-bottom-nav {
     animation: none;
   }
 }
+
+/* ============================================================
+   โทเคนดีไซน์ "จัดการงานเจ้าหน้าที่" (ม่วง) — ที่มา
+   docs/design_handoff_officer_task_management/README.md § Design Tokens
+   ใช้ผ่าน utility: bg-tk-primary · text-tk-overdue-ink · border-tk-line · font-tk-mono · shadow-tk-lg
+
+   จงใจ *ไม่* แตะ --color-primary ของ mytheme (ยังน้ำเงิน) เพราะหน้าเก่าทุกหน้าใช้ btn-primary อยู่ —
+   ถ้าตัดสินใจสลับทั้งระบบเป็นม่วง ให้แก้ --color-primary ใน mytheme เป็น oklch(55.6% 0.245 296.5)
+   บรรทัดเดียว (component ที่ใช้ tk-* ไม่ต้องแก้)
+   ============================================================ */
+@theme {
+  --font-tk-sans: 'Anuphan', 'IBM Plex Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --font-tk-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ม่วงหลัก */
+  --color-tk-primary: #7C3AED;
+  --color-tk-primary-dark: #6D28D9;     /* ตัวอักษรบนพื้นม่วงอ่อน */
+  --color-tk-primary-darker: #5B21B6;   /* ตัวอักษร badge ม่วง */
+  --color-tk-primary-light: #9050F0;    /* ปลาย gradient */
+  --color-tk-primary-lighter: #A86BF5;  /* ปลาย gradient ไกล */
+  --color-tk-primary-tint: #F1ECFE;     /* พื้น badge / icon tile ม่วง */
+  --color-tk-primary-tint-2: #FAF7FF;   /* พื้น accordion ที่เปิด */
+  --color-tk-primary-tint-3: #FBF9FF;
+  --color-tk-primary-line: #E3DAFB;     /* ขอบม่วงอ่อน (accordion เปิด) */
+  --color-tk-primary-line-2: #EDE5FD;
+
+  /* พื้น / เส้น / ตัวอักษร */
+  --color-tk-bg: #F6F5FA;
+  --color-tk-surface: #FFFFFF;
+  --color-tk-line: #ECEAF2;
+  --color-tk-line-light: #F1F0F5;
+  --color-tk-line-lighter: #EFEDF4;
+  --color-tk-line-tint: #F4EEFC;
+  --color-tk-line-dashed: #D8D2E6;
+  --color-tk-ink: #241F38;
+  --color-tk-ink-strong: #1B1830;
+  --color-tk-ink-2: #3A3550;
+  --color-tk-ink-3: #4A4458;
+  --color-tk-ink-4: #6B6880;
+  --color-tk-ink-5: #8B87A0;
+  --color-tk-ink-6: #9590A8;
+  --color-tk-ink-7: #A9A4B8;
+  --color-tk-ink-8: #B8B3C4;
+
+  /* ป้ายเตือน — <kind> = dot/bar · -ink = ตัวอักษร · -soft = พื้น · -line = ขอบ */
+  --color-tk-overdue: #E0455B;
+  --color-tk-overdue-ink: #B92544;
+  --color-tk-overdue-ink-2: #9E4055;
+  --color-tk-overdue-soft: #FDECEF;
+  --color-tk-overdue-line: #F7CBD5;
+  --color-tk-overdue-line-soft: #FBE3E8;
+  --color-tk-overdue-tint: #FFFBFC;
+
+  --color-tk-due: #F2A93B;
+  --color-tk-due-ink: #9E6206;
+  --color-tk-due-soft: #FEF6E0;
+
+  --color-tk-coord: #0E7C86;
+  --color-tk-coord-ink: #0A656E;
+  --color-tk-coord-soft: #E2F4F6;
+  --color-tk-coord-line: #C9EAEE;
+  --color-tk-coord-line-2: #DDEFF1;
+  --color-tk-coord-tint: #F7FDFD;
+  --color-tk-coord-btn: #DCF1F3;
+  --color-tk-coord-label: #6B8E92;
+
+  --color-tk-blocked: #7C3AED;
+  --color-tk-blocked-ink: #5B21B6;
+  --color-tk-blocked-soft: #F1ECFE;
+  --color-tk-blocked-line: #EDE5FD;
+
+  --color-tk-unclaimed: #9590A8;
+  --color-tk-unclaimed-ink: #4A4458;
+  --color-tk-unclaimed-soft: #F1F0F5;
+  --color-tk-unclaimed-line: #C9C4D6;
+
+  --color-tk-done: #1B935A;
+  --color-tk-done-ink: #14714A;
+  --color-tk-done-soft: #E9F6EE;
+
+  --color-tk-blue: #2F6FD0;
+  --color-tk-blue-soft: #EAF4FE;
+  --color-tk-road: #8A6D3B;
+  --color-tk-road-soft: #F3F0EA;
+
+  /* เงา */
+  --shadow-tk-xs: 0 2px 8px rgba(60, 40, 100, 0.05);
+  --shadow-tk-sm: 0 4px 12px rgba(60, 40, 100, 0.04);
+  --shadow-tk-md: 0 4px 14px rgba(60, 40, 100, 0.05);
+  --shadow-tk-lg: 0 4px 16px rgba(60, 40, 100, 0.05);
+  --shadow-tk-xl: 0 6px 20px rgba(60, 40, 100, 0.07);
+  --shadow-tk-purple: 0 8px 18px rgba(124, 58, 237, 0.28);
+  --shadow-tk-purple-card: 0 14px 30px rgba(124, 58, 237, 0.26);
+  --shadow-tk-purple-fab: 0 10px 22px rgba(124, 58, 237, 0.4);
+}
+
+/* accordion กลุ่มงาน: ขยาย/ยุบตาม README (220ms cubic-bezier) — ใช้ grid-rows trick ไม่ต้องรู้ความสูง */
+.tk-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.tk-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.tk-collapse.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tk-collapse {
+    transition: none;
+  }
+}

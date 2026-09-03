@@ -20,6 +20,7 @@ const UserSchema = new mongoose.Schema(
     isActive: Boolean,
     isArchived: Boolean,
     allowedPages: [String],
+    isDepartmentHead: Boolean,
   },
   { collection: 'users' }
 );
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
       appId,
       isArchived: { $ne: true },
     })
-      .select('name position department role phone profileImage profileUrl assignedTask clerkId allowedPages isActive')
+      .select('name position department role phone profileImage profileUrl assignedTask clerkId allowedPages isActive isDepartmentHead')
       .sort({ name: 1 })
       .lean();
 

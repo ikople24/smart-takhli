@@ -16,14 +16,11 @@ const ADMIN_META = {
   '/admin/elderly-cards':             { title: 'ข้อมูลผู้สูงอายุ' },
   '/admin/elderly-schedule':          { title: 'ตารางเยี่ยมผู้สูงอายุ' },
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
-  '/admin/my-tasks': {
-    title: 'KPI งานของฉัน',
-    subtitle: 'สรุปภาระงานและผลการดำเนินการ',
-    breadcrumbs: [
-      { label: 'Dashboard', href: '/admin/dashboard' },
-      { label: 'KPI งานของฉัน' },
-    ],
-  },
+  // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
+  '/admin/my-tasks':                  { title: 'งานของฉัน' },
+  // task-pool: หน้ามี h1 ของตัวเอง — ไม่ใส่ title ที่นี่ ไม่งั้นชื่อซ้ำสองที่ (เจ้าของแจ้ง 2026-09-01)
+  // หน้าจอ 3 รายละเอียดงาน — full-page: ไม่มี sidebar/sub-header (หน้ามี header bar ← กลับ + breadcrumb เอง)
+  '/admin/my-tasks/[assignmentId]':   { title: 'รายละเอียดงาน', noSidebar: true, fullBleed: true },
   '/admin/notifications': {
     title: 'การแจ้งเตือน',
     subtitle: 'ดูและจัดการการแจ้งเตือนของคุณ',
@@ -50,6 +47,7 @@ const ADMIN_META = {
   '/admin/settings/geojson-map':      { title: 'แผนที่ GeoJSON', subtitle: 'จัดการและแสดงผล GeoJSON พื้นที่บริการ' },
   '/admin/superadmin':                { title: 'การบริหารระบบ' },
   '/admin/superadmin/audit-log':      { title: 'Audit Log' },
+  '/admin/superadmin/department-heads': { title: 'ตั้งค่าหัวหน้ากอง', subtitle: 'ใครมอบหมาย/โอนงานในกองได้ (โมดูลงานเจ้าหน้าที่)' },
   '/admin/superadmin/setup':          { title: 'ตั้งค่า Superadmin', noSidebar: true },
 };
 

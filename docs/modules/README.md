@@ -16,6 +16,7 @@
 | Smart Waste (ขยะรีไซเคิล) | [smart-waste.md](smart-waste.md) | `/admin/smart-waste` |
 | ทะเบียนท่อประปา (Smart Water) | [smart-water.md](smart-water.md) | `/admin/smart-water` |
 | ตารางเดินรถเก็บขยะ (Garbage) | [garbage.md](garbage.md) | `/garbage`, `/admin/garbage` |
+| งานเจ้าหน้าที่ (Officer tasks) | [tasks.md](tasks.md) | `/admin/my-tasks` (เฟส 1: logic/API/components) |
 | Superadmin / สิทธิ์ | [superadmin-permissions.md](superadmin-permissions.md) | `/admin/superadmin` |
 | แจ้งเตือน / Audit log | [notifications-audit.md](notifications-audit.md) | `/admin/notifications` |
 | สถิติการเข้าชมเว็บไซต์ | [site-stats.md](site-stats.md) | `/` (การ์ดบนหน้าหลัก) |

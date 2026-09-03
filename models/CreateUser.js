@@ -16,6 +16,9 @@ const UserSchema = new mongoose.Schema(
     exitDate: { type: Date, default: null },
     exitNote: { type: String, default: "" },
     allowedPages: { type: [String], default: [] }, // หน้าที่อนุญาตให้เข้าถึง
+    /** หัวหน้ากอง — มอบหมาย/โอนงานในกองได้ (โมดูล tasks: lib/tasks/roles.js) · ไม่ตั้ง = ดูจากตำแหน่ง (ผู้อำนวยการ/หัวหน้า/ผอ./ปลัด)
+     *  ⚠️ inline User schema ที่ต้องเห็นฟิลด์นี้: pages/api/users/get-all-user.js, pages/api/tasks/_auth.ts (strict:false) */
+    isDepartmentHead: { type: Boolean, default: undefined },
   },
   { collection: "users", timestamps: true }
 );

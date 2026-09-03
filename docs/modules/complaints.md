@@ -18,11 +18,19 @@
 
 `Complaint`, `Assignment`, `AdminOption`
 
+> `Assignment` ถูกขยาย (role / stage / dueDate / SLA pause / coordination / blocked / timeline) และ
+> `Complaint.organizationId` เพิ่มใน **ทั้ง** `models/Complaint.js` และ `models/SubmittedReport.js`
+> โดยโมดูลงานเจ้าหน้าที่ — ดู [tasks.md](tasks.md)
+
 ## Components (`components/complaints/`)
 
 `ComplaintFormModal`, `ComplaintDetailModal`, `ComplaintStats`, `OverdueComplaintsAlert`,
 `ExportComplaints`, `CardAssignment`, `CardModalDetail`, `CardOfficail`,
-`ReporterInfoMap`, `ReporterInput`, `CommunitySelector`, `UpdateAssignmentModal`
+`ReporterInfoMap`, `ReporterInput`, `CommunitySelector`
+
+> `UpdateAssignmentModal` + `PUT /api/complaints/assignments/update` ปลดระวางแล้ว (2026-09-02) —
+> ปุ่ม "อัพเดท" ในหน้าจัดการเรื่องร้องเรียนพาไปหน้างานเจ้าหน้าที่ `/admin/my-tasks/[assignmentId]` (ทางเขียนเดียว)
+> · ปิดเรื่องจากหน้าทะเบียนจะตั้ง `assignment.completedAt/stage` ให้ด้วย · `assignments/{create,update-status}` บังคับล็อกอินแล้ว
 
 > ย้ายเข้าโฟลเดอร์โมดูลแล้ว (เฟส 3, 2026-06-18). คู่ซ้ำ `*New` รวมเป็นชื่อหลักแล้ว;
 > dead code (`CardCompleted`, `ReporterInfoCard`, `*เก่า`) ถูกลบ

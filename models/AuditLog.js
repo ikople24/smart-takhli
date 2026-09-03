@@ -40,6 +40,13 @@ const AuditLogSchema = new mongoose.Schema({
       'garbage_route_updated',
       'garbage_schedule_imported',
       'garbage_communities_mapped',
+      // Officer tasks
+      'task_settings_updated',
+      'assignment_follow_up',
+      'assignment_unclaimed',
+      'complaint_department_set',
+      'assignment_transfer_requested',
+      'department_head_set',
       // General
       'data_exported',
       'login',

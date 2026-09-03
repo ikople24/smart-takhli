@@ -13,6 +13,10 @@ const SubmittedReportSchema = new mongoose.Schema({
     lng: { type: Number }
   },
   complaintId : { type: String },
+  /** กองที่รับผิดชอบ — ชื่อมาตรฐานจาก lib/tasks/departments.js (คัดแยกจากหน้ากองงานรอรับ); '' = ยังไม่ระบุกอง
+   *  ไม่ใช้ ref Organization เพราะ collection organizations เก็บแค่ตัวเทศบาล ไม่ใช่รายชื่อกอง
+   *  ⚠️ ฟิลด์นี้ต้องมีใน models/SubmittedReport.js ด้วย (schema ซ้ำสองไฟล์ ชื่อ model เดียวกัน) */
+  department: { type: String, default: '' },
   status: { type: String },
   officer: { type: String },
   /** ซ่อนการ์ดจากหน้า complaint / status — แอดมินยังเห็นในระบบหลังบ้าน */

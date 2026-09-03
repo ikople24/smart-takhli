@@ -31,6 +31,8 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: String,
     default: 'on',
   },
+  /** กองที่รับผิดชอบ (ชื่อมาตรฐานจาก lib/tasks/departments.js) — ต้องตรงกับ models/Complaint.js (schema ซ้ำสองไฟล์) */
+  department: { type: String, default: '' },
   isConfidential: { type: Boolean, default: false },
   pdpaSensitive: { type: Boolean, default: false },
   pdpaDetailRedactions: {
