@@ -47,6 +47,7 @@ const AuditLogSchema = new mongoose.Schema({
       'complaint_department_set',
       'assignment_transfer_requested',
       'department_head_set',
+      'complaint_deleted',
       // General
       'data_exported',
       'login',
