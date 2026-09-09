@@ -20,7 +20,7 @@
   `PermissionGuard requiredPath="/admin/my-tasks"` — ยืมสิทธิ์หน้าแม่, ADMIN_META `noSidebar + fullBleed`): header bar ← กลับ + breadcrumb ·
   การ์ดเรื่อง (ชื่อ/เบอร์ผู้แจ้งเต็ม — เจ้าหน้าที่ต้องติดต่อ ต่างจาก /status ที่ mask) · ภาพ + แผนที่ (`SmallMap` dynamic) · ไทม์ไลน์ (`buildTimeline`) ·
   แผงอัปเดต: `StatusStepper` (ถอยขั้นถาม Swal เหตุผล, ขั้น "ปิดเรื่อง" เปิด modal ปิดเรื่อง) · `CoordinationBlock` (+ `CoordinationSetModal` / `FollowUpModal` / โทรแล้ว / แจ้ง LINE) ·
-  `BlockedCard` (พัก/เลิกพัก SLA) · บันทึก + `ImageUploads` · ปุ่มปิดเรื่อง (`CloseTaskModal` ≥1 ภาพ + สรุป + วิธีแก้ไขจาก AdminOption) · โอนงาน · เรื่องปิดแล้ว/ไม่ใช่งานของตัวเอง = อ่านอย่างเดียว
+  `BlockedCard` (พัก/เลิกพัก SLA) · บันทึก + `ImageUploads` · ปุ่มปิดเรื่อง (`CloseTaskModal` สรุปบังคับ · ภาพ optional — ไม่มีภาพต้องติ๊กยืนยัน `confirmNoImages` เช่น เรื่องสอบถามข้อมูล + วิธีแก้ไขจาก AdminOption) · โอนงาน · เรื่องปิดแล้ว/ไม่ใช่งานของตัวเอง = อ่านอย่างเดียว
 - `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (ค้างเกิน `unclaimedAlertDays`
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
   (`?days=all|30|90|365` **default ทั้งหมด — เจ้าของยืนยันหน้านี้ต้องเห็นทุกเรื่อง**) · kanban ต่อคอลัมน์ (กองของตัวเอง + **กองที่มีงานกำลังดำเนินการมีคอลัมน์เสมอ** พร้อมบรรทัด "กำลังดำเนินการ N เรื่อง" ลิงก์ไปงานของกอง — เรื่องที่มีคนรับแล้วไม่อยู่หน้านี้,
@@ -123,7 +123,7 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - ป้าย "เสี่ยงอันตราย" / "อาจต้องประสาน กฟภ." เป็นคำใบ้จาก keyword ในข้อความ (`pool.js`) ไม่ใช่การตัดสิน
 - **แจ้งเตือน LINE ตอนสถานะเรื่องเปลี่ยน/ปิดงานอยู่ที่เดียว `lib/complaintNotify.js`** (`notifyComplaintStatusChanged`) — ใช้ทั้ง `update-status.js` เดิม
   และ `PATCH /api/tasks/[assignmentId]` ห้าม copy · การบันทึกความคืบหน้าธรรมดา (note/รูป) **ไม่** แจ้ง LINE (โควตา) — แจ้งเฉพาะเมื่อขั้นเปลี่ยนสถานะเรื่อง/ปิดงาน
-- stepper: เดินหน้าทีละขั้น, ถอยต้องมีเหตุผล, ขั้น "ปิดเรื่อง" ต้องผ่าน `close` (ภาพ ≥1 + สรุป) เท่านั้น · รูปความคืบหน้าอยู่ใน timeline, รูปตอนปิดเรื่องรวมเข้า `solutionImages` (หน้า /status + การ์ด LINE ใช้)
+- stepper: เดินหน้าทีละขั้น, ถอยต้องมีเหตุผล, ขั้น "ปิดเรื่อง" ต้องผ่าน `close` (สรุปบังคับ · ภาพ ≥1 หรือส่ง `confirmNoImages: true` — กติกาที่ `closeChecklist`) เท่านั้น · รูปความคืบหน้าอยู่ใน timeline, รูปตอนปิดเรื่องรวมเข้า `solutionImages` (หน้า /status + การ์ด LINE ใช้)
 - สี: โทเคน `tk-*` ใน `styles/globals.css` (`@theme`) — **ไม่แตะ `--color-primary` ของ `mytheme`**; ฟอนต์ `font-tk-sans` / `font-tk-mono` (IBM Plex Mono เพิ่มใน `_document.tsx`)
 - ข้อความไทยในป้าย/ปุ่มต้อง `whitespace-nowrap`
 
