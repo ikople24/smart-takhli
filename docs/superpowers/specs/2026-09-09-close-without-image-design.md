@@ -40,7 +40,7 @@
 
 - state ใหม่ `confirmNoImages` (default `false`) · แสดง checkbox **เฉพาะเมื่อ `images.length === 0`**:
   ป้าย "ปิดเรื่องโดยไม่แนบภาพผลงาน (เช่น เป็นการสอบถามข้อมูล / ไม่มีงานภาคสนาม)"
-- ปุ่มปิดเรื่อง disabled ตาม `closeChecklist({ note, images, confirmNoImages })` เหมือนกลไกเดิม
+- การกดปุ่มปิดเรื่องผ่านได้ตาม `closeChecklist({ note, images, confirmNoImages })` เหมือนกลไกเดิม (กดแล้วไม่ผ่าน = โชว์รายการ error — ปุ่มไม่ได้ disabled ตาม checklist อยู่แล้ว)
   (ข้อความ error โชว์จาก checklist ตามที่ modal ทำอยู่แล้ว)
 - เมื่อมีรูป: checkbox ไม่แสดง และค่า `confirmNoImages` ที่เคยติ๊กไว้ไม่ถูกส่ง (ส่งเฉพาะกรณีไม่มีรูป)
 - `onSubmit` ส่ง `confirmNoImages` ต่อไปยัง `PATCH` body (type ใน `pages/admin/my-tasks/[assignmentId].tsx` ปรับตาม)
@@ -69,6 +69,6 @@
 
 1. `npm test` ผ่าน (เทส closeChecklist ชุดใหม่)
 2. `npx tsc --noEmit` + lint ผ่าน
-3. dev: ปิดเรื่องแบบมีรูป = พฤติกรรมเดิม · แบบไม่มีรูป: ไม่ติ๊ก → ปุ่ม disabled + ข้อความเตือน, ติ๊ก → ปิดได้
+3. dev: ปิดเรื่องแบบมีรูป = พฤติกรรมเดิม · แบบไม่มีรูป: ไม่ติ๊ก → กดแล้วเห็นข้อความเตือน, ติ๊ก → ปิดได้
 4. ยิง `PATCH action:'close'` ตรงโดยไม่มีรูปและไม่ส่ง flag → 400 ข้อความใหม่
 5. เรื่องที่ปิดไม่มีรูป: `/status/<id>` และการ์ด LINE แสดงข้อความสรุปโดยไม่มีส่วนรูป ไม่มี UI พัง
