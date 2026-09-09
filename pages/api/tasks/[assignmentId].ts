@@ -245,7 +245,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (action === 'close') {
       const note = str(body.note);
       const images = httpsList(body.images);
-      const check = closeChecklist({ note, images });
+      // ปิดโดยไม่มีภาพต้องยืนยันชัดเจน (เช่น เรื่องสอบถามข้อมูล) — เช็คฝั่ง server ด้วย กันยิง API ข้าม UI
+      const confirmNoImages = body.confirmNoImages === true;
+      const check = closeChecklist({ note, images, confirmNoImages });
       if (!check.ok) return res.status(400).json({ success: false, error: check.errors.join(' · '), errors: check.errors });
       const solution = Array.isArray(body.solution) ? body.solution.map(String).filter(Boolean) : [];
 
