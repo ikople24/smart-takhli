@@ -3,7 +3,7 @@
 //   GET   — เรื่อง + assignment + derived + ไทม์ไลน์ + ตัวเลือกวิธีแก้ไข (AdminOption ของประเภทนั้น)
 //   PATCH — { action: 'progress' | 'close' | 'blocked', ... } เฉพาะเจ้าของงาน / superadmin
 //     progress: { note?, images?, stage?, reason? } บันทึกความคืบหน้า และ/หรือ เลื่อนขั้น (ถอยขั้นต้องมี reason)
-//     close:    { note, images (≥1), solution? } ปิดเรื่อง → assignment.completedAt + status เรื่อง + แจ้ง LINE (lib/complaintNotify.js)
+//     close:    { note, images?, confirmNoImages?, solution? } ปิดเรื่อง → assignment.completedAt + status เรื่อง + แจ้ง LINE (lib/complaintNotify.js)
 //     blocked:  { on, itemName?, purchaseRefNo?, expectedAt?, reason? } พัก/เลิกพัก SLA (lib/tasks/timeline.js#blockedUpdate)
 // การประสานงาน (set/follow_up/notify_line) ใช้ POST /api/complaints/coordination · โอนงานใช้ assignments/transfer
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -225,7 +225,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         plan = stageChangePlan(assignment.stage ?? 'received', stage);
         if (!plan.ok) return res.status(400).json({ success: false, error: plan.reason ?? 'เปลี่ยนขั้นไม่ได้' });
         if (plan.needsReason && !reason) return res.status(400).json({ success: false, error: 'ถอยขั้นต้องระบุเหตุผล' });
-        if (plan.closes) return res.status(400).json({ success: false, error: 'ปิดเรื่องผ่านปุ่ม "ปิดเรื่อง" (ต้องมีภาพผลงาน + บันทึกสรุป)' });
+        if (plan.closes) return res.status(400).json({ success: false, error: 'ปิดเรื่องผ่านปุ่ม "ปิดเรื่อง" (บันทึกสรุปบังคับ · ไม่มีภาพต้องติ๊กยืนยัน)' });
       }
       if (solution !== null) assignment.solution = solution;
       if (note || images.length || solution !== null) {
@@ -245,7 +245,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (action === 'close') {
       const note = str(body.note);
       const images = httpsList(body.images);
-      const check = closeChecklist({ note, images });
+      // ปิดโดยไม่มีภาพต้องยืนยันชัดเจน (เช่น เรื่องสอบถามข้อมูล) — เช็คฝั่ง server ด้วย กันยิง API ข้าม UI
+      const confirmNoImages = body.confirmNoImages === true;
+      const check = closeChecklist({ note, images, confirmNoImages });
       if (!check.ok) return res.status(400).json({ success: false, error: check.errors.join(' · '), errors: check.errors });
       const solution = Array.isArray(body.solution) ? body.solution.map(String).filter(Boolean) : [];
 

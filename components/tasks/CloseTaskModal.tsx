@@ -1,5 +1,5 @@
 // components/tasks/CloseTaskModal.tsx
-// modal "ปิดเรื่อง" (README หน้าจอ 3): ต้องมี ≥1 ภาพผลงาน + บันทึกสรุป · เลือกวิธีแก้ไขจาก AdminOption ของประเภทเรื่อง
+// modal "ปิดเรื่อง" (README หน้าจอ 3): บันทึกสรุปบังคับ · ภาพ ≥1 หรือติ๊กยืนยันปิดโดยไม่มีภาพ · เลือกวิธีแก้ไขจาก AdminOption ของประเภทเรื่อง
 // → PATCH /api/tasks/[assignmentId] { action: 'close' } (เซิร์ฟเวอร์เช็ค closeChecklist ซ้ำอีกชั้น)
 import React, { useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -12,6 +12,8 @@ export interface ClosePayload {
   note: string;
   images: string[];
   solution: string[];
+  /** ยืนยันปิดเรื่องโดยไม่แนบภาพ (มีความหมายเฉพาะเมื่อ images ว่าง) */
+  confirmNoImages: boolean;
 }
 
 export interface CloseTaskModalProps {
@@ -29,6 +31,7 @@ export function CloseTaskModal({ open, options, initialSolution = [], submitting
   const [images, setImages] = useState<string[]>([]);
   const [solution, setSolution] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [confirmNoImages, setConfirmNoImages] = useState(false);
   const [touched, setTouched] = useState(false);
   const [uploaderKey, setUploaderKey] = useState(0);
 
@@ -37,13 +40,14 @@ export function CloseTaskModal({ open, options, initialSolution = [], submitting
     setNote('');
     setImages([]);
     setSolution(initialSolution);
+    setConfirmNoImages(false);
     setTouched(false);
     setUploaderKey((k) => k + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;
-  const check = closeChecklist({ note, images }) as { ok: boolean; errors: string[] };
+  const check = closeChecklist({ note, images, confirmNoImages }) as { ok: boolean; errors: string[] };
   const canSubmit = check.ok && !submitting && !uploading;
 
   return (
@@ -52,7 +56,7 @@ export function CloseTaskModal({ open, options, initialSolution = [], submitting
         onSubmit={(e) => {
           e.preventDefault();
           setTouched(true);
-          if (canSubmit) onSubmit({ note: note.trim(), images, solution });
+          if (canSubmit) onSubmit({ note: note.trim(), images, solution, confirmNoImages: images.length === 0 && confirmNoImages });
         }}
         className="modal-box max-w-lg rounded-[18px] bg-tk-surface p-0 text-tk-ink shadow-tk-xl"
       >
@@ -80,8 +84,19 @@ export function CloseTaskModal({ open, options, initialSolution = [], submitting
           </div>
 
           <div>
-            <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">ภาพผลการดำเนินงาน <span className="text-tk-overdue-ink">*</span> (อย่างน้อย 1 ภาพ)</span>
+            <span className="mb-1.5 block text-[12px] font-semibold text-tk-ink-4">ภาพผลการดำเนินงาน (ถ้ามี)</span>
             <ImageUploads key={uploaderKey} maxImages={3} initialImages={[]} onChange={(urls: string[]) => setImages(urls)} onUploadingChange={setUploading} />
+            {images.length === 0 && (
+              <label className="mt-2 flex items-start gap-2 rounded-[10px] bg-tk-bg px-3 py-2 text-[12.5px] text-tk-ink-4">
+                <input
+                  type="checkbox"
+                  checked={confirmNoImages}
+                  onChange={(e) => setConfirmNoImages(e.target.checked)}
+                  className="checkbox checkbox-xs mt-0.5"
+                />
+                <span>ปิดเรื่องโดยไม่แนบภาพผลงาน (เช่น เป็นการสอบถามข้อมูล / ไม่มีงานภาคสนาม)</span>
+              </label>
+            )}
           </div>
 
           {touched && !check.ok && (
