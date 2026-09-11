@@ -23,7 +23,10 @@ export default async function handler(req, res) {
 
   try {
     await dbConnect();
-    const { complaintId, userId, solutionDetails, solutionImages, completedAt, remarks, officerName, role } = req.body;
+    // completedAt เลิกรับจาก client (2026-09-11) — flow เก่าเคยส่งเป็น date-only ทำให้เวลาเสร็จ
+    // กลายเป็นเที่ยงคืน UTC (07:00 ไทย) บางเรื่องถึงขั้น "เสร็จก่อนรับงาน"; ปิดเรื่องต้องผ่าน
+    // PATCH /api/tasks/[assignmentId] หรือ update-status เท่านั้น ซึ่งใช้เวลาจริงฝั่ง server
+    const { complaintId, userId, solutionDetails, solutionImages, remarks, officerName, role } = req.body;
 
     // ต้องล็อกอิน (เดิมไม่บังคับ — ปิดช่องโหว่ 2026-09-02) + ใช้ตัวตนจริงตัดสินสิทธิ์
     const auth = await getOfficer(req);
@@ -82,7 +85,6 @@ export default async function handler(req, res) {
       dueDate,
       solutionDetails,
       solutionImages,
-      completedAt,
       remarks,
       timeline: [
         {
