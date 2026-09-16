@@ -1,5 +1,16 @@
 import mongoose from 'mongoose';
 
+/** หลักฐานการยอมรับข้อตกลงก่อนแจ้งเรื่อง (จอ consent บน /report)
+ *  ห่อเป็น sub-schema ปิด _id — ถ้าใส่เป็น plain object mongoose จะแถม _id ให้ทุกเอกสาร
+ *  ⚠️ ต้องมีเหมือนกันใน models/SubmittedReport.js (schema ซ้ำสองไฟล์ ชื่อ model เดียวกัน) */
+const ConsentSchema = new mongoose.Schema(
+  {
+    version: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const SubmittedReportSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
   phone: { type: String },
@@ -33,6 +44,7 @@ const SubmittedReportSchema = new mongoose.Schema({
     ],
     default: [],
   },
+  consent: { type: ConsentSchema, default: undefined },
   updatedAt: { type: Date },
   timestamp: { type: Date }
 }, {
