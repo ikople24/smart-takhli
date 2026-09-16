@@ -1,7 +1,8 @@
 // pages/report.tsx
-// Wizard แจ้งทุกข์-แจ้งเหตุ 3 ขั้น + จอสำเร็จ (เฟส 2 ของรีดีไซน์ฝั่งประชาชน)
+// Wizard แจ้งทุกข์-แจ้งเหตุ: จอข้อตกลง (ด่านแรก) → 3 ขั้น → จอสำเร็จ (เฟส 2 ของรีดีไซน์ฝั่งประชาชน)
 // spec: docs/superpowers/specs/2026-08-18-citizen-report-wizard-design.md
-// เข้าด้วย ?category=<Prob_name> = เริ่มขั้น 2 (หมวดตั้งให้แล้ว ย้อนไปขั้น 1 ได้)
+// เข้าด้วย ?category=<Prob_name> = เลือกหมวดให้ล่วงหน้าเท่านั้น ยังต้องผ่านด่านข้อตกลงก่อน
+// (ยอมรับแล้วจึงไปขั้น 2 พร้อมหมวดที่ตั้งไว้ ย้อนไปขั้น 1 ได้)
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -67,6 +68,9 @@ export default function ReportWizard() {
     fetchProblemOptions();
   }, [fetchProblemOptions]);
 
+  // สอง effect ด้านล่างทำงานคู่กัน และพึ่งพาว่า setConsent/setConsentChecked ลงในเรนเดอร์เดียวกัน
+  // ถ้าวันหลังเปลี่ยนการอ่านค่ายินยอมเป็นแบบ async (เช่น ย้ายไป IndexedDB/เรียก API) ด่านจะเห็น
+  // consentChecked=true ทั้งที่ consent ยังว่าง แล้วดันคนที่เคยยอมรับแล้วไปค้างที่จอข้อตกลง
   // อ่านค่ายินยอมจากเครื่อง (ทำครั้งเดียวตอน mount — localStorage มีเฉพาะฝั่งเบราว์เซอร์)
   useEffect(() => {
     const stored = readConsent();
@@ -81,6 +85,8 @@ export default function ReportWizard() {
   useEffect(() => {
     if (!router.isReady || !consentChecked || step !== "checking") return;
     const q = router.query.category;
+    // กรองแค่ป้ายบริการ (SERVICE_LABELS) ไม่ได้เทียบกับเมนูจริง — หมวดมั่ว ๆ จึงยังเข้าขั้น 2 ได้
+    // โดยไม่มีรายการปัญหาให้เลือก (พฤติกรรมเดิมก่อนมีด่านข้อตกลง คงไว้เหมือนเดิม)
     const fromCard = typeof q === "string" && q && !SERVICE_LABELS.includes(q) ? q : "";
     if (fromCard) setCategory(fromCard);
     if (!consent) setStep("consent");
@@ -92,7 +98,9 @@ export default function ReportWizard() {
     // ใช้ deviceId เดิมถ้าเคยยอมรับไว้ — ขึ้นข้อตกลงฉบับใหม่แล้วต้องยอมรับซ้ำ เครื่องเดิมจะยังนับเป็นเครื่องเดิมใน log
     const stored = writeConsent({ deviceId: readConsent()?.deviceId });
     setConsent({ version: stored.version, acceptedAt: stored.acceptedAt });
-    // fire-and-forget: log ล้มไม่กระทบผู้ใช้ เพราะยังมีหลักฐานแนบไปกับเรื่องตอนส่ง
+    // กติกาเดียว: log ฝั่งเซิร์ฟเวอร์คือหลักฐานหลักของการยอมรับ ส่วนสำเนาที่แนบไปกับเรื่องร้องเรียนเป็น best effort
+    // จึงยิงแบบ fire-and-forget ไม่บล็อกผู้ใช้ แต่ต้องเห็นใน console เวลาเซิร์ฟเวอร์ตอบไม่ผ่าน
+    // (เช่น app id ตั้งผิด = 400 ทุกครั้ง ซึ่งจะทำให้ log หายเงียบทั้งระบบถ้าไม่เตือน)
     void fetch("/api/complaints/consent-log", {
       method: "POST",
       headers: {
@@ -101,20 +109,23 @@ export default function ReportWizard() {
       },
       body: JSON.stringify(stored),
       keepalive: true,
-    }).catch(() => {});
+    })
+      .then((res) => {
+        if (!res.ok) console.warn("consent-log ไม่สำเร็จ (HTTP " + res.status + ")");
+      })
+      .catch(() => {});
     setStep(category ? 2 : 1);
   };
 
-  // ยืนยันยกเลิกคำร้อง: ล้างค่าที่ตั้งไว้ (หมวดที่ติดมาจากการ์ดหน้าแรก) แล้วกลับหน้าแรก
+  // ยืนยันยกเลิกคำร้อง: replace ทิ้ง /report?category=... ออกจากประวัติ หมวดที่ติดมาจากการ์ดจึงหายไปพร้อม URL
+  // (ไม่ต้องล้าง state เอง — คอมโพเนนต์ถูก unmount ตอนเปลี่ยนหน้า state ตายไปด้วยอยู่แล้ว)
   const handleCancelConsent = () => {
-    setCategory("");
-    setSelectedProblems([]);
-    setErrors({});
     router.replace("/");
   };
 
-  // ปุ่มย้อนกลับที่หัวจอข้อตกลง — ออกจากหน้าได้เลย ยังไม่มีข้อมูลที่กรอกไว้ให้เสีย
-  const handleExitConsent = () => {
+  // ปุ่มย้อนกลับของทั้งจอข้อตกลงและขั้น 1 — เข้าหน้านี้ตรง ๆ (ลิงก์/QR) จะไม่มีประวัติให้ย้อน
+  // router.back() เปล่า ๆ จะกลายเป็นปุ่มกดแล้วไม่ไปไหน จึงพากลับหน้าแรกแทน
+  const goBackOrHome = () => {
     if (window.history.length > 1) router.back();
     else router.push("/");
   };
@@ -171,7 +182,7 @@ export default function ReportWizard() {
   const goBack = () => {
     setErrors({});
     setSubmitError("");
-    if (step === 1) router.back();
+    if (step === 1) goBackOrHome();
     else if (step === 2) setStep(1);
     else if (step === 3) setStep(2);
   };
@@ -196,7 +207,7 @@ export default function ReportWizard() {
         {step === "consent" && (
           <ConsentScreen
             onAccept={handleAcceptConsent}
-            onExit={handleExitConsent}
+            onExit={goBackOrHome}
             onCancel={handleCancelConsent}
           />
         )}
