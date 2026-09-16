@@ -12,6 +12,7 @@ import Notification from "@/models/Notification";
 import mongoose from "mongoose";
 import getNextSequence from "@/lib/getNextSequence";
 import { lineNotifyAdminGroup, formatNewComplaintMessage, buildMessages } from "@/lib/lineMessaging";
+import { consentForPayload } from "@/lib/citizen/report/consent";
 
 const APP_ID = process.env.NEXT_PUBLIC_APP_ID || "";
 
@@ -29,8 +30,15 @@ export default async function handler(req, res) {
     await dbConnect();
 
     const complaintId = await getNextSequence("complaintId");
+
+    // ข้อมูลยินยอมที่เพี้ยนต้องไม่ทำให้เรื่องร้องเรียนทั้งเรื่องบันทึกไม่สำเร็จ
+    // (client มี guard แล้ว แต่ endpoint นี้เป็นทางเขียนสาธารณะ ต้องกันฝั่งเซิร์ฟเวอร์ด้วย)
+    const { consent: rawConsent, ...rest } = req.body || {};
+    const consent = consentForPayload(rawConsent);
+
     const newReport = await SubmittedReport.create({
-      ...req.body,
+      ...rest,
+      ...(consent ? { consent } : {}),
       complaintId,
     });
 
