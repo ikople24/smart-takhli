@@ -13,6 +13,15 @@ export default function ConsentCancelSheet({
 }) {
   const backButtonRef = useRef<HTMLButtonElement>(null);
 
+  // onBack เป็น closure ใหม่ทุกครั้งที่ parent เรนเดอร์ ถ้าใส่ไว้ใน deps ของ effect ด้านล่าง
+  // effect จะถูกรื้อ-ตั้งใหม่ทุกเรนเดอร์ระหว่างที่แผ่นเปิดอยู่ = ดึงโฟกัสกลับไปปุ่มปลอดภัยซ้ำ ๆ
+  // แม้ผู้ใช้กด Tab ไปที่ปุ่มสีแดงแล้ว — เก็บ callback ไว้ใน ref แทน effect จึงรันครั้งเดียวต่อ mount
+  // ส่วน Esc ยังเรียก onBack ตัวล่าสุดเสมอผ่าน ref (ไม่ค้างที่ closure รอบแรก)
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  });
+
   // จอนี้อ้างว่าเป็น dialog (role="dialog" aria-modal="true") จึงต้องทำตัวเป็น
   // dialog จริง: จำโฟกัสเดิมไว้คืนตอนปิด, ย้ายโฟกัสไปปุ่มปลอดภัย (กลับไปยอมรับ),
   // และ Esc ต้องเทียบเท่าปุ่ม "กลับไปยอมรับ" (ไม่ใช่ยกเลิกคำร้อง)
@@ -26,7 +35,7 @@ export default function ConsentCancelSheet({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onBack();
+        onBackRef.current();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -36,7 +45,7 @@ export default function ConsentCancelSheet({
       document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus();
     };
-  }, [onBack]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">

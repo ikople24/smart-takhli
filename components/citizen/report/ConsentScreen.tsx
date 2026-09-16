@@ -71,6 +71,11 @@ export default function ConsentScreen({
   // ด่านเลื่อนอ่าน: ใช้ scroll ของทั้งหน้า (หน้าฝั่งประชาชนเลื่อนทั้งหน้า ไม่ใช่กล่องใน)
   // วัดค่าใน requestAnimationFrame กันอ่าน layout รัวทุก scroll event — เช็คแรกตอน mount
   // ยังเป็น synchronous เพื่อให้เนื้อหาสั้นกว่าจอปลดล็อกได้ทันที ไม่ต้องรอเฟรมแรก
+  //
+  // ตั้งใจวัดจาก window + document.documentElement เพราะจอนี้เลื่อนทั้งหน้าจริง ๆ (ไม่มีกล่องเลื่อนของตัวเอง)
+  // อย่าเปลี่ยนไปวัด element ใดในนี้แทน: ขั้นอื่นของ wizard (StepCategory/StepDetails/StepReporter) มี
+  // <div className="flex-1 overflow-auto"> อยู่ ซึ่ง "ไม่ได้เลื่อน" จริง (ไม่ใช่กล่องที่ล้น) — วัดกล่องนั้น
+  // จะได้ scrollTop = 0 ตลอด ด่านจึงไม่มีวันปลดล็อกและไม่มีใครติ๊กยอมรับได้เลย
   useEffect(() => {
     let frame: number | null = null;
 
@@ -236,15 +241,22 @@ export default function ConsentScreen({
           </div>
         )}
 
+        {/*
+          ใช้ aria-disabled ไม่ใช่ disabled จริง: ปุ่มที่ disabled รับโฟกัสไม่ได้ ผู้ใช้ screen reader
+          จึงไม่มีทางได้ยินคำอธิบายใน aria-describedby ว่าทำไมติ๊กไม่ได้ — แบบนี้ยัง Tab มาหยุดได้และ
+          อ่านคำใบ้ได้ ส่วนด่านยังเข้มเท่าเดิม (onClick ไม่ทำอะไรจนกว่า atEnd จะเป็นจริง)
+        */}
         <button
           type="button"
           role="checkbox"
           aria-checked={checked}
           aria-disabled={!atEnd}
           aria-describedby={!atEnd ? "consent-scroll-hint" : undefined}
-          onClick={() => setChecked((v) => !v)}
-          disabled={!atEnd}
-          className="flex w-full items-start gap-2.5 rounded-[13px] border border-[#EFEDF4] bg-[#FAF9FC] p-3 text-left disabled:opacity-60"
+          onClick={() => {
+            if (!atEnd) return;
+            setChecked((v) => !v);
+          }}
+          className="flex w-full items-start gap-2.5 rounded-[13px] border border-[#EFEDF4] bg-[#FAF9FC] p-3 text-left aria-disabled:opacity-60"
         >
           {checked ? (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="shrink-0">
