@@ -116,15 +116,20 @@ Bottom sheet สไตล์เดียวกับอาร์ตบอร์�
 
 ### ชั้นที่ 2 — แนบไปกับเรื่องตอนส่ง
 
-`buildComplaintPayload()` เพิ่มฟิลด์ `consent: { version, acceptedAt }` (ไม่ส่ง `deviceId` ขึ้นไปกับเรื่อง)
+`buildComplaintPayload()` เพิ่มฟิลด์ `consent: { version, acceptedAt }` **เฉพาะเมื่อมีค่าครบ**
+(ไม่ส่ง `deviceId` ขึ้นไปกับเรื่อง · ไม่มีค่า = ไม่ใส่คีย์นี้เลย เพื่อให้ payload ของเรื่องที่ไม่มีข้อมูล
+ยินยอมเหมือนเดิมทุกไบต์ และเลี่ยงการยัด `null` ลง path ซ้อนของ mongoose)
 
-เพิ่ม schema ฟิลด์เดียวกันใน **ทั้งสองไฟล์** ตามกติกา schema ซ้ำของโปรเจกต์:
+เพิ่ม schema ฟิลด์เดียวกันใน **ทั้งสองไฟล์** ตามกติกา schema ซ้ำของโปรเจกต์ โดยห่อเป็น sub-schema
+ที่ปิด `_id` (ถ้าใส่เป็น plain object ตรง ๆ mongoose จะแถม `_id` ให้ทุกเอกสาร):
 
 ```js
-consent: {
-  version: { type: String, default: '' },
-  acceptedAt: { type: Date, default: null },
-}
+const ConsentSchema = new mongoose.Schema(
+  { version: { type: String, default: '' }, acceptedAt: { type: Date, default: null } },
+  { _id: false }
+);
+// ...
+consent: { type: ConsentSchema, default: undefined },
 ```
 
 - `models/Complaint.js` และ `models/SubmittedReport.js` (ชื่อ model เดียวกัน คนละไฟล์)
@@ -150,7 +155,7 @@ consent: {
 - `POST` เท่านั้น (เมธอดอื่นตอบ 405) · **ไม่มี GET สาธารณะ**
 - header `x-app-id` ต้องตรงกับ `NEXT_PUBLIC_APP_ID` (เหมือน `submit-report`) ไม่ตรง → 400
 - body: `{ version, acceptedAt, deviceId }`
-- ตรวจก่อนเขียน: `version` ต้องอยู่ใน `KNOWN_CONSENT_VERSIONS` (ประกาศใน `consentContent.ts` ใช้ร่วมกันทั้งหน้าจอและ API) · `deviceId` ต้องเข้ารูป
+- ตรวจก่อนเขียน: `version` ต้องอยู่ใน `KNOWN_CONSENT_VERSIONS` (ประกาศใน `consentContent.js` ใช้ร่วมกันทั้งหน้าจอและ API) · `deviceId` ต้องเข้ารูป
   `/^[A-Za-z0-9-]{8,64}$/` · `acceptedAt` ต้อง parse ได้และห่างจากเวลาเซิร์ฟเวอร์ไม่เกิน 2 วัน
   ไม่งั้นใช้เวลาเซิร์ฟเวอร์แทน
 - เขียนแบบ **upsert** ด้วยคีย์ `{ deviceId, version }` (unique index) — ยิงซ้ำได้แถวเดียว
@@ -167,11 +172,11 @@ consent: {
 pages/report.tsx                                   เพิ่ม step "consent" + ปลายทางหลังยอมรับ
 components/citizen/report/ConsentScreen.tsx        จอข้อตกลง (หัวจอ + เนื้อหา + ท้ายจอ)
 components/citizen/report/ConsentCancelSheet.tsx   แผ่นยืนยันยกเลิกคำร้อง
-lib/citizen/report/consentContent.ts               ข้อความทุกบรรทัด + CONSENT_VERSION + KNOWN_CONSENT_VERSIONS + เบอร์โทร
-lib/citizen/report/consent.ts                      logic ล้วน: shouldShowConsent / validateConsentLog
-lib/citizen/report/consentStorage.ts               อ่าน-เขียน localStorage หุ้ม try/catch + สุ่ม deviceId
-lib/citizen/report/payload.js                      แนบ consent เข้า payload เดิม (ไฟล์เดิมเป็น .js คงไว้)
-lib/citizen/report/__tests__/consent.test.ts       เทสต์ logic ล้วน (เข้าเงื่อนไข include `lib/**/*.test.ts`)
+lib/citizen/report/consentContent.js               ข้อความทุกบรรทัด + CONSENT_VERSION + KNOWN_CONSENT_VERSIONS + เบอร์โทร
+lib/citizen/report/consent.js                      logic ล้วน: parseStoredConsent / shouldShowConsent / validateConsentLog
+lib/citizen/report/consentStorage.js               อ่าน-เขียน localStorage หุ้ม try/catch + สุ่ม deviceId
+lib/citizen/report/payload.js                      แนบ consent เข้า payload เดิม
+lib/citizen/__tests__/reportConsent.test.js        เทสต์ logic ล้วน (วางที่เดียวกับ reportPayload/reportSchema เดิม)
 pages/api/complaints/consent-log.ts                ทางเขียน log (POST เท่านั้น)
 models/complaints/ReportConsentLog.js              collection report_consent_logs
 models/Complaint.js · models/SubmittedReport.js    เพิ่มฟิลด์ consent (ทั้งสองไฟล์)
