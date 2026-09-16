@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #EDEAF3; font-family: "Anuphan", ui-sans-serif, system-ui, sans-serif; }
+  a { color: #7C3AED; text-decoration: none; }
+  a:hover { color: #6D28D9; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #D9D2E8; border-radius: 99px; }
+</style>
+</helmet>
+
+<section style="display:flex; flex-direction:column; gap:18px; padding:36px 40px 56px; font-family:'Anuphan',sans-serif;">
+  <div style="display:flex; flex-direction:column; gap:4px;">
+    <div style="font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:#9590A8;">รอบที่ 1</div>
+    <div style="font-size:22px; font-weight:700; color:#1B1830;">หน้าจอยินยอมก่อนแจ้งเรื่องร้องเรียน</div>
+    <div style="font-size:13px; color:#6B6880; max-width:620px; line-height:1.7;">สองจุดที่วางการยินยอมได้ — <a href="#1a">1a</a> หน้าจอเต็มก่อนเริ่ม wizard (ครั้งแรกที่ใช้งาน) และ <a href="#1b">1b</a> แผ่นยืนยันก่อนกดส่งเรื่องในขั้นที่ 3</div>
+  </div>
+
+  <div style="display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start;">
+
+    <div id="1a" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:22px; padding:0 8px; border-radius:7px; background:#7C3AED; color:#fff; font-size:12px; font-weight:700;">1a</span>
+        <span style="font-size:13px; font-weight:600; color:#4A4458;">หน้าจอเต็ม · ก่อนเริ่มแจ้งเรื่องครั้งแรก</span>
+      </div>
+
+      <div style="width:480px; height:900px; display:flex; flex-direction:column; background:#F6F5FA; color:#1B1830; box-shadow:0 0 40px rgba(60,40,100,0.14); overflow:hidden;">
+        <header style="height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:rgba(255,255,255,0.9); border-bottom:1px solid #E5E3EA; position:relative;">
+          <div style="width:40px;"></div>
+          <div style="position:absolute; left:50%; transform:translateX(-50%); font-size:18px; font-weight:600; color:#172554;">SMART-TAKHLI</div>
+          <div style="width:36px; height:36px; border-radius:999px; background:linear-gradient(135deg,#DED6F5,#C9BCEC);"></div>
+        </header>
+
+        <div style="flex-shrink:0; padding:16px 16px 14px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button type="button" aria-label="ย้อนกลับ" style="width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:0; border-radius:11px; background:#fff; box-shadow:0 2px 8px rgba(60,40,100,0.06); cursor:pointer;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A4458" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+            </button>
+            <div style="min-width:0; flex:1;">
+              <div style="font-size:16px; font-weight:700; line-height:1.25;">ข้อตกลงและเงื่อนไขการใช้งาน</div>
+              <div style="font-size:11px; color:#9590A8; margin-top:2px;">ก่อนเริ่มแจ้งเรื่อง · โปรดอ่านและกดยอมรับ</div>
+            </div>
+            <span style="flex-shrink:0; font-size:10px; font-weight:600; color:#7C3AED; background:#F1ECFE; padding:5px 9px; border-radius:8px;">จำเป็น</span>
+          </div>
+        </div>
+
+        <div onScroll="{{ onScroll }}" style="flex:1; overflow:auto; padding:0 16px 20px; display:flex; flex-direction:column; gap:10px;">
+
+          <div style="border-radius:16px; background:#fff; padding:14px; box-shadow:0 4px 12px rgba(60,40,100,0.04); display:flex; gap:11px; align-items:flex-start;">
+            <div style="width:36px; height:36px; flex-shrink:0; border-radius:11px; background:#F1ECFE; display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path></svg>
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:13px; font-weight:700;">ระบบรับแจ้งเรื่องร้องเรียนดิจิทัล</div>
+              <div style="font-size:12px; color:#6B6880; line-height:1.7; margin-top:3px;">เอกสารนี้อธิบายขอบเขตการให้บริการของช่องทางดิจิทัล ข้อยกเว้น และการปรับสถานะเรื่อง โปรดอ่านโดยละเอียดก่อนเริ่มใช้งาน</div>
+            </div>
+          </div>
+
+          <div style="border-radius:16px; background:#FFF5F5; border:1px solid #FBD5D5; padding:14px; display:flex; gap:11px; align-items:flex-start;">
+            <div style="width:36px; height:36px; flex-shrink:0; border-radius:11px; background:#FEE2E2; display:flex; align-items:center; justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path></svg>
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:13px; font-weight:700; color:#B91C1C;">เหตุฉุกเฉิน — อย่าแจ้งผ่านแอปฯ</div>
+              <div style="font-size:12px; color:#7F1D1D; line-height:1.7; margin-top:3px;">เหตุที่ต้องระงับภัยทันที ให้โทรแจ้งศูนย์รับแจ้งเหตุฉุกเฉิน หรือสถานีตำรวจในท้องที่โดยตรง เพื่อให้เจ้าหน้าที่เข้าปฏิบัติการได้ทันท่วงที</div>
+              <div style="display:flex; gap:8px; margin-top:10px;">
+                <a href="tel:191" style="display:flex; align-items:center; gap:6px; background:#DC2626; color:#fff; font-size:12px; font-weight:600; padding:8px 12px; border-radius:11px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.9.36 1.78.7 2.61a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.47-1.27a2 2 0 0 1 2.11-.45c.83.34 1.71.57 2.61.7A2 2 0 0 1 22 16.92Z"></path></svg>
+                  {{ emergencyPhone }}
+                </a>
+                <span style="display:flex; align-items:center; font-size:11px; color:#9F5B5B;">โทรฟรีทุกเครือข่าย 24 ชม.</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-radius:16px; background:#fff; padding:16px; box-shadow:0 4px 12px rgba(60,40,100,0.04);">
+            <div style="display:flex; gap:9px; align-items:baseline;">
+              <span style="font-size:13px; font-weight:700; color:#7C3AED;">1.</span>
+              <div style="font-size:13px; font-weight:700;">วัตถุประสงค์และขอบเขตการให้บริการ</div>
+            </div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:8px; text-wrap:pretty;">ระบบรับแจ้งเรื่องร้องเรียนผ่านแอปพลิเคชันนี้ จัดทำขึ้นเพื่อเป็น<b style="color:#4A4458; font-weight:600;">ช่องทางเสริม</b>ในการอำนวยความสะดวกแก่ประชาชน สำหรับแจ้งข้อมูลเกี่ยวกับเหตุเดือดร้อนรำคาญ หรือความชำรุดเสียหายเชิงกายภาพและโครงสร้างพื้นฐานสาธารณะ ซึ่งเป็นเหตุต่อเนื่องที่ต้องอาศัยการเข้าตรวจสอบ วางแผน และดำเนินการแก้ไขทางกายภาพในวันและเวลาราชการ</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:11px;">
+              <span style="font-size:11px; color:#7C3AED; background:#F4F0FE; padding:6px 10px; border-radius:9px;">ไฟส่องสว่างสาธารณะขัดข้อง</span>
+              <span style="font-size:11px; color:#7C3AED; background:#F4F0FE; padding:6px 10px; border-radius:9px;">ถนนชำรุด</span>
+              <span style="font-size:11px; color:#7C3AED; background:#F4F0FE; padding:6px 10px; border-radius:9px;">ท่อประปาแตก</span>
+              <span style="font-size:11px; color:#7C3AED; background:#F4F0FE; padding:6px 10px; border-radius:9px;">สิ่งก่อสร้างสาธารณะเสียหาย</span>
+            </div>
+          </div>
+
+          <div style="border-radius:16px; background:#fff; padding:16px; box-shadow:0 4px 12px rgba(60,40,100,0.04);">
+            <div style="display:flex; gap:9px; align-items:baseline;">
+              <span style="font-size:13px; font-weight:700; color:#7C3AED;">2.</span>
+              <div style="font-size:13px; font-weight:700;">ข้อยกเว้นการให้บริการผ่านระบบดิจิทัล</div>
+            </div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:8px;">ระบบนี้ <b style="color:#B91C1C; font-weight:600;">ไม่รองรับ</b> และไม่ได้ออกแบบมาเพื่อรับแจ้งเหตุในกรณีดังต่อไปนี้</div>
+            <div style="display:flex; flex-direction:column; gap:9px; margin-top:11px;">
+              <div style="display:flex; gap:9px; align-items:flex-start; background:#FAF9FC; border-radius:12px; padding:11px 12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+                <div style="font-size:12px; color:#4A4458; line-height:1.7;">เหตุฉุกเฉินเฉพาะหน้า เหตุอันตรายร้ายแรง หรือเหตุที่ต้องการการเข้าระงับภัยในทันทีทันใด</div>
+              </div>
+              <div style="display:flex; gap:9px; align-items:flex-start; background:#FAF9FC; border-radius:12px; padding:11px 12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+                <div style="font-size:12px; color:#4A4458; line-height:1.7;">เหตุเดือดร้อนรำคาญจากพฤติกรรมชั่วคราวเฉพาะหน้า ซึ่งเกิดขึ้นและสิ้นสุดในระยะเวลาอันสั้น เช่น การจอดรถติดเครื่องยนต์ เสียงดังรบกวนยามวิกาล หรือการทะเลาะวิวาท</div>
+              </div>
+              <div style="display:flex; gap:9px; align-items:flex-start; background:#FAF9FC; border-radius:12px; padding:11px 12px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="9"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+                <div style="font-size:12px; color:#4A4458; line-height:1.7;">ข้อพิพาทส่วนบุคคล หรือเรื่องที่ต้องอาศัยการตรวจพิสูจน์พยานหลักฐานซึ่งหน้า ณ ขณะเกิดเหตุ เพื่อการลงโทษตามกฎหมายเฉพาะ</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-radius:16px; background:#fff; padding:16px; box-shadow:0 4px 12px rgba(60,40,100,0.04);">
+            <div style="display:flex; gap:9px; align-items:baseline;">
+              <span style="font-size:13px; font-weight:700; color:#7C3AED;">3.</span>
+              <div style="font-size:13px; font-weight:700;">เงื่อนไขการประมวลผลและการปรับสถานะเรื่อง</div>
+            </div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:8px; text-wrap:pretty;">การรับเรื่องผ่านระบบดิจิทัลจะตรวจสอบและประมวลผลตามลำดับความเร่งด่วนในวันและเวลาราชการ</div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:8px; text-wrap:pretty;">กรณีเจ้าหน้าที่เข้าตรวจสอบพื้นที่แล้วไม่พบเหตุ ณ ขณะเข้าดำเนินการ (เนื่องจากเหตุสิ้นสุดลงก่อนเจ้าหน้าที่เข้าถึง) หรือเป็นเรื่องที่ไม่อยู่ในขอบเขตตามข้อ 2 ระบบจะปรับสถานะเป็น</div>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:7px;">
+              <span style="align-self:flex-start; font-size:11.5px; font-weight:600; color:#3F3B52; background:#F1ECFE; border:1px dashed #C9BCEC; padding:7px 11px; border-radius:10px;">ตรวจสอบแล้วไม่พบเหตุ ณ เวลาปฏิบัติการ</span>
+              <span style="align-self:flex-start; font-size:11.5px; font-weight:600; color:#3F3B52; background:#F1ECFE; border:1px dashed #C9BCEC; padding:7px 11px; border-radius:10px;">บันทึกข้อมูลเพื่อเฝ้าระวัง</span>
+            </div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:10px; text-wrap:pretty;">และบันทึกข้อมูลไว้ใช้เป็นสถิติในการเฝ้าระวังต่อไป การปรับสถานะดังกล่าวเป็นการดำเนินการทางเทคนิคของระบบ <b style="color:#4A4458; font-weight:600;">มิใช่การปฏิเสธการปฏิบัติหน้าที่ตามกฎหมายของหน่วยงาน</b></div>
+          </div>
+
+          <div style="border-radius:16px; background:#fff; padding:16px; box-shadow:0 4px 12px rgba(60,40,100,0.04);">
+            <div style="display:flex; gap:9px; align-items:baseline;">
+              <span style="font-size:13px; font-weight:700; color:#7C3AED;">4.</span>
+              <div style="font-size:13px; font-weight:700;">การจำกัดความรับผิดชอบ</div>
+            </div>
+            <div style="font-size:12px; color:#6B6880; line-height:1.85; margin-top:8px; text-wrap:pretty;">เทศบาลขอสงวนสิทธิ์ในการไม่รับผิดชอบต่อความล่าช้าหรือความเสียหายใด ๆ ที่เกิดจากการเข้าใจผิดในวัตถุประสงค์ของระบบ โดยผู้ใช้บริการยอมรับว่าการแจ้งเรื่องผ่านระบบนี้ <b style="color:#4A4458; font-weight:600;">ไม่ถือเป็นการทดแทนการแจ้งเหตุฉุกเฉินต่อเจ้าหน้าที่โดยตรง</b></div>
+          </div>
+
+          <div style="text-align:center; font-size:11px; color:#B9B4C7; padding:6px 0 2px;">ปรับปรุงล่าสุด 1 กันยายน 2569 · ฉบับที่ 1.0</div>
+        </div>
+
+        <div style="flex-shrink:0; background:#fff; border-top:1px solid #EFEDF4; padding:12px 16px 26px;">
+          <sc-if value="{{ showScrollHint }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; justify-content:center; gap:6px; font-size:11px; color:#9590A8; padding-bottom:10px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9590A8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>
+              เลื่อนอ่านให้ครบทุกข้อก่อนกดยอมรับ
+            </div>
+          </sc-if>
+          <button type="button" onClick="{{ toggleAccept }}" style="width:100%; display:flex; align-items:flex-start; gap:10px; text-align:left; background:#FAF9FC; border:1px solid #EFEDF4; border-radius:13px; padding:12px; cursor:pointer;">
+            <sc-if value="{{ accepted }}" hint-placeholder-val="{{ false }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#7C3AED"></rect><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ notAccepted }}" hint-placeholder-val="{{ true }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff" stroke="#CFC8DE" stroke-width="2"></rect></svg>
+            </sc-if>
+            <span style="font-size:12.5px; line-height:1.65; color:#3F3B52;">{{ consentLabel }}</span>
+          </button>
+          <div style="display:flex; gap:10px; margin-top:11px;">
+            <button type="button" style="width:108px; border:0; border-radius:15px; background:#F1ECFE; padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#7C3AED; cursor:pointer;">ไม่ยอมรับ</button>
+            <sc-if value="{{ accepted }}" hint-placeholder-val="{{ false }}">
+              <button type="button" style="flex:1; border:0; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#9050F0); padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#fff; box-shadow:0 10px 22px rgba(124,58,237,0.30); cursor:pointer;">ยอมรับและเริ่มแจ้งเรื่อง</button>
+            </sc-if>
+            <sc-if value="{{ notAccepted }}" hint-placeholder-val="{{ true }}">
+              <button type="button" disabled style="flex:1; border:0; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#9050F0); padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#fff; opacity:.45; cursor:not-allowed;">ยอมรับและเริ่มแจ้งเรื่อง</button>
+            </sc-if>
+          </div>
+          <div style="text-align:center; font-size:10.5px; color:#B9B4C7; margin-top:9px;">ระบบจะบันทึกวันเวลาที่ท่านกดยอมรับไว้เป็นหลักฐาน</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:22px; padding:0 8px; border-radius:7px; background:#7C3AED; color:#fff; font-size:12px; font-weight:700;">1b</span>
+        <span style="font-size:13px; font-weight:600; color:#4A4458;">แผ่นยืนยัน · ก่อนกดส่งเรื่องในขั้นที่ 3</span>
+      </div>
+
+      <div style="width:480px; height:900px; position:relative; display:flex; flex-direction:column; background:#F6F5FA; color:#1B1830; box-shadow:0 0 40px rgba(60,40,100,0.14); overflow:hidden;">
+        <header style="height:56px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:rgba(255,255,255,0.9); border-bottom:1px solid #E5E3EA; position:relative;">
+          <div style="width:40px;"></div>
+          <div style="position:absolute; left:50%; transform:translateX(-50%); font-size:18px; font-weight:600; color:#172554;">SMART-TAKHLI</div>
+          <div style="width:36px; height:36px; border-radius:999px; background:linear-gradient(135deg,#DED6F5,#C9BCEC);"></div>
+        </header>
+
+        <div style="flex-shrink:0; padding:16px 16px 14px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:36px; height:36px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:11px; background:#fff; box-shadow:0 2px 8px rgba(60,40,100,0.06);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A4458" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+            </div>
+            <div style="min-width:0; flex:1;">
+              <div style="font-size:16px; font-weight:700; line-height:1.25;">ข้อมูลผู้แจ้ง</div>
+              <div style="font-size:11px; color:#9590A8; margin-top:2px;">ขั้นที่ 3 จาก 3 · ตรวจสอบและส่ง</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; margin-top:14px;">
+            <div style="height:5px; flex:1; border-radius:99px; background:#7C3AED;"></div>
+            <div style="height:5px; flex:1; border-radius:99px; background:#7C3AED;"></div>
+            <div style="height:5px; flex:1; border-radius:99px; background:#7C3AED;"></div>
+          </div>
+        </div>
+
+        <div style="flex:1; overflow:hidden; padding:0 16px 16px;">
+          <div style="margin:6px 2px 8px; font-size:13px; font-weight:600;">คำนำหน้า</div>
+          <div style="display:flex; gap:6px; border-radius:13px; background:#EFEBF7; padding:4px;">
+            <div style="flex:1; border-radius:10px; background:#fff; padding:10px 0; text-align:center; font-size:13px; font-weight:600; color:#7C3AED; box-shadow:0 2px 6px rgba(60,40,100,0.08);">นาย</div>
+            <div style="flex:1; padding:10px 0; text-align:center; font-size:13px; color:#6B6880;">นาง</div>
+            <div style="flex:1; padding:10px 0; text-align:center; font-size:13px; color:#6B6880;">นางสาว</div>
+          </div>
+          <div style="margin:16px 2px 8px; font-size:13px; font-weight:600;">ชื่อ-นามสกุล</div>
+          <div style="border-radius:13px; background:#fff; padding:14px 16px; font-size:14px; color:#1B1830; box-shadow:0 3px 10px rgba(60,40,100,0.04);">สมชาย ใจดี</div>
+          <div style="margin:16px 2px 8px; font-size:13px; font-weight:600;">เบอร์โทรศัพท์</div>
+          <div style="border-radius:13px; background:#fff; padding:14px 16px; font-size:14px; color:#1B1830; box-shadow:0 3px 10px rgba(60,40,100,0.04);">0812345678</div>
+          <div style="margin:16px 2px 8px; font-size:13px; font-weight:600;">รายละเอียดเพิ่มเติม</div>
+          <div style="border-radius:13px; background:#fff; padding:14px 16px; font-size:14px; line-height:1.7; color:#1B1830; box-shadow:0 3px 10px rgba(60,40,100,0.04);">ไฟส่องสว่างริมถนนหน้าตลาดดับ 3 ต้นติดกัน มืดมากช่วงกลางคืน</div>
+        </div>
+
+        <div style="position:absolute; inset:0; background:rgba(27,24,48,0.45);"></div>
+
+        <div style="position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:22px 22px 0 0; box-shadow:0 -12px 40px rgba(27,24,48,0.22); padding:10px 18px 26px;">
+          <div style="width:42px; height:4px; border-radius:99px; background:#E4DEF2; margin:0 auto 14px;"></div>
+          <div style="font-size:17px; font-weight:700;">ยืนยันก่อนส่งเรื่อง</div>
+          <div style="font-size:12px; color:#6B6880; line-height:1.7; margin-top:5px;">เรื่องที่ท่านแจ้งจะถูกตรวจสอบและดำเนินการ<b style="color:#4A4458; font-weight:600;">ในวันและเวลาราชการ</b> ตามลำดับความเร่งด่วน</div>
+
+          <div style="margin-top:14px; border-radius:14px; background:#FFF5F5; border:1px solid #FBD5D5; padding:13px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path></svg>
+              <div style="font-size:12.5px; font-weight:700; color:#B91C1C;">ไม่ใช้ช่องทางนี้สำหรับเหตุฉุกเฉิน</div>
+            </div>
+            <div style="font-size:11.5px; color:#7F1D1D; line-height:1.7; margin-top:6px;">เหตุอันตรายร้ายแรง เหตุเฉพาะหน้าที่จบในเวลาสั้น หรือข้อพิพาทที่ต้องพิสูจน์พยานซึ่งหน้า กรุณาโทร {{ emergencyPhone }} หรือแจ้งสถานีตำรวจในท้องที่</div>
+          </div>
+
+          <div style="margin-top:11px; display:flex; flex-direction:column; gap:7px;">
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <div style="font-size:11.5px; color:#6B6880; line-height:1.65;">หากตรวจสอบแล้วไม่พบเหตุ ระบบจะปรับสถานะเป็น “ตรวจสอบแล้วไม่พบเหตุ ณ เวลาปฏิบัติการ” และเก็บข้อมูลไว้เฝ้าระวัง</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-start;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:3px;"><path d="M20 6 9 17l-5-5"></path></svg>
+              <div style="font-size:11.5px; color:#6B6880; line-height:1.65;">การแจ้งผ่านระบบนี้ไม่ถือเป็นการทดแทนการแจ้งเหตุฉุกเฉินต่อเจ้าหน้าที่โดยตรง</div>
+            </div>
+          </div>
+
+          <button type="button" onClick="{{ toggleAccept2 }}" style="width:100%; display:flex; align-items:flex-start; gap:10px; text-align:left; margin-top:13px; background:#FAF9FC; border:1px solid #EFEDF4; border-radius:13px; padding:12px; cursor:pointer;">
+            <sc-if value="{{ accepted2 }}" hint-placeholder-val="{{ false }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#7C3AED"></rect><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </sc-if>
+            <sc-if value="{{ notAccepted2 }}" hint-placeholder-val="{{ true }}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;"><rect x="1.5" y="1.5" width="21" height="21" rx="6.5" fill="#fff" stroke="#CFC8DE" stroke-width="2"></rect></svg>
+            </sc-if>
+            <span style="font-size:12.5px; line-height:1.65; color:#3F3B52;">{{ consentLabelShort }} <a href="#1a">อ่านฉบับเต็ม</a></span>
+          </button>
+
+          <div style="display:flex; gap:10px; margin-top:12px;">
+            <button type="button" style="width:100px; border:0; border-radius:15px; background:#F1ECFE; padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#7C3AED; cursor:pointer;">ย้อนกลับ</button>
+            <sc-if value="{{ accepted2 }}" hint-placeholder-val="{{ false }}">
+              <button type="button" style="flex:1; border:0; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#9050F0); padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#fff; box-shadow:0 10px 22px rgba(124,58,237,0.30); cursor:pointer;">ยอมรับและส่งเรื่อง</button>
+            </sc-if>
+            <sc-if value="{{ notAccepted2 }}" hint-placeholder-val="{{ true }}">
+              <button type="button" disabled style="flex:1; border:0; border-radius:15px; background:linear-gradient(135deg,#7C3AED,#9050F0); padding:14px 0; font-family:inherit; font-size:15px; font-weight:600; color:#fff; opacity:.45; cursor:not-allowed;">ยอมรับและส่งเรื่อง</button>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;requireScrollToEnd&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;พฤติกรรม&quot;},&quot;emergencyPhone&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;191 / 199&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;เนื้อหา&quot;},&quot;consentLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;ข้าพเจ้าได้อ่านและยอมรับข้อตกลงและเงื่อนไขการใช้งาน รวมถึงรับทราบว่าระบบนี้ไม่รองรับการแจ้งเหตุฉุกเฉิน&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;เนื้อหา&quot;},&quot;consentLabelShort&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;ข้าพเจ้ารับทราบเงื่อนไขและข้อยกเว้นของระบบ และยอมรับข้อตกลงการใช้งาน&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;เนื้อหา&quot;}}">
+class Component extends DCLogic {
+  state = { accepted: false, accepted2: false, atEnd: false };
+
+  renderVals() {
+    const requireScroll = this.props.requireScrollToEnd ?? true;
+    const canCheck = !requireScroll || this.state.atEnd;
+    const accepted = this.state.accepted && canCheck;
+    return {
+      accepted,
+      notAccepted: !accepted,
+      accepted2: this.state.accepted2,
+      notAccepted2: !this.state.accepted2,
+      showScrollHint: requireScroll && !this.state.atEnd,
+      emergencyPhone: this.props.emergencyPhone ?? "191 / 199",
+      consentLabel:
+        this.props.consentLabel ??
+        "ข้าพเจ้าได้อ่านและยอมรับข้อตกลงและเงื่อนไขการใช้งาน รวมถึงรับทราบว่าระบบนี้ไม่รองรับการแจ้งเหตุฉุกเฉิน",
+      consentLabelShort:
+        this.props.consentLabelShort ??
+        "ข้าพเจ้ารับทราบเงื่อนไขและข้อยกเว้นของระบบ และยอมรับข้อตกลงการใช้งาน",
+      toggleAccept: () => {
+        if (!canCheck) return;
+        this.setState((s) => ({ accepted: !s.accepted }));
+      },
+      toggleAccept2: () => this.setState((s) => ({ accepted2: !s.accepted2 })),
+      onScroll: (e) => {
+        const el = e.currentTarget;
+        const done = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+        if (done !== this.state.atEnd) this.setState({ atEnd: done });
+      },
+    };
+  }
+}
+
+</script>
+</body>
+</html>
