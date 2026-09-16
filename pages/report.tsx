@@ -13,12 +13,17 @@ import StepCategory from "@/components/citizen/report/StepCategory";
 import StepDetails from "@/components/citizen/report/StepDetails";
 import StepReporter from "@/components/citizen/report/StepReporter";
 import StepSuccess from "@/components/citizen/report/StepSuccess";
+import ConsentScreen from "@/components/citizen/report/ConsentScreen";
+import { shouldShowConsent } from "@/lib/citizen/report/consent";
+import { readConsent, writeConsent } from "@/lib/citizen/report/consentStorage";
 import { fullReportSchema, stepDetailsSchema, stepReporterSchema, validateStep } from "@/lib/citizen/report/schema";
 import { buildComplaintPayload } from "@/lib/citizen/report/payload";
 import { useMenuStore } from "@/stores/useMenuStore";
 import { useProblemOptionStore } from "@/stores/useProblemOptionStore";
 
-type Step = 1 | 2 | 3 | "success";
+// "checking" = กำลังอ่านค่ายินยอมจากเครื่อง ยังไม่วาดอะไร (localStorage อ่านฝั่งเซิร์ฟเวอร์ไม่ได้
+// ถ้าเริ่มที่ "consent" คนที่เคยยอมรับแล้วจะเห็นจอข้อตกลงกระพริบ 1 เฟรมทุกครั้ง)
+type Step = "checking" | "consent" | 1 | 2 | 3 | "success";
 
 const STEP_META: Record<1 | 2 | 3, { title: string; hint: string }> = {
   1: { title: "แจ้งเรื่องร้องเรียน", hint: "เลือกหมวดหมู่" },
@@ -31,7 +36,9 @@ export default function ReportWizard() {
   const { menu, fetchMenu, menuLoading } = useMenuStore();
   const { problemOptions, fetchProblemOptions } = useProblemOptionStore();
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>("checking");
+  const [consent, setConsent] = useState<{ version: string; acceptedAt: string } | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
   const [category, setCategory] = useState("");
   const [community, setCommunity] = useState("");
   const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
@@ -60,15 +67,57 @@ export default function ReportWizard() {
     fetchProblemOptions();
   }, [fetchProblemOptions]);
 
-  // ?category=<Prob_name> จากการ์ดหมวดบนหน้าแรก → ตั้งหมวดแล้วข้ามไปขั้น 2
+  // อ่านค่ายินยอมจากเครื่อง (ทำครั้งเดียวตอน mount — localStorage มีเฉพาะฝั่งเบราว์เซอร์)
   useEffect(() => {
-    if (!router.isReady) return;
-    const q = router.query.category;
-    if (typeof q === "string" && q && !SERVICE_LABELS.includes(q)) {
-      setCategory(q);
-      setStep(2);
+    const stored = readConsent();
+    if (stored && !shouldShowConsent(stored)) {
+      setConsent({ version: stored.version, acceptedAt: stored.acceptedAt });
     }
-  }, [router.isReady, router.query.category]);
+    setConsentChecked(true);
+  }, []);
+
+  // ด่านเดียวของทุกทางเข้า: ยังไม่ยอมรับ = เห็นจอข้อตกลงก่อนเสมอ
+  // ?category=<Prob_name> จากการ์ดหมวดบนหน้าแรก → ตั้งหมวดไว้ แต่ข้ามด่านไม่ได้
+  useEffect(() => {
+    if (!router.isReady || !consentChecked || step !== "checking") return;
+    const q = router.query.category;
+    const fromCard = typeof q === "string" && q && !SERVICE_LABELS.includes(q) ? q : "";
+    if (fromCard) setCategory(fromCard);
+    if (!consent) setStep("consent");
+    else setStep(fromCard ? 2 : 1);
+  }, [router.isReady, router.query.category, consentChecked, consent, step]);
+
+  // กดยอมรับ: จำไว้ในเครื่อง → ยิง log แบบไม่รอผล → เข้า wizard
+  const handleAcceptConsent = () => {
+    // ใช้ deviceId เดิมถ้าเคยยอมรับไว้ — ขึ้นข้อตกลงฉบับใหม่แล้วต้องยอมรับซ้ำ เครื่องเดิมจะยังนับเป็นเครื่องเดิมใน log
+    const stored = writeConsent({ deviceId: readConsent()?.deviceId });
+    setConsent({ version: stored.version, acceptedAt: stored.acceptedAt });
+    // fire-and-forget: log ล้มไม่กระทบผู้ใช้ เพราะยังมีหลักฐานแนบไปกับเรื่องตอนส่ง
+    void fetch("/api/complaints/consent-log", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-app-id": process.env.NEXT_PUBLIC_APP_ID || "app_b",
+      },
+      body: JSON.stringify(stored),
+      keepalive: true,
+    }).catch(() => {});
+    setStep(category ? 2 : 1);
+  };
+
+  // ยืนยันยกเลิกคำร้อง: ล้างค่าที่ตั้งไว้ (หมวดที่ติดมาจากการ์ดหน้าแรก) แล้วกลับหน้าแรก
+  const handleCancelConsent = () => {
+    setCategory("");
+    setSelectedProblems([]);
+    setErrors({});
+    router.replace("/");
+  };
+
+  // ปุ่มย้อนกลับที่หัวจอข้อตกลง — ออกจากหน้าได้เลย ยังไม่มีข้อมูลที่กรอกไว้ให้เสีย
+  const handleExitConsent = () => {
+    if (window.history.length > 1) router.back();
+    else router.push("/");
+  };
 
   const complaintMenu = menu.filter((m) => !SERVICE_LABELS.includes(m.Prob_name));
 
@@ -96,7 +145,7 @@ export default function ReportWizard() {
     setSubmitError("");
     try {
       const payload = buildComplaintPayload(
-        { prefix, fullName, phone, community, selectedProblems, category, imageUrls, detail, location },
+        { prefix, fullName, phone, community, selectedProblems, category, imageUrls, detail, location, consent },
         problemOptions
       );
       const res = await fetch("/api/submittedreports/submit-report", {
@@ -127,7 +176,7 @@ export default function ReportWizard() {
     else if (step === 3) setStep(2);
   };
 
-  const meta = step === "success" ? null : STEP_META[step];
+  const meta = step === 1 || step === 2 || step === 3 ? STEP_META[step] : null;
 
   return (
     <>
@@ -141,6 +190,14 @@ export default function ReportWizard() {
             title={meta.title}
             hint={step === 2 ? category : meta.hint}
             onBack={goBack}
+          />
+        )}
+
+        {step === "consent" && (
+          <ConsentScreen
+            onAccept={handleAcceptConsent}
+            onExit={handleExitConsent}
+            onCancel={handleCancelConsent}
           />
         )}
 
