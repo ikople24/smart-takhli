@@ -38,6 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
     return res.status(204).end();
   } catch (err) {
+    // คนละคำขอชนกันตอน upsert แถวเดียวกัน แถวที่ต้องการมีอยู่แล้ว
+    if (typeof err === "object" && err !== null && "code" in err && (err as { code: unknown }).code === 11000) {
+      return res.status(204).end();
+    }
     console.error("[complaints/consent-log]", err);
     return res.status(500).json({ error: "บันทึกไม่สำเร็จ" });
   }
