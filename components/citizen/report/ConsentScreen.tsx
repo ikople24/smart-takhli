@@ -69,23 +69,35 @@ export default function ConsentScreen({
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // ด่านเลื่อนอ่าน: ใช้ scroll ของทั้งหน้า (หน้าฝั่งประชาชนเลื่อนทั้งหน้า ไม่ใช่กล่องใน)
+  // วัดค่าใน requestAnimationFrame กันอ่าน layout รัวทุก scroll event — เช็คแรกตอน mount
+  // ยังเป็น synchronous เพื่อให้เนื้อหาสั้นกว่าจอปลดล็อกได้ทันที ไม่ต้องรอเฟรมแรก
   useEffect(() => {
-    const check = () => {
+    let frame: number | null = null;
+
+    const measure = () => {
+      frame = null;
       const doc = document.documentElement;
       const done = window.innerHeight + window.scrollY >= doc.scrollHeight - 24;
       setAtEnd((prev) => (prev === done ? prev : done));
     };
-    check();
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
+
+    const scheduleMeasure = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(measure);
+    };
+
+    measure();
+    window.addEventListener("scroll", scheduleMeasure, { passive: true });
+    window.addEventListener("resize", scheduleMeasure);
     return () => {
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleMeasure);
+      window.removeEventListener("resize", scheduleMeasure);
     };
   }, []);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
       <div className="shrink-0 px-4 pb-3.5 pt-4">
         <div className="flex items-center gap-3">
           <button
@@ -215,7 +227,7 @@ export default function ConsentScreen({
 
       <div className="sticky bottom-0 z-20 mt-auto shrink-0 border-t border-[#EFEDF4] bg-white px-4 pb-7 pt-3">
         {!atEnd && (
-          <div className="flex items-center justify-center gap-1.5 pb-2.5 text-[11px] text-[#9590A8]">
+          <div id="consent-scroll-hint" className="flex items-center justify-center gap-1.5 pb-2.5 text-[11px] text-[#9590A8]">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9590A8" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14" />
               <path d="m19 12-7 7-7-7" />
@@ -226,6 +238,10 @@ export default function ConsentScreen({
 
         <button
           type="button"
+          role="checkbox"
+          aria-checked={checked}
+          aria-disabled={!atEnd}
+          aria-describedby={!atEnd ? "consent-scroll-hint" : undefined}
           onClick={() => setChecked((v) => !v)}
           disabled={!atEnd}
           className="flex w-full items-start gap-2.5 rounded-[13px] border border-[#EFEDF4] bg-[#FAF9FC] p-3 text-left disabled:opacity-60"
