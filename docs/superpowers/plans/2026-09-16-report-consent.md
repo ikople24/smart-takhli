@@ -221,13 +221,13 @@ export const CONSENT_SECTIONS = [
   },
 ];
 
-export const CONSENT_UPDATED_LABEL = "ปรับปรุงล่าสุด 1 กันยายน 2569 · ฉบับที่ 1.0";
+export const CONSENT_UPDATED_LABEL = "ปรับปรุงล่าสุด 18 กันยายน 2569 · ฉบับที่ 1.0";
 export const CONSENT_SCROLL_HINT = "เลื่อนอ่านให้ครบทุกข้อก่อนกดยอมรับ";
 export const CONSENT_CHECKBOX_LABEL =
   "ข้าพเจ้าได้อ่านและยอมรับข้อตกลงและเงื่อนไขการใช้งาน รวมถึงรับทราบว่าระบบนี้ไม่รองรับการแจ้งเหตุฉุกเฉิน";
 export const CONSENT_DECLINE_LABEL = "ไม่ยอมรับ";
 export const CONSENT_ACCEPT_LABEL = "ยอมรับและเริ่มแจ้งเรื่อง";
-export const CONSENT_FOOTER_NOTE = "ระบบจะบันทึกวันเวลาที่ท่านกดยอมรับไว้เป็นหลักฐาน";
+export const CONSENT_FOOTER_NOTE = "ระบบจะบันทึกวันและเวลาที่ท่านกดยอมรับ เพื่อเป็นหลักฐานการรับทราบข้อตกลงฉบับนี้";
 
 export const CANCEL_SHEET = {
   title: "ต้องการยกเลิกคำร้องใช่หรือไม่",
