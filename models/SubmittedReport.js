@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+/** หลักฐานการยอมรับข้อตกลงก่อนแจ้งเรื่อง — ต้องตรงกับ models/Complaint.js */
+const ConsentSchema = new mongoose.Schema(
+  {
+    version: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const SubmittedReportSchema = new mongoose.Schema({
 
   fullName: String,
@@ -44,6 +53,7 @@ const SubmittedReportSchema = new mongoose.Schema({
     ],
     default: [],
   },
+  consent: { type: ConsentSchema, default: undefined },
   updatedAt: {
     type: Date,
     default: Date.now,

@@ -12,6 +12,8 @@ import Notification from "@/models/Notification";
 import mongoose from "mongoose";
 import getNextSequence from "@/lib/getNextSequence";
 import { lineNotifyAdminGroup, formatNewComplaintMessage, buildMessages } from "@/lib/lineMessaging";
+import { consentForPayload, ACCEPTED_AT_MAX_SKEW_MS } from "@/lib/citizen/report/consent";
+import { KNOWN_CONSENT_VERSIONS } from "@/lib/citizen/report/consentContent";
 
 const APP_ID = process.env.NEXT_PUBLIC_APP_ID || "";
 
@@ -29,8 +31,33 @@ export default async function handler(req, res) {
     await dbConnect();
 
     const complaintId = await getNextSequence("complaintId");
+
+    // ข้อมูลยินยอมที่เพี้ยนต้องไม่ทำให้เรื่องร้องเรียนทั้งเรื่องบันทึกไม่สำเร็จ
+    // (client มี guard แล้ว แต่ endpoint นี้เป็นทางเขียนสาธารณะ ต้องกันฝั่งเซิร์ฟเวอร์ด้วย)
+    const { consent: rawConsent, ...rest } = req.body || {};
+
+    // consentForPayload คุมแค่ "รูปร่าง" ของข้อมูล ส่วน consent log (validateConsentLog) คุมอีก 2 ชั้น คือ
+    // เลขฉบับต้องเป็นฉบับที่เซิร์ฟเวอร์รู้จัก และเวลาต้องไม่ห่างจากเวลาเซิร์ฟเวอร์เกิน ACCEPTED_AT_MAX_SKEW_MS
+    // ถ้าไม่บังคับกติกาเดียวกันตรงนี้ เครื่องที่นาฬิกาเพี้ยนจะได้แถวใน report_consent_logs ที่ถูก
+    // แต่ได้ฟิลด์ consent บนตัวเรื่องร้องเรียนที่ผิด — ทั้งที่ฟิลด์นี้คือค่าที่เจ้าหน้าที่เปิดดูจริง
+    //
+    // ตัดสินแล้วว่า: เวลาเพี้ยน = "หนีบ" ให้เป็นเวลาเซิร์ฟเวอร์ ไม่ใช่ทิ้งทั้งก้อน เพราะการยอมรับเกิดขึ้นจริง
+    // เสียแค่ความแม่นของเวลา (ตรงกับที่ validateConsentLog ทำกับ log) · ส่วนเลขฉบับที่ไม่รู้จัก = ทิ้งทั้งก้อน
+    // เพราะบอกไม่ได้ว่าผู้ใช้เห็นเอกสารฉบับไหน หลักฐานที่อ่านแล้วเข้าใจผิดแย่กว่าไม่มีหลักฐาน
+    // (ฝั่งเบราว์เซอร์ไม่แตะ — ค่าที่เก็บในเครื่องยังเป็นของเดิม)
+    let consent = consentForPayload(rawConsent);
+    if (consent && !KNOWN_CONSENT_VERSIONS.includes(consent.version)) consent = null;
+    if (consent) {
+      const nowMs = Date.now();
+      const acceptedMs = new Date(consent.acceptedAt).getTime(); // consentForPayload การันตีแล้วว่า parse ได้
+      if (Math.abs(acceptedMs - nowMs) > ACCEPTED_AT_MAX_SKEW_MS) {
+        consent = { ...consent, acceptedAt: new Date(nowMs).toISOString() };
+      }
+    }
+
     const newReport = await SubmittedReport.create({
-      ...req.body,
+      ...rest,
+      ...(consent ? { consent } : {}),
       complaintId,
     });
 
