@@ -20,17 +20,17 @@ describe("normalizeRow PARCEL", () => {
     expect(out.txn.deedNo).toBe("31635");
     expect(out.txn.owner.fullName).toBe("นางสาว วรารีย์ ชาลีรัตน์");
     expect(out.txn.area?.sqm).toBe(896);
-    expect(out.txn.payloadRaw["สถานะดำเนินการ"]).toBe("ขาย");
+    expect(out.txn.payloadRaw["REG_CODE"]).toBe("ขาย");
   });
   it("encumbrance -> reviewStatus auto", () => {
-    const raw: RawRow = { docType: "PARCEL", source: "parcel.csv", raw: { ...DIRTY_PARCEL_ROW, "สถานะดำเนินการ ": "จำนอง" } };
+    const raw: RawRow = { docType: "PARCEL", source: "parcel.csv", raw: { ...DIRTY_PARCEL_ROW, "REG_CODE ": "จำนอง" } };
     const out = normalizeRow(raw);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
     expect(out.txn.reviewStatus).toBe("auto");
   });
   it("quarantines unknown status", () => {
-    const raw: RawRow = { docType: "PARCEL", source: "parcel.csv", raw: { ...DIRTY_PARCEL_ROW, "สถานะดำเนินการ ": "แปลกๆ" } };
+    const raw: RawRow = { docType: "PARCEL", source: "parcel.csv", raw: { ...DIRTY_PARCEL_ROW, "REG_CODE ": "แปลกๆ" } };
     expect(normalizeRow(raw)).toEqual({ ok: false, reason: "unknown_status" });
   });
   it("missing UTM_MAP1 -> missing_key", () => {
@@ -42,17 +42,17 @@ describe("normalizeRow PARCEL", () => {
 
 describe("normalizeRow NS3A", () => {
   const NS3A_ROW: Record<string, string> = {
-    "สถานะ": "เอกสารสิทธิที่ยกเลิกระหว่างเดือน",
-    "วันที่": "10/3/2569",
+    "REG_CODE": "เอกสารสิทธิที่ยกเลิกระหว่างเดือน",
+    "REG_DATE": "10/3/2569",
     "REG_AMT": "฿-",
-    "เลขที่นส3ก": "NS3A-001",
+    "NS3A_NO": "NS3A-001",
     "UTM_AIRMAP1": "5040",
     "UTM_AIRMAP2": "3",
     "UTM_AIRMAP3": "4700",
     "UTM_SCALE": "4000",
-    "ล.ที่ดิน": "12",
-    "ไร่": "0", "งาน": "1", "วา": "10", "เศษ": "0",
-    "คำนำหน้า": "นาย", "ชื่อ": "สมชาย", "นามสกุล": "ใจดี",
+    "LAND_NO": "12",
+    "RAI": "0", "NGAN": "1", "WA": "10", "SUBWA": "0",
+    "OWN_TITLE": "นาย", "OWN_FNAME": "สมชาย", "OWN_LNAME": "ใจดี",
     "OWN_PERS_ID": "1234567890123",
   };
 
@@ -71,7 +71,7 @@ describe("normalizeRow NS3A", () => {
 describe("normalizeRow CONSTRUCTION", () => {
   it("has null recordKey -> reviewStatus auto", () => {
     const raw: RawRow = { docType: "CONSTRUCTION", source: "construction.csv",
-      raw: { "สถานะ": "ขาย", "วันที่": "5/1/2569", "REG_AMT": "฿-", "คำนำหน้า": "นาย", "ชื่อ": "ก", "นามสกุล": "ข", "13 หลัก": "1234567890123" } };
+      raw: { "REG_CODE": "ขาย", "REG_DATE": "5/1/2569", "REG_AMT": "฿-", "OWN_TITLE": "นาย", "OWN_FNAME": "ก", "OWN_LNAME": "ข", "OWN_PERS_ID": "1234567890123" } };
     const out = normalizeRow(raw);
     expect(out.ok).toBe(true);
     if (!out.ok) return;

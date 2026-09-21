@@ -27,10 +27,10 @@ export interface WorklistItem {
 // label -> คอลัมน์ payloadRaw — เรียง + ตั้งชื่อตรงฟอร์ม LTAX "เพิ่มข้อมูลเจ้าของทรัพย์สิน"
 // (รหัสไปรษณีย์ไม่มีในข้อมูล ม.10 → เจ้าหน้าที่กรอกเอง)
 export const OWNER_FIELD_COLS: { label: string; col: string }[] = [
-  { label: "เลขประจำตัวประชาชน", col: "13 หลัก" },
-  { label: "คำนำหน้าชื่อ", col: "คำนำหน้า" },
-  { label: "ชื่อ", col: "ชื่อ" },
-  { label: "นามสกุล", col: "นามสกุล" },
+  { label: "เลขประจำตัวประชาชน", col: "OWN_PERS_ID" },
+  { label: "คำนำหน้าชื่อ", col: "OWN_TITLE" },
+  { label: "ชื่อ", col: "OWN_FNAME" },
+  { label: "นามสกุล", col: "OWN_LNAME" },
   { label: "บ้านเลขที่", col: "OWN_HSE_NO" },
   { label: "หมู่ที่/ชุมชน", col: "OWN_MOO" },
   { label: "ซอย", col: "OWN_SOI" },
@@ -43,10 +43,10 @@ export const OWNER_FIELD_COLS: { label: string; col: string }[] = [
 
 // ชื่อ-นามสกุล-เลขบัตร (สำหรับ OWNER_CORRECTION)
 const NAME_FIELD_COLS: { label: string; col: string }[] = [
-  { label: "คำนำหน้าชื่อ", col: "คำนำหน้า" },
-  { label: "ชื่อ", col: "ชื่อ" },
-  { label: "นามสกุล", col: "นามสกุล" },
-  { label: "เลขประจำตัวประชาชน", col: "13 หลัก" },
+  { label: "คำนำหน้าชื่อ", col: "OWN_TITLE" },
+  { label: "ชื่อ", col: "OWN_FNAME" },
+  { label: "นามสกุล", col: "OWN_LNAME" },
+  { label: "เลขประจำตัวประชาชน", col: "OWN_PERS_ID" },
 ];
 
 const note = (label: string): WorklistField => ({ label, value: "", copyable: false });
@@ -60,7 +60,7 @@ export function ownerFields(raw: Record<string, string>, cols: { label: string; 
   return cols.map((c) => {
     const v = raw[c.col] ?? "";
     // เลขบัตรใน LTAX เป็นเลขล้วน (ไม่มีเว้นวรรค/ขีด)
-    return field(c.label, c.col === "13 หลัก" ? digitsOnly(v) : v);
+    return field(c.label, c.col === "OWN_PERS_ID" ? digitsOnly(v) : v);
   });
 }
 
@@ -73,8 +73,8 @@ export function identifyFields(raw: Record<string, string>, area: WorklistTxnInp
     field("ระวางUTM", raw["UTM_MAP3"] ?? ""),
     field("แผ่นที่ระวางUTM", pad2(raw["UTM_MAP4"] ?? "")),
     field("มาตราส่วน", raw["UTM_SCALE"] ?? ""),
-    field("เลขที่ดิน", raw["ที่ดิน"] ?? ""),
-    field("หน้าสำรวจ", raw["ห.สำรวจ"] ?? ""),
+    field("เลขที่ดิน", raw["LAND_NO"] ?? ""),
+    field("หน้าสำรวจ", raw["SURVEY_NO"] ?? ""),
     field("เนื้อที่: ไร่", String(area?.rai ?? "")),
     field("เนื้อที่: งาน", String(area?.ngan ?? "")),
     field("เนื้อที่: ตร.ว.", area ? area.wa.toFixed(2) : ""),

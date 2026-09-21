@@ -16,7 +16,7 @@ function txn(over: Partial<NormalizedTxn> = {}): NormalizedTxn {
     txnDate: "2026-01-05", regAmount: null,
     owner: { title: "นางสาว", name: "วรารีย์", surname: "ชาลีรัตน์", fullName: "นางสาว วรารีย์ ชาลีรัตน์", idHash: "h" },
     area: { rai: 0, ngan: 2, wa: 24, sqm: 896 },
-    payloadRaw: { "โฉนด": "31635", "คำนำหน้า": "นางสาว", "ชื่อ": "วรารีย์", "นามสกุล": "ชาลีรัตน์", "13 หลัก": "1609700018248", OWN_TAMBOL: "ตาคลี" },
+    payloadRaw: { "PARCEL_NO": "31635", "OWN_TITLE": "นางสาว", "OWN_FNAME": "วรารีย์", "OWN_LNAME": "ชาลีรัตน์", "OWN_PERS_ID": "1609700018248", OWN_TAMBOL: "ตาคลี" },
     ...over,
   };
 }
@@ -37,7 +37,7 @@ describe("listPrintRows", () => {
     expect(out.rows).toHaveLength(2);
     expect(out.rows.map((r) => r.reviewStatus).sort()).toEqual(["auto", "pending"]);
     // ต้องส่ง payloadRaw มาเต็ม เพราะเลข 13 หลักอยู่ในนี้เท่านั้น
-    expect(out.rows[0].payloadRaw["13 หลัก"]).toBe("1609700018248");
+    expect(out.rows[0].payloadRaw["OWN_PERS_ID"]).toBe("1609700018248");
   });
 
   it("ไม่เอา txn ของงวดอื่นมาปน", async () => {

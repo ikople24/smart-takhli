@@ -29,6 +29,20 @@ export const STATUS_MAP: Record<string, Classification> = {
   "หมายเหตุสารบัญ": { changeType: "NOTE", taxRelevant: false },
   "ใบแทน": { changeType: "ADMIN", taxRelevant: false },
   "เอกสารสิทธิที่ยกเลิกระหว่างเดือน": { changeType: "RETIRED", taxRelevant: true },
+
+  // เพิ่มจากไฟล์งวด 2569-02 (ยืนยันการจัดหมวดกับเจ้าของงาน 2026-09-21)
+  "โอนมรดกเฉพาะส่วน": { changeType: "TRANSFER_PARTIAL", taxRelevant: true },
+  "ให้เฉพาะส่วน": { changeType: "TRANSFER_PARTIAL", taxRelevant: true },
+  // ผู้จัดการมรดก = เปลี่ยนชื่อผู้ถือในทะเบียน ไม่ใช่โอนกรรมสิทธิ์ (เจ้าของงานชี้ 2026-09-21)
+  "ผู้จัดการมรดก": { changeType: "OWNER_CORRECTION", taxRelevant: true },
+  "ผู้จัดการมรดกเฉพาะส่วน": { changeType: "OWNER_CORRECTION", taxRelevant: true },
+  // ไถ่จากขายฝาก = กรรมสิทธิ์กลับไปผู้ขายฝาก → ต้องคีย์เปลี่ยนเจ้าของใน LTAX
+  "ไถ่จากขายฝาก": { changeType: "TRANSFER", taxRelevant: true },
+  "ขาย รวมสองโฉนด": { changeType: "MERGE", taxRelevant: true },
+  "จำนอง รวมสองโฉนด": { changeType: "MERGE", taxRelevant: true },
+  "แบ่งกรรมสิทธิ์รวม": { changeType: "SPLIT", taxRelevant: true },
+  "เลิกสิทธิเก็บกิน": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  "แก้ไขหนี้อันจำนองเป็นประกัน": { changeType: "ENCUMBRANCE", taxRelevant: false },
 };
 
 // ไม่เจอ → null → caller quarantine (reason="unknown_status") ห้ามเดา

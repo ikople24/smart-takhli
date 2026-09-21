@@ -69,8 +69,8 @@ export async function applyTxnToRecord(txnDoc: TxnDocLike) {
   const status = txnDoc.changeType === "RETIRED" ? "retired" : "active";
   const historyEntry = { txnId: txnDoc._id, changeType: txnDoc.changeType, txnDate: txnDoc.txnDate, at: new Date() };
   // landNo/survey จาก payloadRaw — matcher ชั้น 2 ต้องใช้ (เก็บลง record ตอน materialize)
-  const landNo = txnDoc.payloadRaw?.["ที่ดิน"] ?? null;
-  const survey = txnDoc.payloadRaw?.["ห.สำรวจ"] ?? null;
+  const landNo = txnDoc.payloadRaw?.["LAND_NO"] ?? null;
+  const survey = txnDoc.payloadRaw?.["SURVEY_NO"] ?? null;
   const existing = await M10Record.findOne({ recordKey: txnDoc.recordKey });
 
   const hasGeo = !!txnDoc.geometry;

@@ -31,17 +31,17 @@ export const NS3A_EXTRA_STATUSES = [
 
 // แถว parcel ดิบ 1 แถว (คอลัมน์จริง) — จงใจใส่ความสกปรก: trailing space ในคีย์/ค่า, UTM_MAP4 ไม่ pad, REG_AMT มี space
 export const DIRTY_PARCEL_ROW: Record<string, string> = {
-  "โฉนด": "31635",
+  "PARCEL_NO": "31635",
   "UTM_MAP1": "5039",
   "UTM_MAP2": "2",
   "UTM_MAP3": "4682",
   "UTM_MAP4": "7",            // ไม่ pad → ต้องเป็น "07"
   "UTM_SCALE": "1000",
-  "ที่ดิน": "84",
-  "ไร่": "0", "งาน": "2", "วา": "24", "เศษ": "0",
-  "คำนำหน้า": "นางสาว", "ชื่อ": "วรารีย์", "นามสกุล": "ชาลีรัตน์",
-  "13 หลัก": "1 6097 00018 24 8",
-  "สถานะดำเนินการ ": "ขาย ", // trailing space ในคีย์และค่า
-  "วันที่": "5/1/2569",
+  "LAND_NO": "84",
+  "RAI": "0", "NGAN": "2", "WA": "24", "SUBWA": "0",
+  "OWN_TITLE": "นางสาว", "OWN_FNAME": "วรารีย์", "OWN_LNAME": "ชาลีรัตน์",
+  "OWN_PERS_ID": "1 6097 00018 24 8",
+  "REG_CODE ": "ขาย ", // trailing space ในคีย์และค่า
+  "REG_DATE": "5/1/2569",
   " REG_AMT ": " ฿304,000.00 ",
 };

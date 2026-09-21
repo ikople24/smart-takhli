@@ -3,8 +3,8 @@ import { buildSheet, type PrintTxnRow } from "./buildSheet";
 
 const baseRaw: Record<string, string> = {
   UTM_MAP1: "5039", UTM_MAP2: "2", UTM_MAP3: "4682", UTM_MAP4: "7", UTM_SCALE: "1000",
-  "ที่ดิน": "84", "ห.สำรวจ": "13725",
-  "13 หลัก": "1-2345-67890-12-3", "คำนำหน้า": "นางสาว", "ชื่อ": "วรารีย์", "นามสกุล": "ชาลีรัตน์",
+  "LAND_NO": "84", "SURVEY_NO": "13725",
+  "OWN_PERS_ID": "1-2345-67890-12-3", "OWN_TITLE": "นางสาว", "OWN_FNAME": "วรารีย์", "OWN_LNAME": "ชาลีรัตน์",
   OWN_HSE_NO: "99/1", OWN_TAMBOL: "ตาคลี", OWN_AMPHUR: "ตาคลี", OWN_PROVINCE: "นครสวรรค์", OWN_TEL: "0812345678",
 };
 

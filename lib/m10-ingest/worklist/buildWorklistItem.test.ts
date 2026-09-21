@@ -95,8 +95,8 @@ describe("buildWorklistItem", () => {
 describe("helper ที่เล่มพิมพ์ reuse", () => {
   const raw: Record<string, string> = {
     UTM_MAP1: "5039", UTM_MAP2: "2", UTM_MAP3: "4682", UTM_MAP4: "7", UTM_SCALE: "1000",
-    "ที่ดิน": "84", "ห.สำรวจ": "13725",
-    "13 หลัก": "1-2345-67890-12-3", "คำนำหน้า": "นางสาว", "ชื่อ": "ก", "นามสกุล": "ข",
+    "LAND_NO": "84", "SURVEY_NO": "13725",
+    "OWN_PERS_ID": "1-2345-67890-12-3", "OWN_TITLE": "นางสาว", "OWN_FNAME": "ก", "OWN_LNAME": "ข",
     OWN_TAMBOL: "ตาคลี",
   };
 

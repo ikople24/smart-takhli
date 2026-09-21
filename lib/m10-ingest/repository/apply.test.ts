@@ -57,7 +57,7 @@ describe("confirmTransaction -> applyTxnToRecord", () => {
   it("confirm populates landNo/survey + parcelMatch (unmatched when no basemap)", async () => {
     const b = await createBatch({ fileHash: "h", period: "2569-01", files: [], counts: {} });
     const geo: GeoJSON.Polygon = { type: "Polygon", coordinates: [[[100, 15], [100.1, 15], [100.1, 15.1], [100, 15]]] };
-    const t = await insertTransactionDedup(b._id, txn({ payloadRaw: { "ที่ดิน": "84", "ห.สำรวจ": "13725" } }), geo);
+    const t = await insertTransactionDedup(b._id, txn({ payloadRaw: { "LAND_NO": "84", "SURVEY_NO": "13725" } }), geo);
     await confirmTransaction(t.doc._id, "o");
     const rec = await col("m10_records").findOne({ recordKey: "K1" });
     expect(rec?.landNo).toBe("84");
