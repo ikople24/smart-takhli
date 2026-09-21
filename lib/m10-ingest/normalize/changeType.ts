@@ -43,6 +43,24 @@ export const STATUS_MAP: Record<string, Classification> = {
   "แบ่งกรรมสิทธิ์รวม": { changeType: "SPLIT", taxRelevant: true },
   "เลิกสิทธิเก็บกิน": { changeType: "ENCUMBRANCE", taxRelevant: false },
   "แก้ไขหนี้อันจำนองเป็นประกัน": { changeType: "ENCUMBRANCE", taxRelevant: false },
+
+  // เพิ่มจากงวด 2569-03..05 (เจ้าของงานยืนยันการจัดหมวด 2026-09-21)
+  // กลุ่มกระทบกรรมสิทธิ์
+  "โอนชำระหนี้จำนอง": { changeType: "TRANSFER", taxRelevant: true },
+  "ขายฝาก มีกำหนด หนึ่งปี": { changeType: "TRANSFER", taxRelevant: true },
+  "กรรมสิทธิ์รวม (ไม่มีค่าตอบแทน)": { changeType: "TRANSFER_PARTIAL", taxRelevant: true },
+  "ลงชื่อคู่สมรส": { changeType: "TRANSFER_PARTIAL", taxRelevant: true },
+  // กลุ่มแก้ชื่อผู้ถือในทะเบียน
+  "แก้คำนำหน้านามและชื่อสกุล": { changeType: "OWNER_CORRECTION", taxRelevant: true },
+  "แก้ชื่อสกุล (ราชการให้เปลี่ยนชื่อสกุล)": { changeType: "OWNER_CORRECTION", taxRelevant: true },
+  // กลุ่มภาระผูกพัน ไม่เปลี่ยนเจ้าของ/รูปแปลง จึงไม่กระทบฐานภาษี
+  "ไถ่ถอนจากจำนองเฉพาะส่วน": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  "แบ่งไถ่ถอนจากจำนอง": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  "ปลอดจำนอง": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  "ภาระจำยอม (ไม่มีค่าตอบแทน)": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  "สิทธิเก็บกิน (ตลอดชีวิตของผู้ทรงสิทธิ)": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  // หมายเหตุ: "ครั้งที่สาม" เปลี่ยนได้ทุกครั้งที่ขยายเวลา ถ้าเจอ "ครั้งที่สี่" จะถูกกักอีก
+  "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สาม": { changeType: "ENCUMBRANCE", taxRelevant: false },
 };
 
 // ---- กฎกลุ่ม (ใช้ต่อเมื่อไม่เจอชื่อตรงตัวใน STATUS_MAP) ----

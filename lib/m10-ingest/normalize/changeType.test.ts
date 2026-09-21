@@ -50,8 +50,38 @@ describe("กฎกลุ่ม — ไม่ต้องไล่ใส่ช�
   });
 
   it("นิติกรรมที่ยังไม่เคยเจอ ยังถูกกักไว้ให้คนตัดสิน ไม่เดาให้", () => {
-    expect(classifyStatus("ลงชื่อคู่สมรส")).toBeNull();
-    expect(classifyStatus("ปลอดจำนอง")).toBeNull();
+    // กฎกลุ่มครอบเฉพาะรูปแบบที่พิสูจน์แล้ว ชื่อใหม่ล้วน ๆ ต้องไม่ถูกเดาให้
     expect(classifyStatus("นิติกรรมที่ไม่มีอยู่จริง")).toBeNull();
+    expect(classifyStatus("โอนตามคำพิพากษาแบบที่ยังไม่เคยเจอ")).toBeNull();
+    // วงเล็บท้ายถูกตัดแล้วยังไม่เจอชื่อฐานใน dict → ยังกักอยู่
+    expect(classifyStatus("นิติกรรมใหม่ (มีเงื่อนไข)")).toBeNull();
+  });
+});
+
+describe("นิติกรรมงวด 2569-03..05 (เจ้าของงานยืนยันการจัดหมวด)", () => {
+  it("กลุ่มกระทบกรรมสิทธิ์", () => {
+    expect(classifyStatus("โอนชำระหนี้จำนอง")).toEqual({ changeType: "TRANSFER", taxRelevant: true });
+    expect(classifyStatus("ขายฝาก มีกำหนด หนึ่งปี")).toEqual({ changeType: "TRANSFER", taxRelevant: true });
+    expect(classifyStatus("ลงชื่อคู่สมรส")).toEqual({ changeType: "TRANSFER_PARTIAL", taxRelevant: true });
+    expect(classifyStatus("กรรมสิทธิ์รวม (ไม่มีค่าตอบแทน)")).toEqual({ changeType: "TRANSFER_PARTIAL", taxRelevant: true });
+  });
+
+  it("กลุ่มแก้ชื่อผู้ถือ", () => {
+    expect(classifyStatus("แก้คำนำหน้านามและชื่อสกุล")).toEqual({ changeType: "OWNER_CORRECTION", taxRelevant: true });
+    expect(classifyStatus("แก้ชื่อสกุล (ราชการให้เปลี่ยนชื่อสกุล)")).toEqual({ changeType: "OWNER_CORRECTION", taxRelevant: true });
+  });
+
+  it("กลุ่มภาระผูกพัน — ไม่กระทบฐานภาษี", () => {
+    for (const n of [
+      "ไถ่ถอนจากจำนองเฉพาะส่วน", "แบ่งไถ่ถอนจากจำนอง", "ปลอดจำนอง",
+      "ภาระจำยอม (ไม่มีค่าตอบแทน)", "สิทธิเก็บกิน (ตลอดชีวิตของผู้ทรงสิทธิ)",
+    ]) {
+      expect(classifyStatus(n), n).toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
+    }
+  });
+
+  it("ขยายเวลาไถ่จากขายฝาก — วงเล็บท้ายถูกตัดด้วยกฎ B แล้วเจอชื่อฐาน", () => {
+    expect(classifyStatus("ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สาม (กำหนดสองปี )"))
+      .toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
   });
 });
