@@ -45,7 +45,29 @@ export const STATUS_MAP: Record<string, Classification> = {
   "แก้ไขหนี้อันจำนองเป็นประกัน": { changeType: "ENCUMBRANCE", taxRelevant: false },
 };
 
-// ไม่เจอ → null → caller quarantine (reason="unknown_status") ห้ามเดา
+// ---- กฎกลุ่ม (ใช้ต่อเมื่อไม่เจอชื่อตรงตัวใน STATUS_MAP) ----
+// กรมที่ดินเขียนจำนวนโฉนดที่ถูกรวมเป็นคำไทยซึ่งเปลี่ยนทุกเดือน (สอง/สาม/สี่/ห้า/เก้า/สิบ/สิบหก...)
+// ถ้าไล่ใส่ทีละชื่อจะไม่มีวันจบ — ลงท้ายด้วย "รวม...โฉนด" คือการรวมแปลงเสมอ ไม่ว่านิติกรรมต้นทาง
+// จะเป็นขาย จำนอง หรือไถ่ถอน (สอดคล้องกับรายการที่ใส่มือไว้เดิมทุกตัวที่ลงท้ายแบบนี้ = MERGE)
+const MERGE_SUFFIX = /รวม\S*โฉนด$/;
+
+// วงเล็บต่อท้ายเป็นคำขยายเงื่อนไข ไม่เปลี่ยนชนิดนิติกรรม เช่น "โอนมรดก (ระหว่างจำนอง)" = โอนมรดก
+const TRAILING_PAREN = /\s*\([^)]*\)$/;
+
+// ไม่เจอทั้งชื่อตรงตัวและกฎกลุ่ม → null → caller quarantine (reason="unknown_status") ห้ามเดา
 export function classifyStatus(status: string): Classification | null {
-  return STATUS_MAP[status.trim()] ?? null;
+  const s = status.trim();
+
+  const direct = STATUS_MAP[s];
+  if (direct) return direct;
+
+  if (MERGE_SUFFIX.test(s)) return { changeType: "MERGE", taxRelevant: true };
+
+  const base = s.replace(TRAILING_PAREN, "").trim();
+  if (base !== s) {
+    const byBase = STATUS_MAP[base];
+    if (byBase) return byBase;
+  }
+
+  return null;
 }
