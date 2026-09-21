@@ -26,7 +26,7 @@ export interface WorklistItem {
 
 // label -> คอลัมน์ payloadRaw — เรียง + ตั้งชื่อตรงฟอร์ม LTAX "เพิ่มข้อมูลเจ้าของทรัพย์สิน"
 // (รหัสไปรษณีย์ไม่มีในข้อมูล ม.10 → เจ้าหน้าที่กรอกเอง)
-const OWNER_FIELD_COLS: { label: string; col: string }[] = [
+export const OWNER_FIELD_COLS: { label: string; col: string }[] = [
   { label: "เลขประจำตัวประชาชน", col: "13 หลัก" },
   { label: "คำนำหน้าชื่อ", col: "คำนำหน้า" },
   { label: "ชื่อ", col: "ชื่อ" },
@@ -56,7 +56,7 @@ const ROMAN: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "I
 const pad2 = (v: string): string => { const t = (v ?? "").trim(); return t ? t.padStart(2, "0") : ""; };
 const digitsOnly = (v: string): string => (v ?? "").replace(/\D/g, "");
 
-function ownerFields(raw: Record<string, string>, cols: { label: string; col: string }[]): WorklistField[] {
+export function ownerFields(raw: Record<string, string>, cols: { label: string; col: string }[]): WorklistField[] {
   return cols.map((c) => {
     const v = raw[c.col] ?? "";
     // เลขบัตรใน LTAX เป็นเลขล้วน (ไม่มีเว้นวรรค/ขีด)
@@ -65,7 +65,7 @@ function ownerFields(raw: Record<string, string>, cols: { label: string; col: st
 }
 
 // ข้อมูลยืนยันแปลง — ตรง label หน้า LTAX "แก้ไขข้อมูลที่ดิน" 1:1 (ระวางแยกช่อง, UTM2→โรมัน, UTM4 pad2, เนื้อที่ 3 ช่อง)
-function identifyFields(raw: Record<string, string>, area: WorklistTxnInput["area"]): WorklistField[] {
+export function identifyFields(raw: Record<string, string>, area: WorklistTxnInput["area"]): WorklistField[] {
   const u2 = (raw["UTM_MAP2"] ?? "").trim();
   return [
     field("ระวาง", raw["UTM_MAP1"] ?? ""),

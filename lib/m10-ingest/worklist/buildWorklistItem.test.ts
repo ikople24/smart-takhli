@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildWorklistItem, type WorklistTxnInput } from "./buildWorklistItem";
+import {
+  buildWorklistItem,
+  identifyFields,
+  ownerFields,
+  OWNER_FIELD_COLS,
+  type WorklistTxnInput,
+} from "./buildWorklistItem";
 import { PARCEL_PAYLOAD } from "./__fixtures__/parcelPayload";
 
 function txn(over: Partial<WorklistTxnInput> = {}): WorklistTxnInput {
@@ -83,5 +89,38 @@ describe("buildWorklistItem", () => {
     expect(val(item.steps, "วา")).toBe("24");
     // ไม่มีช่องเจ้าของในงานแก้เนื้อที่
     expect(val(item.steps, "เลขบัตรประชาชน (13 หลัก)")).toBeUndefined();
+  });
+});
+
+describe("helper ที่เล่มพิมพ์ reuse", () => {
+  const raw: Record<string, string> = {
+    UTM_MAP1: "5039", UTM_MAP2: "2", UTM_MAP3: "4682", UTM_MAP4: "7", UTM_SCALE: "1000",
+    "ที่ดิน": "84", "ห.สำรวจ": "13725",
+    "13 หลัก": "1-2345-67890-12-3", "คำนำหน้า": "นางสาว", "ชื่อ": "ก", "นามสกุล": "ข",
+    OWN_TAMBOL: "ตาคลี",
+  };
+
+  it("identifyFields แปลง UTM_MAP2 เป็นเลขโรมันและ pad UTM_MAP4 สองหลัก", () => {
+    const f = identifyFields(raw, { rai: 0, ngan: 2, wa: 24, sqm: 896 });
+    const byLabel = Object.fromEntries(f.map((x) => [x.label, x.value]));
+    expect(byLabel["แผนที่ระวางภูมิประเทศ"]).toBe("II");
+    expect(byLabel["แผ่นที่ระวางUTM"]).toBe("07");
+    expect(byLabel["เลขที่ดิน"]).toBe("84");
+    expect(byLabel["หน้าสำรวจ"]).toBe("13725");
+    expect(byLabel["เนื้อที่: ตร.ว."]).toBe("24.00");
+  });
+
+  it("identifyFields ทำงานได้กับ area เป็น null (นิติกรรมที่ไม่มีเนื้อที่)", () => {
+    const f = identifyFields(raw, null);
+    const byLabel = Object.fromEntries(f.map((x) => [x.label, x.value]));
+    expect(byLabel["เนื้อที่: ไร่"]).toBe("");
+    expect(byLabel["ระวาง"]).toBe("5039");
+  });
+
+  it("ownerFields ตัดเลขบัตรให้เหลือเฉพาะตัวเลข", () => {
+    const f = ownerFields(raw, OWNER_FIELD_COLS);
+    const byLabel = Object.fromEntries(f.map((x) => [x.label, x.value]));
+    expect(byLabel["เลขประจำตัวประชาชน"]).toBe("1234567890123");
+    expect(byLabel["ตำบล"]).toBe("ตาคลี");
   });
 });
