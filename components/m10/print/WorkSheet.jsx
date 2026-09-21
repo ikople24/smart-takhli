@@ -1,11 +1,22 @@
 // แผ่นงานรายแปลง 5 บล็อก
+
+// ช่องที่กรมที่ดินไม่ส่งข้อมูลมา (ตรวจแล้ว OWN_TEL ว่าง 176/176 ทั้งสองงวด) —
+// พิมพ์เป็นเส้นประให้เจ้าหน้าที่จดเองตอนติดต่อเจ้าของ ดีกว่าขีด "—" ที่เขียนทับไม่ได้
+const WRITE_IN_WHEN_EMPTY = new Set(["โทรศัพท์"]);
+
 function FieldRows({ fields }) {
   return (
     <dl className="m10p-fields">
       {fields.map((f, i) => (
         <div key={i} className="m10p-field">
           <dt>{f.label}</dt>
-          <dd>{f.value || "—"}</dd>
+          <dd>
+            {f.value
+              ? f.value
+              : WRITE_IN_WHEN_EMPTY.has(f.label)
+                ? <span className="m10p-line-sm" />
+                : "—"}
+          </dd>
         </div>
       ))}
     </dl>
