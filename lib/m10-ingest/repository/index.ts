@@ -1,6 +1,7 @@
 import type { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
+import type { PrintTxnRow } from "../print/buildSheet";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
 import { suggestForRecord } from "../parcelcode/suggest";
 import { normalizeEditedGeometry } from "../basemap/load";
@@ -637,3 +638,63 @@ export async function confirmNewCode(recordKey: string, by: string, input: {
 }
 
 export { M10ImportBatch, M10Transaction, M10Record, M10Reject, M10Basemap, M10BasemapEdit };
+
+// ---- เล่มพิมพ์รายเดือน ----
+// เจ้าของเดิม: replay ครั้งเดียวที่ต้นงวด (ไม่ใช่ต่อรายการเหมือน getWorklistItem ที่เรียก
+// asOfMaterialize ทุกครั้ง — 60+ แผ่นจะช้ามาก) ข้อแลกเปลี่ยน: แปลงที่มี 2 นิติกรรมใน
+// เดือนเดียวกันจะเห็นเจ้าของ ณ ต้นเดือน ไม่ใช่เจ้าของก่อนนิติกรรมนั้นทันที
+export async function listPrintRows(period: string): Promise<{
+  rows: PrintTxnRow[];
+  batchCount: number;
+}> {
+  const batches = await M10ImportBatch.find({ period }).select("_id").lean();
+  if (batches.length === 0) return { rows: [], batchCount: 0 };
+  const batchIds = batches.map((b: { _id: unknown }) => b._id);
+
+  const txns = await M10Transaction.find({ batchId: { $in: batchIds } })
+    .sort({ txnDate: 1, createdAt: 1 })
+    .lean();
+  if (txns.length === 0) return { rows: [], batchCount: batches.length };
+
+  // parcelCode effective ต่อ recordKey (override ของ จนท. ชนะ auto)
+  const recordKeys = [...new Set(txns.map((t: { recordKey?: string }) => t.recordKey).filter(Boolean))] as string[];
+  const records = await M10Record.find({ recordKey: { $in: recordKeys } })
+    .select("recordKey parcelCode reconcileOverride.parcelCode")
+    .lean();
+  const codeByKey = new Map<string, string | null>();
+  for (const r of records) {
+    codeByKey.set(r.recordKey, r.reconcileOverride?.parcelCode ?? r.parcelCode ?? null);
+  }
+
+  // เจ้าของเดิม ณ ต้นงวด — replay ครั้งเดียว
+  const firstTxnTime = Math.min(...txns.map((t: { txnDate: Date }) => new Date(t.txnDate).getTime()));
+  const asOf = await asOfMaterialize(new Date(firstTxnTime - 1));
+  const ownerByKey = new Map<string, string>();
+  for (const rec of asOf) {
+    const name = rec.owners?.[0]?.fullName;
+    if (rec.recordKey && name) ownerByKey.set(rec.recordKey, name);
+  }
+
+  const rows: PrintTxnRow[] = txns.map((t: Record<string, unknown>) => {
+    const recordKey = (t.recordKey as string) ?? null;
+    return {
+      txnId: String(t._id),
+      docType: (t.docType as string) ?? "",
+      changeType: (t.changeType as string) ?? "",
+      rawStatus: (t.rawStatus as string) ?? "",
+      taxRelevant: t.taxRelevant === true,
+      reviewStatus: (t.reviewStatus as string) ?? "",
+      ltaxStatus: (t.ltaxStatus as string) ?? null,
+      txnDate: t.txnDate as Date,
+      deedNo: (t.deedNo as string) ?? null,
+      recordKey,
+      area: (t.area as PrintTxnRow["area"]) ?? null,
+      regAmount: (t.regAmount as number) ?? null,
+      payloadRaw: (t.payloadRaw as Record<string, string>) ?? {},
+      parcelCode: recordKey ? codeByKey.get(recordKey) ?? null : null,
+      oldOwnerName: recordKey ? ownerByKey.get(recordKey) ?? null : null,
+    };
+  });
+
+  return { rows, batchCount: batches.length };
+}
