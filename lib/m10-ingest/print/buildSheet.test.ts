@@ -92,6 +92,23 @@ describe("buildSheet", () => {
 describe("buildSheet — เจ้าของร่วม", () => {
   const opt = { seqInSection: 1, sectionTotal: 1, sheetNo: 1 };
 
+  it("มีช่องโทรศัพท์และที่อยู่ครบบนแผ่นงาน — ขึ้นค่าทันทีถ้าไฟล์กรมที่ดินกรอกมา", () => {
+    // ข้อมูลจริงงวด 2569-01/02 OWN_TEL ว่างทั้ง 176 รายการ แต่ช่องต้องพร้อมรับค่า
+    const s = buildSheet(row({ payloadRaw: { ...baseRaw, OWN_TEL: "0812345678" } }), opt);
+    const byLabel = Object.fromEntries(s.owners[0].fields.map((f) => [f.label, f.value]));
+    expect(byLabel["โทรศัพท์"]).toBe("0812345678");
+    expect(byLabel["บ้านเลขที่"]).toBe("99/1");
+    expect(byLabel["ตำบล"]).toBe("ตาคลี");
+    expect(byLabel["จังหวัด"]).toBe("นครสวรรค์");
+  });
+
+  it("ไม่มีเบอร์โทรในไฟล์ → ช่องยังอยู่แต่ค่าว่าง (แผ่นงานพิมพ์เป็นขีด)", () => {
+    const s = buildSheet(row({ payloadRaw: { ...baseRaw, OWN_TEL: "" } }), opt);
+    const tel = s.owners[0].fields.find((f) => f.label === "โทรศัพท์");
+    expect(tel).toBeDefined();
+    expect(tel?.value).toBe("");
+  });
+
   it("เจ้าของคนเดียว → owners มีรายการเดียว พร้อมลำดับที่", () => {
     const s = buildSheet(row(), opt);
     expect(s.owners).toHaveLength(1);
