@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildSheet, type PrintTxnRow } from "./buildSheet";
 
 const baseRaw: Record<string, string> = {
+  OWN_LINE_NO: "1",
   UTM_MAP1: "5039", UTM_MAP2: "2", UTM_MAP3: "4682", UTM_MAP4: "7", UTM_SCALE: "1000",
   "LAND_NO": "84", "SURVEY_NO": "13725",
   "OWN_PERS_ID": "1-2345-67890-12-3", "OWN_TITLE": "นางสาว", "OWN_FNAME": "วรารีย์", "OWN_LNAME": "ชาลีรัตน์",
@@ -25,6 +26,7 @@ function row(over: Partial<PrintTxnRow> = {}): PrintTxnRow {
     payloadRaw: baseRaw,
     parcelCode: null,
     oldOwnerName: null,
+    coOwnerRows: [],
     ...over,
   };
 }
@@ -41,7 +43,7 @@ describe("buildSheet", () => {
 
   it("เลข 13 หลักมาจาก payloadRaw และเป็นเลขล้วน", () => {
     const s = buildSheet(row(), { seqInSection: 1, sectionTotal: 1, sheetNo: 1 });
-    const byLabel = Object.fromEntries(s.owner.map((f) => [f.label, f.value]));
+    const byLabel = Object.fromEntries(s.owners[0].fields.map((f) => [f.label, f.value]));
     expect(byLabel["เลขประจำตัวประชาชน"]).toBe("1234567890123");
   });
 
@@ -84,5 +86,46 @@ describe("buildSheet", () => {
     expect(buildSheet(row({ oldOwnerName: "นายเก่า ใจดี" }), opt).previousOwner).toBe("นายเก่า ใจดี");
     expect(buildSheet(row({ regAmount: null }), opt).regAmountLabel).toBeNull();
     expect(buildSheet(row({ regAmount: 1250000 }), opt).regAmountLabel).toBe("1,250,000 บาท");
+  });
+});
+
+describe("buildSheet — เจ้าของร่วม", () => {
+  const opt = { seqInSection: 1, sectionTotal: 1, sheetNo: 1 };
+
+  it("เจ้าของคนเดียว → owners มีรายการเดียว พร้อมลำดับที่", () => {
+    const s = buildSheet(row(), opt);
+    expect(s.owners).toHaveLength(1);
+    expect(s.owners[0].lineNo).toBe("1");
+    expect(s.hasCoOwners).toBe(false);
+  });
+
+  it("เจ้าของร่วมหลายคน → พิมพ์ครบทุกคนเรียงตามลำดับที่ พร้อมเลขบัตรของแต่ละคน", () => {
+    const s = buildSheet(
+      row({
+        coOwnerRows: [
+          { ...baseRaw, OWN_LINE_NO: "3", OWN_FNAME: "สาม", OWN_LNAME: "สามสกุล", "OWN_PERS_ID": "3333333333333" },
+          { ...baseRaw, OWN_LINE_NO: "2", OWN_FNAME: "สอง", OWN_LNAME: "สองสกุล", "OWN_PERS_ID": "2222222222222" },
+        ],
+      }),
+      opt
+    );
+    expect(s.owners.map((o) => o.lineNo)).toEqual(["1", "2", "3"]);
+    expect(s.hasCoOwners).toBe(true);
+    const idOf = (i: number) =>
+      s.owners[i].fields.find((f) => f.label === "เลขประจำตัวประชาชน")?.value;
+    expect(idOf(0)).toBe("1234567890123");
+    expect(idOf(1)).toBe("2222222222222");
+    expect(idOf(2)).toBe("3333333333333");
+    const nameOf = (i: number) => s.owners[i].fields.find((f) => f.label === "ชื่อ")?.value;
+    expect(nameOf(1)).toBe("สอง");
+    expect(nameOf(2)).toBe("สาม");
+  });
+
+  it("แถวเจ้าของร่วมไม่มี OWN_LINE_NO → ยังพิมพ์ได้ ไม่ throw", () => {
+    const noLine = { ...baseRaw };
+    delete noLine.OWN_LINE_NO;
+    const s = buildSheet(row({ coOwnerRows: [noLine] }), opt);
+    expect(s.owners).toHaveLength(2);
+    expect(s.hasCoOwners).toBe(true);
   });
 });

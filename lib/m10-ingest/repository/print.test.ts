@@ -86,4 +86,36 @@ describe("listPrintRows", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].oldOwnerName).toBe("นาย เก่า ใจดี");
   });
+
+  it("แถวเจ้าของร่วม (คีย์ซ้ำ) ไม่ถูกทิ้ง — เก็บไว้ใน coOwnerRows ของรายการเดิม", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const first = await insertTransactionDedup(b._id, txn({
+      payloadRaw: { PARCEL_NO: "31635", OWN_LINE_NO: "1", OWN_FNAME: "หนึ่ง", OWN_PERS_ID: "1111111111111" },
+    }));
+    expect(first.inserted).toBe(true);
+    // เจ้าของคนที่ 2 ของนิติกรรมเดียวกัน (recordKey/rawStatus/txnDate เหมือนกันเป๊ะ)
+    const second = await insertTransactionDedup(b._id, txn({
+      payloadRaw: { PARCEL_NO: "31635", OWN_LINE_NO: "2", OWN_FNAME: "สอง", OWN_PERS_ID: "2222222222222" },
+    }));
+    expect(second.inserted).toBe(false);
+
+    const { rows } = await listPrintRows("2569-01");
+    // ยังนับเป็น 1 รายการ (ยอดในบัญชีคุมไม่เพี้ยน)
+    expect(rows).toHaveLength(1);
+    // แต่เก็บเจ้าของคนที่ 2 ไว้พิมพ์
+    expect(rows[0].payloadRaw.OWN_FNAME).toBe("หนึ่ง");
+    expect(rows[0].coOwnerRows).toHaveLength(1);
+    expect(rows[0].coOwnerRows[0].OWN_FNAME).toBe("สอง");
+    expect(rows[0].coOwnerRows[0].OWN_PERS_ID).toBe("2222222222222");
+  });
+
+  it("นำเข้าแถวเจ้าของร่วมซ้ำลำดับเดิม ไม่เพิ่มซ้ำใน coOwnerRows", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const raw2 = { PARCEL_NO: "31635", OWN_LINE_NO: "2", OWN_FNAME: "สอง", OWN_PERS_ID: "2222222222222" };
+    await insertTransactionDedup(b._id, txn({ payloadRaw: { PARCEL_NO: "31635", OWN_LINE_NO: "1" } }));
+    await insertTransactionDedup(b._id, txn({ payloadRaw: raw2 }));
+    await insertTransactionDedup(b._id, txn({ payloadRaw: raw2 }));
+    const { rows } = await listPrintRows("2569-01");
+    expect(rows[0].coOwnerRows).toHaveLength(1);
+  });
 });

@@ -47,7 +47,18 @@ export async function insertTransactionDedup(batchId: Types.ObjectId, txn: Norma
   if (txn.recordKey !== null) {
     const filter = { batchId, recordKey: txn.recordKey, rawStatus: txn.rawStatus, txnDate: new Date(txn.txnDate) };
     const existing = await M10Transaction.findOne(filter);
-    if (existing) return { inserted: false as const, doc: existing };
+    if (existing) {
+      // แถวซ้ำคีย์ = เจ้าของร่วมคนถัดไปของนิติกรรมเดียวกัน (ไฟล์แยกแถวต่อเจ้าของ 1 คน)
+      // รายการยังนับเป็น 1 เหมือนเดิม (ยึดเจ้าของลำดับ 1) แต่เก็บแถวไว้พิมพ์ลงแผ่นงานให้ครบ
+      const line = txn.payloadRaw?.OWN_LINE_NO ?? "";
+      const already =
+        (existing.payloadRaw?.OWN_LINE_NO ?? "") === line ||
+        (existing.coOwnerRows ?? []).some((r: Record<string, string>) => (r?.OWN_LINE_NO ?? "") === line);
+      if (!already) {
+        await M10Transaction.updateOne({ _id: existing._id }, { $push: { coOwnerRows: txn.payloadRaw } });
+      }
+      return { inserted: false as const, merged: !already, doc: existing };
+    }
   }
   const doc = await M10Transaction.create({
     batchId, docType: txn.docType, recordKey: txn.recordKey, deedNo: txn.deedNo,
@@ -691,6 +702,7 @@ export async function listPrintRows(period: string): Promise<{
       area: (t.area as PrintTxnRow["area"]) ?? null,
       regAmount: (t.regAmount as number) ?? null,
       payloadRaw: (t.payloadRaw as Record<string, string>) ?? {},
+      coOwnerRows: (t.coOwnerRows as Record<string, string>[]) ?? [],
       parcelCode: recordKey ? codeByKey.get(recordKey) ?? null : null,
       oldOwnerName: recordKey ? ownerByKey.get(recordKey) ?? null : null,
     };

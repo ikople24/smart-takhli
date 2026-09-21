@@ -36,8 +36,15 @@ export default function WorkSheet({ sheet, sectionLabel, changeType }) {
       </dl>
       <FieldRows fields={sheet.identify} />
 
-      <h4>เจ้าของ</h4>
-      <FieldRows fields={sheet.owner} />
+      <h4>{sheet.hasCoOwners ? `เจ้าของร่วม ${sheet.owners.length} คน` : "เจ้าของ"}</h4>
+      {sheet.owners.map((o, i) => (
+        <div key={i} className="m10p-owner">
+          {sheet.hasCoOwners && (
+            <p className="m10p-owner-head">เจ้าของลำดับที่ {o.lineNo || i + 1}</p>
+          )}
+          <FieldRows fields={o.fields} />
+        </div>
+      ))}
       {sheet.previousOwner && (
         <p className="m10p-note">เจ้าของเดิมที่ต้องลบออกจาก LTAX: <strong>{sheet.previousOwner}</strong></p>
       )}
@@ -48,6 +55,11 @@ export default function WorkSheet({ sheet, sectionLabel, changeType }) {
         <div className="m10p-blank" />
       ) : (
         <ol className="m10p-steps">
+          {sheet.hasCoOwners && (
+            <li className="m10p-step-note">
+              แปลงนี้มีเจ้าของ {sheet.owners.length} คน — ทำขั้นตอนเพิ่มเจ้าของซ้ำให้ครบทุกลำดับตามบล็อกด้านบน
+            </li>
+          )}
           {sheet.steps.map((s, i) =>
             s.copyable
               ? <li key={i} className="m10p-step-field"><span>{s.label}</span><b>{s.value || "—"}</b></li>

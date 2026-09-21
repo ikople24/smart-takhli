@@ -28,9 +28,17 @@ export interface PrintTxnRow {
   area: { rai: number; ngan: number; wa: number; sqm: number } | null;
   regAmount: number | null;
   payloadRaw: Record<string, string>;
+  /** แถวเจ้าของร่วมคนที่ 2 เป็นต้นไป — ไฟล์กรมที่ดินแยกเป็นคนละแถวต่อเจ้าของ 1 คน */
+  coOwnerRows: Record<string, string>[];
   /** PARCEL_COD จาก m10_records (effective = override ?? auto) */
   parcelCode: string | null;
   oldOwnerName: string | null;
+}
+
+export interface PrintOwnerBlock {
+  /** ลำดับเจ้าของตามไฟล์ (OWN_LINE_NO) — ว่างได้ถ้าไฟล์ไม่ระบุ */
+  lineNo: string;
+  fields: WorklistField[];
 }
 
 export interface PrintSheet {
@@ -45,7 +53,9 @@ export interface PrintSheet {
   deedNo: string;
   parcelCode: string;
   identify: WorklistField[];
-  owner: WorklistField[];
+  /** เจ้าของทุกคนของนิติกรรมนี้ เรียงตามลำดับในไฟล์ (คนแรกคือเจ้าของหลักของรายการ) */
+  owners: PrintOwnerBlock[];
+  hasCoOwners: boolean;
   previousOwner: string | null;
   regAmountLabel: string | null;
   steps: WorklistField[] | null;
@@ -68,7 +78,21 @@ function moneyLabel(v: number | null): string | null {
   return `${new Intl.NumberFormat("en-US").format(v)} บาท`;
 }
 
+/** เรียงตาม OWN_LINE_NO แบบตัวเลข (แถวที่ไม่มีเลขไปท้ายสุด) — ผลคงที่ พิมพ์ซ้ำได้เหมือนเดิม */
+function ownerBlocks(row: PrintTxnRow): PrintOwnerBlock[] {
+  const rows = [row.payloadRaw, ...(row.coOwnerRows ?? [])];
+  return rows
+    .map((raw) => ({ lineNo: (raw?.OWN_LINE_NO ?? "").trim(), fields: ownerFields(raw ?? {}, OWNER_FIELD_COLS) }))
+    .sort((a, b) => {
+      const na = a.lineNo === "" ? Number.MAX_SAFE_INTEGER : Number(a.lineNo);
+      const nb = b.lineNo === "" ? Number.MAX_SAFE_INTEGER : Number(b.lineNo);
+      if (Number.isNaN(na) || Number.isNaN(nb)) return 0;
+      return na - nb;
+    });
+}
+
 export function buildSheet(row: PrintTxnRow, pos: SheetPosition): PrintSheet {
+  const owners = ownerBlocks(row);
   const steps = hasSteps(row.changeType)
     ? buildWorklistItem(
         {
@@ -97,7 +121,8 @@ export function buildSheet(row: PrintTxnRow, pos: SheetPosition): PrintSheet {
     deedNo: row.deedNo || "-",
     parcelCode: row.parcelCode || "ยังไม่จับคู่",
     identify: identifyFields(row.payloadRaw, row.area),
-    owner: ownerFields(row.payloadRaw, OWNER_FIELD_COLS),
+    owners,
+    hasCoOwners: owners.length > 1,
     previousOwner: row.oldOwnerName || null,
     regAmountLabel: moneyLabel(row.regAmount),
     steps,

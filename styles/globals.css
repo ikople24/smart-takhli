@@ -1259,6 +1259,8 @@ body.survey-form-open .app-bottom-nav {
 .m10p-field dt { min-width: 130px; }
 .m10p-field dd { font-weight: 600; }
 .m10p-note { font-size: 10pt; margin-top: 4px; }
+.m10p-owner + .m10p-owner { margin-top: 6px; padding-top: 4px; border-top: 1px dashed #000; }
+.m10p-owner-head { font-size: 10pt; font-weight: 700; }
 .m10p-steps { font-size: 10pt; padding-left: 4px; }
 .m10p-step-note { font-weight: 600; margin-top: 4px; list-style: none; }
 .m10p-step-field { display: flex; gap: 8px; list-style: none; border-bottom: 1px dotted #999; }

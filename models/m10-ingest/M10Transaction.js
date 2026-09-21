@@ -16,6 +16,9 @@ const TransactionSchema = new mongoose.Schema({
   area: { rai: Number, ngan: Number, wa: Number, sqm: Number },
   geometry: { type: mongoose.Schema.Types.Mixed, default: null }, // reprojected 4326 (parcel txn)
   payloadRaw: { type: mongoose.Schema.Types.Mixed },
+  // แถวเจ้าของร่วมคนที่ 2 เป็นต้นไป (ไฟล์กรมที่ดินแยกเป็นคนละแถวต่อเจ้าของ 1 คน)
+  // ข้อมูลหลักของรายการยังยึดเจ้าของลำดับ 1 ใน owner/payloadRaw — เก็บไว้เพื่อพิมพ์ลงแผ่นงานให้ครบทุกคน
+  coOwnerRows: { type: [mongoose.Schema.Types.Mixed], default: [] },
   createdAt: { type: Date, default: Date.now },
 }, { collection: "m10_transactions" });
 // dedup index เฉพาะแถวที่มี recordKey (parcel/ns3a) — construction ไม่มี key แปลง

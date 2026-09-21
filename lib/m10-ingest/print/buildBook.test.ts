@@ -18,7 +18,7 @@ function row(over: Partial<PrintTxnRow> = {}): PrintTxnRow {
     txnDate: new Date("2026-01-10T00:00:00.000Z"),
     deedNo: "1", recordKey: "k1",
     area: { rai: 0, ngan: 2, wa: 24, sqm: 896 },
-    regAmount: null, payloadRaw: raw, parcelCode: null, oldOwnerName: null,
+    regAmount: null, payloadRaw: raw, coOwnerRows: [], parcelCode: null, oldOwnerName: null,
     ...over,
   };
 }
