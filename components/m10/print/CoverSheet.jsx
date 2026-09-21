@@ -1,4 +1,6 @@
 // ใบปก = บัญชีคุมนิติกรรมรายเดือน
+// หมายเหตุ: ไม่พิมพ์คอลัมน์ "คีย์แล้ว/ค้างคีย์" — สถานะคีย์เปลี่ยนทุกวัน กระดาษที่พิมพ์แล้วจะล้าสมัยทันที
+// (API ยังคืน keyed/pendingKey อยู่ ถ้าต้องการเอากลับมาแสดง)
 export default function CoverSheet({ book }) {
   const { cover, periodLabel, batchCount, printedAt, printedBy } = book;
   const printedLabel = printedAt
@@ -20,13 +22,11 @@ export default function CoverSheet({ book }) {
       <table className="m10p-table">
         <thead>
           <tr>
-            <th>ชนิดเอกสาร</th>
-            <th>นิติกรรม</th>
-            <th>หมวด</th>
-            <th>กระทบภาษี</th>
-            <th className="m10p-num">จำนวน</th>
-            <th className="m10p-num">คีย์แล้ว</th>
-            <th className="m10p-num">ค้างคีย์</th>
+            <th className="m10p-th-doc">ชนิดเอกสาร</th>
+            <th className="m10p-th-act">นิติกรรม</th>
+            <th className="m10p-th-cat">หมวด</th>
+            <th className="m10p-th-tax">กระทบภาษี</th>
+            <th className="m10p-th-num m10p-num">จำนวน</th>
           </tr>
         </thead>
         <tbody>
@@ -37,24 +37,22 @@ export default function CoverSheet({ book }) {
               <td>{r.changeTypeLabel}</td>
               <td className="m10p-center">{r.taxRelevant ? "✓" : "—"}</td>
               <td className="m10p-num">{r.count}</td>
-              <td className="m10p-num">{r.taxRelevant ? r.keyed : "—"}</td>
-              <td className="m10p-num">{r.taxRelevant ? r.pendingKey : "—"}</td>
             </tr>
           ))}
           {cover.rows.length === 0 && (
-            <tr><td colSpan={7} className="m10p-center">ไม่มีรายการในงวดนี้</td></tr>
+            <tr><td colSpan={5} className="m10p-center">ไม่มีรายการในงวดนี้</td></tr>
           )}
         </tbody>
         <tfoot>
           <tr>
             <th colSpan={4}>รวม</th>
             <th className="m10p-num">{cover.totals.all}</th>
-            <th colSpan={2} className="m10p-num">
-              กระทบภาษี {cover.totals.taxRelevant} · ไม่กระทบ {cover.totals.nonTaxRelevant}
-            </th>
           </tr>
           <tr>
-            <th colSpan={7}>จำนวนแผ่นงานในเล่ม {cover.totals.sheets} แผ่น</th>
+            <th colSpan={5} className="m10p-foot-note">
+              กระทบภาษี {cover.totals.taxRelevant} · ไม่กระทบภาษี {cover.totals.nonTaxRelevant} ·
+              แผ่นงานในเล่ม {cover.totals.sheets} แผ่น
+            </th>
           </tr>
         </tfoot>
       </table>

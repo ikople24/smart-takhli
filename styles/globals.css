@@ -1207,6 +1207,20 @@ body.survey-form-open .app-bottom-nav {
 .m10p-num { text-align: right; font-variant-numeric: tabular-nums; }
 .m10p-center { text-align: center; }
 
+/* หัวตารางบัญชีคุม: สีจาง ๆ แยกคนละคอลัมน์ให้กวาดตาง่าย
+   print-color-adjust: exact = บังคับให้สีติดไปตอนพิมพ์ (เบราว์เซอร์ปิด background graphics เป็นค่าเริ่มต้น) */
+.m10p-table th {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.m10p-th-doc { background: #eef2ff; }
+.m10p-th-act { background: #ecfeff; }
+.m10p-th-cat { background: #f0fdf4; }
+.m10p-th-tax { background: #fefce8; }
+.m10p-th-num { background: #fdf2f8; }
+.m10p-table tfoot th { background: #f4f4f5; }
+.m10p-foot-note { font-weight: 600; text-align: right; }
+
 .m10p-signs { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; text-align: center; font-size: 10pt; }
 .m10p-line { display: block; border-bottom: 1px dotted #000; height: 1px; margin-bottom: 4px; }
 .m10p-line-sm { display: inline-block; border-bottom: 1px dotted #000; width: 90px; }
