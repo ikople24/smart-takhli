@@ -1269,13 +1269,20 @@ body.survey-form-open .app-bottom-nav {
 
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
+  /* ปลดล็อกความสูง/overflow ของ html-body กันเนื้อหาที่ล้นถูกตัดทิ้งเหลือหน้าเดียว */
+  html, body { height: auto !important; max-height: none !important; overflow: visible !important; }
   .m10p-toolbar, .m10p-msg { display: none !important; }
-  .m10p-root { padding: 0; }
+  .m10p-root { padding: 0; height: auto !important; overflow: visible !important; }
   .m10p-cover, .m10p-divider, .m10p-sheet {
     border: none; margin: 0; break-after: page; break-inside: avoid;
   }
   /* หัวตารางบัญชีคุมซ้ำทุกหน้าเมื่อตารางยาวข้ามหน้า */
   .m10p-table thead { display: table-header-group; }
+  /* แผ่นสุดท้ายของเล่มไม่ต้องขึ้นหน้าใหม่ ไม่งั้นได้หน้าเปล่าท้ายเล่ม
+     (เจาะจงหมวดสุดท้ายเท่านั้น — ถ้าใช้ .m10p-sheet:last-child เฉย ๆ จะไปโดนแผ่นท้ายของทุกหมวด
+     ทำให้ใบคั่นหมวดถัดไปมาแปะอยู่หน้าเดียวกัน) */
+  .m10p-book > div:last-child .m10p-sheet:last-child { break-after: auto; }
+
   /* ประหยัดกระดาษ: แผ่นที่ไม่มีสคริปต์ขั้นตอนอยู่ได้ 2 รายการ/หน้า */
   .m10p-compact .m10p-sheet { break-after: auto; padding-bottom: 8px; border-bottom: 1px dashed #000; }
   .m10p-compact .m10p-divider { break-after: page; }

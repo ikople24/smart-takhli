@@ -113,8 +113,12 @@ Spec: `docs/superpowers/specs/2026-06-30-m10-basemap-editor-design.md` · Plan: 
 Spec: `docs/superpowers/specs/2026-06-30-m10-parcelcode-suggest-design.md` · Plan: `docs/superpowers/plans/2026-06-30-m10-parcelcode-suggest.md`
 
 ## เล่มพิมพ์บัญชีคุมนิติกรรมรายเดือน (2026-09-21)
-- หน้า `/admin/m10/print?period=YYYY-MM` (`?compact=1` = 2 รายการ/หน้า) — **ไม่ใช้ `LayoutAdmin`**
-  เพราะ chrome จะติดไปในกระดาษ · สิทธิ์ได้ตาม prefix ของ `/admin/m10` ไม่ต้อง migration
+- หน้า `/admin/m10/print?period=YYYY-MM` (`?compact=1` = 2 รายการ/หน้า) · สิทธิ์ได้ตาม prefix
+  ของ `/admin/m10` ไม่ต้อง migration
+- ⚠️ **`components/Layout.js` มี early return ให้ pathname นี้โดยเฉพาะ — ห้ามลบ**: Layout ใส่
+  `LayoutAdmin` ให้ทุก route ที่ขึ้นต้นด้วย `/admin` อัตโนมัติ และ wrapper เป็น
+  `h-screen overflow-hidden` ซึ่งตัดเนื้อหาที่ล้นจอทิ้ง → **สั่งพิมพ์จะได้แค่หน้าเดียว**
+  (บทเรียนจริง 2026-09-21) · print CSS ยัง `height: auto !important` ให้ html/body ซ้ำอีกชั้น
 - เล่ม = ใบปกบัญชีคุม → ใบคั่นหมวด → แผ่นงานรายแปลง · **ชั้นบนแยกตาม `docType`** (โฉนด →
   สิ่งปลูกสร้าง → น.ส.3ก) ชั้นในแยกตาม `changeType` ตามลำดับคงที่ใน `print/labels.ts`
 - **แผ่นงานมีเฉพาะรายการ `taxRelevant`** · ที่ไม่กระทบภาษี (จำนอง/หมายเหตุ/ใบแทน) ขึ้นเฉพาะใบปก

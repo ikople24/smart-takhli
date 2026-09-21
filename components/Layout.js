@@ -55,6 +55,13 @@ const Layout = ({ children }) => {
   const router = useRouter();
   const isAdminRoute = router.pathname.startsWith("/admin");
 
+  // หน้าเล่มพิมพ์ ม.10 — ต้องอยู่นอก chrome ของแอดมินทั้งหมด
+  // เพราะ wrapper ของ admin เป็น h-screen + overflow-hidden ซึ่งตัดเนื้อหาที่ล้นจอทิ้ง
+  // → สั่งพิมพ์แล้วจะได้แค่หน้าเดียว (และ sidebar จะติดไปในกระดาษด้วย)
+  if (router.pathname === "/admin/m10/print") {
+    return <>{children}</>;
+  }
+
   if (isAdminRoute) {
     // หา metadata ตาม pathname (fallback ว่างถ้าไม่มีใน map)
     const meta = ADMIN_META[router.pathname] || {};

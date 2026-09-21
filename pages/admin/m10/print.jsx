@@ -1,4 +1,8 @@
-// หน้าเล่มพิมพ์ — ไม่ใช้ LayoutAdmin เพราะ sidebar/nav จะติดไปในกระดาษ
+// หน้าเล่มพิมพ์ — ต้องอยู่นอก chrome ของแอดมิน
+// สำคัญ: components/Layout.js ใส่ LayoutAdmin ให้ทุก route ที่ขึ้นต้นด้วย /admin โดยอัตโนมัติ
+// (ไม่เกี่ยวกับว่า page นี้ import หรือไม่) และ wrapper ของมันเป็น h-screen + overflow-hidden
+// ซึ่งตัดเนื้อหาที่ล้นจอทิ้ง → สั่งพิมพ์ได้แค่หน้าเดียว
+// จึงมี early return สำหรับ pathname นี้ใน Layout.js — อย่าลบทิ้ง
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import PrintBook from "@/components/m10/print/PrintBook";
