@@ -10,7 +10,7 @@ import {
   insertTransactionDedup, insertReject,
 } from "./repository/index";
 
-export interface IngestOptions { period: string; optId?: string; optName?: string; }
+export interface IngestOptions { period: string; optId?: string; optName?: string; password?: string; }
 export interface IngestResult {
   skipped: boolean; batchId?: string;
   counts?: { transactions: number; rejects: number; geometryMatched: number; geometryUnmatched: number };
@@ -21,7 +21,7 @@ export async function ingestZip(buffer: Buffer, opts: IngestOptions): Promise<In
   const existing = await findBatchByHash(fileHash);
   if (existing) return { skipped: true, batchId: existing._id.toString() };
 
-  const batchFiles: ExtractedBatch = extractBatch(buffer);
+  const batchFiles: ExtractedBatch = extractBatch(buffer, opts.password);
   const batch = await createBatch({
     fileHash, period: opts.period,
     optId: opts.optId ?? batchFiles.optId, optName: opts.optName ?? batchFiles.optName,

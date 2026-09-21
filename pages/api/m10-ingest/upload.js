@@ -22,13 +22,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "period ต้องเป็นรูปแบบ พ.ศ.-เดือน เช่น 2569-01" });
   }
 
+  // ไฟล์จากกรมที่ดินส่วนใหญ่ใส่รหัสไว้ — ไม่ log ค่านี้
+  const rawPass = Array.isArray(fields.password) ? fields.password[0] : fields.password;
+  const password = rawPass ? String(rawPass) : undefined;
+
   try {
     const buffer = await readFile(file.filepath);
     await dbConnect();
     const { ingestZip } = await import("@/lib/m10-ingest/ingest");
-    const result = await ingestZip(buffer, { period });
+    const result = await ingestZip(buffer, { period, password });
     return res.status(200).json(result);
   } catch (e) {
+    // รหัสผิด/ไม่ได้กรอก = ความผิดฝั่งผู้ใช้ ตอบ 400 พร้อมข้อความที่แก้ได้เอง
+    if (e?.name === "ZipPasswordError") {
+      return res.status(400).json({ error: e.message, reason: e.kind });
+    }
     console.error("m10 ingest error", e);
     return res.status(500).json({ error: e?.message || "ingest ล้มเหลว" });
   } finally {

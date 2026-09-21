@@ -139,3 +139,19 @@ Spec: `docs/superpowers/specs/2026-06-30-m10-parcelcode-suggest-design.md` · Pl
 
 Spec: `docs/superpowers/specs/2026-09-21-m10-print-monthly-book-design.md` ·
 Plan: `docs/superpowers/plans/2026-09-21-m10-print-monthly-book.md`
+
+## ไฟล์ต้นฉบับใส่รหัส + หัวคอลัมน์อังกฤษ (2026-09-21)
+- **ไฟล์ ZIP จากกรมที่ดินส่วนใหญ่ใส่รหัสไว้** → หน้า "นำเข้าข้อมูล" มีช่อง "รหัสเปิดไฟล์"
+  (ไม่บังคับ เว้นว่างได้ถ้าไฟล์ไม่ได้เข้ารหัส) ส่งเป็น field `password` ของ `POST /api/m10-ingest/upload`
+  → `ingestZip(buffer, { period, password })` → `extractBatch(buffer, password)` · **ไม่ log ค่ารหัส**
+- `fileHash` คิดจาก buffer ดิบ ไม่เกี่ยวกับรหัส → กันนำเข้าซ้ำยังทำงานเหมือนเดิม
+- `ZipPasswordError` (`kind: required | wrong | unsupported_encryption`) → API ตอบ **400** พร้อมข้อความไทย
+  ไม่ใช่ 500 เพราะเป็นเรื่องที่เจ้าหน้าที่แก้เองได้
+- ⚠️ **adm-zip ถอดได้เฉพาะ ZipCrypto ไม่รองรับ AES (method 99)** — ถ้าไฟล์เข้ารหัสแบบ AES ระบบจะบอกให้
+  แตกไฟล์แล้วบีบใหม่โดยไม่ใส่รหัส · มีเทสต์ round-trip จริงที่ `adapters/zip-password.test.ts`
+  (สร้างไฟล์เข้ารหัสด้วย `zip -P` ตอนรันเทสต์ ถ้าเครื่องไม่มี zip CLI จะ skip 3 เคสนั้น)
+- **หัวคอลัมน์ต้องเป็นชื่อในไฟล์ดิบ (อังกฤษ)** — ห้ามแตกไฟล์ไปเปลี่ยนหัวตารางเป็นไทยก่อนอัปโหลด
+  (งวด 2569-01 ครั้งแรกเคยทำแบบนั้น ทำให้งวด 2569-02 ที่เป็นไฟล์ดิบเข้าไม่ได้เลยทั้งก้อน)
+- 🔴 **ยังไม่รองรับ `ns3_*.csv` (น.ส.3 ไม่ใช่ น.ส.3ก)** ที่โผล่มาในงวด 2569-02 —
+  `extractBatch` รู้จักแค่ `parcel_*` / `ns3a_*` / `construction_*` แถวในไฟล์นี้จึง**หายเงียบ**
+  ไม่เข้าทั้ง transaction และ rejects ซึ่งขัดกับหลัก "ห้าม drop เงียบ" ของโมดูล

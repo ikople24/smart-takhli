@@ -13,6 +13,7 @@ const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CUR_BE - i);
 
 export default function IngestPanel() {
   const [file, setFile] = useState(null);
+  const [password, setPassword] = useState("");
   const [year, setYear] = useState(CUR_BE);
   const [month, setMonth] = useState(CUR_MONTH);
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export default function IngestPanel() {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("period", period);
+      if (password) fd.append("password", password);
       const res = await fetch("/api/m10-ingest/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "อัปโหลดล้มเหลว");
@@ -57,6 +59,20 @@ export default function IngestPanel() {
         <div>
           <label className="label"><span className="label-text">ไฟล์ ZIP จากกรมที่ดิน</span></label>
           <input type="file" accept=".zip" className="file-input file-input-bordered w-full" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <p className="text-xs opacity-60 mt-1">
+            อัปโหลดไฟล์ต้นฉบับได้เลยไม่ต้องแตกไฟล์ — <strong>ห้ามแก้ชื่อหัวคอลัมน์</strong> เพราะระบบอ่านตามชื่อในไฟล์ดิบ
+          </p>
+        </div>
+        <div>
+          <label className="label"><span className="label-text">รหัสเปิดไฟล์ (ถ้าไฟล์ใส่รหัสไว้)</span></label>
+          <input
+            type="password"
+            autoComplete="off"
+            className="input input-bordered w-full"
+            placeholder="เว้นว่างถ้าไฟล์ไม่ได้ใส่รหัส"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </div>
         <button className="btn btn-primary" disabled={busy}>{busy ? "กำลังประมวลผล..." : "อัปโหลดและประมวลผล"}</button>
       </form>
