@@ -1184,3 +1184,69 @@ body.survey-form-open .app-bottom-nav {
     transition: none;
   }
 }
+
+/* ── เล่มพิมพ์บัญชีคุมนิติกรรม ม.10 (prefix .m10p-) ─────────────────────
+   ห้ามพึ่งสีพื้นหลัง: เครื่องพิมพ์ปิด background graphics เป็นค่าเริ่มต้น → ใช้เส้นขอบ */
+.m10p-root { background: #fff; color: #000; padding: 16px; }
+.m10p-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.m10p-toolbar-info { font-size: 13px; opacity: 0.7; }
+.m10p-msg { padding: 24px; }
+.m10p-error { color: #b91c1c; }
+
+.m10p-cover, .m10p-divider, .m10p-sheet {
+  border: 1px solid #000; padding: 14px; margin-bottom: 16px; font-size: 11pt; line-height: 1.5;
+}
+.m10p-head { text-align: center; margin-bottom: 12px; }
+.m10p-head h1 { font-size: 16pt; font-weight: 700; }
+.m10p-head h2 { font-size: 13pt; }
+.m10p-head h3 { font-size: 12pt; margin-top: 4px; }
+.m10p-meta { font-size: 10pt; margin-top: 6px; }
+
+.m10p-table { width: 100%; border-collapse: collapse; }
+.m10p-table th, .m10p-table td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
+.m10p-num { text-align: right; font-variant-numeric: tabular-nums; }
+.m10p-center { text-align: center; }
+
+.m10p-signs { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; text-align: center; font-size: 10pt; }
+.m10p-line { display: block; border-bottom: 1px dotted #000; height: 1px; margin-bottom: 4px; }
+.m10p-line-sm { display: inline-block; border-bottom: 1px dotted #000; width: 90px; }
+
+.m10p-divider { text-align: center; padding: 40px 14px; }
+.m10p-divider-doc { font-size: 12pt; }
+.m10p-divider-title { font-size: 22pt; font-weight: 700; margin: 8px 0; }
+.m10p-divider-count { font-size: 14pt; }
+.m10p-divider-range { font-size: 10pt; margin-top: 8px; }
+
+.m10p-sheet h4 { font-size: 11pt; font-weight: 700; border-bottom: 1px solid #000; margin: 10px 0 6px; }
+.m10p-sheet-head { display: flex; justify-content: space-between; gap: 12px; }
+.m10p-sheet-status { font-size: 14pt; display: block; }
+.m10p-sheet-sub { font-size: 10pt; }
+.m10p-sheet-seq { text-align: right; font-size: 10pt; display: flex; flex-direction: column; }
+.m10p-badge { border: 1px solid #000; padding: 0 4px; display: inline-block; margin-top: 2px; }
+
+.m10p-fields, .m10p-keyvals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 16px; }
+.m10p-field { display: flex; gap: 6px; font-size: 10pt; border-bottom: 1px dotted #999; }
+.m10p-field dt { min-width: 130px; }
+.m10p-field dd { font-weight: 600; }
+.m10p-note { font-size: 10pt; margin-top: 4px; }
+.m10p-steps { font-size: 10pt; padding-left: 4px; }
+.m10p-step-note { font-weight: 600; margin-top: 4px; list-style: none; }
+.m10p-step-field { display: flex; gap: 8px; list-style: none; border-bottom: 1px dotted #999; }
+.m10p-step-field span { min-width: 160px; }
+.m10p-blank { border: 1px solid #000; height: 110px; }
+.m10p-sheet-foot { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 9pt; margin-top: 10px; border-top: 1px solid #000; padding-top: 6px; }
+.m10p-sheet-foot em { margin-left: auto; }
+
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  .m10p-toolbar, .m10p-msg { display: none !important; }
+  .m10p-root { padding: 0; }
+  .m10p-cover, .m10p-divider, .m10p-sheet {
+    border: none; margin: 0; break-after: page; break-inside: avoid;
+  }
+  /* หัวตารางบัญชีคุมซ้ำทุกหน้าเมื่อตารางยาวข้ามหน้า */
+  .m10p-table thead { display: table-header-group; }
+  /* ประหยัดกระดาษ: แผ่นที่ไม่มีสคริปต์ขั้นตอนอยู่ได้ 2 รายการ/หน้า */
+  .m10p-compact .m10p-sheet { break-after: auto; padding-bottom: 8px; border-bottom: 1px dashed #000; }
+  .m10p-compact .m10p-divider { break-after: page; }
+}
