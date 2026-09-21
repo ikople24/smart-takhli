@@ -111,3 +111,27 @@ Spec: `docs/superpowers/specs/2026-06-30-m10-basemap-editor-design.md` · Plan: 
 - **นอก scope:** auto-group siblings, RETIRED, ตั้งแปลงเก่าที่ถูกรวม/แบ่งเป็น retired อัตโนมัติ, ปรับ buildWorklistItem script เฉพาะ SPLIT/MERGE (worklist item ใช้ builder เดิม)
 
 Spec: `docs/superpowers/specs/2026-06-30-m10-parcelcode-suggest-design.md` · Plan: `docs/superpowers/plans/2026-06-30-m10-parcelcode-suggest.md`
+
+## เล่มพิมพ์บัญชีคุมนิติกรรมรายเดือน (2026-09-21)
+- หน้า `/admin/m10/print?period=YYYY-MM` (`?compact=1` = 2 รายการ/หน้า) — **ไม่ใช้ `LayoutAdmin`**
+  เพราะ chrome จะติดไปในกระดาษ · สิทธิ์ได้ตาม prefix ของ `/admin/m10` ไม่ต้อง migration
+- เล่ม = ใบปกบัญชีคุม → ใบคั่นหมวด → แผ่นงานรายแปลง · **ชั้นบนแยกตาม `docType`** (โฉนด →
+  สิ่งปลูกสร้าง → น.ส.3ก) ชั้นในแยกตาม `changeType` ตามลำดับคงที่ใน `print/labels.ts`
+- **แผ่นงานมีเฉพาะรายการ `taxRelevant`** · ที่ไม่กระทบภาษี (จำนอง/หมายเหตุ/ใบแทน) ขึ้นเฉพาะใบปก
+- **พิมพ์ได้ทันทีไม่ต้องรอคิวยืนยัน** — ทุกแผ่นมีป้าย "ยืนยันแล้ว/รอยืนยัน" จาก `reviewStatus`
+- ชื่อนิติกรรมรายรายการใช้ **`rawStatus` ดิบจากกรมที่ดิน** (ไม่ใช่ชื่อหมวด) ตามที่เจ้าหน้าที่ใช้รายงาน
+- logic ล้วนอยู่ `lib/m10-ingest/print/` (`labels` · `buildSheet` · `buildBook`) มีเทสต์ครบ —
+  **ห้ามคำนวณยอด/ลำดับซ้ำใน component**
+- reuse `identifyFields`/`ownerFields`/`OWNER_FIELD_COLS` + `buildWorklistItem` ของ worklist
+  (จึง export เพิ่มใน `buildWorklistItem.ts`) — 4 นิติกรรมที่มีสคริปต์ได้ขั้นตอน ที่เหลือได้กล่องว่าง
+- `listPrintRows(period)` replay `asOfMaterialize` **ครั้งเดียวที่ต้นงวด** เพื่อหาเจ้าของเดิม
+  (ต่างจาก `getWorklistItem` ที่ replay ต่อรายการ) → แปลงที่มี 2 นิติกรรมในเดือนเดียวจะเห็นเจ้าของ
+  ณ ต้นเดือน ไม่ใช่เจ้าของก่อนนิติกรรมนั้นทันที · งวดแรกสุดจะได้ `oldOwnerName` เป็น null ทั้งหมด
+  เพราะไม่มีประวัติที่ยืนยันแล้วก่อนหน้า (แผ่นงานพิมพ์ว่า "ดูรายชื่อในจอ LTAX")
+- **เลขบัตร 13 หลักพิมพ์เต็มเฉพาะเอกสารชุดนี้** (ตัดสินใจโดยเจ้าของงาน) ที่อื่นคงกติกาเดิม ·
+  ทุกครั้งที่เรียก API จะลง audit log `action: data_exported`, `resourceType: system`
+- print CSS อยู่ท้าย `styles/globals.css` prefix `.m10p-` · **ห้ามใช้สีพื้นหลัง** เพราะเครื่องพิมพ์
+  ปิด background graphics เป็นค่าเริ่มต้น
+
+Spec: `docs/superpowers/specs/2026-09-21-m10-print-monthly-book-design.md` ·
+Plan: `docs/superpowers/plans/2026-09-21-m10-print-monthly-book.md`

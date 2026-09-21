@@ -72,6 +72,7 @@ export default function SummaryPanel() {
                 <th className="text-right">ค้างคีย์</th>
                 <th className="text-right">ข้าม</th>
                 <th className="text-right">รอรอบหน้า</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -84,9 +85,19 @@ export default function SummaryPanel() {
                   <td className="text-right tabular-nums">{r.wlPending > 0 ? <span className="badge badge-error badge-sm">{r.wlPending}</span> : "-"}</td>
                   <td className="text-right tabular-nums">{r.wlSkipped || "-"}</td>
                   <td className="text-right tabular-nums opacity-70">{r.deferred || "-"}</td>
+                  <td>
+                    <a
+                      className="btn btn-xs btn-outline"
+                      href={`/admin/m10/print?period=${encodeURIComponent(r.period)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      พิมพ์เล่ม
+                    </a>
+                  </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={7} className="text-center opacity-60">ยังไม่มีข้อมูลนำเข้า</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="text-center opacity-60">ยังไม่มีข้อมูลนำเข้า</td></tr>}
             </tbody>
           </table>
         </div>
