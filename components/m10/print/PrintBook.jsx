@@ -14,7 +14,12 @@ export default function PrintBook({ book }) {
             lastSheetNo={section.sheets[section.sheets.length - 1]?.sheetNo ?? 0}
           />
           {section.sheets.map((sheet) => (
-            <WorkSheet key={sheet.txnId} sheet={sheet} sectionLabel={section.changeTypeLabel} />
+            <WorkSheet
+              key={sheet.txnId}
+              sheet={sheet}
+              sectionLabel={section.changeTypeLabel}
+              changeType={section.changeType}
+            />
           ))}
         </div>
       ))}

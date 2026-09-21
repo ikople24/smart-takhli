@@ -12,10 +12,10 @@ function FieldRows({ fields }) {
   );
 }
 
-export default function WorkSheet({ sheet, sectionLabel }) {
+export default function WorkSheet({ sheet, sectionLabel, changeType }) {
   return (
     <section className="m10p-sheet">
-      <header className="m10p-sheet-head">
+      <header className={`m10p-sheet-head m10p-ct-${changeType}`}>
         <div>
           <strong className="m10p-sheet-status">{sheet.rawStatus}</strong>
           <span className="m10p-sheet-sub">

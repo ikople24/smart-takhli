@@ -1206,33 +1206,49 @@ body.survey-form-open .app-bottom-nav {
 .m10p-table th, .m10p-table td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
 .m10p-num { text-align: right; font-variant-numeric: tabular-nums; }
 .m10p-center { text-align: center; }
+.m10p-cat-cell { font-weight: 600; }
 
-/* หัวตารางบัญชีคุม: สีจาง ๆ แยกคนละคอลัมน์ให้กวาดตาง่าย
-   print-color-adjust: exact = บังคับให้สีติดไปตอนพิมพ์ (เบราว์เซอร์ปิด background graphics เป็นค่าเริ่มต้น) */
-.m10p-table th {
+.m10p-table th { background: #f4f4f5; }
+.m10p-foot-note { font-weight: 600; text-align: right; }
+
+/* ── สีประจำหมวดนิติกรรม ────────────────────────────────────────────
+   สีเดียวกันปรากฏ 3 ที่: ใบคั่นหมวด · ช่อง "หมวด" ในบัญชีคุม · หัวแผ่นงาน
+   เพื่อให้จับกระดาษที่หล่นปนกันกลับเข้ากองถูก
+   print-color-adjust: exact = บังคับให้สีติดไปตอนพิมพ์
+   (เบราว์เซอร์ปิด background graphics เป็นค่าเริ่มต้น สีจะหายถ้าไม่ใส่) */
+.m10p-table th,
+.m10p-cat-cell,
+.m10p-divider-band,
+.m10p-sheet-head {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.m10p-th-doc { background: #eef2ff; }
-.m10p-th-act { background: #ecfeff; }
-.m10p-th-cat { background: #f0fdf4; }
-.m10p-th-tax { background: #fefce8; }
-.m10p-th-num { background: #fdf2f8; }
-.m10p-table tfoot th { background: #f4f4f5; }
-.m10p-foot-note { font-weight: 600; text-align: right; }
+
+.m10p-ct-TRANSFER { background: #dbeafe; }          /* โอนกรรมสิทธิ์ — ฟ้า */
+.m10p-ct-TRANSFER_PARTIAL { background: #e0e7ff; }  /* ให้เฉพาะส่วน — ฟ้าอมม่วง */
+.m10p-ct-MERGE { background: #dcfce7; }             /* รวมโฉนด — เขียว */
+.m10p-ct-NEW { background: #fef3c7; }               /* เอกสารสิทธิเกิดใหม่ — เหลือง */
+.m10p-ct-SPLIT { background: #ffedd5; }             /* แบ่งแยกในนามเดิม — ส้ม */
+.m10p-ct-SPLIT_PUBLIC { background: #fce7f3; }      /* แบ่งหักที่สาธารณประโยชน์ — ชมพู */
+.m10p-ct-BOUNDARY_CHANGE { background: #ccfbf1; }   /* สอบเขต — เขียวอมฟ้า */
+.m10p-ct-RETIRED { background: #e5e7eb; }           /* ยกเลิกเอกสารสิทธิ — เทา */
+.m10p-ct-OWNER_CORRECTION { background: #ede9fe; }  /* แก้ชื่อเจ้าของ — ม่วง */
+/* ไม่กระทบภาษี — ขึ้นเฉพาะบัญชีคุม ไม่มีกอง จึงใช้เทาอ่อนกลาง ๆ */
+.m10p-ct-ENCUMBRANCE, .m10p-ct-NOTE, .m10p-ct-ADMIN { background: #f5f5f4; }
 
 .m10p-signs { display: flex; justify-content: space-between; gap: 16px; margin-top: 48px; text-align: center; font-size: 10pt; }
 .m10p-line { display: block; border-bottom: 1px dotted #000; height: 1px; margin-bottom: 4px; }
 .m10p-line-sm { display: inline-block; border-bottom: 1px dotted #000; width: 90px; }
 
-.m10p-divider { text-align: center; padding: 40px 14px; }
+.m10p-divider { text-align: center; padding: 40px 0 14px; }
+.m10p-divider-band { padding: 28px 14px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
 .m10p-divider-doc { font-size: 12pt; }
 .m10p-divider-title { font-size: 22pt; font-weight: 700; margin: 8px 0; }
 .m10p-divider-count { font-size: 14pt; }
 .m10p-divider-range { font-size: 10pt; margin-top: 8px; }
 
 .m10p-sheet h4 { font-size: 11pt; font-weight: 700; border-bottom: 1px solid #000; margin: 10px 0 6px; }
-.m10p-sheet-head { display: flex; justify-content: space-between; gap: 12px; }
+.m10p-sheet-head { display: flex; justify-content: space-between; gap: 12px; padding: 6px 8px; border: 1px solid #000; }
 .m10p-sheet-status { font-size: 14pt; display: block; }
 .m10p-sheet-sub { font-size: 10pt; }
 .m10p-sheet-seq { text-align: right; font-size: 10pt; display: flex; flex-direction: column; }

@@ -22,11 +22,11 @@ export default function CoverSheet({ book }) {
       <table className="m10p-table">
         <thead>
           <tr>
-            <th className="m10p-th-doc">ชนิดเอกสาร</th>
-            <th className="m10p-th-act">นิติกรรม</th>
-            <th className="m10p-th-cat">หมวด</th>
-            <th className="m10p-th-tax">กระทบภาษี</th>
-            <th className="m10p-th-num m10p-num">จำนวน</th>
+            <th>ชนิดเอกสาร</th>
+            <th>นิติกรรม</th>
+            <th>หมวด</th>
+            <th>กระทบภาษี</th>
+            <th className="m10p-num">จำนวน</th>
           </tr>
         </thead>
         <tbody>
@@ -34,7 +34,7 @@ export default function CoverSheet({ book }) {
             <tr key={`${r.docType}-${r.rawStatus}-${i}`}>
               <td>{r.docTypeLabel}</td>
               <td>{r.rawStatus}</td>
-              <td>{r.changeTypeLabel}</td>
+              <td className={`m10p-cat-cell m10p-ct-${r.changeType}`}>{r.changeTypeLabel}</td>
               <td className="m10p-center">{r.taxRelevant ? "✓" : "—"}</td>
               <td className="m10p-num">{r.count}</td>
             </tr>
