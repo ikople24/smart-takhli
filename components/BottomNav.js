@@ -14,7 +14,7 @@ export default function BottomNav() {
   const isAdminRoute = router.pathname.startsWith("/admin");
 
   return (
-    <div className={`fixed bottom-0 left-0 w-full bg-white/30 backdrop-blur-md border-t border-white/40 shadow-md z-50 flex justify-around items-center h-14 px-safe${isAdminRoute ? " md:hidden" : ""}`}>
+    <div className={`app-bottom-nav fixed bottom-0 left-0 w-full bg-white/30 backdrop-blur-md border-t border-white/40 shadow-md z-50 flex justify-around items-center h-14 px-safe${isAdminRoute ? " md:hidden" : ""}`}>
       {navs.map((nav) =>
         nav.disabled ? (
           <div

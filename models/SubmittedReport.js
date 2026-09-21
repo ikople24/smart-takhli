@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+/** หลักฐานการยอมรับข้อตกลงก่อนแจ้งเรื่อง — ต้องตรงกับ models/Complaint.js */
+const ConsentSchema = new mongoose.Schema(
+  {
+    version: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const SubmittedReportSchema = new mongoose.Schema({
 
   fullName: String,
@@ -31,6 +40,8 @@ const SubmittedReportSchema = new mongoose.Schema({
     type: String,
     default: 'on',
   },
+  /** กองที่รับผิดชอบ (ชื่อมาตรฐานจาก lib/tasks/departments.js) — ต้องตรงกับ models/Complaint.js (schema ซ้ำสองไฟล์) */
+  department: { type: String, default: '' },
   isConfidential: { type: Boolean, default: false },
   pdpaSensitive: { type: Boolean, default: false },
   pdpaDetailRedactions: {
@@ -42,6 +53,7 @@ const SubmittedReportSchema = new mongoose.Schema({
     ],
     default: [],
   },
+  consent: { type: ConsentSchema, default: undefined },
   updatedAt: {
     type: Date,
     default: Date.now,

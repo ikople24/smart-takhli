@@ -7,11 +7,16 @@
 | เรื่องร้องเรียน | [complaints.md](complaints.md) | `/complaint`, `/admin/manage-complaints` |
 | โรงเรียนผู้สูงอายุ | [elderly-school.md](elderly-school.md) | `/admin/elderly-school` |
 | Smart Health (ยืม-คืนอุปกรณ์, สุขภาพพนักงาน) | [smart-health.md](smart-health.md) | `/admin/smart-health` |
-| การศึกษา (Smart School) | [education.md](education.md) | `/admin/education-map` |
+| การศึกษา (Smart School) | [smart-school.md](smart-school.md) | `/admin/smart-school` |
+| เสาไฟสาธารณะ (Smart Light) | [smart-light.md](smart-light.md) | `/admin/smart-light` |
 | กิจกรรม | [activities.md](activities.md) | `/activities`, `/admin/manage-activities` |
 | ประเมินความพึงพอใจ | [satisfaction.md](satisfaction.md) | `/user/satisfaction` |
 | PM2.5 (DustBoy) | [pm25.md](pm25.md) | `/admin/pm25-settings` |
 | Smart Papar (คุณภาพน้ำประปา) | [smart-papar.md](smart-papar.md) | `/admin/smart-papar/water-quality` |
+| Smart Waste (ขยะรีไซเคิล) | [smart-waste.md](smart-waste.md) | `/admin/smart-waste` |
+| ทะเบียนท่อประปา (Smart Water) | [smart-water.md](smart-water.md) | `/admin/smart-water` |
+| ตารางเดินรถเก็บขยะ (Garbage) | [garbage.md](garbage.md) | `/garbage`, `/admin/garbage` |
+| งานเจ้าหน้าที่ (Officer tasks) | [tasks.md](tasks.md) | `/admin/my-tasks` (เฟส 1: logic/API/components) |
 | มาตรา 10 (นำเข้า/normalize ข้อมูลกรมที่ดิน) | [m10-ingest.md](m10-ingest.md) | `/admin/m10-ingest`, `/admin/m10-review`, `/admin/m10-records` |
 | Superadmin / สิทธิ์ | [superadmin-permissions.md](superadmin-permissions.md) | `/admin/superadmin` |
 | แจ้งเตือน / Audit log | [notifications-audit.md](notifications-audit.md) | `/admin/notifications` |
@@ -45,8 +50,10 @@ models/<module>/                          ← Mongoose models
 - ✅ **เฟส 3 (เสร็จ)**: complaints — ย้าย root components → `components/complaints/`
   + dedup `*New` + ลบ dead code (2026-06-18); ย้าย `/api/assignments` →
   `/api/complaints/assignments` + อัปเดต caller (2026-06-19)
-- **เฟส 4**: education — `StudentFeedback*` components → `components/education/`,
-  จัดความสัมพันธ์ education ↔ activities หลังออกแบบฟีด
+- ✅ **เฟส 4 (เสร็จ)**: education ถูกรีดีไซน์เป็นโมดูล `smart-school` เต็มรูปแบบ
+  (models/API/components/lib ตาม convention) แทนที่จะย้าย component เดิม —
+  โมดูลเก่าปลดระวางแล้ว 2026-07 (ดู [smart-school.md](smart-school.md));
+  ความสัมพันธ์กับ activities ยังคงผ่าน `StudentFeedback.activityId`
 - **เฟส 5**: satisfaction / pm25 components เข้าโฟลเดอร์, models ที่เหลือเข้า
   subfolder, lib รายฟีเจอร์เข้า `lib/<module>/`
 - **เฟส 6**: เลิก inline User schema ซ้ำซ้อน — ใช้ schema กลางที่เดียว

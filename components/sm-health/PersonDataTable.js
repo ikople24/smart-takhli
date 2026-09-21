@@ -34,7 +34,7 @@ import { COMMUNITIES } from "@/lib/takhliCommunities";
 
 // Dynamic import for map component (ssr: false for leaflet)
 const LocationPickerMap = dynamic(
-  () => import("./LocationPickerMap"),
+  () => import("@/components/LocationPickerMap"),
   { ssr: false, loading: () => <div className="h-64 bg-gray-100 rounded-xl flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div> }
 );
 

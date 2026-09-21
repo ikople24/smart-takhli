@@ -21,12 +21,33 @@ const AuditLogSchema = new mongoose.Schema({
       'complaint_completed',
       // Permissions
       'permissions_updated',
+      'permissions_bulk_updated',
       'app_id_assigned',
+      // User repair (หน้า superadmin)
+      'user_repaired',
+      'user_doc_deleted',
       // Assignment
       'assignment_created',
       'assignment_completed',
       // Notification
       'notification_sent',
+      // Smart Waste
+      'waste_daily_updated',
+      // Garbage schedule
+      'garbage_assignment_created',
+      'garbage_assignment_updated',
+      'garbage_assignment_deleted',
+      'garbage_route_updated',
+      'garbage_schedule_imported',
+      'garbage_communities_mapped',
+      // Officer tasks
+      'task_settings_updated',
+      'assignment_follow_up',
+      'assignment_unclaimed',
+      'complaint_department_set',
+      'assignment_transfer_requested',
+      'department_head_set',
+      'complaint_deleted',
       // General
       'data_exported',
       'login',
@@ -37,7 +58,7 @@ const AuditLogSchema = new mongoose.Schema({
   /** resource ที่ถูกกระทำ */
   resourceType: {
     type: String,
-    enum: ['complaint', 'assignment', 'user', 'notification', 'system'],
+    enum: ['complaint', 'assignment', 'user', 'notification', 'system', 'garbage_assignment', 'garbage_route'],
     required: true,
   },
   resourceId: { type: String, default: '' },

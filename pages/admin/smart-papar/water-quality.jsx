@@ -205,6 +205,59 @@ function normalizePayload(form) {
   };
 }
 
+function ymToThaiMonthLabel(ym) {
+  if (!/^\d{4}-\d{2}$/.test(String(ym || ""))) return String(ym || "");
+  const [y, m] = ym.split("-").map((n) => parseInt(n, 10));
+  return `${TH_MONTHS[m - 1]} ${y + 543}`;
+}
+
+// "YYYY-MM" → ช่วงวันแรก-วันสุดท้ายของเดือน (YYYY-MM-DD)
+function monthRange(ym) {
+  if (!/^\d{4}-\d{2}$/.test(String(ym || ""))) return { start: "", end: "" };
+  const [y, m] = ym.split("-").map((n) => parseInt(n, 10));
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { start: `${ym}-01`, end: `${ym}-${String(lastDay).padStart(2, "0")}` };
+}
+
+function round2OrNull(n) {
+  if (n === null || n === undefined || !Number.isFinite(n)) return null;
+  return Math.round(n * 100) / 100;
+}
+
+function avgOf(list, getter) {
+  const vals = list.map(getter).map(numOrNull).filter((v) => v !== null);
+  if (vals.length === 0) return null;
+  return round2OrNull(vals.reduce((a, b) => a + b, 0) / vals.length);
+}
+
+// สรุปค่าเฉลี่ยรายเดือน (group ตาม YYYY-MM) — เว้นค่าว่างไม่นำมาคิดเฉลี่ย
+function buildMonthlySummary(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    const ym = String(r?.recordDate || "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(ym)) continue;
+    if (!groups.has(ym)) groups.set(ym, []);
+    groups.get(ym).push(r);
+  }
+  return [...groups.keys()]
+    .sort()
+    .map((ym) => {
+      const list = groups.get(ym);
+      return {
+        ym,
+        count: list.length,
+        rawNtu: avgOf(list, (r) => r?.raw?.turbidityNtu),
+        rawPh: avgOf(list, (r) => r?.raw?.ph),
+        rawTds: avgOf(list, (r) => r?.raw?.tdsMgL),
+        tapNtu: avgOf(list, (r) => r?.tap?.turbidityNtu),
+        tapPh: avgOf(list, (r) => r?.tap?.ph),
+        tapTds: avgOf(list, (r) => r?.tap?.tdsMgL),
+        clSrc: avgOf(list, (r) => r?.tap?.freeChlorineSourceMgL),
+        clEnd: avgOf(list, (r) => r?.tap?.freeChlorineEndMgL),
+      };
+    });
+}
+
 export default function SmartPaparWaterQualityPage() {
   const today = useMemo(() => getBangkokYMD(new Date()), []);
   const minDate = useMemo(() => addDaysYMD(today, -7), [today]);
@@ -219,6 +272,11 @@ export default function SmartPaparWaterQualityPage() {
   const [form, setForm] = useState(() => emptyForm(today));
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // เดือนสำหรับ Export Excel + mini dashboard (ค่าเริ่มต้น: เดือนปัจจุบัน)
+  const [exportMonth, setExportMonth] = useState(() => today.slice(0, 7));
+  const [exporting, setExporting] = useState(false);
+  const [monthData, setMonthData] = useState({ loading: false, rows: [], summary: null });
 
   const canEditSelected = useMemo(() => canEditYmd(form.recordDate, 7), [form.recordDate]);
   const latest = useMemo(() => (Array.isArray(items) && items.length > 0 ? items[0] : null), [items]);
@@ -242,6 +300,31 @@ export default function SmartPaparWaterQualityPage() {
     fetchItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // โหลดข้อมูลของเดือนที่เลือก เพื่อแสดง mini dashboard (สรุปค่าเฉลี่ยของเดือน)
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}$/.test(exportMonth)) return;
+    const { start, end } = monthRange(exportMonth);
+    let cancelled = false;
+    (async () => {
+      setMonthData((p) => ({ ...p, loading: true }));
+      try {
+        const params = new URLSearchParams({ start, end });
+        const res = await fetch(`/api/smart-papar/water-quality?${params.toString()}`, {
+          credentials: "same-origin",
+        });
+        const data = await res.json();
+        const rows = res.ok && data.success && Array.isArray(data.data) ? data.data : [];
+        if (cancelled) return;
+        setMonthData({ loading: false, rows, summary: buildMonthlySummary(rows)[0] || null });
+      } catch {
+        if (!cancelled) setMonthData({ loading: false, rows: [], summary: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [exportMonth]);
 
   const syncFromSheet = async () => {
     try {
@@ -293,6 +376,132 @@ export default function SmartPaparWaterQualityPage() {
     } finally {
       Swal.close();
       setSyncing(false);
+    }
+  };
+
+  const exportExcel = async () => {
+    if (!/^\d{4}-\d{2}$/.test(exportMonth)) {
+      await Swal.fire({
+        icon: "warning",
+        title: "กรุณาเลือกเดือน",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+    const { start, end } = monthRange(exportMonth);
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      params.set("start", start);
+      params.set("end", end);
+
+      const res = await fetch(`/api/smart-papar/water-quality?${params.toString()}`, {
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "โหลดข้อมูลไม่สำเร็จ");
+
+      const rows = Array.isArray(data.data) ? data.data : [];
+      if (rows.length === 0) {
+        await Swal.fire({
+          icon: "info",
+          title: "เดือนนี้ยังไม่มีข้อมูล",
+          text: `ไม่พบข้อมูลของ ${ymToThaiMonthLabel(exportMonth)}`,
+          confirmButtonText: "ตกลง",
+        });
+        return;
+      }
+
+      // เรียงจากเก่า → ใหม่ ให้อ่านเป็นรายงานได้สะดวก
+      const sorted = [...rows].sort((a, b) =>
+        String(a.recordDate).localeCompare(String(b.recordDate))
+      );
+
+      const cell = (v) => {
+        const n = numOrNull(v);
+        return n === null ? "" : n;
+      };
+      const avgCell = (v) => (v === null || v === undefined ? "" : v);
+
+      const XLSX = await import("xlsx");
+
+      // ── ชีท 1: รายวัน ──
+      const dailyHeader = [
+        "วันที่",
+        "น้ำดิบ NTU",
+        "น้ำดิบ pH",
+        "น้ำดิบ TDS (mg/L)",
+        "น้ำประปา NTU",
+        "น้ำประปา pH",
+        "น้ำประปา TDS (mg/L)",
+        "คลอรีนต้นทาง (mg/L)",
+        "คลอรีนปลายทาง (mg/L)",
+        "หมายเหตุ",
+      ];
+      const dailyRows = sorted.map((r) => [
+        ymdToThaiDmyBE(r.recordDate) || r.recordDate,
+        cell(r?.raw?.turbidityNtu),
+        cell(r?.raw?.ph),
+        cell(r?.raw?.tdsMgL),
+        cell(r?.tap?.turbidityNtu),
+        cell(r?.tap?.ph),
+        cell(r?.tap?.tdsMgL),
+        cell(r?.tap?.freeChlorineSourceMgL),
+        cell(r?.tap?.freeChlorineEndMgL),
+        r?.note || "",
+      ]);
+      const ws1 = XLSX.utils.aoa_to_sheet([dailyHeader, ...dailyRows]);
+      ws1["!cols"] = [
+        { wch: 16 }, { wch: 11 }, { wch: 9 }, { wch: 16 },
+        { wch: 12 }, { wch: 9 }, { wch: 18 }, { wch: 18 },
+        { wch: 18 }, { wch: 24 },
+      ];
+
+      // ── ชีท 2: สรุปรายเดือน (ค่าเฉลี่ย) ──
+      const summary = buildMonthlySummary(sorted);
+      const summaryHeader = [
+        "เดือน",
+        "จำนวนวันที่บันทึก",
+        "เฉลี่ย น้ำดิบ NTU",
+        "เฉลี่ย น้ำดิบ pH",
+        "เฉลี่ย น้ำดิบ TDS",
+        "เฉลี่ย น้ำประปา NTU",
+        "เฉลี่ย น้ำประปา pH",
+        "เฉลี่ย น้ำประปา TDS",
+        "เฉลี่ย คลอรีนต้นทาง",
+        "เฉลี่ย คลอรีนปลายทาง",
+      ];
+      const summaryRows = summary.map((s) => [
+        ymToThaiMonthLabel(s.ym),
+        s.count,
+        avgCell(s.rawNtu),
+        avgCell(s.rawPh),
+        avgCell(s.rawTds),
+        avgCell(s.tapNtu),
+        avgCell(s.tapPh),
+        avgCell(s.tapTds),
+        avgCell(s.clSrc),
+        avgCell(s.clEnd),
+      ]);
+      const ws2 = XLSX.utils.aoa_to_sheet([summaryHeader, ...summaryRows]);
+      ws2["!cols"] = [
+        { wch: 16 }, { wch: 16 }, { wch: 15 }, { wch: 14 }, { wch: 14 },
+        { wch: 16 }, { wch: 15 }, { wch: 16 }, { wch: 17 }, { wch: 18 },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws1, "รายวัน");
+      XLSX.utils.book_append_sheet(wb, ws2, "สรุปรายเดือน");
+      XLSX.writeFile(wb, `คุณภาพน้ำ_${ymToThaiMonthLabel(exportMonth)}.xlsx`);
+    } catch (e) {
+      await Swal.fire({
+        icon: "error",
+        title: "Export ไม่สำเร็จ",
+        text: e.message || "เกิดข้อผิดพลาด",
+        confirmButtonText: "ตกลง",
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -860,6 +1069,70 @@ export default function SmartPaparWaterQualityPage() {
                     รีเฟรช
                   </button>
                 </div>
+              </div>
+
+              <div className="mb-3 p-3 rounded-xl border border-emerald-200 bg-emerald-50/40">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <label className="label py-0">
+                      <span className="label-text text-xs">เลือกเดือน (สรุป + ออกรายงาน)</span>
+                    </label>
+                    <input
+                      type="month"
+                      className="input input-bordered input-sm border-emerald-200 bg-white"
+                      value={exportMonth}
+                      max={today.slice(0, 7)}
+                      onChange={(e) => setExportMonth(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    className="btn btn-sm btn-success text-white"
+                    type="button"
+                    onClick={exportExcel}
+                    disabled={exporting || monthData.loading}
+                    title="ดาวน์โหลดข้อมูลของเดือนที่เลือกเป็นไฟล์ Excel"
+                  >
+                    {exporting ? "กำลังสร้างไฟล์..." : "⬇️ Export Excel"}
+                  </button>
+                </div>
+
+                {/* mini dashboard สรุปเดือนที่เลือก */}
+                {(() => {
+                  const s = monthData.summary;
+                  const tapNtus = monthData.rows
+                    .map((r) => numOrNull(r?.tap?.turbidityNtu))
+                    .filter((v) => v !== null);
+                  const maxTapNtu = tapNtus.length ? Math.max(...tapNtus) : null;
+                  const stat = (label, value, unit, color) => (
+                    <div className="bg-white rounded-xl border border-emerald-100 px-3 py-2 min-w-[112px]">
+                      <div className="text-[11px] text-slate-500 leading-tight">{label}</div>
+                      <div className={`text-xl font-bold tabular-nums leading-tight ${color || "text-slate-800"}`}>
+                        {value}
+                        {unit && value !== "-" ? <span className="text-xs font-medium text-slate-400 ml-1">{unit}</span> : null}
+                      </div>
+                    </div>
+                  );
+                  return (
+                    <div className="mt-3">
+                      <div className="text-xs font-medium text-emerald-900/80 mb-2">
+                        📊 สรุป {ymToThaiMonthLabel(exportMonth)}
+                        {monthData.loading ? " • กำลังโหลด..." : ""}
+                      </div>
+                      {!monthData.loading && (!s || s.count === 0) ? (
+                        <div className="text-sm text-slate-500">ยังไม่มีข้อมูลในเดือนนี้</div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {stat("บันทึก", s ? s.count : "-", "วัน", "text-emerald-700")}
+                          {stat("เฉลี่ย NTU น้ำจ่าย", s ? format2(s.tapNtu) : "-", "", "text-sky-700")}
+                          {stat("สูงสุด NTU น้ำจ่าย", format2(maxTapNtu), "", "text-orange-600")}
+                          {stat("เฉลี่ย pH น้ำจ่าย", s ? format2(s.tapPh) : "-", "")}
+                          {stat("เฉลี่ย คลอรีนต้นทาง", s ? format2(s.clSrc) : "-", "mg/L")}
+                          {stat("เฉลี่ย NTU น้ำดิบ", s ? format2(s.rawNtu) : "-", "")}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {loading ? (

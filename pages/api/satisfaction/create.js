@@ -1,10 +1,7 @@
-import dbConnect from "@/lib/dbConnect";
-import Satisfaction from "@/models/Satisfaction";
-import { n8n } from "@/lib/n8nWebhook";
+import { recordPublicRating } from "@/lib/satisfaction/record";
+import { publicQuotaFullMessage } from "@/lib/satisfaction/quota";
 
 export default async function handler(req, res) {
-  await dbConnect();
-
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -12,22 +9,30 @@ export default async function handler(req, res) {
   const { complaintId, rating, comment } = req.body;
 
   if (!complaintId || !rating) {
-    return res.status(400).json({ message: "Missing required fields" });
+    return res.status(400).json({ success: false, message: "ข้อมูลไม่ครบถ้วน กรุณาให้คะแนนก่อนส่ง" });
   }
 
   try {
-    const newSatisfaction = await Satisfaction.create({
-      complaintId,
-      rating,
-      comment,
-    });
+    const result = await recordPublicRating({ complaintId, rating, comment });
 
-    // แจ้งเตือน n8n (fire-and-forget)
-    n8n.satisfactionSubmitted({ complaintId: String(complaintId), rating, comment });
+    // ให้คะแนนได้เฉพาะเรื่องที่ปิดงานแล้ว และไม่เกินโควตา — กันคนยิง API ตรง ๆ ข้ามหน้าเว็บ
+    if (!result.ok) {
+      if (result.reason === "quota_exceeded") {
+        return res.status(429).json({ success: false, message: publicQuotaFullMessage() });
+      }
+      return result.reason === "not_closed"
+        ? res.status(409).json({
+            success: false,
+            message: "ให้คะแนนได้เมื่อเรื่องดำเนินการเสร็จสิ้นแล้ว",
+          })
+        : res.status(404).json({ success: false, message: "ไม่พบเรื่องร้องเรียนนี้" });
+    }
 
-    return res.status(201).json({ success: true, data: newSatisfaction });
+    // ไม่คืน document — ผู้เรียก (SatisfactionForm) ดูแค่ res.ok และ endpoint สาธารณะไม่ควรคืนทั้ง document (มีฟิลด์ lineUserId)
+    return res.status(201).json({ success: true });
   } catch (error) {
     console.error("Error saving satisfaction:", error);
-    return res.status(500).json({ message: "Server error" });
+    // ข้อความนี้ถูกแสดงตรง ๆ ใน dialog ของประชาชน (SatisfactionForm) — ต้องเป็นภาษาไทย
+    return res.status(500).json({ success: false, message: "ไม่สามารถส่งความคิดเห็นได้ กรุณาลองใหม่อีกครั้ง" });
   }
 }

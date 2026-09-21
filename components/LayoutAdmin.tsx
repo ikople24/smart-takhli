@@ -14,6 +14,8 @@ interface LayoutAdminProps {
   subtitle?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   noSidebar?: boolean;
+  /** true → children คุมพื้นที่ content เองเต็มผืน (ไม่มี p-6/overflow-auto) — สำหรับหน้าแผนที่เต็มจอ */
+  fullBleed?: boolean;
 }
 
 // Sidebar navigation — รวมทุกหน้าที่เคยอยู่ใน dropdown
@@ -21,14 +23,21 @@ const navigationItems = [
   // ภาพรวม
   { label: 'Dashboard',          href: '/admin/dashboard',                icon: '📊', group: 'ภาพรวม' },
   { label: 'งานของฉัน',         href: '/admin/my-tasks',                 icon: '✅', group: 'ภาพรวม' },
+  { label: 'กองงานรอรับ',       href: '/admin/task-pool',                icon: '📥', group: 'ภาพรวม' },
   { label: 'การแจ้งเตือน',     href: '/admin/notifications',             icon: '🔔', group: 'ภาพรวม' },
+  // แก้โปรไฟล์ของตัวเองเท่านั้น (ไม่ใช่หน้าจัดการผู้ใช้คนอื่น) — จึงไม่อยู่กลุ่ม 'ตั้งค่า'
+  { label: 'ข้อมูลส่วนตัว',    href: '/admin/register-user',             icon: '👤', group: 'ภาพรวม' },
 
   // จัดการ
   { label: 'การร้องเรียน',     href: '/admin/manage-complaints',         icon: '📋', group: 'จัดการ' },
   { label: 'Smart Health',       href: '/admin/smart-health',             icon: '🟣', group: 'จัดการ' },
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
-  { label: 'Smart School',       href: '/admin/education-map',            icon: '🏫', group: 'จัดการ' },
+  { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
+  { label: 'ทะเบียนท่อประปา',   href: '/admin/smart-water',              icon: '🚰', group: 'จัดการ' },
+  { label: 'ระบบบริหารจัดการขยะ', href: '/admin/smart-waste',               icon: '♻️', group: 'จัดการ' },
+  { label: 'ตารางเดินรถเก็บขยะ', href: '/admin/garbage',                   icon: '🚛', group: 'จัดการ' },
   { label: 'แผนที่ภาษี (ม.10)', href: '/admin/m10',                     icon: '🗺️', group: 'จัดการ' },
   { label: 'แก้รูปแปลง (basemap)', href: '/admin/m10/basemap',           icon: '✏️', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },
@@ -38,7 +47,6 @@ const navigationItems = [
 
   // ตั้งค่า
   { label: 'ตั้งค่าหน้าจอ',   href: '/admin',                                   icon: '🛠️', group: 'ตั้งค่า' },
-  { label: 'จัดการผู้ใช้',     href: '/admin/register-user',                    icon: '👥', group: 'ตั้งค่า' },
   { label: 'จัดการ PM2.5',     href: '/admin/pm25-settings',                    icon: '🌫️', group: 'ตั้งค่า' },
   { label: 'ข้อมูลองค์กร',     href: '/admin/settings/organizations',           icon: '🏛️', group: 'ตั้งค่า' },
   { label: 'ข้อมูลชุมชน',      href: '/admin/settings/communities',             icon: '🏘️', group: 'ตั้งค่า' },
@@ -54,13 +62,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   subtitle,
   breadcrumbs = [],
   noSidebar = false,
+  fullBleed: fullBleedProp = false,
 }) => {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // หน้าแบบเต็มจอ (แผนที่) — ไม่ใส่ padding/scroll ให้แผนที่กิน area เต็ม
-  const fullBleed = ['/admin/m10/basemap'].includes(router.pathname);
+  // หน้าอื่นส่ง prop เข้ามา ส่วนหน้าแผนที่ m10 กำหนดเองจาก pathname
+  const fullBleed = fullBleedProp || ['/admin/m10/basemap'].includes(router.pathname);
 
   const { role, allowedPages, isLoaded } = usePermissionsStore();
   const { user } = useUser();
@@ -99,7 +109,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
     /*
      * h-screen — sidebar spans full viewport height, same level as TopNavbar
      * TopNavbar is rendered INSIDE the content column (not in Layout.js for admin routes)
-     * BottomNav is fixed bottom-0 h-14 — content area has pb-14 to compensate
+     * โหมด admin ไม่มี BottomNav (เป็น nav ของหน้า public) — เนื้อหาใช้พื้นที่เต็มความสูง
      */
     <div className="flex h-screen bg-base-100 overflow-hidden">
 
@@ -258,22 +268,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
       {/* ─── Main Content ─── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน) */}
-        <TopNavbar />
+        {/* TopNavbar — อยู่ในคอลัมน์ content เท่านั้น (sidebar อยู่ระดับเดียวกัน)
+            hamburger เปิด sidebar (มือถือ) ย้ายมาอยู่บน TopNavbar แล้ว */}
+        <TopNavbar onMenuClick={noSidebar ? undefined : () => setMobileMenuOpen(true)} />
 
-        {/* Page title / subtitle / breadcrumbs sub-header */}
-        {(title || subtitle || breadcrumbs.length > 0) && (
+        {/* Page title / subtitle / breadcrumbs sub-header
+            ข้าม fullBleed (หน้าแผนที่มี header ของตัวเอง ไม่ให้ชื่อซ้ำ) — hamburger ย้ายไป TopNavbar แล้ว */}
+        {!fullBleed && (title || subtitle || breadcrumbs.length > 0) && (
           <div className="flex-shrink-0 bg-base-100 border-b border-base-300">
             <div className="flex items-center gap-4 px-6 h-12">
-              {/* Mobile sidebar toggle */}
-              {!noSidebar && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden btn btn-ghost btn-sm btn-circle"
-                >
-                  <Bars3Icon className="w-5 h-5" />
-                </button>
-              )}
               {(title || subtitle) && (
                 <div>
                   {title && <h2 className="text-base font-semibold leading-tight">{title}</h2>}
@@ -302,7 +305,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Mobile sidebar toggle when no title bar */}
+        {/* ปุ่มเปิด sidebar บนมือถือ เมื่อหน้าไม่มี title bar (เช่นหน้าแผนที่ m10 เต็มจอ) */}
         {!noSidebar && !title && !subtitle && breadcrumbs.length === 0 && (
           <div className="flex-shrink-0 px-4 py-2 md:hidden">
             <button
@@ -314,11 +317,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
         )}
 
-        {/* Scrollable content — pb-14 รองรับ BottomNav ที่ fixed bottom-0; fullBleed = แผนที่เต็มจอ ไม่มี padding */}
+        {/* Scrollable content — โหมด admin ไม่มี BottomNav แล้ว จึงไม่ต้องเผื่อ padding ล่าง
+            fullBleed: children คุมพื้นที่เองเต็มผืน (หน้าแผนที่) — min-h-0 ให้ลูกหดได้ใน flex-col */}
         {fullBleed ? (
-          <div className="flex-1 overflow-hidden min-h-0">{children}</div>
+          <div className="flex-1 overflow-hidden min-h-0">
+            {children}
+          </div>
         ) : (
-          <div className="flex-1 overflow-auto pb-14">
+          <div className="flex-1 overflow-auto">
             <div className="p-6">
               {children}
             </div>

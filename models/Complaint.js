@@ -1,5 +1,16 @@
 import mongoose from 'mongoose';
 
+/** หลักฐานการยอมรับข้อตกลงก่อนแจ้งเรื่อง (จอ consent บน /report)
+ *  ห่อเป็น sub-schema ปิด _id — ถ้าใส่เป็น plain object mongoose จะแถม _id ให้ทุกเอกสาร
+ *  ⚠️ ต้องมีเหมือนกันใน models/SubmittedReport.js (schema ซ้ำสองไฟล์ ชื่อ model เดียวกัน) */
+const ConsentSchema = new mongoose.Schema(
+  {
+    version: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const SubmittedReportSchema = new mongoose.Schema({
   fullName: { type: String, required: true },
   phone: { type: String },
@@ -13,6 +24,10 @@ const SubmittedReportSchema = new mongoose.Schema({
     lng: { type: Number }
   },
   complaintId : { type: String },
+  /** กองที่รับผิดชอบ — ชื่อมาตรฐานจาก lib/tasks/departments.js (คัดแยกจากหน้ากองงานรอรับ); '' = ยังไม่ระบุกอง
+   *  ไม่ใช้ ref Organization เพราะ collection organizations เก็บแค่ตัวเทศบาล ไม่ใช่รายชื่อกอง
+   *  ⚠️ ฟิลด์นี้ต้องมีใน models/SubmittedReport.js ด้วย (schema ซ้ำสองไฟล์ ชื่อ model เดียวกัน) */
+  department: { type: String, default: '' },
   status: { type: String },
   officer: { type: String },
   /** ซ่อนการ์ดจากหน้า complaint / status — แอดมินยังเห็นในระบบหลังบ้าน */
@@ -29,6 +44,7 @@ const SubmittedReportSchema = new mongoose.Schema({
     ],
     default: [],
   },
+  consent: { type: ConsentSchema, default: undefined },
   updatedAt: { type: Date },
   timestamp: { type: Date }
 }, {

@@ -9,21 +9,18 @@ const ADMIN_META = {
   '/admin/dashboard':                 { title: 'แดชบอร์ด' },
   '/admin/manage-complaints':         { title: 'การร้องเรียน' },
   '/admin/smart-health':              { title: 'Smart Health' },
-  '/admin/education-map':             { title: 'Smart School' },
+  '/admin/smart-school':              { title: 'Smart School' },
   '/admin/register-user':             { title: 'จัดการผู้ใช้งาน' },
   '/admin/manage-activities':         { title: 'จัดการกิจกรรม' },
   '/admin/pm25-settings':             { title: 'จัดการ PM2.5' },
   '/admin/elderly-cards':             { title: 'ข้อมูลผู้สูงอายุ' },
   '/admin/elderly-schedule':          { title: 'ตารางเยี่ยมผู้สูงอายุ' },
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
-  '/admin/my-tasks': {
-    title: 'KPI งานของฉัน',
-    subtitle: 'สรุปภาระงานและผลการดำเนินการ',
-    breadcrumbs: [
-      { label: 'Dashboard', href: '/admin/dashboard' },
-      { label: 'KPI งานของฉัน' },
-    ],
-  },
+  // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
+  '/admin/my-tasks':                  { title: 'งานของฉัน' },
+  // task-pool: หน้ามี h1 ของตัวเอง — ไม่ใส่ title ที่นี่ ไม่งั้นชื่อซ้ำสองที่ (เจ้าของแจ้ง 2026-09-01)
+  // หน้าจอ 3 รายละเอียดงาน — full-page: ไม่มี sidebar/sub-header (หน้ามี header bar ← กลับ + breadcrumb เอง)
+  '/admin/my-tasks/[assignmentId]':   { title: 'รายละเอียดงาน', noSidebar: true, fullBleed: true },
   '/admin/notifications': {
     title: 'การแจ้งเตือน',
     subtitle: 'ดูและจัดการการแจ้งเตือนของคุณ',
@@ -41,11 +38,16 @@ const ADMIN_META = {
     ],
   },
   '/admin/smart-papar/water-quality':   { title: 'คุณภาพน้ำ (ประปา)' },
+  '/admin/smart-light':               { title: 'เสาไฟสาธารณะ (กองช่าง)', fullBleed: true },
+  '/admin/smart-waste':               { title: 'ระบบบริหารจัดการขยะ' },
+  // subtitle อยู่ที่ DashboardHeader ในหน้าแล้ว — ใส่ซ้ำที่นี่จะขึ้นสองที่
+  '/admin/garbage':                   { title: 'ตารางเดินรถเก็บขยะ' },
   '/admin/settings/organizations':     { title: 'ข้อมูลองค์กร', subtitle: 'จัดการข้อมูลองค์กรและสำนักงาน' },
   '/admin/settings/communities':       { title: 'ข้อมูลชุมชน', subtitle: 'จัดการข้อมูลชุมชนในพื้นที่' },
   '/admin/settings/geojson-map':      { title: 'แผนที่ GeoJSON', subtitle: 'จัดการและแสดงผล GeoJSON พื้นที่บริการ' },
   '/admin/superadmin':                { title: 'การบริหารระบบ' },
   '/admin/superadmin/audit-log':      { title: 'Audit Log' },
+  '/admin/superadmin/department-heads': { title: 'ตั้งค่าหัวหน้ากอง', subtitle: 'ใครมอบหมาย/โอนงานในกองได้ (โมดูลงานเจ้าหน้าที่)' },
   '/admin/superadmin/setup':          { title: 'ตั้งค่า Superadmin', noSidebar: true },
 };
 
@@ -67,22 +69,33 @@ const Layout = ({ children }) => {
           subtitle={meta.subtitle}
           breadcrumbs={meta.breadcrumbs}
           noSidebar={meta.noSidebar}
+          fullBleed={meta.fullBleed}
         >
           {children}
         </LayoutAdmin>
-        <BottomNav />
       </div>
     );
   }
+
+  // หน้าฝั่งประชาชนโฉมใหม่ (citizen shell) มี chrome ของตัวเอง — ไม่ครอบ layout เดิม
+  // (/, /report, /status, /activities — หน้า public อื่นเช่น /garbage /complaint ยังใช้ layout เดิม)
+  const isCitizenRoute =
+    ["/", "/report", "/activities"].includes(router.pathname) || router.pathname.startsWith("/status");
+  if (isCitizenRoute) {
+    return <>{children}</>;
+  }
+
+  // /garbage มี UI เต็มหน้าของตัวเอง — ไม่แสดง BottomNav เก่าซ้อน (เจ้าของสั่ง 2026-08-20)
+  const hideOldBottomNav = router.pathname === "/garbage";
 
   // Public / User pages: layout เดิม
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 w-full min-w-[320px]">
       <TopNavbar />
-      <main className="flex-1 pb-16 px-4 pt-4 flex flex-col gap-4 w-full overflow-x-hidden">
+      <main className={`flex-1 ${hideOldBottomNav ? "pb-4" : "pb-16"} px-4 pt-4 flex flex-col gap-4 w-full overflow-x-hidden`}>
         <div className="w-full">{children}</div>
       </main>
-      <BottomNav />
+      {!hideOldBottomNav && <BottomNav />}
     </div>
   );
 };

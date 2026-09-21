@@ -27,14 +27,6 @@ export const ALL_PAGES: PagePermission[] = [
     description: 'ตั้งค่าหน้าจอและระบบ',
     category: 'settings'
   },
-  {
-    path: '/admin/register-user',
-    label: 'จัดการผู้ใช้งาน',
-    icon: '👥',
-    description: 'ลงทะเบียนและแก้ไขข้อมูลผู้ใช้',
-    category: 'settings'
-  },
-  
   // Management
   {
     path: '/admin/manage-complaints',
@@ -66,10 +58,10 @@ export const ALL_PAGES: PagePermission[] = [
     hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   {
-    path: '/admin/education-map',
+    path: '/admin/smart-school',
     label: 'smart-school',
     icon: '🏫',
-    description: 'ระบบการศึกษา',
+    description: 'ระบบสำรวจการศึกษา/ทุนการศึกษา (ทะเบียนบุคคล + ใบสมัครรายปี)',
     category: 'management'
   },
   {
@@ -77,6 +69,34 @@ export const ALL_PAGES: PagePermission[] = [
     label: 'smart-papar (คุณภาพน้ำ)',
     icon: '💧',
     description: 'ระบบบันทึกคุณภาพน้ำรายวัน (งานประปา)',
+    category: 'management'
+  },
+  {
+    path: '/admin/smart-light',
+    label: 'เสาไฟสาธารณะ',
+    icon: '💡',
+    description: 'ทะเบียน+สำรวจเสาไฟสาธารณะ LED บนแผนที่ (กองช่าง)',
+    category: 'management'
+  },
+  {
+    path: '/admin/smart-water',
+    label: 'ทะเบียนท่อประปา',
+    icon: '🚰',
+    description: 'ทะเบียนท่อประปาและอุปกรณ์ — แผนที่แนวท่อ + รายงานความยาว',
+    category: 'management'
+  },
+  {
+    path: '/admin/smart-waste',
+    label: 'ระบบบริหารจัดการขยะ',
+    icon: '♻️',
+    description: 'บันทึกน้ำหนักขยะรีไซเคิลและขยะเปียกรายวัน (กองสาธารณสุข)',
+    category: 'management'
+  },
+  {
+    path: '/admin/garbage',
+    label: 'ตารางเดินรถเก็บขยะ',
+    icon: '🚛',
+    description: 'ตารางเดินรถเก็บขยะรายสัปดาห์ (กองสาธารณสุข)',
     category: 'management'
   },
   {
@@ -140,6 +160,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/task-pool',
+    label: 'กองงานรอรับ',
+    icon: '📥',
+    description: 'เรื่องร้องเรียนที่ยังไม่มีเจ้าหน้าที่รับผิดชอบ — รับงาน / มอบหมาย / คัดแยกกอง',
+    category: 'management'
+  },
+  {
     path: '/admin/notifications',
     label: 'การแจ้งเตือน',
     icon: '🔔',
@@ -172,6 +199,16 @@ export const ALL_PAGES: PagePermission[] = [
 
   // User
   {
+    // หน้านี้ "ไม่ใช่" หน้าจัดการผู้ใช้คนอื่น — แก้ได้เฉพาะโปรไฟล์ของคนที่ล็อกอินอยู่
+    // (ฟอร์มผูกกับ user.id เสมอ) จึงจัดหมวด 'user' ไม่ใช่ 'settings'
+    // ถ้าอยู่หมวด settings จะโดน preset ผู้บริหารตัดทิ้ง = boss แก้โปรไฟล์ตัวเองไม่ได้
+    path: '/admin/register-user',
+    label: 'ข้อมูลส่วนตัว',
+    icon: '👤',
+    description: 'ลงทะเบียนและแก้ไขข้อมูลโปรไฟล์ของตัวเอง',
+    category: 'user'
+  },
+  {
     path: '/user/satisfaction',
     label: 'ประเมินความพึงพอใจ',
     icon: '⭐',
@@ -183,12 +220,17 @@ export const ALL_PAGES: PagePermission[] = [
 
 // หน้าที่ superadmin เท่านั้นที่เข้าถึงได้
 // ต้องตรงกับไฟล์จริงใน pages/admin/superadmin/
-// ✓ index.jsx  → /admin/superadmin
-// ✓ setup.jsx  → /admin/superadmin/setup
+// ✓ index.jsx         → /admin/superadmin
+// ✓ setup.jsx         → /admin/superadmin/setup
+// ✓ audit-log.tsx     → /admin/superadmin/audit-log
+// ✓ line-settings.jsx → /admin/superadmin/line-settings
+// ✓ department-heads.tsx → /admin/superadmin/department-heads (ตั้งค่าหัวหน้ากอง — โมดูลงานเจ้าหน้าที่)
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
   '/admin/superadmin/setup',
   '/admin/superadmin/audit-log',
+  '/admin/superadmin/line-settings',
+  '/admin/superadmin/department-heads',
 ];
 
 // สิทธิ์เริ่มต้นตาม role — ใช้เมื่อ user ยังไม่มี allowedPages ใน Mongo (= ยังไม่ถูกตั้งค่า)
@@ -197,17 +239,42 @@ export const SUPERADMIN_ONLY_PAGES = [
 export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   superadmin: ALL_PAGES.map(p => p.path), // superadmin เข้าถึงได้ทุกหน้า
   admin: [
+    // หน้าโปรไฟล์ตัวเอง — ต้องอยู่ในชุดพื้นฐาน ไม่งั้นพนักงานใหม่ (allowedPages ว่าง)
+    // เข้าหน้านี้ไม่ได้เลย = ลงทะเบียนตัวเองไม่ได้
+    '/admin/register-user',
     '/admin/dashboard',
     '/admin/my-tasks',
+    '/admin/task-pool', // คู่กับ my-tasks — เจ้าหน้าที่ทุกคนต้องรับงานจากกองได้
     '/admin/notifications',
+    '/admin/smart-light',
+    '/admin/smart-waste',
+    '/admin/garbage',
     '/user/satisfaction',
     '/admin/m10',
   ],
   user: [
+    '/admin/register-user', // แก้โปรไฟล์ตัวเอง — ทุกคนที่ล็อกอินได้ต้องเข้าได้
     '/user/satisfaction',
   ],
   guest: [],
 };
+
+// Preset "ผู้บริหาร (boss)" — เห็นทุกโมดูลยกเว้นการตั้งค่า
+// ใช้เป็น "แหล่งความจริงเดียว" ให้ปุ่ม preset ในหน้า /admin/superadmin (superadmin กด
+// apply ให้ user รายคน แล้วบันทึกลง allowedPages) — เพิ่มหน้าโมดูลใหม่ในหมวด management/
+// reports/user เมื่อไร preset นี้จะรวมให้อัตโนมัติ
+//
+// /admin/pm25-settings อยู่หมวด management แต่เนื้อหาคือ "ตั้งค่าแหล่งข้อมูลฝุ่น"
+// จึงถูกนับเป็นการตั้งค่าและตัดออกจาก preset นี้ (ไม่ให้ผู้บริหารเห็น)
+export const EXECUTIVE_EXCLUDED_PATHS = ['/admin/pm25-settings'];
+
+// รายการ path สำหรับ preset ผู้บริหาร = ทุกหน้าที่ category !== 'settings'
+// และไม่อยู่ใน EXECUTIVE_EXCLUDED_PATHS
+export function getExecutivePagePaths(): string[] {
+  return ALL_PAGES
+    .filter(p => p.category !== 'settings' && !EXECUTIVE_EXCLUDED_PATHS.includes(p.path))
+    .map(p => p.path);
+}
 
 // path ที่ต้อง match แบบ exact เท่านั้น — ห้ามทำตัวเป็น prefix ครอบหน้าอื่น
 // ('/admin' คือหน้า "ตั้งค่าหน้าจอ" — ถ้าปล่อยให้ prefix match จะกลายเป็น wildcard

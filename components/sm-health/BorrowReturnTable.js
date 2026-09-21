@@ -12,7 +12,7 @@ import {
 } from '@/lib/smartHealthBorrowDates';
 
 const LocationPickerMap = dynamic(
-  () => import('@/components/sm-health/LocationPickerMap'),
+  () => import('@/components/LocationPickerMap'),
   {
     ssr: false,
     loading: () => (

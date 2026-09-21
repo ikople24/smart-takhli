@@ -3,7 +3,9 @@
 //
 // ENV vars ที่ต้องมีใน .env.local:
 //   LINE_CHANNEL_ACCESS_TOKEN  — Channel Access Token จาก LINE Developers Console
-//   LINE_ADMIN_GROUP_ID        — (optional) LINE group/user ID สำหรับแจ้งเจ้าหน้าที่เรื่องใหม่
+//   LINE_ADMIN_GROUP_ID        — groupId ของกลุ่มเจ้าหน้าที่ (ขึ้นต้น C...)
+//                                ได้จากการเชิญบอทเข้ากลุ่มแล้วบอทตอบ groupId กลับมา
+//                                หรือพิมพ์ "groupid" ในกลุ่ม
 //
 // ใช้งาน:
 //   import { lineReply, linePush, formatStatusMessage, buildMessages } from '@/lib/lineMessaging'
@@ -13,6 +15,12 @@
 //
 //   // Push เมื่อสถานะเปลี่ยน (พร้อมภาพ)
 //   await linePush(lineUserId, buildMessages(formatStatusMessage(c), c.images?.[0]))
+//
+//   // แจ้งกลุ่มเจ้าหน้าที่ (skip เงียบ ๆ ถ้าไม่ได้ตั้ง LINE_ADMIN_GROUP_ID)
+//   await lineNotifyAdminGroup(buildMessages(formatNewComplaintMessage(c), c.images?.[0]))
+
+import { getAdminGroupId } from './lineSettings';
+import { buildRatingPostbackData, starText } from './satisfaction/lineRating';
 
 const LINE_API = 'https://api.line.me/v2/bot/message';
 const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
@@ -39,6 +47,93 @@ export interface ImageMessage {
 export type LineMessage = TextMessage | FlexMessage | ImageMessage;
 
 // ---------- Helpers ----------
+
+/**
+ * ฟอร์แมตวันเวลาเป็น "เวลาไทย" เสมอ (Asia/Bangkok)
+ *
+ * สำคัญ: ข้อความ LINE ถูกสร้างฝั่งเซิร์ฟเวอร์ ซึ่งโปรดักชัน (Railway) รันเป็น UTC
+ * ถ้าไม่ระบุ timeZone จะได้เวลาช้ากว่าไทย 7 ชม. (บนเครื่อง dev ที่เป็น Asia/Bangkok
+ * จะดูปกติ เลยไม่เจอตอนเทส) — อย่าเรียก toLocale*String ตรง ๆ ในไฟล์นี้
+ */
+export function formatThaiDateTime(
+  value: Date | string | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }
+): string {
+  if (!value) return '-';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', ...options });
+}
+
+/** ข้อมูลแถบให้คะแนนท้ายการ์ดสถานะ */
+export interface RatingRequest {
+  /** เลขเรื่องแบบ TKC-690006 (ไม่ใช่ ObjectId) */
+  complaintCode: string;
+  /** คะแนนที่คนนี้เคยให้ไว้ — มีค่า = แสดงคะแนนเดิมแทนปุ่ม */
+  current?: number | null;
+}
+
+/**
+ * แถบ "พอใจกับการแก้ไขแค่ไหน?" + ปุ่ม postback 1-5 ดาว
+ * แนบท้าย body ของ bubble เดิม ไม่สร้าง message ใบใหม่ (LINE OA นับโควตาเป็นรายข้อความ)
+ */
+function ratingContents(rating?: RatingRequest | null): Record<string, unknown>[] {
+  if (!rating) return [];
+
+  if (rating.current) {
+    return [
+      { type: 'separator' },
+      {
+        type: 'text',
+        text: `ให้คะแนนไว้แล้ว ${starText(rating.current)}`,
+        size: 'sm',
+        color: '#f59e0b',
+      },
+    ];
+  }
+
+  return [
+    { type: 'separator' },
+    {
+      type: 'text',
+      text: 'พอใจกับการแก้ไขแค่ไหน?',
+      size: 'sm',
+      weight: 'bold',
+      color: '#111111',
+    },
+    {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'xs',
+      contents: [1, 2, 3, 4, 5].map((score) => ({
+        type: 'button',
+        style: 'secondary',
+        height: 'sm',
+        action: {
+          type: 'postback',
+          label: `${score}⭐`,
+          data: buildRatingPostbackData(rating.complaintCode, score),
+          displayText: `ให้ ${score} ดาว`,
+        },
+      })),
+    },
+  ];
+}
+
+/** ข้อความตอบหลังกดดาว */
+export function formatRatingThanks(score: number, updated = false): TextMessage {
+  return {
+    type: 'text',
+    text: updated
+      ? `อัปเดตเป็น ${starText(score)} แล้วครับ`
+      : `ขอบคุณครับ ${starText(score)}\nอยากเล่าเพิ่มพิมพ์มาได้เลยตอนนี้ (ความเห็นอาจแสดงบนเว็บของเทศบาล) ถ้าไม่สะดวกข้ามได้ครับ`,
+  };
+}
 
 /**
  * สร้าง ImageMessage จาก URL
@@ -185,11 +280,26 @@ export async function lineMulticast(
   }
 }
 
+/**
+ * ส่งข้อความเข้ากลุ่ม LINE ของเจ้าหน้าที่
+ * groupId มาจาก Mongo (หน้า /admin/superadmin/line-settings) → fallback env LINE_ADMIN_GROUP_ID
+ * fire-and-forget: ถ้าไม่ได้ตั้งค่าจะ log warning แล้ว skip — ระบบหลักทำงานต่อปกติ
+ */
+export async function lineNotifyAdminGroup(messages: LineMessage[]): Promise<boolean> {
+  const groupId = await getAdminGroupId();
+  if (!groupId) {
+    console.warn('[LINE] admin group id not configured — skipping admin group notify');
+    return false;
+  }
+  return linePush(groupId, messages);
+}
+
 // ---------- Message formatters ----------
 
 /** สี badge ตามสถานะ */
 function statusColor(status: string): string {
   const map: Record<string, string> = {
+    'ดำเนินการเสร็จสิ้น': '#22c55e',
     'เสร็จสิ้น': '#22c55e',
     'อยู่ระหว่างดำเนินการ': '#f59e0b',
     'รอการตรวจสอบ': '#06b6d4',
@@ -202,6 +312,7 @@ function statusColor(status: string): string {
 /** Emoji ตามสถานะ */
 function statusEmoji(status: string): string {
   const map: Record<string, string> = {
+    'ดำเนินการเสร็จสิ้น': '✅',
     'เสร็จสิ้น': '✅',
     'อยู่ระหว่างดำเนินการ': '🔄',
     'รอการตรวจสอบ': '🔍',
@@ -213,6 +324,7 @@ function statusEmoji(status: string): string {
 
 /**
  * สร้าง Flex Message สำหรับแสดงสถานะเรื่องร้องเรียน
+ * เรื่องที่ปิดงานแล้วส่ง solution/note มาด้วยเพื่อแสดงส่วน "การแก้ไข"
  */
 export function formatStatusMessage(complaint: {
   complaintId: string;
@@ -220,20 +332,42 @@ export function formatStatusMessage(complaint: {
   category?: string;
   status: string;
   updatedAt?: Date | string | null;
+  solution?: string[];
+  note?: string;
+  rating?: RatingRequest | null;
 }): FlexMessage {
-  const { complaintId, fullName, category, status, updatedAt } = complaint;
+  const { complaintId, fullName, category, status, updatedAt, solution, note, rating } = complaint;
   const color = statusColor(status);
   const emoji = statusEmoji(status);
 
-  const updatedStr = updatedAt
-    ? new Date(updatedAt).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '-';
+  const updatedStr = formatThaiDateTime(updatedAt, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // ส่วน "การแก้ไข" — แสดงเมื่อมีข้อมูล solution/note (เรื่องที่ปิดงานแล้ว)
+  const solutionItems = (solution ?? []).filter(Boolean);
+  const noteText = note?.trim() || '';
+  const fixContents =
+    solutionItems.length || noteText
+      ? [
+          { type: 'separator' },
+          { type: 'text', text: '🔧 การแก้ไข', size: 'sm', weight: 'bold', color: '#166534' },
+          ...solutionItems.map((s) => ({
+            type: 'text',
+            text: `• ${s}`,
+            size: 'sm',
+            color: '#555555',
+            wrap: true,
+          })),
+          ...(noteText
+            ? [{ type: 'text', text: noteText, size: 'sm', color: '#555555', wrap: true }]
+            : []),
+        ]
+      : [];
 
   return {
     type: 'flex',
@@ -272,6 +406,8 @@ export function formatStatusMessage(complaint: {
           ...(category
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
+          ...fixContents,
+          ...ratingContents(rating),
           { type: 'separator' },
           {
             type: 'text',
@@ -287,7 +423,7 @@ export function formatStatusMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
@@ -300,29 +436,30 @@ export function formatStatusMessage(complaint: {
 
 /**
  * สร้าง Flex Message สำหรับแจ้งเรื่องร้องเรียนใหม่ (ส่งให้เจ้าหน้าที่)
+ * รายละเอียดครบตามข้อความ n8n/Telegram เดิม + ปุ่มเปิดแผนที่จากพิกัดผู้แจ้ง
+ * เรื่องลับ: caller ไม่ส่ง fullName/phone/detail มา (เซ็นเซอร์ตั้งแต่ต้นทาง)
  */
 export function formatNewComplaintMessage(complaint: {
   complaintId: string;
   fullName?: string;
+  phone?: string;
   category?: string;
+  problems?: string[];
   detail?: string;
   community?: string;
+  location?: { lat?: number; lng?: number } | null;
   createdAt?: Date | string | null;
 }): FlexMessage {
-  const { complaintId, fullName, category, detail, community, createdAt } = complaint;
+  const { complaintId, fullName, phone, category, problems, detail, community, location, createdAt } =
+    complaint;
 
-  const createdStr = createdAt
-    ? new Date(createdAt).toLocaleDateString('th-TH', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : '-';
+  const createdStr = formatThaiDateTime(createdAt);
 
-  const detailSnippet = detail
-    ? detail.length > 60 ? detail.slice(0, 60) + '…' : detail
-    : '';
+  const problemsStr = (problems ?? []).filter(Boolean).join(', ');
+  const mapUrl =
+    typeof location?.lat === 'number' && typeof location?.lng === 'number'
+      ? `https://www.google.com/maps?q=${location.lat},${location.lng}`
+      : null;
 
   return {
     type: 'flex',
@@ -355,21 +492,123 @@ export function formatNewComplaintMessage(complaint: {
         spacing: 'sm',
         contents: [
           ...(fullName
-            ? [{ type: 'text', text: `ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333', weight: 'bold' }]
+            ? [{ type: 'text', text: `👤 ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333', weight: 'bold' }]
+            : []),
+          ...(phone
+            ? [{ type: 'text', text: `📞 โทร: ${phone}`, size: 'sm', color: '#555555' }]
+            : []),
+          ...(community
+            ? [{ type: 'text', text: `🏘️ ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
             : []),
           ...(category
             ? [{ type: 'text', text: `หมวดหมู่: ${category}`, size: 'sm', color: '#555555' }]
             : []),
-          ...(community
-            ? [{ type: 'text', text: `ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
+          ...(problemsStr
+            ? [{ type: 'text', text: `🚧 ปัญหา: ${problemsStr}`, size: 'sm', color: '#555555', wrap: true }]
             : []),
-          ...(detailSnippet
-            ? [{ type: 'text', text: detailSnippet, size: 'sm', color: '#666666', wrap: true }]
+          ...(detail
+            ? [
+                { type: 'separator' },
+                { type: 'text', text: '🧾 รายละเอียด', size: 'sm', weight: 'bold', color: '#333333' },
+                { type: 'text', text: detail, size: 'sm', color: '#666666', wrap: true },
+              ]
             : []),
           { type: 'separator' },
           {
             type: 'text',
-            text: `แจ้งเมื่อ: ${createdStr}`,
+            text: `🕒 แจ้งเมื่อ: ${createdStr}`,
+            size: 'xs',
+            color: '#aaaaaa',
+          },
+        ],
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          ...(mapUrl
+            ? [
+                {
+                  type: 'button',
+                  action: { type: 'uri', label: '🗺️ เปิดแผนที่จุดแจ้ง', uri: mapUrl },
+                  style: 'primary',
+                  color: '#6366f1',
+                  height: 'sm',
+                },
+              ]
+            : []),
+          {
+            type: 'text',
+            text: 'เทศบาลเมืองตาคลี — กรุณาตรวจสอบและดำเนินการ',
+            size: 'xs',
+            color: '#aaaaaa',
+            align: 'center',
+            wrap: true,
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * สร้าง Flex Message แจ้งกลุ่มเจ้าหน้าที่เมื่อปิดงาน
+ */
+export function formatClosedMessage(opts: {
+  complaintId: string;
+  community?: string;
+  fullName?: string;
+  officerName?: string;
+  closedAt?: Date | string | null;
+}): FlexMessage {
+  const { complaintId, community, fullName, officerName, closedAt } = opts;
+
+  const closedStr = formatThaiDateTime(closedAt);
+
+  return {
+    type: 'flex',
+    altText: `✅ ปิดงานเรื่องร้องเรียน #${complaintId}`,
+    contents: {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#22c55e',
+        contents: [
+          {
+            type: 'text',
+            text: '✅ ปิดงานเรียบร้อย',
+            color: '#ffffff',
+            weight: 'bold',
+            size: 'lg',
+          },
+          {
+            type: 'text',
+            text: `#${complaintId}`,
+            color: '#dcfce7',
+            size: 'sm',
+          },
+        ],
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          ...(fullName
+            ? [{ type: 'text', text: `ผู้แจ้ง: ${fullName}`, size: 'sm', color: '#333333' }]
+            : []),
+          ...(community
+            ? [{ type: 'text', text: `ชุมชน: ${community}`, size: 'sm', color: '#555555' }]
+            : []),
+          ...(officerName
+            ? [{ type: 'text', text: `เจ้าหน้าที่: ${officerName}`, size: 'sm', color: '#555555', weight: 'bold' }]
+            : []),
+          { type: 'separator' },
+          {
+            type: 'text',
+            text: `ปิดงานเมื่อ: ${closedStr}`,
             size: 'xs',
             color: '#aaaaaa',
           },
@@ -381,11 +620,10 @@ export function formatNewComplaintMessage(complaint: {
         contents: [
           {
             type: 'text',
-            text: 'เทศบาลตำบลตาคลี — กรุณาตรวจสอบและดำเนินการ',
+            text: 'เทศบาลเมืองตาคลี',
             size: 'xs',
             color: '#aaaaaa',
             align: 'center',
-            wrap: true,
           },
         ],
       },
@@ -402,7 +640,8 @@ export function notFoundMessage(complaintId: string): TextMessage {
     text:
       `❌ ไม่พบเรื่องร้องเรียนรหัส "${complaintId}"\n\n` +
       `กรุณาตรวจสอบรหัสและลองใหม่อีกครั้ง\n` +
-      `รูปแบบที่ถูกต้อง: สถานะ TK-001-2025`,
+      `ส่งเลขเต็ม เช่น TKC-690001\n` +
+      `หรือเลขย่อ เช่น 69001 (ปี + 3 ตัวท้าย)`,
   };
 }
 
@@ -412,10 +651,11 @@ export function notFoundMessage(complaintId: string): TextMessage {
 export const helpMessage: TextMessage = {
   type: 'text',
   text:
-    `🏛️ เทศบาลตำบลตาคลี — LINE Bot\n\n` +
-    `คำสั่งที่ใช้ได้:\n` +
-    `📋 สถานะ <รหัส> — ตรวจสอบสถานะเรื่องร้องเรียน\n` +
-    `   ตัวอย่าง: สถานะ TK-001-2025\n\n` +
+    `🏛️ เทศบาลเมืองตาคลี — LINE Bot\n\n` +
+    `ตรวจสอบสถานะเรื่องร้องเรียน:\n` +
+    `📋 ส่งเลขที่เรื่องมาได้เลย เช่น TKC-690001\n` +
+    `   หรือเลขย่อ 69001 (ปี + 3 ตัวท้าย)\n` +
+    `📁 พิมพ์ "เรื่องของฉัน" — ดูเรื่องที่ติดตามไว้ทั้งหมด\n\n` +
     `หากต้องการความช่วยเหลือเพิ่มเติม\n` +
-    `ติดต่อ: โทร 056-280-366`,
+    `ติดต่อ: โทร 056-219-299 หรือ LINE OA @075cphqu`,
 };

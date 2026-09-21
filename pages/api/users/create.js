@@ -1,7 +1,7 @@
 // POST /api/users/create
 // สร้าง user ใหม่ใน MongoDB โดยตรง (ไม่ผ่าน Express)
 
-import { getAuth } from '@clerk/nextjs/server';
+import { getAuth, clerkClient } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/dbConnect';
 import mongoose from 'mongoose';
 
@@ -42,6 +42,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // สร้าง doc ให้ "ตัวเอง" ได้เสมอ (ฟอร์มลงทะเบียน) — สร้างให้ "คนอื่น" ได้เฉพาะ superadmin
+    // (หน้า superadmin ใช้ช่องทางนี้ onboard พนักงานใหม่ที่มีแต่บัญชี Clerk)
+    if (clerkId !== userId) {
+      const client = await clerkClient();
+      const caller = await client.users.getUser(userId);
+      if (caller.publicMetadata?.role !== 'superadmin') {
+        return res.status(403).json({ success: false, message: 'สร้างผู้ใช้ให้คนอื่นได้เฉพาะ superadmin' });
+      }
+    }
+
     await dbConnect();
 
     // ตรวจสอบซ้ำ

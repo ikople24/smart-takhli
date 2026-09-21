@@ -11,6 +11,7 @@ import {
   Timer
 } from "lucide-react";
 import SatisfactionForm from "@/components/SatisfactionForm";
+import { MAX_PUBLIC_RATINGS_PER_COMPLAINT } from "@/lib/satisfaction/quota";
 
 export default function CardOfficail(props) {
   const [assignedDate, setAssignedDate] = useState(null);
@@ -19,7 +20,7 @@ export default function CardOfficail(props) {
   const [complaintStatus, setComplaintStatus] = useState(null);
   const [assignedUser, setAssignedUser] = useState(null);
   const [satisfactionCount, setSatisfactionCount] = useState(0);
-  const MAX_RATINGS = 4; // จำนวนครั้งสูงสุดที่สามารถประเมินได้
+  const MAX_RATINGS = MAX_PUBLIC_RATINGS_PER_COMPLAINT; // เพดานเดียวกับ server (lib/satisfaction/quota.js)
 
   // ฟังก์ชันซ่อนนามสกุลของเจ้าหน้าที่
   const hideLastName = (fullName) => {
@@ -164,7 +165,7 @@ export default function CardOfficail(props) {
     const fetchSatisfactionCount = async () => {
       try {
         if (props.probId) {
-          const res = await fetch(`/api/satisfaction/count?complaintId=${props.probId}`);
+          const res = await fetch(`/api/satisfaction/count?complaintId=${props.probId}&source=public`);
           const data = await res.json();
           if (data.success) {
             setSatisfactionCount(data.count || 0);
@@ -328,6 +329,10 @@ export default function CardOfficail(props) {
               setShowRating(false);
               // Refresh satisfaction count
               setSatisfactionCount(prev => prev + 1);
+            }}
+            onQuotaFull={() => {
+              setShowRating(false);
+              setSatisfactionCount(MAX_RATINGS); // server ยืนยันครบแล้ว — ให้การ์ดเปลี่ยนเป็น "ประเมินครบ"
             }}
           />
         </div>

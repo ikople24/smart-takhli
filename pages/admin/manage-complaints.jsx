@@ -2,10 +2,10 @@ import dynamic from "next/dynamic";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import useComplaintStore from "@/stores/useComplaintStore";
 import { useMenuStore } from "@/stores/useMenuStore";
-import UpdateAssignmentModal from "@/components/complaints/UpdateAssignmentModal";
 import EditUserModal from "@/components/EditUserModal";
 import ComplaintStats from "@/components/complaints/ComplaintStats";
 import OverdueComplaintsAlert from "@/components/complaints/OverdueComplaintsAlert";
@@ -38,6 +38,7 @@ export default function ManageComplaintsPage() {
   const { menu, fetchMenu } = useMenuStore();
   const { user } = useUser();
   const { getToken, userId } = useAuth();
+  const router = useRouter();
   
   // Core states
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,7 @@ export default function ManageComplaintsPage() {
   const isSuperAdmin = existingUser?.role === 'superadmin';
   
   // Modal states
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null); // ใช้กับ EditUserModal
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [overdueExpanded, setOverdueExpanded] = useState(false);
@@ -216,12 +216,15 @@ export default function ManageComplaintsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintId, userId: existingUser?._id }),
       });
-      if (!res.ok) throw new Error("Failed to assign");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "เกิดข้อผิดพลาดในการรับงาน");
+      }
       await fetchAssignments();
       alert("รับงานสำเร็จ");
     } catch (error) {
       console.error("Error assigning:", error);
-      alert("เกิดข้อผิดพลาดในการรับงาน");
+      alert(error.message || "เกิดข้อผิดพลาดในการรับงาน");
     }
   };
 
@@ -410,10 +413,10 @@ export default function ManageComplaintsPage() {
     }
   };
 
+  // อัปเดตความคืบหน้าย้ายไปหน้างานเจ้าหน้าที่ (หน้าจอ 3) — ทางเขียนเดียว มี timeline/เช็คปิดเรื่อง/audit ครบ
+  // (UpdateAssignmentModal + PUT assignments/update เดิมปลดระวางแล้ว 2026-09-02)
   const handleOpenUpdateForm = (assignment) => {
-    const complaint = complaints.find((c) => c._id === assignment.complaintId);
-    setSelectedAssignment({ ...assignment, category: complaint?.category });
-    setShowUpdateModal(true);
+    router.push(`/admin/my-tasks/${assignment._id}`);
   };
 
   const handleDeleteComplaint = (complaint) => {
@@ -1131,13 +1134,6 @@ export default function ManageComplaintsPage() {
       </div>
 
       {/* Modals */}
-      {showUpdateModal && selectedAssignment && (
-        <UpdateAssignmentModal
-          assignment={selectedAssignment}
-          onClose={() => setShowUpdateModal(false)}
-        />
-      )}
-      
       {showEditUserModal && (
         <EditUserModal
           isOpen={showEditUserModal}
@@ -1197,9 +1193,7 @@ export default function ManageComplaintsPage() {
           menu={menu}
           assignedUsers={assignedUsers}
           onOpenUpdateModal={(assignment) => {
-            const complaint = complaints.find((c) => c._id === assignment.complaintId);
-            setSelectedAssignment({ ...assignment, category: complaint?.category });
-            setShowUpdateModal(true);
+            router.push(`/admin/my-tasks/${assignment._id}`);
           }}
           onPrivacySaved={(updated) => {
             if (updated?._id) {

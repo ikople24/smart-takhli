@@ -11,14 +11,34 @@ type AuditAction =
   | 'complaint_reassigned'
   | 'complaint_completed'
   | 'permissions_updated'
+  | 'permissions_bulk_updated'
   | 'app_id_assigned'
+  // User repair (หน้า superadmin)
+  | 'user_repaired'
+  | 'user_doc_deleted'
   | 'assignment_created'
   | 'assignment_completed'
   | 'notification_sent'
+  | 'waste_daily_updated'
+  // Garbage schedule
+  | 'garbage_assignment_created'
+  | 'garbage_assignment_updated'
+  | 'garbage_assignment_deleted'
+  | 'garbage_route_updated'
+  | 'garbage_schedule_imported'
+  | 'garbage_communities_mapped'
+  // Officer tasks
+  | 'task_settings_updated'
+  | 'assignment_follow_up'
+  | 'assignment_unclaimed'
+  | 'complaint_department_set'
+  | 'assignment_transfer_requested'
+  | 'department_head_set'
+  | 'complaint_deleted'
   | 'data_exported'
   | 'login';
 
-type ResourceType = 'complaint' | 'assignment' | 'user' | 'notification' | 'system';
+type ResourceType = 'complaint' | 'assignment' | 'user' | 'notification' | 'system' | 'garbage_assignment' | 'garbage_route';
 
 interface AuditParams {
   actorClerkId: string;

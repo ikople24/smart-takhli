@@ -23,7 +23,11 @@ export default async function handler(req, res) {
       ? new mongoose.Types.ObjectId(id)
       : id;
 
+    // เอนด์พอยต์นี้เปิดสาธารณะ (หน้า /status เรียกผ่าน SatisfactionChart)
+    // ต้อง select เฉพาะฟิลด์ที่กราฟใช้ — ห้ามคืนทั้ง document เพราะแถว source: 'line'
+    // มี lineUserId ของประชาชนคนอื่นติดไปด้วย
     const data = await Satisfaction.find({ complaintId: objectId })
+      .select("rating comment createdAt")
       .sort({ createdAt: -1 })
       .limit(4)
       .lean();

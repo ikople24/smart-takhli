@@ -46,3 +46,6 @@ next-env.d.ts
 
 # ม.10 sample batch — มี PII (เลข13หลัก/ชื่อ-ที่อยู่) ห้าม commit; วางไว้ local เพื่อ integration test
 public/60070001_60010000.zip
+# ต้นฉบับตารางรถขยะ + ข้อมูลคนขับ — repo นี้ public ห้าม commit (PDPA)
+data/garbage/*.numbers
+data/garbage/*.local.json
