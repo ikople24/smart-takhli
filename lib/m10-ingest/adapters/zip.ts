@@ -33,7 +33,10 @@ function readEntry(entry: AdmZip.IZipEntry, password?: string): string {
   if (encrypted && entry.header.method === AES_METHOD) throw new ZipPasswordError("unsupported_encryption");
   if (encrypted && !password) throw new ZipPasswordError("required");
   try {
-    return entry.getData(password).toString("utf8");
+    // @types/adm-zip ประกาศ getData() ว่าไม่รับพารามิเตอร์ ทั้งที่ runtime รับรหัสผ่านได้
+    // (adm-zip 0.5: item.getData(pass)) — cast เพื่อให้ tsc ผ่าน ไม่ใช่เพื่อเลี่ยงการตรวจจริง
+    const withPass = entry as unknown as { getData(pass?: string): Buffer };
+    return withPass.getData(password).toString("utf8");
   } catch (e) {
     // adm-zip: "Wrong Password" (ตรวจ 1 ไบต์) หรือ "BAD_CRC" (รหัสผ่านด่านแรกแต่ข้อมูลเพี้ยน)
     const msg = e instanceof Error ? e.message : String(e);
