@@ -85,3 +85,39 @@ describe("นิติกรรมงวด 2569-03..05 (เจ้าของ�
       .toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
   });
 });
+
+describe('กฎกลุ่ม — "ลำดับที่/ครั้งที่" และ "เฉพาะส่วน" (พบในงวด 2569-06..08)', () => {
+  it('จำนองลำดับที่เท่าไหร่ก็ยังเป็นจำนอง ไม่กระทบภาษี', () => {
+    for (const n of ["จำนองลำดับที่สาม", "จำนองลำดับที่สี่", "จำนองลำดับที่สิบ"]) {
+      expect(classifyStatus(n), n).toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
+    }
+    // ต้องตรงกับรายการที่ใส่มือไว้เดิม
+    expect(classifyStatus("จำนองลำดับที่สาม")).toEqual(classifyStatus("จำนองลำดับที่สอง"));
+  });
+
+  it("ขยายเวลาไถ่จากขายฝาก ครั้งที่เท่าไหร่ก็ครอบหมด (ตัดวงเล็บ + ครั้งที่)", () => {
+    for (const n of [
+      "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่หนึ่ง (กำหนดหนึ่งปี )",
+      "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สอง (กำหนดสามเดือน )",
+      "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สาม (กำหนดสองปี )",
+      "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สิบ",
+    ]) {
+      expect(classifyStatus(n), n).toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
+    }
+  });
+
+  it('"เฉพาะส่วน" ของการโอน → โอนเฉพาะส่วน · ของภาระผูกพัน → คงเป็นภาระผูกพัน', () => {
+    expect(classifyStatus("ขายเฉพาะส่วน")).toEqual({ changeType: "TRANSFER_PARTIAL", taxRelevant: true });
+    expect(classifyStatus("โอนมรดกเฉพาะส่วน")).toEqual({ changeType: "TRANSFER_PARTIAL", taxRelevant: true });
+    // ฐานไม่ใช่การโอน → ไม่แปลงเป็น TRANSFER_PARTIAL
+    expect(classifyStatus("ไถ่ถอนจากจำนองเฉพาะส่วน")).toEqual({ changeType: "ENCUMBRANCE", taxRelevant: false });
+    expect(classifyStatus("ผู้จัดการมรดกเฉพาะส่วน")).toEqual({ changeType: "OWNER_CORRECTION", taxRelevant: true });
+  });
+
+  it("กฎไม่ลามไปเดาของที่ไม่รู้จัก", () => {
+    expect(classifyStatus("เฉพาะส่วน")).toBeNull();
+    expect(classifyStatus("นิติกรรมใหม่เฉพาะส่วน")).toBeNull();
+    expect(classifyStatus("ลำดับที่สอง")).toBeNull();
+    expect(classifyStatus("ครั้งที่หนึ่ง")).toBeNull();
+  });
+});

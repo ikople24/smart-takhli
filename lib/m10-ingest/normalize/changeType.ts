@@ -59,32 +59,72 @@ export const STATUS_MAP: Record<string, Classification> = {
   "ปลอดจำนอง": { changeType: "ENCUMBRANCE", taxRelevant: false },
   "ภาระจำยอม (ไม่มีค่าตอบแทน)": { changeType: "ENCUMBRANCE", taxRelevant: false },
   "สิทธิเก็บกิน (ตลอดชีวิตของผู้ทรงสิทธิ)": { changeType: "ENCUMBRANCE", taxRelevant: false },
-  // หมายเหตุ: "ครั้งที่สาม" เปลี่ยนได้ทุกครั้งที่ขยายเวลา ถ้าเจอ "ครั้งที่สี่" จะถูกกักอีก
-  "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่สาม": { changeType: "ENCUMBRANCE", taxRelevant: false },
+  // ชื่อฐาน — กฎ "ครั้งที่N" ตัดคำขยายท้ายแล้วมาเทียบตัวนี้ จึงครอบทุกครั้งที่ขยายเวลา
+  "ขยายกำหนดเวลาไถ่จากขายฝาก": { changeType: "ENCUMBRANCE", taxRelevant: false },
 };
 
 // ---- กฎกลุ่ม (ใช้ต่อเมื่อไม่เจอชื่อตรงตัวใน STATUS_MAP) ----
-// กรมที่ดินเขียนจำนวนโฉนดที่ถูกรวมเป็นคำไทยซึ่งเปลี่ยนทุกเดือน (สอง/สาม/สี่/ห้า/เก้า/สิบ/สิบหก...)
-// ถ้าไล่ใส่ทีละชื่อจะไม่มีวันจบ — ลงท้ายด้วย "รวม...โฉนด" คือการรวมแปลงเสมอ ไม่ว่านิติกรรมต้นทาง
-// จะเป็นขาย จำนอง หรือไถ่ถอน (สอดคล้องกับรายการที่ใส่มือไว้เดิมทุกตัวที่ลงท้ายแบบนี้ = MERGE)
+//
+// กรมที่ดินเขียนคำขยายที่มี "ตัวเลขไทย" วิ่งไม่จบ ถ้าไล่ใส่ทีละชื่อจะตามไม่ทันทุกเดือน:
+//   "รวมสองโฉนด" → "รวมสามโฉนด" → "รวมสิบหกโฉนด"
+//   "จำนองลำดับที่สอง" → "ลำดับที่สาม" → "ลำดับที่สี่"
+//   "ขยายกำหนดเวลาไถ่จากขายฝากครั้งที่หนึ่ง/สอง/สาม"
+//
+// กติกาของกฎทุกข้อในไฟล์นี้: **ต้องให้ผลตรงกับรายการที่ใส่มือไว้แล้วทุกตัว** (มีเทสต์คุมไว้)
+// ถ้าข้อไหนให้ผลต่างจากของเดิม ถือว่ากฎผิด ไม่ใช่ของเดิมผิด
+// และถ้าไม่เข้ากฎใดเลย ต้องคืน null เพื่อกักไว้ให้คนตัดสิน — ห้ามเดา
+
+/** ลงท้าย "รวม...โฉนด" = รวมแปลงเสมอ ไม่ว่านิติกรรมต้นทางจะเป็นอะไร */
 const MERGE_SUFFIX = /รวม\S*โฉนด$/;
 
-// วงเล็บต่อท้ายเป็นคำขยายเงื่อนไข ไม่เปลี่ยนชนิดนิติกรรม เช่น "โอนมรดก (ระหว่างจำนอง)" = โอนมรดก
-const TRAILING_PAREN = /\s*\([^)]*\)$/;
+/** คำขยายท้ายที่ "ไม่เปลี่ยนชนิดนิติกรรม" — ตัดออกแล้วเทียบชื่อฐานซ้ำได้ */
+const TRAILING_NOISE: RegExp[] = [
+  /\s*\([^)]*\)$/,              // "(ระหว่างจำนอง)" "(กำหนดสามเดือน )"
+  /\s*ลำดับที่\S*$/,             // "จำนองลำดับที่สาม" → "จำนอง"
+  /\s*ครั้งที่\S*$/,             // "...ครั้งที่หนึ่ง" → "..."
+];
+
+/** ลงท้าย "เฉพาะส่วน" = ทำกับกรรมสิทธิ์บางส่วน → ถ้าฐานเป็นการโอน ให้เป็นการโอนเฉพาะส่วน */
+const PARTIAL_SUFFIX = /เฉพาะส่วน$/;
+
+/** ตัดคำขยายท้ายทีละชั้นแล้วเทียบ dict — คืนชื่อฐานที่เจอ (ไม่เกิน 4 ชั้นกัน loop) */
+function resolveByStripping(input: string): Classification | null {
+  let s = input;
+  for (let depth = 0; depth < 4; depth += 1) {
+    let stripped = s;
+    for (const re of TRAILING_NOISE) stripped = stripped.replace(re, "").trim();
+    if (stripped === s || stripped === "") return null;
+    const hit = STATUS_MAP[stripped];
+    if (hit) return hit;
+    s = stripped;
+  }
+  return null;
+}
 
 // ไม่เจอทั้งชื่อตรงตัวและกฎกลุ่ม → null → caller quarantine (reason="unknown_status") ห้ามเดา
 export function classifyStatus(status: string): Classification | null {
   const s = status.trim();
 
+  // 1) ชื่อตรงตัวมาก่อนเสมอ — dictionary ชนะกฎ
   const direct = STATUS_MAP[s];
   if (direct) return direct;
 
+  // 2) รวมแปลง: ตรวจก่อนตัดคำขยาย เพราะ "รวม N โฉนด" เปลี่ยนความหมายเป็น MERGE
   if (MERGE_SUFFIX.test(s)) return { changeType: "MERGE", taxRelevant: true };
 
-  const base = s.replace(TRAILING_PAREN, "").trim();
-  if (base !== s) {
-    const byBase = STATUS_MAP[base];
-    if (byBase) return byBase;
+  // 3) ตัดคำขยายท้ายที่ไม่เปลี่ยนชนิดนิติกรรม แล้วเทียบ dict ซ้ำ
+  const byBase = resolveByStripping(s);
+  if (byBase) return byBase;
+
+  // 4) "เฉพาะส่วน": หาชนิดของนิติกรรมฐาน แล้วแปลงการโอนเต็มให้เป็นโอนเฉพาะส่วน
+  if (PARTIAL_SUFFIX.test(s)) {
+    const baseName = s.replace(PARTIAL_SUFFIX, "").trim();
+    const base = baseName ? (STATUS_MAP[baseName] ?? resolveByStripping(baseName)) : null;
+    if (base) {
+      return base.changeType === "TRANSFER"
+        ? { changeType: "TRANSFER_PARTIAL", taxRelevant: base.taxRelevant }
+        : base;
+    }
   }
 
   return null;
