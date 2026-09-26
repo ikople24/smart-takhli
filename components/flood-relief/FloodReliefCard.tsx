@@ -64,10 +64,13 @@ export default function FloodReliefCard() {
             )}
           </div>
 
-          <h2 id="flood-title" className="mt-3 text-[18px] font-bold leading-[1.3] text-white">
-            ศูนย์ช่วยเหลือผู้ประสบภัยน้ำท่วม
+          {/* ใหญ่กว่าดีไซน์ (18px) ตามที่เจ้าของขอ — ตัด 2 บรรทัดเอง ไม่ปล่อยให้ขึ้นบรรทัดใหม่กลางคำบนจอแคบ */}
+          <h2 id="flood-title" className="mt-3 text-[24px] font-bold leading-[1.2] text-white">
+            ศูนย์ช่วยเหลือ
+            <br />
+            ผู้ประสบภัยน้ำท่วม
           </h2>
-          <p className="mt-0.5 text-[12.5px] leading-normal text-white/85">
+          <p className="mt-1.5 text-[13px] leading-normal text-white/90">
             แตะเรื่องที่ต้องการ ส่งตำแหน่งถึงเจ้าหน้าที่ได้ทันที
           </p>
           {summary.announcement && (
