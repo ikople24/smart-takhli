@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       >,
       // เลือกเฉพาะช่องที่ publicGauge ใช้ — ไม่ดึง photos/createdBy/updatedBy ออกมาเลย
       FloodGauge.find({ active: true })
-        .select({ _id: 0, name: 1, location: 1, note: 1, lastPhotoUrl: 1, lastPhotoAt: 1, lastLevelCm: 1, lastNote: 1 })
+        .select({ name: 1, kind: 1, location: 1, note: 1, lastPhotoUrl: 1, lastPhotoAt: 1, lastLevelCm: 1, lastNote: 1, lastSource: 1 })
         .sort({ name: 1 })
         .lean() as unknown as Promise<Array<Parameters<typeof publicGauge>[0]>>,
     ]);

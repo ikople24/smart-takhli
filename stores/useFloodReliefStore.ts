@@ -3,7 +3,7 @@
 import { create } from "zustand";
 
 export type FloodFilter = "all" | "critical" | "evac" | "drain" | "sand" | "other";
-export type FloodLayers = { zones: boolean; gauges: boolean; requests: boolean; teams: boolean; communities: boolean };
+export type FloodLayers = { zones: boolean; gauges: boolean; services: boolean; requests: boolean; teams: boolean; communities: boolean };
 export type FloodBaseMap = "street" | "satellite";
 
 type State = {
@@ -27,7 +27,7 @@ export const useFloodReliefStore = create<State>((set) => ({
   filter: "all",
   query: "",
   mobileTab: "list",
-  layers: { zones: true, gauges: true, requests: true, teams: true, communities: false },
+  layers: { zones: true, gauges: true, services: true, requests: true, teams: true, communities: false },
   baseMap: "street",
   select: (id) => set({ selectedId: id }),
   setFilter: (filter) => set({ filter }),

@@ -78,6 +78,10 @@ export type AdminZone = {
 export type GaugePhoto = { url: string; at: string; levelCm: number | null; note: string; by: string };
 export type AdminGauge = {
   id: string;
+  kind: "gauge" | "water" | "donation";
+  /** ใครปักจุด */
+  source: "staff" | "public";
+  lastFromPublic: boolean;
   name: string;
   lat: number | null;
   lng: number | null;
