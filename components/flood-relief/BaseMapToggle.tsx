@@ -4,6 +4,13 @@
 
 export type BaseMap = "street" | "satellite";
 
+/**
+ * ซูมละเอียดของแผนที่ในโมดูล (เจ้าของขอ 2026-09-26) — ส่งเข้า <MapContainer {...FINE_ZOOM}>
+ * zoomSnap 0.25 = หยุดได้ทุก ¼ ระดับ · zoomDelta 0.5 = ปุ่ม +/− ครั้งละ ½ ระดับ
+ * wheelPxPerZoomLevel 120 = ล้อเมาส์ช้าลงครึ่งหนึ่งจากค่าเริ่มต้น 60
+ */
+export const FINE_ZOOM = Object.freeze({ zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 });
+
 /** ปุ่มสลับ แผนที่/ดาวเทียม — segmented control ขนาดแตะได้บนมือถือ */
 export default function BaseMapToggle({
   value,
