@@ -211,7 +211,9 @@ export default function AdminMap({
                 >
                   <Tooltip permanent direction="center" className="flood-zone-label">
                     <span style={{ background: ZONE_LABEL_BG[z.level as ZoneLevel] }}>
-                      {z.name} · {m.label} · {z.openCount}
+                      {/* ไม่มีคำขอค้างในโซน = ไม่ต่อท้าย 0 (เจ้าของขอ) */}
+                      {z.name} · {m.label}
+                      {z.openCount > 0 ? ` · ${z.openCount}` : ""}
                     </span>
                   </Tooltip>
                 </Polygon>
