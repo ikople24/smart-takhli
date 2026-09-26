@@ -19,6 +19,7 @@ export default function ZoneToolbar({
   setPaint,
   zoneCount,
   onManage,
+  className = "",
 }: {
   tool: ZoneTool;
   setTool: (t: ZoneTool) => void;
@@ -26,6 +27,8 @@ export default function ZoneToolbar({
   setPaint: (p: FillPaint) => void;
   zoneCount: number;
   onManage: () => void;
+  /** ตำแหน่ง/การแสดงผล — มือถือพับไว้ เดสก์ท็อปแสดงมุมขวาบนตลอด (กำหนดจาก AdminMap) */
+  className?: string;
 }) {
   const tools = [
     { key: "none" as const, label: "เลือก/ลากแผนที่", Icon: Hand },
@@ -37,7 +40,7 @@ export default function ZoneToolbar({
   ];
 
   return (
-    <div className="absolute right-3.5 top-3.5 z-[500] w-[200px] rounded-2xl bg-white/97 p-2.5 shadow-tk-xl">
+    <div className={`absolute z-[500] w-[200px] rounded-2xl bg-white/97 p-2.5 shadow-tk-xl ${className}`}>
       <div className="px-0.5 text-[11px] font-bold tracking-[0.5px] text-tk-ink-4">เครื่องมือโซน</div>
       <div className="mt-2 grid grid-cols-2 gap-1">
         {tools.map(({ key, label, Icon }) => {

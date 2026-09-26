@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import { List, Map as MapIcon } from "lucide-react";
+import { Link2, List, Map as MapIcon, Settings } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
 import KpiBar from "@/components/flood-relief/admin/KpiBar";
 import RequestList from "@/components/flood-relief/admin/RequestList";
@@ -88,11 +88,15 @@ export default function FloodReliefDashboard() {
       </Head>
       <div className="flex h-full min-h-0 flex-col bg-tk-bg font-tk-sans text-tk-ink">
         {/* Header */}
-        <header className="flex min-h-[60px] shrink-0 flex-wrap items-center gap-x-3.5 gap-y-1 border-b border-tk-line bg-white px-5 py-2">
-          <Image src="/logoTK.png" alt="ตราเทศบาลเมืองตาคลี" width={36} height={36} className="object-contain" />
+        {/* มือถือ: บรรทัดเดียว ซ่อนคำบรรยาย/ข้อความยาว ปุ่มเหลือไอคอน — ให้แผนที่มีพื้นที่ (เจ้าของแจ้ง 2026-09-26) */}
+        <header className="flex shrink-0 items-center gap-x-2 gap-y-1 border-b border-tk-line bg-white px-3 py-1.5 lg:min-h-[60px] lg:flex-wrap lg:gap-x-3.5 lg:px-5 lg:py-2">
+          <Image src="/logoTK.png" alt="ตราเทศบาลเมืองตาคลี" width={36} height={36} className="hidden object-contain lg:block" />
           <div className="min-w-0">
-            <h1 className="text-[15px] font-bold leading-[1.2]">ศูนย์ช่วยเหลือผู้ประสบภัยน้ำท่วม</h1>
-            <p className="text-[11px] text-tk-ink-4">แดชบอร์ดประสานงาน · เทศบาลเมืองตาคลี</p>
+            <h1 className="truncate text-[14px] font-bold leading-[1.2] lg:text-[15px]">
+              <span className="lg:hidden">ศูนย์ช่วยเหลือน้ำท่วม</span>
+              <span className="hidden lg:inline">ศูนย์ช่วยเหลือผู้ประสบภัยน้ำท่วม</span>
+            </h1>
+            <p className="hidden text-[11px] text-tk-ink-4 lg:block">แดชบอร์ดประสานงาน · เทศบาลเมืองตาคลี</p>
           </div>
           {centerOpen != null && (
             <span
@@ -101,13 +105,14 @@ export default function FloodReliefDashboard() {
               }`}
             >
               <span className={`h-[7px] w-[7px] rounded-full ${centerOpen ? "bg-tk-overdue" : "bg-tk-ink-6"}`} />
-              {centerOpen ? "เปิดศูนย์ฯ · รับคำขอทางเว็บ" : "ศูนย์ฯ ปิด · ไม่รับคำขอทางเว็บ"}
+              <span className="lg:hidden">{centerOpen ? "เปิด" : "ปิด"}</span>
+              <span className="hidden lg:inline">{centerOpen ? "เปิดศูนย์ฯ · รับคำขอทางเว็บ" : "ศูนย์ฯ ปิด · ไม่รับคำขอทางเว็บ"}</span>
             </span>
           )}
-          <span className="text-[11.5px] text-tk-ink-4">
+          <span className="hidden text-[11.5px] text-tk-ink-4 lg:inline">
             อัปเดตอัตโนมัติทุก 30 วิ{lastAt ? ` · ล่าสุด ${clockFmt.format(new Date(lastAt))}` : ""}
           </span>
-          {error && <span className="text-[11.5px] font-semibold text-tk-overdue-ink">{error}</span>}
+          {error && <span className="truncate text-[11px] font-semibold text-tk-overdue-ink lg:text-[11.5px]">{error}</span>}
           <button
             type="button"
             onClick={() => {
@@ -119,16 +124,22 @@ export default function FloodReliefDashboard() {
               setTimeout(() => setLinkCopied(false), 2000);
             }}
             title="หน้าติดตามสถานการณ์สาธารณะ — ส่งให้หน่วยงานอื่น/ผู้สนใจ (ไม่มีข้อมูลรายบ้าน)"
-            className="ml-auto inline-flex h-9 items-center rounded-full bg-tk-unclaimed-soft px-3.5 text-[12.5px] font-semibold text-tk-ink-2"
+            aria-label="คัดลอกลิงก์สาธารณะ"
+            className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-tk-unclaimed-soft px-2.5 text-[12.5px] font-semibold text-tk-ink-2 lg:px-3.5"
           >
-            {linkCopied ? "คัดลอกแล้ว" : "คัดลอกลิงก์สาธารณะ"}
+            <Link2 size={16} aria-hidden className="lg:hidden" />
+            <span className={linkCopied ? "text-[11.5px] lg:text-[12.5px]" : "hidden lg:inline"}>
+              {linkCopied ? "คัดลอกแล้ว" : "คัดลอกลิงก์สาธารณะ"}
+            </span>
           </button>
           {me?.isSuperAdmin && (
             <Link
               href="/admin/superadmin/flood-relief"
-              className="inline-flex h-9 items-center rounded-full border-[1.5px] border-tk-flood px-3.5 text-[12.5px] font-bold text-tk-flood"
+              aria-label="ตั้งค่าศูนย์ฯ"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-tk-flood px-2.5 text-[12.5px] font-bold text-tk-flood lg:px-3.5"
             >
-              ตั้งค่าศูนย์ฯ
+              <Settings size={16} aria-hidden className="lg:hidden" />
+              <span className="hidden lg:inline">ตั้งค่าศูนย์ฯ</span>
             </Link>
           )}
         </header>

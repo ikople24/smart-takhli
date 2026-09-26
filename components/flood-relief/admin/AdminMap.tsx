@@ -103,6 +103,13 @@ export default function AdminMap({
   const [focusZone, setFocusZone] = useState<AdminZone | null>(null);
   const [busyCommunity, setBusyCommunity] = useState<string | null>(null);
   const [addingGauge, setAddingGauge] = useState(false);
+  /** มือถือ (< 1024px): แผงลอยพับเป็นปุ่ม เปิดทีละแผง ไม่ให้บังแผนที่ · เดสก์ท็อปแสดงครบตลอด */
+  const [mobilePanel, setMobilePanel] = useState<"none" | "layers" | "zone" | "legend">("none");
+  const togglePanel = (p: "layers" | "zone" | "legend") => setMobilePanel((cur) => (cur === p ? "none" : p));
+  // มือถือ: เลือกสีแล้ว (เข้าโหมดเติมสี) พับแผงโซนให้เห็นแผนที่แตะชุมชนได้ทันที — เดสก์ท็อปไม่มีผล (แผง lg:block)
+  useEffect(() => {
+    if (tool === "fill") setMobilePanel((cur) => (cur === "zone" ? "none" : cur));
+  }, [tool, paint]);
   const [openGaugeId, setOpenGaugeId] = useState<string | null>(null);
   const openGauge = useMemo(() => gauges.find((g) => g.id === openGaugeId) ?? null, [gauges, openGaugeId]);
 
@@ -322,8 +329,33 @@ export default function AdminMap({
         <FitZone zone={focusZone} />
       </MapContainer>
 
-      {/* ชั้นข้อมูล */}
-      <div className="absolute left-3.5 top-3.5 z-[500] flex flex-col gap-1 rounded-[14px] bg-white/95 p-2 shadow-tk-xl">
+      {/* มือถือ: แถวปุ่มเปิดแผง */}
+      <div className="absolute left-2 top-2 z-[550] flex gap-1.5 lg:hidden">
+        {(
+          [
+            ["layers", "ชั้นข้อมูล"],
+            ...(canEditZones ? ([["zone", "โซน"]] as const) : []),
+            ["legend", "สัญลักษณ์"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            aria-expanded={mobilePanel === k}
+            onClick={() => togglePanel(k)}
+            className={`h-9 rounded-full px-3.5 text-[12.5px] font-bold shadow-tk-xl ${
+              mobilePanel === k ? "bg-tk-flood text-white" : "bg-white/95 text-tk-ink-2"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ชั้นข้อมูล — มือถือเปิดจากปุ่ม · เดสก์ท็อปแสดงตลอด */}
+      <div
+        className={`${mobilePanel === "layers" ? "flex" : "hidden"} absolute left-2 top-[52px] z-[500] max-h-[calc(100%-64px)] flex-col gap-1 overflow-y-auto rounded-[14px] bg-white/95 p-2 shadow-tk-xl lg:left-3.5 lg:top-3.5 lg:flex lg:max-h-none`}
+      >
         <BaseMapToggle value={baseMap} onChange={setBaseMap} className="mb-1" />
         <span className="px-1.5 pb-1 pt-0.5 text-[10.5px] font-bold tracking-[0.5px] text-tk-ink-4">ชั้นข้อมูล</span>
         {(
@@ -342,7 +374,10 @@ export default function AdminMap({
         ))}
         <button
           type="button"
-          onClick={() => setAddingGauge((v) => !v)}
+          onClick={() => {
+            setAddingGauge((v) => !v);
+            setMobilePanel("none"); // มือถือ: พับแผงให้เห็นแผนที่ก่อนแตะปักจุด
+          }}
           aria-pressed={addingGauge}
           className={`mt-1 h-8 rounded-lg px-2 text-[12px] font-bold ${
             addingGauge ? "bg-tk-flood text-white" : "bg-tk-flood-soft text-tk-flood"
@@ -353,7 +388,7 @@ export default function AdminMap({
       </div>
 
       {addingGauge && (
-        <div className="absolute left-1/2 top-3.5 z-[600] -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
+        <div className="absolute left-1/2 top-[52px] z-[600] whitespace-nowrap lg:top-3.5 -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
           📷 แตะแผนที่ตรงจุดที่จะวัดระดับน้ำ
         </div>
       )}
@@ -375,17 +410,38 @@ export default function AdminMap({
           setPaint={setPaint}
           zoneCount={zones.length}
           onManage={() => setManagerOpen(true)}
+          className={`${mobilePanel === "zone" ? "block" : "hidden"} right-2 top-[52px] max-h-[calc(100%-64px)] overflow-y-auto lg:right-3.5 lg:top-3.5 lg:block lg:max-h-none`}
         />
       )}
 
+      {/* มือถือ: ตอนเติมสีแล้วพับแผงโซน — แถบบอกสีที่กำลังเติม + ปุ่มจบ */}
+      {canEditZones && tool === "fill" && mobilePanel !== "zone" && (
+        <div className="absolute bottom-3 left-1/2 z-[600] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-tk-ink-strong py-1.5 pl-3 pr-1.5 text-[12.5px] text-white shadow-tk-xl lg:hidden">
+          {paint === "clear" ? (
+            <span>ล้างสี</span>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded" style={{ background: ZONE_META[paint].fill }} />
+              เติมสี{ZONE_META[paint].label}
+            </span>
+          )}
+          <span className="text-white/70">· แตะชุมชน</span>
+          <button type="button" onClick={() => setTool("none")} className="h-7 rounded-full bg-white px-3 font-bold text-tk-flood">
+            เสร็จ
+          </button>
+        </div>
+      )}
+
       {busyCommunity && (
-        <div className="absolute left-1/2 top-3.5 z-[600] -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
+        <div className="absolute left-1/2 top-[52px] z-[600] whitespace-nowrap lg:top-3.5 -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
           กำลังบันทึกสีชุมชน{busyCommunity}…
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-3.5 left-3.5 z-[500] flex gap-4 rounded-[14px] bg-white/95 px-3 py-2.5 shadow-tk-xl">
+      {/* Legend — มือถือเปิดจากปุ่ม "สัญลักษณ์" (ใต้แถวปุ่ม) · เดสก์ท็อปมุมซ้ายล่างตลอด */}
+      <div
+        className={`${mobilePanel === "legend" ? "flex" : "hidden"} absolute left-2 top-[52px] z-[500] gap-4 rounded-[14px] bg-white/95 px-3 py-2.5 shadow-tk-xl lg:bottom-3.5 lg:left-3.5 lg:top-auto lg:flex`}
+      >
         <div>
           <div className="text-[10.5px] font-bold tracking-[0.5px] text-tk-ink-4">ระดับโซน</div>
           <div className="mt-1.5 flex flex-col gap-1 text-[11.5px] font-semibold">
