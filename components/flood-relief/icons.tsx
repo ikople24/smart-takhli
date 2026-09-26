@@ -5,10 +5,6 @@ import type { RequestType } from "@/lib/flood-relief/status";
 
 const WAVE =
   "M2 19c1.7 0 1.7-1.5 3.3-1.5s1.7 1.5 3.3 1.5 1.7-1.5 3.3-1.5 1.7 1.5 3.3 1.5 1.7-1.5 3.3-1.5 1.7 1.5 3.3 1.5";
-const WAVE_A =
-  "M2 17.2c1.7 0 1.7-1.2 3.3-1.2s1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2";
-const WAVE_B =
-  "M2 20.7c1.7 0 1.7-1.2 3.3-1.2s1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.3 1.2";
 
 export function TypeIcon({ type, size = 24 }: { type: RequestType | string; size?: number }) {
   return (
@@ -49,13 +45,13 @@ export function TypeIcon({ type, size = 24 }: { type: RequestType | string; size
         </>
       )}
       {type !== "evac" && type !== "drain" && type !== "sand" && (
+        // อาหาร น้ำดื่ม (key "other") — ชามมีไอร้อน + หยดน้ำ
         <>
-          <path d="M3.5 11.5 12 4.5l8.5 7" />
-          <path d="M6 9.8v4.2" />
-          <path d="M18 9.8v4.2" />
-          <path d="M10 14v-3h4v3" />
-          <path d={WAVE_A} />
-          <path d={WAVE_B} />
+          <path d="M2.5 12.5h13a6.5 6.5 0 0 1-13 0Z" />
+          <path d="M6.5 21h5" />
+          <path d="M6.5 9.5c0-1.2 1-1.3 1-2.5" />
+          <path d="M10.5 9.5c0-1.2 1-1.3 1-2.5" />
+          <path d="M19 3.5s-2.5 3-2.5 4.8a2.5 2.5 0 0 0 5 0c0-1.8-2.5-4.8-2.5-4.8Z" />
         </>
       )}
     </svg>
