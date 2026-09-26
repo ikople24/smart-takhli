@@ -169,7 +169,7 @@ export default function AdminMap({
   const zonesInteractive = canEditZones && (tool === "edit" || tool === "delete");
 
   return (
-    <div className="relative h-full w-full">
+    <div className="flood-map relative h-full w-full">
       <MapContainer
         center={[TAKHLI_CENTER.lat, TAKHLI_CENTER.lng]}
         zoom={14}
