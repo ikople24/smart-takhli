@@ -65,19 +65,15 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
         <ZoomControl position="bottomright" />
         {baseMap === "satellite" ? (
           <>
-            {/* ภาพดาวเทียม Esri World Imagery (แหล่งเดียวกับแผนที่อื่นในระบบ) + ชั้นชื่อสถานที่ให้อ่านรู้เรื่อง */}
+            {/* ภาพดาวเทียม Google แบบ hybrid (lyrs=y มีชื่อถนน/สถานที่ในตัว) — ชัดกว่า Esri ในเขตตาคลี (เจ้าของขอ 2026-09-26)
+                แหล่งเดียวกับ components/MapBaseTileLayers.js */}
             <TileLayer
               key="sat"
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution="Imagery &copy; Esri"
-              maxNativeZoom={19}
-              maxZoom={20}
-            />
-            <TileLayer
-              key="sat-labels"
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-              maxNativeZoom={19}
-              maxZoom={20}
+              url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+              subdomains={["mt0", "mt1", "mt2", "mt3"]}
+              attribution="Imagery &copy; Google"
+              maxNativeZoom={20}
+              maxZoom={21}
             />
           </>
         ) : (
