@@ -8,7 +8,8 @@ import { requireFloodAdmin } from "../_auth";
 
 /**
  * GET  /api/flood-relief/gauges — จุดวัดระดับน้ำทั้งหมด + ประวัติรูปล่าสุด (admin ที่เข้าแดชบอร์ดได้)
- * POST /api/flood-relief/gauges — ปักจุดใหม่ { name, lat, lng, note? } (admin ทุกคน — เจ้าหน้าที่ภาคสนามต้องปักได้เอง)
+ * POST /api/flood-relief/gauges — ปักจุดใหม่ { name, lat, lng, note?, kind? } (admin ทุกคน — เจ้าหน้าที่ภาคสนามต้องปักได้เอง)
+ *   kind: gauge (วัดน้ำ) | water (แจกน้ำดื่ม) | donation (รับบริจาค) — 2 อย่างหลังปักได้ที่นี่ที่เดียว (ประชาชนปักไม่ได้)
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await requireFloodAdmin(req).catch(() => null);
@@ -27,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!v.ok) return res.status(400).json({ error: v.error });
       const doc = await FloodGauge.create({
         name: v.name,
+        kind: v.kind,
+        source: "staff",
         location: toGeoPoint(v.point),
         note: v.note,
         createdBy: auth.name,

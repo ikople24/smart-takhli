@@ -6,11 +6,14 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronLeft, LoaderCircle, Phone, Share2, TriangleAlert, X } from "lucide-react";
+import { Camera, ChevronLeft, LoaderCircle, Navigation, Phone, Share2, TriangleAlert, X } from "lucide-react";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import BaseMapToggle, { type BaseMap } from "@/components/flood-relief/BaseMapToggle";
 import { TypeIcon } from "@/components/flood-relief/icons";
+import PublicPointForm from "@/components/flood-relief/PublicPointForm";
 import type { PublicGauge, PublicZone } from "@/components/flood-relief/PublicZoneMap";
+import { POINT_KIND_META } from "@/lib/flood-relief/gauge";
+import { googleMapsDirUrl, type LatLng } from "@/lib/flood-relief/geo";
 import type { PublicStats } from "@/lib/flood-relief/publicStats";
 import { DEFAULT_FLOOD_SETTINGS, telHref } from "@/lib/flood-relief/settings";
 import { REQUEST_TYPE_META, REQUEST_TYPES } from "@/lib/flood-relief/status";
@@ -41,6 +44,19 @@ export default function FloodSituationPage() {
   const [baseMap, setBaseMap] = useState<BaseMap>("satellite");
   const [copied, setCopied] = useState(false);
   const [gaugeOpen, setGaugeOpen] = useState<PublicGauge | null>(null);
+  // ประชาชนช่วยปักจุดวัดน้ำ: picking = รอแตะแผนที่ · newPoint = ได้ตำแหน่งแล้ว เปิดฟอร์ม · photoFor = ส่งรูปเข้าจุดเดิม
+  const [picking, setPicking] = useState(false);
+  const [newPoint, setNewPoint] = useState<LatLng | null>(null);
+  const [photoFor, setPhotoFor] = useState<PublicGauge | null>(null);
+  const [thanks, setThanks] = useState(false);
+  const afterSubmit = () => {
+    setNewPoint(null);
+    setPhotoFor(null);
+    setGaugeOpen(null);
+    setThanks(true);
+    setTimeout(() => setThanks(false), 3000);
+    load();
+  };
 
   const load = useCallback(() => {
     fetch("/api/flood-relief/public/situation", { cache: "no-store" })
@@ -148,7 +164,42 @@ export default function FloodSituationPage() {
             {/* แผนที่โซน */}
             <section className="mx-4 mt-4 overflow-hidden rounded-[20px] border border-tk-line bg-white shadow-tk-md">
               <div className="relative h-[340px]">
-                <PublicZoneMap zones={data.zones} gauges={data.gauges ?? []} baseMap={baseMap} onGauge={setGaugeOpen} />
+                <PublicZoneMap
+                  zones={data.zones}
+                  gauges={data.gauges ?? []}
+                  baseMap={baseMap}
+                  onGauge={setGaugeOpen}
+                  onPick={
+                    picking
+                      ? (p) => {
+                          setPicking(false);
+                          setNewPoint(p);
+                        }
+                      : null
+                  }
+                />
+                {data.centerOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setPicking((v) => !v)}
+                    className={`absolute right-2.5 top-2.5 z-[400] inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-bold shadow ${
+                      picking ? "bg-tk-ink-strong text-white" : "bg-tk-flood text-white"
+                    }`}
+                  >
+                    <Camera size={15} aria-hidden />
+                    {picking ? "ยกเลิก" : "ปักจุดวัดน้ำ"}
+                  </button>
+                )}
+                {picking && (
+                  <span className="pointer-events-none absolute inset-x-0 bottom-3 z-[400] mx-auto w-fit rounded-full bg-tk-ink-strong px-3.5 py-1.5 text-[12px] font-semibold text-white shadow">
+                    📍 แตะแผนที่ตรงจุดที่ถ่ายรูประดับน้ำ
+                  </span>
+                )}
+                {thanks && (
+                  <span className="pointer-events-none absolute inset-x-0 bottom-3 z-[400] mx-auto w-fit rounded-full bg-tk-done px-3.5 py-1.5 text-[12px] font-semibold text-white shadow">
+                    ขอบคุณที่ช่วยส่งข้อมูล 🙏
+                  </span>
+                )}
                 <BaseMapToggle value={baseMap} onChange={setBaseMap} className="absolute left-2.5 top-2.5 z-[400] bg-white/95 shadow" />
                 {data.zones.length === 0 && (
                   <span className="pointer-events-none absolute inset-x-0 top-12 z-[400] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-[12px] font-semibold text-tk-done-ink shadow">
@@ -167,11 +218,11 @@ export default function FloodSituationPage() {
             </section>
 
             {/* จุดวัดระดับน้ำ — รูปล่าสุดจากเจ้าหน้าที่ */}
-            {(data.gauges ?? []).length > 0 && (
+            {(data.gauges ?? []).some((g) => g.kind === "gauge") && (
               <section className="mx-4 mt-3">
                 <h2 className="text-[14px] font-bold">📷 ระดับน้ำล่าสุดจากจุดวัด</h2>
                 <div className="mt-2 flex snap-x gap-2.5 overflow-x-auto pb-1">
-                  {data.gauges.map((g) => (
+                  {data.gauges.filter((g) => g.kind === "gauge").map((g) => (
                     <button
                       key={`${g.name}-${g.photoAt}`}
                       type="button"
@@ -189,6 +240,11 @@ export default function FloodSituationPage() {
                             {g.levelCm} ซม.
                           </span>
                         )}
+                        {g.photoFromPublic && (
+                          <span className="absolute right-1.5 top-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[9.5px] font-semibold text-white">
+                            ภาพจากประชาชน
+                          </span>
+                        )}
                       </span>
                       <span className="block px-2.5 py-2">
                         <span className="block truncate text-[12.5px] font-bold">{g.name}</span>
@@ -202,6 +258,44 @@ export default function FloodSituationPage() {
                 </div>
               </section>
             )}
+
+            {/* จุดแจกน้ำดื่ม / จุดรับบริจาค — ปักโดยเจ้าหน้าที่เท่านั้น */}
+            {(["water", "donation"] as const).map((k) => {
+              const list = (data.gauges ?? []).filter((g) => g.kind === k);
+              if (!list.length) return null;
+              const meta = POINT_KIND_META[k];
+              return (
+                <section key={k} className="mx-4 mt-3 rounded-[20px] bg-white p-4 shadow-tk-md">
+                  <h2 className="text-[14px] font-bold">
+                    {meta.icon} {meta.label} ({list.length})
+                  </h2>
+                  <ul className="mt-2 flex flex-col gap-2">
+                    {list.map((g) => (
+                      <li key={g.id} className="flex items-center gap-3 rounded-xl bg-tk-bg px-3 py-2.5">
+                        <button type="button" onClick={() => setGaugeOpen(g)} className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-[13px] font-bold">{g.name}</span>
+                          {(g.photoNote || g.note) && (
+                            <span className="block text-[11.5px] leading-snug text-tk-ink-3">{g.photoNote || g.note}</span>
+                          )}
+                        </button>
+                        {g.lat != null && g.lng != null && (
+                          <a
+                            href={googleMapsDirUrl({ lat: g.lat, lng: g.lng })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full px-3 text-[12px] font-bold text-white"
+                            style={{ background: meta.color }}
+                          >
+                            <Navigation size={13} aria-hidden />
+                            นำทาง
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
 
             {/* ตัวเลขรวม */}
             <section className="mx-4 mt-3 grid grid-cols-3 gap-2">
@@ -288,7 +382,9 @@ export default function FloodSituationPage() {
             <div className="w-full max-w-[480px] overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-2 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-[15px] font-bold">📷 {gaugeOpen.name}</h2>
+                  <h2 className="truncate text-[15px] font-bold">
+                    {POINT_KIND_META[gaugeOpen.kind]?.icon ?? "📷"} {gaugeOpen.name}
+                  </h2>
                   {gaugeOpen.note && <p className="truncate text-[11.5px] text-tk-ink-4">{gaugeOpen.note}</p>}
                 </div>
                 <button type="button" onClick={() => setGaugeOpen(null)} aria-label="ปิด" className="flex h-8 w-8 items-center justify-center rounded-full bg-tk-unclaimed-soft">
@@ -311,9 +407,43 @@ export default function FloodSituationPage() {
                   <p className="mt-1 text-[11.5px] text-tk-due-ink">รูปนี้เกิน 6 ชั่วโมงแล้ว สภาพจริงอาจเปลี่ยนไป</p>
                 )}
                 {gaugeOpen.photoNote && <p className="mt-1 text-tk-ink-3">{gaugeOpen.photoNote}</p>}
+                {gaugeOpen.photoFromPublic && <p className="mt-1 text-[11px] text-tk-ink-4">ภาพจากประชาชน</p>}
+                <div className="mt-3 flex gap-2">
+                  {gaugeOpen.kind === "gauge" && data?.centerOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setPhotoFor(gaugeOpen)}
+                      className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-tk-flood text-[13px] font-bold text-white"
+                    >
+                      <Camera size={16} aria-hidden />
+                      ส่งรูปอัปเดต
+                    </button>
+                  )}
+                  {gaugeOpen.lat != null && gaugeOpen.lng != null && (
+                    <a
+                      href={googleMapsDirUrl({ lat: gaugeOpen.lat, lng: gaugeOpen.lng })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-tk-flood text-[13px] font-bold text-tk-flood"
+                    >
+                      <Navigation size={15} aria-hidden />
+                      นำทาง
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        )}
+        {newPoint && <PublicPointForm mode="new" point={newPoint} onClose={() => setNewPoint(null)} onDone={afterSubmit} />}
+        {photoFor && (
+          <PublicPointForm
+            mode="photo"
+            gaugeId={photoFor.id}
+            gaugeName={photoFor.name}
+            onClose={() => setPhotoFor(null)}
+            onDone={afterSubmit}
+          />
         )}
       </CitizenShell>
     </>

@@ -32,11 +32,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       {
         $push: {
           photos: {
-            $each: [{ url: v.url, at: now, levelCm: v.levelCm, note: v.note, by: auth.name, byClerkId: auth.userId }],
+            $each: [{ url: v.url, at: now, levelCm: v.levelCm, note: v.note, by: auth.name, byClerkId: auth.userId, source: "staff" }],
             $slice: -MAX_GAUGE_PHOTOS,
           },
         },
-        $set: { lastPhotoUrl: v.url, lastPhotoAt: now, lastLevelCm: v.levelCm, lastNote: v.note, updatedBy: auth.name },
+        $set: { lastPhotoUrl: v.url, lastPhotoAt: now, lastLevelCm: v.levelCm, lastNote: v.note, lastSource: "staff", updatedBy: auth.name },
       }
     );
     return r.matchedCount ? res.status(201).json({ ok: true }) : res.status(404).json({ error: "ไม่พบจุดวัด" });

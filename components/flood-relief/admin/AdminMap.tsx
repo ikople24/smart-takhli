@@ -11,6 +11,7 @@ import type { FeatureCollection } from "geojson";
 import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
 import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
+import { POINT_KIND_META, POINT_KINDS } from "@/lib/flood-relief/gauge";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
 import BaseMapToggle, { FINE_ZOOM } from "../BaseMapToggle";
 import BaseTiles from "../BaseTiles";
@@ -129,15 +130,18 @@ export default function AdminMap({
       .catch(() => {});
   }, [layers.communities, filling, communities]);
 
-  /** ปักจุดวัดน้ำใหม่ → ตั้งชื่อ → เปิดหน้าต่างส่งรูปต่อทันที */
+  /** ปักจุดใหม่ (วัดน้ำ / แจกน้ำดื่ม / รับบริจาค) → ตั้งชื่อ → เปิดหน้าต่างจุดต่อทันที */
   const addGaugeAt = useCallback(
     async (lat: number, lng: number) => {
       setAddingGauge(false);
       const r = await Swal.fire({
-        title: "ตั้งชื่อจุดวัดระดับน้ำ",
+        title: "ปักจุดบนแผนที่",
         html:
-          '<input id="g-name" class="swal2-input" maxlength="60" placeholder="เช่น สะพานข้ามคลองหน้าวัด">' +
-          '<input id="g-note" class="swal2-input" maxlength="300" placeholder="คำอธิบาย (ไม่บังคับ) เช่น ดูที่เสาตอม่อ">',
+          '<select id="g-kind" class="swal2-select" style="display:flex;width:auto;margin:1em auto 0">' +
+          POINT_KINDS.map((k) => `<option value="${k}">${POINT_KIND_META[k].icon} ${POINT_KIND_META[k].label}</option>`).join("") +
+          "</select>" +
+          '<input id="g-name" class="swal2-input" maxlength="60" placeholder="ชื่อจุด เช่น สะพานหน้าวัด / เต็นท์หน้าเทศบาล">' +
+          '<input id="g-note" class="swal2-input" maxlength="300" placeholder="รายละเอียด (ไม่บังคับ) เช่น เวลาเปิด เบอร์ติดต่อ">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: "ปักจุด",
@@ -148,7 +152,11 @@ export default function AdminMap({
             Swal.showValidationMessage("กรุณาตั้งชื่อจุด");
             return false;
           }
-          return { name, note: (document.getElementById("g-note") as HTMLInputElement).value.trim() };
+          return {
+            name,
+            note: (document.getElementById("g-note") as HTMLInputElement).value.trim(),
+            kind: (document.getElementById("g-kind") as HTMLSelectElement).value,
+          };
         },
       });
       if (!r.isConfirmed || !r.value) return;
@@ -259,21 +267,21 @@ export default function AdminMap({
               );
             })}
 
-        {/* จุดวัดระดับน้ำ — หมุดรูปย่อล่าสุด · ปิดใช้งานแสดงจาง (เปิดกลับได้จากหน้าต่างจุด) */}
-        {layers.gauges &&
-          gauges.map((g) =>
-            g.lat == null || g.lng == null ? null : (
+        {/* จุดบนแผนที่ — วัดน้ำ (รูปย่อล่าสุด) / แจกน้ำดื่ม / รับบริจาค · ปิดใช้งานแสดงจาง (เปิดกลับได้จากหน้าต่างจุด) */}
+        {gauges.map((g) =>
+            g.lat == null || g.lng == null || !(g.kind === "gauge" ? layers.gauges : layers.services) ? null : (
               <Marker
                 key={`${g.id}-${g.lastPhotoAt}-${g.stale}`}
                 position={[g.lat, g.lng]}
-                icon={gaugeIcon(g.lastPhotoUrl, g.stale, g.lastLevelCm)}
+                icon={gaugeIcon({ kind: g.kind, photoUrl: g.lastPhotoUrl, stale: g.stale, levelCm: g.lastLevelCm })}
                 opacity={g.active ? 1 : 0.45}
                 zIndexOffset={500}
                 eventHandlers={{ click: () => setOpenGaugeId(g.id) }}
               >
                 <Tooltip direction="top" offset={[0, -22]}>
-                  📷 {g.name}
-                  {g.lastPhotoAt ? "" : " · ยังไม่มีรูป"}
+                  {POINT_KIND_META[g.kind].icon} {g.name}
+                  {g.kind === "gauge" && !g.lastPhotoAt ? " · ยังไม่มีรูป" : ""}
+                  {g.source === "public" ? " · ปักโดยประชาชน" : ""}
                 </Tooltip>
               </Marker>
             )
@@ -361,7 +369,8 @@ export default function AdminMap({
         {(
           [
             ["zones", `โซนสี (${activeZones.length})`],
-            ["gauges", `จุดวัดระดับน้ำ (${gauges.filter((g) => g.active).length})`],
+            ["gauges", `จุดวัดระดับน้ำ (${gauges.filter((g) => g.active && g.kind === "gauge").length})`],
+            ["services", `จุดแจกน้ำ/รับบริจาค (${gauges.filter((g) => g.active && g.kind !== "gauge").length})`],
             ["requests", "คำขอช่วยเหลือ"],
             ["teams", "ทีมปฏิบัติงาน"],
             ["communities", "ขอบเขตชุมชน (22)"],
@@ -383,13 +392,13 @@ export default function AdminMap({
             addingGauge ? "bg-tk-flood text-white" : "bg-tk-flood-soft text-tk-flood"
           }`}
         >
-          {addingGauge ? "ยกเลิกการปักจุด" : "+ ปักจุดวัดน้ำ"}
+          {addingGauge ? "ยกเลิกการปักจุด" : "+ ปักจุด (วัดน้ำ/แจกน้ำ/บริจาค)"}
         </button>
       </div>
 
       {addingGauge && (
         <div className="absolute left-1/2 top-[52px] z-[600] whitespace-nowrap lg:top-3.5 -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
-          📷 แตะแผนที่ตรงจุดที่จะวัดระดับน้ำ
+          📍 แตะแผนที่ตรงตำแหน่งจุด
         </div>
       )}
 

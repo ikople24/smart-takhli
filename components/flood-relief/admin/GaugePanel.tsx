@@ -1,10 +1,11 @@
-// components/flood-relief/admin/GaugePanel.tsx — หน้าต่างจุดวัดระดับน้ำ: รูปล่าสุด · ส่งรูปใหม่ · ประวัติ
+// components/flood-relief/admin/GaugePanel.tsx — หน้าต่างจุดบนแผนที่ (วัดน้ำ / แจกน้ำดื่ม / รับบริจาค): รูปล่าสุด · ส่งรูปใหม่ · ประวัติ
 // ส่งรูปได้ admin ทุกคน (ถ่ายจากมือถือหน้างานได้เลย) · ลบจุดได้เฉพาะ superadmin
 import { useRef, useState } from "react";
 import Image from "next/image";
 import Swal from "sweetalert2";
 import { Camera, ImageUp, LoaderCircle, Trash2, X } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
+import { POINT_KIND_META } from "@/lib/flood-relief/gauge";
 import { thaiWhen } from "@/lib/flood-relief/time";
 import type { AdminGauge } from "./types";
 
@@ -37,6 +38,8 @@ export default function GaugePanel({
   const [level, setLevel] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const meta = POINT_KIND_META[gauge.kind] ?? POINT_KIND_META.gauge;
+  const isGauge = gauge.kind === "gauge";
 
   const pick = (f: File | null) => {
     setFile(f);
@@ -65,7 +68,7 @@ export default function GaugePanel({
   const remove = async () => {
     const ok = await Swal.fire({
       icon: "warning",
-      title: `ลบจุดวัด "${gauge.name}"?`,
+      title: `ลบ${meta.label} "${gauge.name}"?`,
       text: "ลบพร้อมประวัติรูปทั้งหมด — ถ้าแค่ไม่ใช้ชั่วคราวให้ปิดใช้งานแทน",
       showCancelButton: true,
       confirmButtonText: "ลบ",
@@ -92,14 +95,18 @@ export default function GaugePanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`จุดวัดระดับน้ำ ${gauge.name}`}>
+    <div className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/40 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`${meta.label} ${gauge.name}`}>
       <div className="max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-t-2xl bg-white font-tk-sans text-tk-ink shadow-xl sm:rounded-2xl">
         <div className="sticky top-0 z-[1] flex items-center gap-2 border-b border-tk-line bg-white px-4 py-3">
           <span className="text-[18px]" aria-hidden>
-            📷
+            {meta.icon}
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[15px] font-bold">{gauge.name}</h2>
+            <p className="text-[11px] font-semibold" style={{ color: meta.color }}>
+              {meta.label}
+              {gauge.source === "public" && <span className="ml-1.5 rounded-full bg-tk-due-soft px-1.5 py-px text-tk-due-ink">ปักโดยประชาชน — ตรวจสอบก่อนใช้</span>}
+            </p>
             {gauge.note && <p className="truncate text-[11.5px] text-tk-ink-4">{gauge.note}</p>}
           </div>
           <button type="button" onClick={onClose} aria-label="ปิด" className="flex h-8 w-8 items-center justify-center rounded-full bg-tk-unclaimed-soft">
@@ -118,16 +125,19 @@ export default function GaugePanel({
                 <b className={gauge.stale ? "text-tk-ink-4" : "text-tk-flood"}>ล่าสุด {thaiWhen(gauge.lastPhotoAt)}</b>
                 {gauge.lastLevelCm != null && <span className="font-bold">· ระดับน้ำ {gauge.lastLevelCm} ซม.</span>}
                 {gauge.stale && <span className="text-tk-due-ink">· เกิน 6 ชม. ควรส่งรูปใหม่</span>}
+                {gauge.lastFromPublic && <span className="text-tk-due-ink">· ภาพจากประชาชน</span>}
                 {gauge.lastNote && <span className="w-full text-tk-ink-3">{gauge.lastNote}</span>}
               </figcaption>
             </figure>
           ) : (
-            <p className="rounded-xl bg-tk-bg px-3 py-6 text-center text-[12.5px] text-tk-ink-4">ยังไม่มีรูป — ส่งรูปแรกด้านล่าง</p>
+            <p className="rounded-xl bg-tk-bg px-3 py-6 text-center text-[12.5px] text-tk-ink-4">
+              ยังไม่มีรูป{isGauge ? " — ส่งรูปแรกด้านล่าง" : " (ไม่บังคับ)"}
+            </p>
           )}
 
           {/* ส่งรูปใหม่ */}
           <section className="mt-4 rounded-xl border-[1.5px] border-tk-flood bg-tk-flood-tint p-3">
-            <h3 className="text-[13px] font-bold text-tk-flood-dark">ส่งรูประดับน้ำตอนนี้</h3>
+            <h3 className="text-[13px] font-bold text-tk-flood-dark">{isGauge ? "ส่งรูประดับน้ำตอนนี้" : "อัปเดตรูปจุดนี้"}</h3>
             <input
               ref={cameraRef}
               type="file"
@@ -182,8 +192,8 @@ export default function GaugePanel({
                 </button>
               </div>
             )}
-            <div className="mt-2 grid grid-cols-[110px_1fr] gap-2">
-              <label className="block">
+            <div className={`mt-2 grid gap-2 ${isGauge ? "grid-cols-[110px_1fr]" : "grid-cols-1"}`}>
+              <label className={isGauge ? "block" : "hidden"}>
                 <span className="text-[11px] font-semibold text-tk-ink-3">ระดับน้ำ (ซม.)</span>
                 <input
                   type="number"
@@ -202,7 +212,7 @@ export default function GaugePanel({
                   value={note}
                   maxLength={300}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="เช่น น้ำเริ่มลด รถเล็กผ่านได้"
+                  placeholder={isGauge ? "เช่น น้ำเริ่มลด รถเล็กผ่านได้" : "เช่น น้ำดื่มหมดแล้ว / รับถึง 18:00"}
                   className="mt-1 h-10 w-full rounded-lg border border-tk-line px-2 text-[13px] focus:border-tk-flood focus:outline-none"
                 />
               </label>

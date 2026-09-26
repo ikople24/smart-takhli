@@ -2,10 +2,11 @@
 // แผนที่หน้าสถานการณ์สาธารณะ /flood: โซนสีทั้งชุมชน + จุดวัดระดับน้ำ (รูปล่าสุด)
 // **ไม่มีหมุดคำขอ** (ตำแหน่งบ้านผู้ขอความช่วยเหลือเป็นข้อมูลอ่อนไหว)
 import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, Polygon, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { MapContainer, Marker, Polygon, Tooltip, useMap, useMapEvents, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
+import { POINT_KIND_META, type PointKind } from "@/lib/flood-relief/gauge";
+import { TAKHLI_CENTER, type LatLng } from "@/lib/flood-relief/geo";
 import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
 import { FINE_ZOOM, type BaseMap } from "./BaseMapToggle";
 import BaseTiles from "./BaseTiles";
@@ -14,6 +15,8 @@ import { gaugeIcon } from "./gaugeIcon";
 export type PublicZone = { name: string; level: string; geometry: { type: "Polygon"; coordinates: number[][][] } };
 /** ตรงกับ lib/flood-relief/gauge#publicGauge */
 export type PublicGauge = {
+  id: string;
+  kind: PointKind;
   name: string;
   lat: number | null;
   lng: number | null;
@@ -22,8 +25,14 @@ export type PublicGauge = {
   photoAt: string | null;
   levelCm: number | null;
   photoNote: string;
+  photoFromPublic: boolean;
   stale: boolean;
 };
+
+function PickPoint({ onPick }: { onPick: (p: LatLng) => void }) {
+  useMapEvents({ click: (e) => onPick({ lat: e.latlng.lat, lng: e.latlng.lng }) });
+  return null;
+}
 
 const LABEL_BG: Record<ZoneLevel, string> = { critical: "#B92544", danger: "#9E6206", watch: "#7A6510", safe: "#14714A" };
 const ring = (z: PublicZone): [number, number][] => z.geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
@@ -46,11 +55,14 @@ export default function PublicZoneMap({
   gauges,
   baseMap,
   onGauge,
+  onPick,
 }: {
   zones: PublicZone[];
   gauges: PublicGauge[];
   baseMap: BaseMap;
   onGauge: (g: PublicGauge) => void;
+  /** โหมดปักจุด: แตะแผนที่ 1 ครั้ง = ตำแหน่ง · null = ไม่ได้ปัก */
+  onPick: ((p: LatLng) => void) | null;
 }) {
   const sorted = useMemo(
     () =>
@@ -92,16 +104,17 @@ export default function PublicZoneMap({
           <Marker
             key={`${g.name}-${g.photoAt}`}
             position={[g.lat, g.lng]}
-            icon={gaugeIcon(g.photoUrl, g.stale, g.levelCm)}
+            icon={gaugeIcon({ kind: g.kind, photoUrl: g.photoUrl, stale: g.stale, levelCm: g.levelCm })}
             zIndexOffset={500}
             eventHandlers={{ click: () => onGauge(g) }}
           >
             <Tooltip direction="top" offset={[0, -22]}>
-              📷 {g.name}
+              {POINT_KIND_META[g.kind]?.icon ?? "📷"} {g.name}
             </Tooltip>
           </Marker>
         )
       )}
+      {onPick && <PickPoint onPick={onPick} />}
       <FitOnce zones={sorted} />
     </MapContainer>
   );
