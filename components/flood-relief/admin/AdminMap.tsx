@@ -3,8 +3,9 @@
 // เลือกหมุด ↔ รายการซ้าย ↔ แผงขวา ผ่าน selectedId ใน useFloodReliefStore
 // เติมสีโซนทั้งชุมชน — เฉพาะ superadmin (canEditZones) ตามที่เจ้าของตกลง 2026-09-26 (เลิกวาด/วงเอง)
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Tooltip, useMap, useMapEvents, ZoomControl } from "react-leaflet";
 import L from "leaflet";
+import Swal from "sweetalert2";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
 import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
@@ -13,8 +14,10 @@ import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
 import BaseMapToggle, { FINE_ZOOM } from "../BaseMapToggle";
 import BaseTiles from "../BaseTiles";
+import { gaugeIcon } from "../gaugeIcon";
+import GaugePanel from "./GaugePanel";
 import { pinColor } from "./labels";
-import type { AdminRequest, AdminTeam, AdminZone } from "./types";
+import type { AdminGauge, AdminRequest, AdminTeam, AdminZone } from "./types";
 import ZoneManager from "./ZoneManager";
 import ZoneToolbar, { type FillPaint, type ZoneTool } from "./ZoneToolbar";
 import { zoneRequest } from "./zoneApi";
@@ -59,6 +62,12 @@ function FlyToSelected({ req }: { req: AdminRequest | null }) {
   return null;
 }
 
+/** โหมดปักจุดวัดน้ำ: แตะแผนที่ 1 ครั้ง = ตำแหน่งจุดใหม่ */
+function PickPoint({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
+  return null;
+}
+
 function FitZone({ zone }: { zone: AdminZone | null }) {
   const map = useMap();
   useEffect(() => {
@@ -73,12 +82,18 @@ export default function AdminMap({
   zones,
   canEditZones,
   onZonesChanged,
+  gauges,
+  canDeleteGauges,
+  onGaugesChanged,
 }: {
   items: AdminRequest[];
   teams: AdminTeam[];
   zones: AdminZone[];
   canEditZones: boolean;
   onZonesChanged: () => void;
+  gauges: AdminGauge[];
+  canDeleteGauges: boolean;
+  onGaugesChanged: () => Promise<void> | void;
 }) {
   const { selectedId, select, layers, toggleLayer, baseMap, setBaseMap } = useFloodReliefStore();
   const [communities, setCommunities] = useState<FeatureCollection | null>(null);
@@ -87,6 +102,9 @@ export default function AdminMap({
   const [managerOpen, setManagerOpen] = useState(false);
   const [focusZone, setFocusZone] = useState<AdminZone | null>(null);
   const [busyCommunity, setBusyCommunity] = useState<string | null>(null);
+  const [addingGauge, setAddingGauge] = useState(false);
+  const [openGaugeId, setOpenGaugeId] = useState<string | null>(null);
+  const openGauge = useMemo(() => gauges.find((g) => g.id === openGaugeId) ?? null, [gauges, openGaugeId]);
 
   const selected = useMemo(() => items.find((r) => r.id === selectedId) ?? null, [items, selectedId]);
   const activeZones = useMemo(() => zones.filter((z) => z.active && isZoneLevel(z.level)), [zones]);
@@ -103,6 +121,45 @@ export default function AdminMap({
       .then((j) => j && setCommunities(j))
       .catch(() => {});
   }, [layers.communities, filling, communities]);
+
+  /** ปักจุดวัดน้ำใหม่ → ตั้งชื่อ → เปิดหน้าต่างส่งรูปต่อทันที */
+  const addGaugeAt = useCallback(
+    async (lat: number, lng: number) => {
+      setAddingGauge(false);
+      const r = await Swal.fire({
+        title: "ตั้งชื่อจุดวัดระดับน้ำ",
+        html:
+          '<input id="g-name" class="swal2-input" maxlength="60" placeholder="เช่น สะพานข้ามคลองหน้าวัด">' +
+          '<input id="g-note" class="swal2-input" maxlength="300" placeholder="คำอธิบาย (ไม่บังคับ) เช่น ดูที่เสาตอม่อ">',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: "ปักจุด",
+        cancelButtonText: "ยกเลิก",
+        preConfirm: () => {
+          const name = (document.getElementById("g-name") as HTMLInputElement).value.trim();
+          if (!name) {
+            Swal.showValidationMessage("กรุณาตั้งชื่อจุด");
+            return false;
+          }
+          return { name, note: (document.getElementById("g-note") as HTMLInputElement).value.trim() };
+        },
+      });
+      if (!r.isConfirmed || !r.value) return;
+      const res = await fetch("/api/flood-relief/gauges", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...r.value, lat, lng }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Swal.fire({ icon: "error", title: "ปักจุดไม่สำเร็จ", text: j?.error || "" });
+        return;
+      }
+      await onGaugesChanged();
+      setOpenGaugeId(j.id);
+    },
+    [onGaugesChanged]
+  );
 
   /** คลิกชุมชนตอนโหมดเติมสี → เติม/เปลี่ยนระดับ หรือล้างสี (ลบโซนของชุมชนนั้น) */
   const fillCommunity = useCallback(
@@ -191,6 +248,27 @@ export default function AdminMap({
               );
             })}
 
+        {/* จุดวัดระดับน้ำ — หมุดรูปย่อล่าสุด · ปิดใช้งานแสดงจาง (เปิดกลับได้จากหน้าต่างจุด) */}
+        {layers.gauges &&
+          gauges.map((g) =>
+            g.lat == null || g.lng == null ? null : (
+              <Marker
+                key={`${g.id}-${g.lastPhotoAt}-${g.stale}`}
+                position={[g.lat, g.lng]}
+                icon={gaugeIcon(g.lastPhotoUrl, g.stale, g.lastLevelCm)}
+                opacity={g.active ? 1 : 0.45}
+                zIndexOffset={500}
+                eventHandlers={{ click: () => setOpenGaugeId(g.id) }}
+              >
+                <Tooltip direction="top" offset={[0, -22]}>
+                  📷 {g.name}
+                  {g.lastPhotoAt ? "" : " · ยังไม่มีรูป"}
+                </Tooltip>
+              </Marker>
+            )
+          )}
+        {addingGauge && <PickPoint onPick={addGaugeAt} />}
+
         {layers.requests &&
           items.map((r) =>
             r.lat == null || r.lng == null || r.id === selectedId ? null : (
@@ -247,6 +325,7 @@ export default function AdminMap({
         {(
           [
             ["zones", `โซนสี (${activeZones.length})`],
+            ["gauges", `จุดวัดระดับน้ำ (${gauges.filter((g) => g.active).length})`],
             ["requests", "คำขอช่วยเหลือ"],
             ["teams", "ทีมปฏิบัติงาน"],
             ["communities", "ขอบเขตชุมชน (22)"],
@@ -257,7 +336,32 @@ export default function AdminMap({
             {label}
           </label>
         ))}
+        <button
+          type="button"
+          onClick={() => setAddingGauge((v) => !v)}
+          aria-pressed={addingGauge}
+          className={`mt-1 h-8 rounded-lg px-2 text-[12px] font-bold ${
+            addingGauge ? "bg-tk-flood text-white" : "bg-tk-flood-soft text-tk-flood"
+          }`}
+        >
+          {addingGauge ? "ยกเลิกการปักจุด" : "+ ปักจุดวัดน้ำ"}
+        </button>
       </div>
+
+      {addingGauge && (
+        <div className="absolute left-1/2 top-3.5 z-[600] -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
+          📷 แตะแผนที่ตรงจุดที่จะวัดระดับน้ำ
+        </div>
+      )}
+
+      {openGauge && (
+        <GaugePanel
+          gauge={openGauge}
+          canDelete={canDeleteGauges}
+          onClose={() => setOpenGaugeId(null)}
+          onChanged={onGaugesChanged}
+        />
+      )}
 
       {canEditZones && (
         <ZoneToolbar

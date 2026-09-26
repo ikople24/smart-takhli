@@ -3,13 +3,14 @@
 // แสดงเฉพาะระดับ/โซนชุมชน/ตัวเลขรวม — ไม่มีหมุดหรือรายละเอียดคำขอรายบ้าน
 import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
+import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ChevronLeft, LoaderCircle, Phone, Share2, TriangleAlert } from "lucide-react";
+import { ChevronLeft, LoaderCircle, Phone, Share2, TriangleAlert, X } from "lucide-react";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import BaseMapToggle, { type BaseMap } from "@/components/flood-relief/BaseMapToggle";
 import { TypeIcon } from "@/components/flood-relief/icons";
-import type { PublicZone } from "@/components/flood-relief/PublicZoneMap";
+import type { PublicGauge, PublicZone } from "@/components/flood-relief/PublicZoneMap";
 import type { PublicStats } from "@/lib/flood-relief/publicStats";
 import { DEFAULT_FLOOD_SETTINGS, telHref } from "@/lib/flood-relief/settings";
 import { REQUEST_TYPE_META, REQUEST_TYPES } from "@/lib/flood-relief/status";
@@ -31,6 +32,7 @@ type Situation = {
   announcement: string;
   zones: PublicZone[];
   stats: PublicStats;
+  gauges: PublicGauge[];
 };
 
 export default function FloodSituationPage() {
@@ -38,6 +40,7 @@ export default function FloodSituationPage() {
   const [error, setError] = useState(false);
   const [baseMap, setBaseMap] = useState<BaseMap>("satellite");
   const [copied, setCopied] = useState(false);
+  const [gaugeOpen, setGaugeOpen] = useState<PublicGauge | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/flood-relief/public/situation", { cache: "no-store" })
@@ -145,7 +148,7 @@ export default function FloodSituationPage() {
             {/* แผนที่โซน */}
             <section className="mx-4 mt-4 overflow-hidden rounded-[20px] border border-tk-line bg-white shadow-tk-md">
               <div className="relative h-[340px]">
-                <PublicZoneMap zones={data.zones} baseMap={baseMap} />
+                <PublicZoneMap zones={data.zones} gauges={data.gauges ?? []} baseMap={baseMap} onGauge={setGaugeOpen} />
                 <BaseMapToggle value={baseMap} onChange={setBaseMap} className="absolute left-2.5 top-2.5 z-[400] bg-white/95 shadow" />
                 {data.zones.length === 0 && (
                   <span className="pointer-events-none absolute inset-x-0 top-12 z-[400] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-[12px] font-semibold text-tk-done-ink shadow">
@@ -162,6 +165,43 @@ export default function FloodSituationPage() {
                 ))}
               </div>
             </section>
+
+            {/* จุดวัดระดับน้ำ — รูปล่าสุดจากเจ้าหน้าที่ */}
+            {(data.gauges ?? []).length > 0 && (
+              <section className="mx-4 mt-3">
+                <h2 className="text-[14px] font-bold">📷 ระดับน้ำล่าสุดจากจุดวัด</h2>
+                <div className="mt-2 flex snap-x gap-2.5 overflow-x-auto pb-1">
+                  {data.gauges.map((g) => (
+                    <button
+                      key={`${g.name}-${g.photoAt}`}
+                      type="button"
+                      onClick={() => setGaugeOpen(g)}
+                      className="w-[150px] shrink-0 snap-start overflow-hidden rounded-2xl bg-white text-left shadow-tk-md"
+                    >
+                      <span className="relative block aspect-[4/3] bg-tk-bg">
+                        {g.photoUrl ? (
+                          <Image src={g.photoUrl} alt={`ระดับน้ำที่ ${g.name}`} fill sizes="150px" className="object-cover" />
+                        ) : (
+                          <span className="flex h-full items-center justify-center text-[11px] text-tk-ink-4">ยังไม่มีรูป</span>
+                        )}
+                        {g.levelCm != null && (
+                          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-tk-flood px-2 py-0.5 text-[11px] font-bold text-white">
+                            {g.levelCm} ซม.
+                          </span>
+                        )}
+                      </span>
+                      <span className="block px-2.5 py-2">
+                        <span className="block truncate text-[12.5px] font-bold">{g.name}</span>
+                        <span className={`block text-[10.5px] ${g.stale ? "text-tk-due-ink" : "text-tk-ink-4"}`}>
+                          {g.photoAt ? thaiWhen(g.photoAt) : "-"}
+                          {g.stale && g.photoAt ? " · อาจไม่ใช่ปัจจุบัน" : ""}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* ตัวเลขรวม */}
             <section className="mx-4 mt-3 grid grid-cols-3 gap-2">
@@ -236,6 +276,44 @@ export default function FloodSituationPage() {
               )}
             </section>
           </>
+        )}
+        {gaugeOpen && (
+          <div
+            className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`ระดับน้ำที่ ${gaugeOpen.name}`}
+            onClick={() => setGaugeOpen(null)}
+          >
+            <div className="w-full max-w-[480px] overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-[15px] font-bold">📷 {gaugeOpen.name}</h2>
+                  {gaugeOpen.note && <p className="truncate text-[11.5px] text-tk-ink-4">{gaugeOpen.note}</p>}
+                </div>
+                <button type="button" onClick={() => setGaugeOpen(null)} aria-label="ปิด" className="flex h-8 w-8 items-center justify-center rounded-full bg-tk-unclaimed-soft">
+                  <X size={16} aria-hidden />
+                </button>
+              </div>
+              {gaugeOpen.photoUrl ? (
+                <div className="relative aspect-[4/3] bg-tk-bg">
+                  <Image src={gaugeOpen.photoUrl} alt={`ระดับน้ำที่ ${gaugeOpen.name}`} fill sizes="480px" className="object-cover" />
+                </div>
+              ) : (
+                <p className="bg-tk-bg px-4 py-10 text-center text-[13px] text-tk-ink-4">ยังไม่มีรูปจากจุดนี้</p>
+              )}
+              <div className="px-4 py-3 text-[12.5px]">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <b>{gaugeOpen.photoAt ? `ถ่ายเมื่อ ${thaiWhen(gaugeOpen.photoAt)}` : "ยังไม่มีข้อมูล"}</b>
+                  {gaugeOpen.levelCm != null && <span className="font-bold text-tk-flood">· ระดับน้ำ {gaugeOpen.levelCm} ซม.</span>}
+                </div>
+                {gaugeOpen.stale && gaugeOpen.photoAt && (
+                  <p className="mt-1 text-[11.5px] text-tk-due-ink">รูปนี้เกิน 6 ชั่วโมงแล้ว สภาพจริงอาจเปลี่ยนไป</p>
+                )}
+                {gaugeOpen.photoNote && <p className="mt-1 text-tk-ink-3">{gaugeOpen.photoNote}</p>}
+              </div>
+            </div>
+          </div>
         )}
       </CitizenShell>
     </>

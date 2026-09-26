@@ -21,7 +21,7 @@
 
 ## Collections
 
-`flood_requests` · `flood_zones` · `flood_teams` · `flood_shelters` · `flood_settings` (singleton `key: "default"`) · `flood_counters` (`_id: "flood-ticket"`) — prefix `flood_` จำเป็นเพราะฐานข้อมูลแชร์ข้ามแอปพี่น้อง
+`flood_requests` · `flood_zones` · `flood_gauges` (จุดวัดระดับน้ำ) · `flood_teams` · `flood_shelters` · `flood_settings` (singleton `key: "default"`) · `flood_counters` (`_id: "flood-ticket"`) — prefix `flood_` จำเป็นเพราะฐานข้อมูลแชร์ข้ามแอปพี่น้อง
 
 `geojsonfeatures` (22 polygon ชุมชน) เป็นของแอปพี่น้อง — **อ่านอย่างเดียวผ่าน native driver** (`lib/flood-relief/locate.ts`, `communities.ts`) ห้ามใช้ `models/GeoJSONFeature` เพราะ autoIndex อาจสร้าง index ลง collection ของแอปอื่น
 
@@ -37,5 +37,6 @@
 - **แจ้ง LINE อยู่ที่ `lib/flood-relief/notify.ts` ที่เดียว**: คำขอใหม่ = การ์ด Flex เข้ากลุ่มเจ้าหน้าที่เดิม (`getAdminGroupId`) มีปุ่มโทรหาผู้แจ้ง (เบอร์อยู่ในปุ่มเท่านั้น ไม่อยู่ใน altText) · มอบหมาย = การ์ดเข้า `FloodTeam.lineGroupId` · ผู้แจ้งที่เชื่อม LINE ได้ข้อความตอน ออกเดินทาง/ถึงจุด/เสร็จสิ้น (ยังไม่มีทางเชื่อม — webhook ยังไม่รู้จักเลข `FL-`) · โควตา LINE OA นับผู้รับ × ครั้ง
 - ลิงก์ "เปิดในแดชบอร์ด" ในการ์ดต้องตั้ง env `NEXT_PUBLIC_SITE_URL` (https) — ไม่เชื่อ Host header
 - **โซนสี = เติมสีทั้งชุมชน** (เจ้าของสั่ง 2026-09-26 แทนการวาด/วงเอง — ถอด Geoman ออกแล้ว): superadmin เลือกสี → คลิกกรอบชุมชน → `POST /api/flood-relief/zones { communityName, level }` รูปคัดลอกจาก `geojsonfeatures` · ชุมชนเดียวมีได้โซนเดียว (`FloodZone.communityName`) คลิกซ้ำ = เปลี่ยนระดับ · "ล้างสี" = ลบโซนนั้น · **แก้/ลบโซนได้เฉพาะ superadmin** admin อื่นเห็นอย่างเดียว · ทุกการเปลี่ยนจัดโซนคำขอที่ยังเปิดใหม่ (`lib/flood-relief/reassignZones.ts`) + audit `flood_zone_changed` · โซนที่วาดเองก่อนเปลี่ยนวิธี (`communityName: null`) ยังแสดง/จัดการได้จาก "จัดการโซนทั้งหมด"
+- **จุดวัดระดับน้ำ** (`models/flood-relief/FloodGauge.js`, API `pages/api/flood-relief/gauges/*`, UI `GaugePanel.tsx` + `gaugeIcon.ts`): ปักจุดสำคัญแล้วส่งรูปเป็นระยะ (+ระดับน้ำ ซม. ไม่บังคับ) · **admin ทุกคนปักจุด/ส่งรูปได้ ลบจุดได้เฉพาะ superadmin** · เก็บ 30 รูปล่าสุด + คัดลอก `last*` · รูปขึ้นหน้าสาธารณะ `/flood` ผ่าน `publicGauge()` ที่ **ไม่ส่งชื่อผู้อัปโหลด/ประวัติ** · รูปเก่าเกิน 6 ชม. ขึ้นเตือน "อาจไม่ใช่ปัจจุบัน" · รูปรับเฉพาะ Cloudinary
 - ระดับสถานการณ์บนหน้าแรก = `situationOverride` ที่ superadmin ประกาศ หรือ `auto` = ระดับโซนสูงสุดที่เปิดใช้งาน
 - บล็อกหน้าแรกเป็นโทนแดง + ขอบไฟไซเรน (`.flood-siren` ใน `styles/globals.css`) ตามที่เจ้าของสั่ง · หน้าอื่นใช้น้ำเงิน `tk-flood-*` · ไม่แตะ `--color-primary`

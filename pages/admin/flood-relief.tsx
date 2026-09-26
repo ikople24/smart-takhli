@@ -13,7 +13,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import KpiBar from "@/components/flood-relief/admin/KpiBar";
 import RequestList from "@/components/flood-relief/admin/RequestList";
 import RequestDetail from "@/components/flood-relief/admin/RequestDetail";
-import type { AdminRequest, AdminTeam, AdminZone, FloodKpi, Me } from "@/components/flood-relief/admin/types";
+import type { AdminGauge, AdminRequest, AdminTeam, AdminZone, FloodKpi, Me } from "@/components/flood-relief/admin/types";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
 
 const AdminMap = dynamic(() => import("@/components/flood-relief/admin/AdminMap"), {
@@ -31,6 +31,7 @@ export default function FloodReliefDashboard() {
   const [kpi, setKpi] = useState<FloodKpi | null>(null);
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [zones, setZones] = useState<AdminZone[]>([]);
+  const [gauges, setGauges] = useState<AdminGauge[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [centerOpen, setCenterOpen] = useState<boolean | null>(null);
   const [lastAt, setLastAt] = useState<string | null>(null);
@@ -40,10 +41,11 @@ export default function FloodReliefDashboard() {
 
   const load = useCallback(async () => {
     try {
-      const [r, t, z] = await Promise.all([
+      const [r, t, z, g] = await Promise.all([
         fetch("/api/flood-relief/requests"),
         fetch("/api/flood-relief/teams"),
         fetch("/api/flood-relief/zones"),
+        fetch("/api/flood-relief/gauges"),
       ]);
       const j = await r.json().catch(() => null);
       if (!r.ok) {
@@ -58,6 +60,7 @@ export default function FloodReliefDashboard() {
       setError(null);
       if (t.ok) setTeams((await t.json()).teams ?? []);
       if (z.ok) setZones((await z.json()).zones ?? []);
+      if (g.ok) setGauges((await g.json()).gauges ?? []);
     } catch {
       setError("เชื่อมต่อไม่ได้ — จะลองใหม่อัตโนมัติ");
     }
@@ -169,6 +172,9 @@ export default function FloodReliefDashboard() {
               zones={zones}
               canEditZones={Boolean(me?.isSuperAdmin)}
               onZonesChanged={load}
+              gauges={gauges}
+              canDeleteGauges={Boolean(me?.isSuperAdmin)}
+              onGaugesChanged={load}
             />
           </div>
 
