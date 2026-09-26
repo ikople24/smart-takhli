@@ -45,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (before.hotline !== next.hotline) changes.push(`เบอร์ ${next.hotline}`);
       if (before.callbackSlaMin !== next.callbackSlaMin) changes.push(`โทรกลับใน ${next.callbackSlaMin} นาที`);
       if (before.announcement !== next.announcement) changes.push("แก้ประกาศ");
+      if (before.situationOverride !== next.situationOverride) changes.push(`ระดับสถานการณ์ ${next.situationOverride}`);
       logAuditEvent({
         actorClerkId: userId,
         actorName,

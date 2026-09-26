@@ -10,6 +10,8 @@ const FloodSettingsSchema = new mongoose.Schema(
     hotline: { type: String, default: "056-261-500" },
     callbackSlaMin: { type: Number, default: 15 },
     announcement: { type: String, default: "" },
+    // ระดับสถานการณ์บนบล็อกหน้าแรก: auto = ตามโซนสี · normal|watch|danger|critical = ประกาศทับ
+    situationOverride: { type: String, default: "auto" },
     updatedBy: { type: String, default: "" },
   },
   { timestamps: true, collection: "flood_settings" }

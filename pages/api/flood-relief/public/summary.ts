@@ -2,12 +2,14 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import FloodZone from "@/models/flood-relief/FloodZone";
 import { loadFloodSettings } from "@/lib/flood-relief/loadSettings";
+import { effectiveSituation } from "@/lib/flood-relief/settings";
 import { situationLevel } from "@/lib/flood-relief/zones";
 
 /**
  * GET /api/flood-relief/public/summary — สาธารณะ (บล็อกหน้าแรก)
  * { centerOpen, level, updatedAt, hotline, callbackSlaMin, announcement }
- * level = ระดับโซนสูงสุดที่ยังเปิดใช้งาน (ไม่มีโซน = normal) · updatedAt = เวลาแก้โซน/ค่าตั้งล่าสุด
+ * level = ค่าที่ superadmin ประกาศทับ หรือ (auto) ระดับโซนสูงสุดที่ยังเปิดใช้งาน (ไม่มีโซน = normal)
+ * updatedAt = เวลาแก้โซน/ค่าตั้งล่าสุด
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -30,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
     return res.status(200).json({
       centerOpen: settings.centerOpen,
-      level: situationLevel(zones),
+      level: effectiveSituation(settings.situationOverride, situationLevel(zones)),
       updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : null,
       hotline: settings.hotline,
       callbackSlaMin: settings.callbackSlaMin,
