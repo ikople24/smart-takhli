@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/dbConnect";
 import FloodRequest from "@/models/flood-relief/FloodRequest";
+import { newAccessKey } from "@/lib/flood-relief/accessKey";
 import { toGeoPoint } from "@/lib/flood-relief/geo";
+import { loadFloodSettings } from "@/lib/flood-relief/loadSettings";
 import { locate } from "@/lib/flood-relief/locate";
 import { nextTicket } from "@/lib/flood-relief/nextTicket";
 import { notifyNewRequest } from "@/lib/flood-relief/notify";
@@ -11,7 +13,9 @@ import { validateRequestInput } from "@/lib/flood-relief/validate";
 /**
  * POST /api/flood-relief/public/requests — สาธารณะ (ผู้ประสบภัยไม่ต้องล็อกอิน) + rate-limit ต่อ IP/เบอร์
  * body: { type, lat, lng, phone, accuracyM?, urgency?, landmark?, peopleCount?, reporterName?, detail?, images? }
- * สร้างคำขอ → จัดชุมชน/โซนจากพิกัดฝั่ง server → แจ้ง LINE กลุ่มศูนย์ฯ → คืน { ticket } เท่านั้น
+ * ศูนย์ฯ ปิด (FloodSettings.centerOpen !== true) = ไม่รับ 403 ให้โทรแทน
+ * สร้างคำขอ → จัดชุมชน/โซนจากพิกัดฝั่ง server → แจ้ง LINE กลุ่มเจ้าหน้าที่ → คืน { ticket, key }
+ * key = กุญแจดูรายละเอียดหน้าสถานะ (lib/flood-relief/accessKey.ts) — ออกครั้งเดียวตอนนี้เท่านั้น
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -26,6 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await dbConnect();
 
+    const settings = await loadFloodSettings();
+    if (!settings.centerOpen) {
+      return res
+        .status(403)
+        .json({ error: `ศูนย์ช่วยเหลือยังไม่เปิดรับคำขอทางเว็บ กรุณาโทร ${settings.hotline}`, centerOpen: false });
+    }
+
     const ip = clientIp(req.headers, req.socket?.remoteAddress);
     const since = rateLimitSince();
     const [byIp, byPhone] = await Promise.all([
@@ -33,14 +44,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       FloodRequest.countDocuments({ phone: input.phone, createdAt: { $gte: since } }),
     ]);
     if (isRateLimited({ byIp, byPhone }, Boolean(ip))) {
-      return res.status(429).json({ error: "ส่งคำขอถี่เกินไป กรุณาโทรศูนย์ฯ 056-261-500" });
+      return res.status(429).json({ error: `ส่งคำขอถี่เกินไป กรุณาโทรศูนย์ฯ ${settings.hotline}` });
     }
 
     const [{ communityName, zone }, ticket] = await Promise.all([locate(input.point), nextTicket()]);
     const now = new Date();
+    const key = newAccessKey();
 
     await FloodRequest.create({
       ticket,
+      accessKey: key,
       type: input.type,
       urgency: input.urgency,
       status: "received",
@@ -72,10 +85,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       zoneLevel: zone?.level ?? null,
       landmark: input.landmark,
       peopleCount: input.peopleCount,
+      phone: input.phone,
       createdAt: now,
     });
 
-    return res.status(201).json({ ticket });
+    return res.status(201).json({ ticket, key });
   } catch (err) {
     console.error("[flood-relief/public/requests] POST", err);
     return res.status(500).json({ error: "บันทึกคำขอไม่สำเร็จ กรุณาโทรศูนย์ฯ 056-261-500" });

@@ -11,6 +11,7 @@ const base = {
   zoneLevel: "critical",
   landmark: "ซ.มาลัย 2 บ้านรั้วเขียว",
   peopleCount: 3,
+  phone: "0812344421",
   createdAt: new Date("2026-09-26T01:32:00Z"), // 08:32 น.
 };
 
@@ -49,6 +50,14 @@ describe("formatNewRequestFlex — บล็อกพิเศษเข้าก
     expect(t).not.toContain("โซน");
     expect(t).not.toContain("คนในบ้าน");
     expect(t).not.toContain("จุดสังเกต");
+  });
+
+  it("ปุ่มโทรหาผู้แจ้ง — เบอร์อยู่ในปุ่มเท่านั้น ไม่อยู่ใน altText/เนื้อการ์ด", () => {
+    const m = formatNewRequestFlex(base);
+    const s = json(m);
+    expect(s).toContain('"uri":"tel:0812344421"');
+    expect(s.split("0812344421").length - 1).toBe(1);
+    expect(m.altText).not.toContain("0812344421");
   });
 
   it("ไม่มีข้อความว่างในการ์ด (LINE ปฏิเสธ text ว่างทั้งใบ)", () => {

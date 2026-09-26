@@ -36,6 +36,9 @@ const FloodRequestSchema = new mongoose.Schema(
   {
     // FL-0142 — เลขวิ่งต่อเนื่องจาก counter ใน flood_counters (lib/flood-relief/ticket.ts)
     ticket: { type: String, required: true },
+    // กุญแจสุ่มที่ออกให้ผู้แจ้งตอนส่ง — เลขที่ FL-#### เรียงกันเดาได้ จึงต้องมีกุญแจก่อนเห็นจุดสังเกต/ชุมชน/จำนวนคน
+    // select: false = ไม่หลุดไปกับ query ไหนโดยไม่ตั้งใจ (ดึงเฉพาะตอนเทียบกุญแจ)
+    accessKey: { type: String, required: true, select: false },
     type: { type: String, required: true }, // evac | drain | sand | other
     urgency: { type: String, required: true }, // critical | urgent | normal
     status: { type: String, default: "received" },

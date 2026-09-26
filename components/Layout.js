@@ -48,6 +48,7 @@ const ADMIN_META = {
   '/admin/superadmin':                { title: 'การบริหารระบบ' },
   '/admin/superadmin/audit-log':      { title: 'Audit Log' },
   '/admin/superadmin/department-heads': { title: 'ตั้งค่าหัวหน้ากอง', subtitle: 'ใครมอบหมาย/โอนงานในกองได้ (โมดูลงานเจ้าหน้าที่)' },
+  '/admin/superadmin/flood-relief':   { title: 'ศูนย์ช่วยเหลือน้ำท่วม', subtitle: 'เปิด/ปิดศูนย์ฯ · เบอร์ · ประกาศบนหน้าแรก' },
   '/admin/superadmin/setup':          { title: 'ตั้งค่า Superadmin', noSidebar: true },
 };
 
@@ -85,9 +86,11 @@ const Layout = ({ children }) => {
   }
 
   // หน้าฝั่งประชาชนโฉมใหม่ (citizen shell) มี chrome ของตัวเอง — ไม่ครอบ layout เดิม
-  // (/, /report, /status, /activities — หน้า public อื่นเช่น /garbage /complaint ยังใช้ layout เดิม)
+  // (/, /report, /status, /activities, /flood/* — หน้า public อื่นเช่น /garbage /complaint ยังใช้ layout เดิม)
   const isCitizenRoute =
-    ["/", "/report", "/activities"].includes(router.pathname) || router.pathname.startsWith("/status");
+    ["/", "/report", "/activities"].includes(router.pathname) ||
+    router.pathname.startsWith("/status") ||
+    router.pathname.startsWith("/flood/");
   if (isCitizenRoute) {
     return <>{children}</>;
   }

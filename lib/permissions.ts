@@ -225,12 +225,14 @@ export const ALL_PAGES: PagePermission[] = [
 // ✓ audit-log.tsx     → /admin/superadmin/audit-log
 // ✓ line-settings.jsx → /admin/superadmin/line-settings
 // ✓ department-heads.tsx → /admin/superadmin/department-heads (ตั้งค่าหัวหน้ากอง — โมดูลงานเจ้าหน้าที่)
+// ✓ flood-relief.tsx  → /admin/superadmin/flood-relief (เปิด/ปิดศูนย์ช่วยเหลือน้ำท่วม)
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
   '/admin/superadmin/setup',
   '/admin/superadmin/audit-log',
   '/admin/superadmin/line-settings',
   '/admin/superadmin/department-heads',
+  '/admin/superadmin/flood-relief',
 ];
 
 // สิทธิ์เริ่มต้นตาม role — ใช้เมื่อ user ยังไม่มี allowedPages ใน Mongo (= ยังไม่ถูกตั้งค่า)

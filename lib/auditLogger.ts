@@ -34,6 +34,8 @@ type AuditAction =
   | 'complaint_department_set'
   | 'assignment_transfer_requested'
   | 'department_head_set'
+  // Flood relief
+  | 'flood_settings_updated'
   | 'complaint_deleted'
   | 'data_exported'
   | 'login';
