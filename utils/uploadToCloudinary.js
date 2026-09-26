@@ -18,9 +18,12 @@ export async function uploadToCloudinary(file) {
 }
 
 // ฟังก์ชันช่วยปรับขนาดภาพก่อนอัปโหลด
+// ย่อไม่ได้ (เบราว์เซอร์อ่านไฟล์ไม่ได้ เช่น HEIC จากอัลบั้มบางเครื่อง / เข้ารหัสกลับไม่ได้) → ส่งไฟล์เดิมให้ Cloudinary แปลงเอง
+// เดิมไม่มี onerror → Promise ค้างตลอดไป ปุ่มส่งหมุนไม่จบ (เจอที่จุดวัดระดับน้ำ flood-relief 2026-09-26)
 function resizeImage(file, maxWidth = 1024, maxHeight = 1024) {
   return new Promise((resolve) => {
     const img = new Image();
+    img.onerror = () => resolve(file);
     img.onload = function () {
       const canvas = document.createElement("canvas");
       let width = img.width;
@@ -41,6 +44,10 @@ function resizeImage(file, maxWidth = 1024, maxHeight = 1024) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(file);
+          return;
+        }
         const resizedFile = new File([blob], file.name, { type: file.type });
         resolve(resizedFile);
       }, file.type);

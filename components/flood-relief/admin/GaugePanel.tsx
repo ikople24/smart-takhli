@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import Swal from "sweetalert2";
-import { Camera, LoaderCircle, Trash2, X } from "lucide-react";
+import { Camera, ImageUp, LoaderCircle, Trash2, X } from "lucide-react";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 import { thaiWhen } from "@/lib/flood-relief/time";
 import type { AdminGauge } from "./types";
@@ -29,7 +29,9 @@ export default function GaugePanel({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  // 2 ช่อง: กล้อง (capture) กับอัลบั้ม — ช่องที่ใส่ capture มือถือจะเปิดกล้องทันทีโดยไม่ให้เลือกรูปเดิม (เจ้าของแจ้ง 2026-09-26)
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const albumRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [level, setLevel] = useState("");
@@ -127,12 +129,25 @@ export default function GaugePanel({
           <section className="mt-4 rounded-xl border-[1.5px] border-tk-flood bg-tk-flood-tint p-3">
             <h3 className="text-[13px] font-bold text-tk-flood-dark">ส่งรูประดับน้ำตอนนี้</h3>
             <input
-              ref={fileRef}
+              ref={cameraRef}
               type="file"
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => pick(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                pick(e.target.files?.[0] ?? null);
+                e.target.value = ""; // เลือกไฟล์เดิมซ้ำได้
+              }}
+            />
+            <input
+              ref={albumRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                pick(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
             />
             {preview ? (
               <div className="relative mt-2 aspect-[4/3] overflow-hidden rounded-lg bg-tk-bg">
@@ -148,14 +163,24 @@ export default function GaugePanel({
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-tk-flood-line bg-white text-[13px] font-semibold text-tk-flood"
-              >
-                <Camera size={18} aria-hidden />
-                ถ่ายรูป / เลือกรูป
-              </button>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  className="flex h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-tk-flood-line bg-white text-[13px] font-semibold text-tk-flood"
+                >
+                  <Camera size={18} aria-hidden />
+                  ถ่ายรูป
+                </button>
+                <button
+                  type="button"
+                  onClick={() => albumRef.current?.click()}
+                  className="flex h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-tk-flood-line bg-white text-[13px] font-semibold text-tk-flood"
+                >
+                  <ImageUp size={18} aria-hidden />
+                  เลือกจากอัลบั้ม
+                </button>
+              </div>
             )}
             <div className="mt-2 grid grid-cols-[110px_1fr] gap-2">
               <label className="block">
