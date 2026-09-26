@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   accuracyTier,
-  circleToPolygon,
   formatCoords,
   fromGeoPoint,
   googleMapsDirUrl,
@@ -101,17 +100,5 @@ describe("polygonError", () => {
   it("มุมซ้ำจนเหลือไม่ถึง 3 จุดจริง = ไม่ผ่าน", () => {
     const flat = [[100.35, 15.25], [100.36, 15.25], [100.36, 15.25], [100.35, 15.25]];
     expect(polygonError({ type: "Polygon", coordinates: [flat] })).toMatch(/3 มุม/);
-  });
-});
-
-describe("circleToPolygon", () => {
-  it("ได้ polygon ปิดรูปที่ผ่าน polygonError และทุกมุมห่างจากศูนย์กลางเท่ารัศมี", () => {
-    const c = { lat: 15.2539, lng: 100.3511 };
-    const g = circleToPolygon(c, 200, 24);
-    expect(polygonError(g)).toBeNull();
-    expect(g.coordinates[0]).toHaveLength(25);
-    for (const [lng, lat] of g.coordinates[0]) {
-      expect(haversineKm(c, { lat, lng }) * 1000).toBeCloseTo(200, 0);
-    }
   });
 });

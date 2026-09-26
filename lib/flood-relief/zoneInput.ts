@@ -8,6 +8,16 @@ export const ZONE_NAME_MAX = 20;
 
 export type ZonePatch = { name?: string; level?: ZoneLevel; geometry?: unknown; active?: boolean };
 
+/** POST แบบเติมสี: { communityName, level } — รูปดึงจาก basemap ฝั่ง server */
+export function parseFillInput(body: unknown): { ok: true; communityName: string; level: ZoneLevel } | { ok: false; error: string } {
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  // รับเฉพาะ string — กัน object อย่าง { $ne: null } ถูกแปลงเป็น "[object Object]" แล้วหลุดเข้า query
+  const communityName = typeof b.communityName === "string" ? b.communityName.trim() : "";
+  if (!communityName || communityName.length > 100) return { ok: false, error: "กรุณาเลือกชุมชน" };
+  if (!isZoneLevel(b.level)) return { ok: false, error: "กรุณาเลือกระดับโซน" };
+  return { ok: true, communityName, level: b.level };
+}
+
 /** คืน { ok, value } หรือ { ok:false, error } · requireAll = ตอนสร้าง (ต้องมี level + geometry) */
 export function parseZoneInput(
   body: unknown,

@@ -5,6 +5,7 @@ import { openRequestIdsByZone } from "@/lib/flood-relief/reassignZones";
 type ZoneDoc = {
   _id: unknown;
   name: string;
+  communityName?: string | null;
   level: string;
   geometry: unknown;
   active?: boolean;
@@ -18,6 +19,7 @@ export async function zoneViews(zones: ZoneDoc[]) {
   return zones.map((z) => ({
     id: String(z._id),
     name: z.name,
+    communityName: z.communityName ?? null,
     level: z.level,
     geometry: z.geometry,
     active: z.active !== false,

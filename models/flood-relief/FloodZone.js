@@ -25,7 +25,10 @@ const HistorySchema = new mongoose.Schema(
 
 const FloodZoneSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true }, // A, B, C … (nextZoneName)
+    name: { type: String, required: true }, // ชื่อชุมชน (โซนแบบเติมสี) หรือ A, B, C … (โซนที่วาดเอง — เลิกใช้เครื่องมือวาดแล้ว)
+    // โซนแบบ "เติมสีทั้งชุมชน" (เจ้าของสั่ง 2026-09-26): geometry คัดลอกจาก basemap geojsonfeatures (อ่านอย่างเดียว)
+    // หนึ่งชุมชนมีได้หนึ่งโซน · null = โซนที่วาดเองแบบเดิม
+    communityName: { type: String, default: null },
     level: { type: String, required: true }, // critical | danger | watch | safe
     geometry: { type: PolygonSchema, required: true },
     active: { type: Boolean, default: true },
@@ -38,5 +41,6 @@ const FloodZoneSchema = new mongoose.Schema(
 
 FloodZoneSchema.index({ geometry: "2dsphere" });
 FloodZoneSchema.index({ active: 1 });
+FloodZoneSchema.index({ communityName: 1 });
 
 export default mongoose.models.FloodZone || mongoose.model("FloodZone", FloodZoneSchema, "flood_zones");

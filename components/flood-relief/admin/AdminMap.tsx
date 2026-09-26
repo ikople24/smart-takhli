@@ -1,24 +1,22 @@
 // components/flood-relief/admin/AdminMap.tsx — client only (import ผ่าน next/dynamic ssr:false)
 // แผนที่กลางแดชบอร์ด: โซนสี · หมุดคำขอ (สีตามความเร่งด่วน) · หมุดทีม · ขอบเขตชุมชน 22 (basemap อ่านอย่างเดียว)
 // เลือกหมุด ↔ รายการซ้าย ↔ แผงขวา ผ่าน selectedId ใน useFloodReliefStore
-// เครื่องมือวาด/แก้/ลบโซน (Geoman) — เฉพาะ superadmin (canEditZones) ตามที่เจ้าของตกลง 2026-09-26
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// เติมสีโซนทั้งชุมชน — เฉพาะ superadmin (canEditZones) ตามที่เจ้าของตกลง 2026-09-26 (เลิกวาด/วงเอง)
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Tooltip, useMap, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
-import Swal from "sweetalert2";
 import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
-import { isZoneLevel, nextZoneName, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
+import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
 import BaseMapToggle from "../BaseMapToggle";
 import BaseTiles from "../BaseTiles";
 import { pinColor } from "./labels";
 import type { AdminRequest, AdminTeam, AdminZone } from "./types";
-import { DrawZone, EditZone } from "./ZoneGeoman";
 import ZoneManager from "./ZoneManager";
-import ZoneToolbar, { type ZoneTool } from "./ZoneToolbar";
+import ZoneToolbar, { type FillPaint, type ZoneTool } from "./ZoneToolbar";
 import { zoneRequest } from "./zoneApi";
 
 type PolygonGeom = { type: "Polygon"; coordinates: number[][][] };
@@ -85,88 +83,49 @@ export default function AdminMap({
   const { selectedId, select, layers, toggleLayer, baseMap, setBaseMap } = useFloodReliefStore();
   const [communities, setCommunities] = useState<FeatureCollection | null>(null);
   const [tool, setTool] = useState<ZoneTool>("none");
-  const [drawLevel, setDrawLevel] = useState<ZoneLevel>("critical");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [paint, setPaint] = useState<FillPaint>("critical");
   const [managerOpen, setManagerOpen] = useState(false);
   const [focusZone, setFocusZone] = useState<AdminZone | null>(null);
-  const [saving, setSaving] = useState(false);
-  const collectRef = useRef<(() => PolygonGeom | null) | null>(null);
+  const [busyCommunity, setBusyCommunity] = useState<string | null>(null);
 
   const selected = useMemo(() => items.find((r) => r.id === selectedId) ?? null, [items, selectedId]);
   const activeZones = useMemo(() => zones.filter((z) => z.active && isZoneLevel(z.level)), [zones]);
-  const editing = useMemo(() => zones.find((z) => z.id === editingId) ?? null, [zones, editingId]);
+  const zoneByCommunity = useMemo(
+    () => new Map(zones.filter((z) => z.communityName).map((z) => [z.communityName as string, z])),
+    [zones]
+  );
+  const filling = canEditZones && tool === "fill";
 
   useEffect(() => {
-    if (!layers.communities || communities) return;
+    if ((!layers.communities && !filling) || communities) return;
     fetch("/api/flood-relief/communities")
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => j && setCommunities(j))
       .catch(() => {});
-  }, [layers.communities, communities]);
+  }, [layers.communities, filling, communities]);
 
-  // เปลี่ยนเครื่องมือ = ออกจากโหมดแก้มุมที่ค้างอยู่
-  useEffect(() => {
-    if (tool !== "edit") setEditingId(null);
-  }, [tool]);
-
-  const onCreated = useCallback(
-    async (geometry: PolygonGeom) => {
-      const suggested = nextZoneName(zones.map((z) => z.name));
-      const r = await Swal.fire({
-        title: `ตั้งชื่อโซน${ZONE_META[drawLevel].label}`,
-        input: "text",
-        inputValue: suggested,
-        inputAttributes: { maxlength: "20" },
-        showCancelButton: true,
-        confirmButtonText: "บันทึกโซน",
-        cancelButtonText: "ยกเลิก",
-      });
-      if (!r.isConfirmed) {
-        setTool("none");
+  /** คลิกชุมชนตอนโหมดเติมสี → เติม/เปลี่ยนระดับ หรือล้างสี (ลบโซนของชุมชนนั้น) */
+  const fillCommunity = useCallback(
+    async (name: string) => {
+      if (!name || busyCommunity) return;
+      const current = zoneByCommunity.get(name);
+      if (paint === "clear") {
+        if (!current) return;
+        setBusyCommunity(name);
+        const ok = await zoneRequest("DELETE", current.id);
+        setBusyCommunity(null);
+        if (ok) onZonesChanged();
         return;
       }
-      setSaving(true);
-      const ok = await zoneRequest("POST", null, { level: drawLevel, geometry, name: String(r.value ?? "").trim() || suggested });
-      setSaving(false);
-      setTool("none");
+      if (current && current.active && current.level === paint) return; // สีเดิมอยู่แล้ว
+      setBusyCommunity(name);
+      const ok = await zoneRequest("POST", null, { communityName: name, level: paint });
+      setBusyCommunity(null);
       if (ok) onZonesChanged();
     },
-    [zones, drawLevel, onZonesChanged]
+    [busyCommunity, zoneByCommunity, paint, onZonesChanged]
   );
 
-  const onZoneClick = async (z: AdminZone) => {
-    if (tool === "edit") {
-      setEditingId(z.id);
-      return;
-    }
-    if (tool === "delete") {
-      const ok = await Swal.fire({
-        icon: "warning",
-        title: `ลบโซน ${z.name}?`,
-        text: `${ZONE_META[z.level as ZoneLevel]?.label ?? z.level} · มีคำขอที่ยังเปิด ${z.openCount} รายการ (จะถูกจัดโซนใหม่)`,
-        showCancelButton: true,
-        confirmButtonText: "ลบ",
-        cancelButtonText: "ยกเลิก",
-        confirmButtonColor: "#B92544",
-      });
-      if (!ok.isConfirmed) return;
-      if (await zoneRequest("DELETE", z.id)) onZonesChanged();
-    }
-  };
-
-  const saveEdit = async () => {
-    const geometry = collectRef.current?.();
-    if (!editing || !geometry) return;
-    setSaving(true);
-    const ok = await zoneRequest("PATCH", editing.id, { geometry });
-    setSaving(false);
-    if (ok) {
-      setEditingId(null);
-      onZonesChanged();
-    }
-  };
-
-  const zonesInteractive = canEditZones && (tool === "edit" || tool === "delete");
 
   return (
     <div className="flood-map relative h-full w-full">
@@ -174,32 +133,44 @@ export default function AdminMap({
         center={[TAKHLI_CENTER.lat, TAKHLI_CENTER.lng]}
         zoom={14}
         zoomControl={false}
-        doubleClickZoom={false}
         style={{ height: "100%", width: "100%" }}
       >
         {/* ปุ่มซูมมุมขวาล่างตามดีไซน์ — ค่าเริ่มต้นมุมซ้ายบนทับแผงชั้นข้อมูล */}
         <ZoomControl position="bottomright" />
         <BaseTiles baseMap={baseMap} />
-        {layers.communities && communities && (
+        {/* ขอบเขตชุมชน — โหมดเติมสีแสดงเสมอและคลิกได้ (key เปลี่ยนตามโหมด เพราะ GeoJSON ของ react-leaflet ไม่อัปเดต handler เอง) */}
+        {(layers.communities || filling) && communities && (
           <GeoJSON
+            key={filling ? `fill-${paint}` : "view"}
             data={communities}
-            style={{ color: "#2F80FF", weight: 2, dashArray: "6 4", fillColor: "#2F80FF", fillOpacity: 0.04 }}
-            onEachFeature={(f, layer) => layer.bindTooltip(String(f.properties?.name ?? ""), { sticky: true })}
+            style={{ color: "#2F80FF", weight: filling ? 2.5 : 2, dashArray: "6 4", fillColor: "#2F80FF", fillOpacity: filling ? 0.08 : 0.04 }}
+            onEachFeature={(f, layer) => {
+              const name = String(f.properties?.name ?? "");
+              layer.bindTooltip(filling ? `คลิกเพื่อ${paint === "clear" ? "ล้างสี" : `เติมสี${ZONE_META[paint].label}`} · ${name}` : name, {
+                sticky: true,
+              });
+              if (!filling) return;
+              const path = layer as L.Path;
+              layer.on({
+                click: () => fillCommunity(name),
+                mouseover: () => path.setStyle({ fillOpacity: 0.22, weight: 3.5 }),
+                mouseout: () => path.setStyle({ fillOpacity: 0.08, weight: 2.5 }),
+              });
+            }}
           />
         )}
 
-        {/* โซนสี — ระดับต่ำวาดก่อน ระดับสูงทับด้านบน · interactive เฉพาะตอนแก้/ลบ (ไม่ขวางการคลิกหมุด/วาด) */}
+        {/* โซนสี — ระดับต่ำวาดก่อน ระดับสูงทับด้านบน · ไม่รับคลิก ให้คลิกทะลุไปถึงกรอบชุมชนตอนเติมสี */}
         {layers.zones &&
           [...activeZones]
             .sort((a, b) => ZONE_LEVELS.indexOf(b.level as ZoneLevel) - ZONE_LEVELS.indexOf(a.level as ZoneLevel))
             .map((z) => {
-              if (z.id === editingId) return null;
               const m = ZONE_META[z.level as ZoneLevel];
               return (
                 <Polygon
-                  key={`${z.id}-${z.updatedAt}-${zonesInteractive}`}
+                  key={`${z.id}-${z.updatedAt}-${z.level}`}
                   positions={ringLatLng(z.geometry)}
-                  interactive={zonesInteractive}
+                  interactive={false}
                   pathOptions={{
                     color: m.stroke,
                     weight: m.strokeWidth,
@@ -207,7 +178,6 @@ export default function AdminMap({
                     fillColor: m.fill,
                     fillOpacity: m.fillOpacity,
                   }}
-                  eventHandlers={{ click: () => onZoneClick(z) }}
                 >
                   <Tooltip permanent direction="center" className="flood-zone-label">
                     <span style={{ background: ZONE_LABEL_BG[z.level as ZoneLevel] }}>
@@ -265,12 +235,6 @@ export default function AdminMap({
             )
           )}
 
-        {canEditZones && (tool === "polygon" || tool === "circle") && !saving && (
-          <DrawZone shape={tool} level={drawLevel} onCreated={onCreated} />
-        )}
-        {canEditZones && editing && isZoneLevel(editing.level) && (
-          <EditZone geometry={editing.geometry} level={editing.level} collectRef={collectRef} />
-        )}
         <FlyToSelected req={selected} />
         <FitZone zone={focusZone} />
       </MapContainer>
@@ -298,30 +262,16 @@ export default function AdminMap({
         <ZoneToolbar
           tool={tool}
           setTool={setTool}
-          level={drawLevel}
-          setLevel={setDrawLevel}
+          paint={paint}
+          setPaint={setPaint}
           zoneCount={zones.length}
           onManage={() => setManagerOpen(true)}
         />
       )}
 
-      {/* แถบบันทึกตอนแก้มุมโซน */}
-      {editing && (
-        <div className="absolute left-1/2 top-3.5 z-[600] flex -translate-x-1/2 items-center gap-2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
-          <span>
-            กำลังแก้โซน <b>{editing.name}</b> — ลากจุดมุมเพื่อปรับ
-          </span>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={saveEdit}
-            className="h-8 rounded-full bg-white px-3.5 font-bold text-tk-flood disabled:opacity-60"
-          >
-            บันทึก
-          </button>
-          <button type="button" onClick={() => setEditingId(null)} className="h-8 rounded-full px-3 font-semibold text-white/80">
-            ยกเลิก
-          </button>
+      {busyCommunity && (
+        <div className="absolute left-1/2 top-3.5 z-[600] -translate-x-1/2 rounded-full bg-tk-ink-strong px-4 py-2 text-[12.5px] text-white shadow-tk-xl">
+          กำลังบันทึกสีชุมชน{busyCommunity}…
         </div>
       )}
 

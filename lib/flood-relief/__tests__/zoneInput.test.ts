@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeZonePatch, parseZoneInput } from "../zoneInput";
+import { describeZonePatch, parseFillInput, parseZoneInput } from "../zoneInput";
 
 const poly = { type: "Polygon", coordinates: [[[100.35, 15.25], [100.36, 15.25], [100.36, 15.26], [100.35, 15.25]]] };
 
@@ -31,5 +31,14 @@ describe("describeZonePatch", () => {
     expect(describeZonePatch({ level: "critical", geometry: poly, active: false })).toBe(
       "เปลี่ยนระดับเป็น วิกฤต · แก้รูปโซน · ปิดใช้งาน"
     );
+  });
+});
+
+describe("parseFillInput — เติมสีทั้งชุมชน", () => {
+  it("ต้องมีชื่อชุมชน + ระดับ", () => {
+    expect(parseFillInput({ communityName: " มาลัย ", level: "critical" })).toEqual({ ok: true, communityName: "มาลัย", level: "critical" });
+    expect(parseFillInput({ level: "critical" })).toMatchObject({ ok: false });
+    expect(parseFillInput({ communityName: "มาลัย", level: "clear" })).toMatchObject({ ok: false });
+    expect(parseFillInput({ communityName: { $ne: null }, level: "watch" })).toMatchObject({ ok: false });
   });
 });

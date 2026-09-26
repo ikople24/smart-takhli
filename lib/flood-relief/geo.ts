@@ -91,24 +91,3 @@ export function polygonError(geometry: unknown): string | null {
   if (distinct.size < 3) return "โซนต้องมีอย่างน้อย 3 มุม";
   return null;
 }
-
-const EARTH_RADIUS_M = 6371008.8;
-
-/**
- * วงกลม (จุดศูนย์กลาง + รัศมีเมตร) → GeoJSON Polygon ประมาณด้วย n มุม
- * ใช้กับเครื่องมือ "วงกลม" ตอนมาร์คจุดน้ำท่วม — MongoDB $geoIntersects ไม่รู้จักวงกลม เก็บเป็น polygon แทน
- */
-export function circleToPolygon(center: LatLng, radiusM: number, n = 32): { type: "Polygon"; coordinates: number[][][] } {
-  const ring: number[][] = [];
-  const latR = rad(center.lat);
-  const lngR = rad(center.lng);
-  const d = Math.max(1, radiusM) / EARTH_RADIUS_M;
-  for (let i = 0; i < n; i++) {
-    const brg = (2 * Math.PI * i) / n;
-    const lat2 = Math.asin(Math.sin(latR) * Math.cos(d) + Math.cos(latR) * Math.sin(d) * Math.cos(brg));
-    const lng2 = lngR + Math.atan2(Math.sin(brg) * Math.sin(d) * Math.cos(latR), Math.cos(d) - Math.sin(latR) * Math.sin(lat2));
-    ring.push([Number(((lng2 * 180) / Math.PI).toFixed(7)), Number(((lat2 * 180) / Math.PI).toFixed(7))]);
-  }
-  ring.push([...ring[0]]);
-  return { type: "Polygon", coordinates: [ring] };
-}
