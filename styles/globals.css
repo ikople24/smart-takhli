@@ -1172,7 +1172,10 @@ body.survey-form-open .app-bottom-nav {
   --color-tk-flood-soft: #E8EEFA;     /* แถวที่เลือก / icon tile / กล่องแจ้งเตือน */
   --color-tk-flood-line: #C9D6F2;     /* ขอบการ์ดแผนที่ / select */
   --color-tk-flood-tint: #FBFCFF;     /* พื้นกล่องมอบหมายทีม */
-  --color-tk-emergency: #C62839;      /* ปุ่มส่งฟอร์ม ไอคอนเตือน หมุดด่วนมาก */
+  --color-tk-emergency: #C62839;      /* ปุ่มส่งฟอร์ม ไอคอนเตือน หมุดด่วนมาก · พื้นบล็อกหน้าแรก */
+  --color-tk-emergency-dark: #9F1D2D; /* ตัวอักษรแดงบนพื้นขาว (ปุ่มหลักในบล็อก) */
+  --color-tk-emergency-wave: #D2394A;   /* คลื่นชั้นหลังบนบล็อกแดง */
+  --color-tk-emergency-wave-2: #DD4C5C; /* คลื่นชั้นหน้าบนบล็อกแดง */
   --color-tk-urgent-pin: #E8891D;     /* หมุดด่วน */
   --color-tk-zone-critical: #E0455B;
   --color-tk-zone-danger: #F2A93B;
@@ -1183,6 +1186,7 @@ body.survey-form-open .app-bottom-nav {
   --shadow-tk-flood-card: 0 12px 26px rgba(29, 66, 153, 0.32);
   --shadow-tk-flood-btn: 0 8px 18px rgba(29, 66, 153, 0.3);
   --shadow-tk-emergency: 0 10px 22px rgba(198, 40, 57, 0.32);
+  --shadow-tk-emergency-card: 0 12px 26px rgba(198, 40, 57, 0.34);
 }
 
 /* accordion กลุ่มงาน: ขยาย/ยุบตาม README (220ms cubic-bezier) — ใช้ grid-rows trick ไม่ต้องรู้ความสูง */
