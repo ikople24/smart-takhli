@@ -1,15 +1,29 @@
 // components/flood-relief/PublicZoneMap.tsx — client only (import ผ่าน next/dynamic ssr:false)
-// แผนที่หน้าสถานการณ์สาธารณะ /flood: โซนสีทั้งชุมชน + ป้ายชื่อ **ไม่มีหมุดคำขอ** (ตำแหน่งบ้านผู้ขอความช่วยเหลือเป็นข้อมูลอ่อนไหว)
+// แผนที่หน้าสถานการณ์สาธารณะ /flood: โซนสีทั้งชุมชน + จุดวัดระดับน้ำ (รูปล่าสุด)
+// **ไม่มีหมุดคำขอ** (ตำแหน่งบ้านผู้ขอความช่วยเหลือเป็นข้อมูลอ่อนไหว)
 import { useEffect, useMemo } from "react";
-import { MapContainer, Polygon, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { MapContainer, Marker, Polygon, Tooltip, useMap, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
 import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
 import { FINE_ZOOM, type BaseMap } from "./BaseMapToggle";
 import BaseTiles from "./BaseTiles";
+import { gaugeIcon } from "./gaugeIcon";
 
 export type PublicZone = { name: string; level: string; geometry: { type: "Polygon"; coordinates: number[][][] } };
+/** ตรงกับ lib/flood-relief/gauge#publicGauge */
+export type PublicGauge = {
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  note: string;
+  photoUrl: string | null;
+  photoAt: string | null;
+  levelCm: number | null;
+  photoNote: string;
+  stale: boolean;
+};
 
 const LABEL_BG: Record<ZoneLevel, string> = { critical: "#B92544", danger: "#9E6206", watch: "#7A6510", safe: "#14714A" };
 const ring = (z: PublicZone): [number, number][] => z.geometry.coordinates[0].map(([lng, lat]) => [lat, lng]);
@@ -27,7 +41,17 @@ function FitOnce({ zones }: { zones: PublicZone[] }) {
   return null;
 }
 
-export default function PublicZoneMap({ zones, baseMap }: { zones: PublicZone[]; baseMap: BaseMap }) {
+export default function PublicZoneMap({
+  zones,
+  gauges,
+  baseMap,
+  onGauge,
+}: {
+  zones: PublicZone[];
+  gauges: PublicGauge[];
+  baseMap: BaseMap;
+  onGauge: (g: PublicGauge) => void;
+}) {
   const sorted = useMemo(
     () =>
       zones
@@ -63,6 +87,21 @@ export default function PublicZoneMap({ zones, baseMap }: { zones: PublicZone[];
           </Polygon>
         );
       })}
+      {gauges.map((g) =>
+        g.lat == null || g.lng == null ? null : (
+          <Marker
+            key={`${g.name}-${g.photoAt}`}
+            position={[g.lat, g.lng]}
+            icon={gaugeIcon(g.photoUrl, g.stale, g.levelCm)}
+            zIndexOffset={500}
+            eventHandlers={{ click: () => onGauge(g) }}
+          >
+            <Tooltip direction="top" offset={[0, -22]}>
+              📷 {g.name}
+            </Tooltip>
+          </Marker>
+        )
+      )}
       <FitOnce zones={sorted} />
     </MapContainer>
   );

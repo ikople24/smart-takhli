@@ -74,3 +74,21 @@ export type AdminZone = {
   updatedBy: string;
   updatedAt: string | null;
 };
+
+export type GaugePhoto = { url: string; at: string; levelCm: number | null; note: string; by: string };
+export type AdminGauge = {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  note: string;
+  active: boolean;
+  lastPhotoUrl: string | null;
+  lastPhotoAt: string | null;
+  lastLevelCm: number | null;
+  lastNote: string;
+  stale: boolean;
+  photos: GaugePhoto[];
+  createdBy: string;
+  updatedAt: string | null;
+};
