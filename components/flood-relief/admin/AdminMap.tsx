@@ -3,7 +3,7 @@
 // เลือกหมุด ↔ รายการซ้าย ↔ แผงขวา ผ่าน selectedId ใน useFloodReliefStore
 // เติมสีโซนทั้งชุมชน — เฉพาะ superadmin (canEditZones) ตามที่เจ้าของตกลง 2026-09-26 (เลิกวาด/วงเอง)
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Tooltip, useMap, useMapEvents, ZoomControl } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Marker, Pane, Polygon, Tooltip, useMap, useMapEvents, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import Swal from "sweetalert2";
 import "leaflet/dist/leaflet.css";
@@ -197,26 +197,30 @@ export default function AdminMap({
         <ZoomControl position="bottomright" />
         <BaseTiles baseMap={baseMap} />
         {/* ขอบเขตชุมชน — โหมดเติมสีแสดงเสมอและคลิกได้ (key เปลี่ยนตามโหมด เพราะ GeoJSON ของ react-leaflet ไม่อัปเดต handler เอง) */}
-        {(layers.communities || filling) && communities && (
-          <GeoJSON
-            key={filling ? `fill-${paint}` : "view"}
-            data={communities}
-            style={{ color: "#2F80FF", weight: filling ? 2.5 : 2, dashArray: "6 4", fillColor: "#2F80FF", fillOpacity: filling ? 0.08 : 0.04 }}
-            onEachFeature={(f, layer) => {
-              const name = String(f.properties?.name ?? "");
-              layer.bindTooltip(filling ? `คลิกเพื่อ${paint === "clear" ? "ล้างสี" : `เติมสี${ZONE_META[paint].label}`} · ${name}` : name, {
-                sticky: true,
-              });
-              if (!filling) return;
-              const path = layer as L.Path;
-              layer.on({
-                click: () => fillCommunity(name),
-                mouseover: () => path.setStyle({ fillOpacity: 0.22, weight: 3.5 }),
-                mouseout: () => path.setStyle({ fillOpacity: 0.08, weight: 2.5 }),
-              });
-            }}
-          />
-        )}
+        {/* ชั้นชุมชนอยู่ล่างสุดเสมอ (เจ้าของขอ 2026-09-26): pane ของตัวเอง zIndex 350 < โซนสี (overlayPane 400) < หมุด
+            ไม่งั้นเปิดชั้นนี้ทีหลังจะวาดทับโซนสี · ตอนเติมสีโซนไม่รับคลิก คลิกจึงทะลุลงมาถึงชุมชนได้ */}
+        <Pane name="flood-communities" style={{ zIndex: 350 }}>
+          {(layers.communities || filling) && communities && (
+            <GeoJSON
+              key={filling ? `fill-${paint}` : "view"}
+              data={communities}
+              style={{ color: "#2F80FF", weight: filling ? 2.5 : 2, dashArray: "6 4", fillColor: "#2F80FF", fillOpacity: filling ? 0.08 : 0.04 }}
+              onEachFeature={(f, layer) => {
+                const name = String(f.properties?.name ?? "");
+                layer.bindTooltip(filling ? `คลิกเพื่อ${paint === "clear" ? "ล้างสี" : `เติมสี${ZONE_META[paint].label}`} · ${name}` : name, {
+                  sticky: true,
+                });
+                if (!filling) return;
+                const path = layer as L.Path;
+                layer.on({
+                  click: () => fillCommunity(name),
+                  mouseover: () => path.setStyle({ fillOpacity: 0.22, weight: 3.5 }),
+                  mouseout: () => path.setStyle({ fillOpacity: 0.08, weight: 2.5 }),
+                });
+              }}
+            />
+          )}
+        </Pane>
 
         {/* โซนสี — ระดับต่ำวาดก่อน ระดับสูงทับด้านบน · ไม่รับคลิก ให้คลิกทะลุไปถึงกรอบชุมชนตอนเติมสี */}
         {layers.zones &&
