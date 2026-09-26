@@ -6,7 +6,7 @@ import { Circle, MapContainer, Marker, useMap, useMapEvents } from "react-leafle
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { LatLng } from "@/lib/flood-relief/geo";
-import type { BaseMap } from "./BaseMapToggle";
+import { FINE_ZOOM, type BaseMap } from "./BaseMapToggle";
 import BaseTiles from "./BaseTiles";
 
 const PIN = L.divIcon({
@@ -68,6 +68,7 @@ export default function MiniMap({
       zoom={17}
       zoomControl={false}
       attributionControl={false}
+      {...FINE_ZOOM}
       style={{ height, width: "100%" }}
     >
       <BaseTiles baseMap={baseMap} />

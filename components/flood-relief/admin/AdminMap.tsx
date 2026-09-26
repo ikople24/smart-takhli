@@ -11,7 +11,7 @@ import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
 import { isZoneLevel, ZONE_LEVELS, ZONE_META, type ZoneLevel } from "@/lib/flood-relief/zones";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
-import BaseMapToggle from "../BaseMapToggle";
+import BaseMapToggle, { FINE_ZOOM } from "../BaseMapToggle";
 import BaseTiles from "../BaseTiles";
 import { pinColor } from "./labels";
 import type { AdminRequest, AdminTeam, AdminZone } from "./types";
@@ -133,6 +133,7 @@ export default function AdminMap({
         center={[TAKHLI_CENTER.lat, TAKHLI_CENTER.lng]}
         zoom={14}
         zoomControl={false}
+        {...FINE_ZOOM}
         style={{ height: "100%", width: "100%" }}
       >
         {/* ปุ่มซูมมุมขวาล่างตามดีไซน์ — ค่าเริ่มต้นมุมซ้ายบนทับแผงชั้นข้อมูล */}
