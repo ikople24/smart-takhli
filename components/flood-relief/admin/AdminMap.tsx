@@ -41,7 +41,7 @@ function FlyToSelected({ req }: { req: AdminRequest | null }) {
 }
 
 export default function AdminMap({ items, teams }: { items: AdminRequest[]; teams: AdminTeam[] }) {
-  const { selectedId, select, layers, toggleLayer } = useFloodReliefStore();
+  const { selectedId, select, layers, toggleLayer, baseMap, setBaseMap } = useFloodReliefStore();
   const [communities, setCommunities] = useState<FeatureCollection | null>(null);
   const selected = useMemo(() => items.find((r) => r.id === selectedId) ?? null, [items, selectedId]);
 
@@ -63,10 +63,30 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
       >
         {/* ปุ่มซูมมุมขวาล่างตามดีไซน์ — ค่าเริ่มต้นมุมซ้ายบนทับแผงชั้นข้อมูล */}
         <ZoomControl position="bottomright" />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
-        />
+        {baseMap === "satellite" ? (
+          <>
+            {/* ภาพดาวเทียม Esri World Imagery (แหล่งเดียวกับแผนที่อื่นในระบบ) + ชั้นชื่อสถานที่ให้อ่านรู้เรื่อง */}
+            <TileLayer
+              key="sat"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Imagery &copy; Esri"
+              maxNativeZoom={19}
+              maxZoom={20}
+            />
+            <TileLayer
+              key="sat-labels"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxNativeZoom={19}
+              maxZoom={20}
+            />
+          </>
+        ) : (
+          <TileLayer
+            key="osm"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
+          />
+        )}
         {layers.communities && communities && (
           <GeoJSON
             data={communities}
@@ -123,6 +143,28 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
 
       {/* ชั้นข้อมูล */}
       <div className="absolute left-3.5 top-3.5 z-[500] flex flex-col gap-1 rounded-[14px] bg-white/95 p-2 shadow-tk-xl">
+        {/* สลับแผนที่ถนน / ภาพดาวเทียม */}
+        <div role="radiogroup" aria-label="รูปแบบแผนที่" className="mb-1 grid grid-cols-2 gap-1 rounded-[10px] bg-tk-unclaimed-soft p-0.5">
+          {(
+            [
+              ["street", "แผนที่"],
+              ["satellite", "ดาวเทียม"],
+            ] as const
+          ).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={baseMap === k}
+              onClick={() => setBaseMap(k)}
+              className={`h-7 rounded-lg px-2 text-[11.5px] font-bold ${
+                baseMap === k ? "bg-white text-tk-flood shadow-tk-xs" : "text-tk-ink-4"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <span className="px-1.5 pb-1 pt-0.5 text-[10.5px] font-bold tracking-[0.5px] text-tk-ink-4">ชั้นข้อมูล</span>
         {(
           [
