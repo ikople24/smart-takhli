@@ -50,6 +50,7 @@ const AuditLogSchema = new mongoose.Schema({
       'complaint_deleted',
       // Flood relief
       'flood_settings_updated',
+      'flood_zone_changed',
       // General
       'data_exported',
       'login',

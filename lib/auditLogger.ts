@@ -36,6 +36,7 @@ type AuditAction =
   | 'department_head_set'
   // Flood relief
   | 'flood_settings_updated'
+  | 'flood_zone_changed'
   | 'complaint_deleted'
   | 'data_exported'
   | 'login';
