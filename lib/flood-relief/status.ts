@@ -15,7 +15,7 @@ export const REQUEST_TYPE_META: Readonly<Record<RequestType, { label: string; sh
     drain: { label: "การระบายน้ำ", shortLabel: "ระบายน้ำ", description: "น้ำท่วมขัง ท่ออุดตัน" },
     sand: { label: "ขอกระสอบทราย", shortLabel: "กระสอบทราย", description: "กั้นน้ำเข้าบ้าน" },
     // key "other" คงเดิม (มีข้อมูลในฐานแล้วได้) — ป้ายเปลี่ยนเป็นอาหาร/น้ำดื่มตามเจ้าของ 2026-09-26 แต่ยังรับเรื่องอื่น ๆ ด้วย
-    other: { label: "อาหาร น้ำดื่ม", shortLabel: "อาหาร/น้ำ", description: "ของใช้จำเป็น ไฟฟ้า อื่น ๆ" },
+    other: { label: "อาหาร น้ำดื่ม", shortLabel: "อาหาร/น้ำ", description: "ของใช้จำเป็น อื่น ๆ" },
   });
 
 export function isRequestType(v: unknown): v is RequestType {
