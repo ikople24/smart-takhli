@@ -64,11 +64,15 @@ export default function FloodReliefCard() {
             )}
           </div>
 
-          {/* ใหญ่กว่าดีไซน์ (18px) ตามที่เจ้าของขอ — ตัด 2 บรรทัดเอง ไม่ปล่อยให้ขึ้นบรรทัดใหม่กลางคำบนจอแคบ */}
-          <h2 id="flood-title" className="mt-3 text-[24px] font-bold leading-[1.2] text-white">
-            ศูนย์ช่วยเหลือ
-            <br />
-            ผู้ประสบภัยน้ำท่วม
+          {/* บรรทัดเดียวและใหญ่กว่าดีไซน์ (18px) ตามที่เจ้าของขอ — ขนาดไหลตามความกว้างจอ
+              ข้อความกว้าง ≈ 15 × ขนาดตัวอักษร · พื้นที่ในการ์ด ≈ จอ − 70px (ขอบหน้า+ขอบไซเรน+padding)
+              → จอ 360px ได้ ~19px · จอ 430px ขึ้นไปได้ 24px เต็ม (shell กว้างสุด 480px) */}
+          <h2
+            id="flood-title"
+            className="mt-3 whitespace-nowrap font-bold leading-[1.25] text-white"
+            style={{ fontSize: "clamp(16px, calc((100vw - 70px) / 15), 24px)" }}
+          >
+            ศูนย์ช่วยเหลือผู้ประสบภัยน้ำท่วม
           </h2>
           <p className="mt-1.5 text-[13px] leading-normal text-white/90">
             แตะเรื่องที่ต้องการ ส่งตำแหน่งถึงเจ้าหน้าที่ได้ทันที
