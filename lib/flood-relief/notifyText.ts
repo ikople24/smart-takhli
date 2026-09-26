@@ -135,3 +135,39 @@ export function formatNewRequestFlex(r: NewRequestSummary, dashboardUrl?: string
     },
   };
 }
+
+// ─── แจ้งทีมที่ถูกมอบหมาย (ส่งเข้า FloodTeam.lineGroupId) ───────────────
+// ทีมต้องโทรหาผู้แจ้งได้ทันที จึงใส่เบอร์ในปุ่ม (เหมือนการ์ดกลุ่มเจ้าหน้าที่)
+
+export type TeamAssignSummary = NewRequestSummary & { teamName: string; assignedBy: string };
+
+export function formatTeamAssignFlex(r: TeamAssignSummary): FlexMessage {
+  const card = formatNewRequestFlex(r);
+  const contents = card.contents as { header: { contents: Array<Record<string, unknown>> } };
+  contents.header.contents[0] = {
+    type: "text",
+    text: `🚤 มอบหมาย ${r.teamName}`,
+    color: "#FFFFFF",
+    size: "xs",
+    weight: "bold",
+  };
+  return {
+    ...card,
+    altText: `🚤 ${r.teamName} ได้รับมอบหมาย ${r.ticket} ${REQUEST_TYPE_META[r.type].label} · ${placeText(r)}`,
+  };
+}
+
+// ─── แจ้งผู้แจ้งที่เชื่อม LINE ไว้ (dispatched / on_site / done) ──────────
+// ฝั่งประชาชน: ไม่มีชื่อ/เบอร์ใคร (นโยบายเดียวกับหน้าสถานะ)
+
+const REPORTER_TEXT: Record<string, string> = {
+  dispatched: "ทีมเจ้าหน้าที่ออกเดินทางไปยังจุดของคุณแล้ว",
+  on_site: "ทีมเจ้าหน้าที่ถึงจุดเกิดเหตุแล้ว",
+  done: "การช่วยเหลือเสร็จสิ้นแล้ว ขอให้ปลอดภัย",
+};
+
+/** สถานะที่ไม่ต้องแจ้งผู้แจ้ง = null */
+export function formatReporterStatusText(ticket: string, status: string): string | null {
+  const msg = REPORTER_TEXT[status];
+  return msg ? `🌊 คำขอ ${ticket}\n${msg}` : null;
+}

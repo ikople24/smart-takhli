@@ -100,6 +100,13 @@ export const ALL_PAGES: PagePermission[] = [
     category: 'management'
   },
   {
+    path: '/admin/flood-relief',
+    label: 'ศูนย์ช่วยเหลือน้ำท่วม',
+    icon: '🌊',
+    description: 'แดชบอร์ดประสานงานคำขอช่วยเหลือผู้ประสบภัยน้ำท่วม (รายการ · แผนที่ · มอบหมายทีม)',
+    category: 'management'
+  },
+  {
     path: '/admin/pm25-settings',
     label: 'จัดการ PM2.5',
     icon: '🌫️',
@@ -251,6 +258,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
     '/admin/smart-light',
     '/admin/smart-waste',
     '/admin/garbage',
+    '/admin/flood-relief', // ศูนย์ช่วยเหลือน้ำท่วม — ช่วงภัยพิบัติเจ้าหน้าที่ทุกกองต้องช่วยรับเรื่องได้ทันที
     '/user/satisfaction',
     '/admin/m10',
   ],

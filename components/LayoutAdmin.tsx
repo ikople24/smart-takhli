@@ -38,6 +38,7 @@ const navigationItems = [
   { label: 'ทะเบียนท่อประปา',   href: '/admin/smart-water',              icon: '🚰', group: 'จัดการ' },
   { label: 'ระบบบริหารจัดการขยะ', href: '/admin/smart-waste',               icon: '♻️', group: 'จัดการ' },
   { label: 'ตารางเดินรถเก็บขยะ', href: '/admin/garbage',                   icon: '🚛', group: 'จัดการ' },
+  { label: 'ศูนย์ช่วยเหลือน้ำท่วม', href: '/admin/flood-relief',            icon: '🌊', group: 'จัดการ' },
   { label: 'แผนที่ภาษี (ม.10)', href: '/admin/m10',                     icon: '🗺️', group: 'จัดการ' },
   { label: 'แก้รูปแปลง (basemap)', href: '/admin/m10/basemap',           icon: '✏️', group: 'จัดการ' },
   { label: 'กิจกรรม',           href: '/admin/manage-activities',        icon: '📅', group: 'จัดการ' },

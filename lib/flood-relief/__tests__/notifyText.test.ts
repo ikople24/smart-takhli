@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatNewRequestFlex } from "../notifyText";
+import { formatNewRequestFlex, formatReporterStatusText, formatTeamAssignFlex } from "../notifyText";
 
 const base = {
   ticket: "FL-0142",
@@ -62,5 +62,26 @@ describe("formatNewRequestFlex — บล็อกพิเศษเข้าก
 
   it("ไม่มีข้อความว่างในการ์ด (LINE ปฏิเสธ text ว่างทั้งใบ)", () => {
     expect(json(formatNewRequestFlex({ ...base, landmark: "" }))).not.toMatch(/"text":""/);
+  });
+});
+
+describe("formatTeamAssignFlex", () => {
+  it("หัวการ์ดบอกชื่อทีม · ยังมีปุ่มโทรหาผู้แจ้ง", () => {
+    const m = formatTeamAssignFlex({ ...base, teamName: "ทีม ปภ. 1", assignedBy: "หัวหน้า" });
+    expect(m.altText).toContain("ทีม ปภ. 1");
+    expect(json(m)).toContain("มอบหมาย ทีม ปภ. 1");
+    expect(json(m)).toContain("tel:0812344421");
+    // ไม่แก้การ์ดกลุ่มเจ้าหน้าที่ตัวเดิม (object ใหม่ทุกครั้ง)
+    expect(json(formatNewRequestFlex(base))).not.toContain("มอบหมาย");
+  });
+});
+
+describe("formatReporterStatusText", () => {
+  it("แจ้งเฉพาะ ออกเดินทาง / ถึงจุด / เสร็จสิ้น", () => {
+    expect(formatReporterStatusText("FL-0142", "dispatched")).toContain("ออกเดินทาง");
+    expect(formatReporterStatusText("FL-0142", "on_site")).toContain("ถึงจุด");
+    expect(formatReporterStatusText("FL-0142", "done")).toContain("เสร็จสิ้น");
+    expect(formatReporterStatusText("FL-0142", "assigning")).toBeNull();
+    expect(formatReporterStatusText("FL-0142", "cancelled")).toBeNull();
   });
 });
