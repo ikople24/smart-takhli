@@ -52,6 +52,8 @@ const navigationItems = [
   { label: 'ข้อมูลชุมชน',      href: '/admin/settings/communities',             icon: '🏘️', group: 'ตั้งค่า' },
   { label: 'แผนที่ GeoJSON',   href: '/admin/settings/geojson-map',             icon: '🗺️', group: 'ตั้งค่า' },
   { label: 'การบริหารระบบ',   href: '/admin/superadmin',                        icon: '⚙️', group: 'ตั้งค่า' },
+  // เปิด/ปิดศูนย์ช่วยเหลือน้ำท่วม — path ใต้ /admin/superadmin จึงโชว์เฉพาะ superadmin (ตัวกรองด้านล่าง)
+  { label: 'ศูนย์ช่วยเหลือน้ำท่วม', href: '/admin/superadmin/flood-relief',       icon: '🌊', group: 'ตั้งค่า' },
 ];
 
 const GROUP_ORDER = ['ภาพรวม', 'จัดการ', 'รายงาน', 'ตั้งค่า'];

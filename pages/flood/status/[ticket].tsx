@@ -108,7 +108,7 @@ export default function FloodStatusPage() {
   return (
     <>
       <Head>
-        <title>{ticket ? `สถานะคำขอ ${ticket}` : "สถานะคำขอ"} · ศูนย์ช่วยเหลือน้ำท่วม</title>
+        <title>{`${ticket ? `สถานะคำขอ ${ticket}` : "สถานะคำขอ"} · ศูนย์ช่วยเหลือน้ำท่วม`}</title>
         <meta name="robots" content="noindex" />
       </Head>
       <CitizenShell hideNav>
