@@ -28,8 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map((t) => (t ? new Date(t).getTime() : 0))
       .filter((t) => t > 0);
 
-    // หน้าแรกคนเข้าเยอะ — cache สั้น ๆ ที่ CDN พอ (ระดับโซนไม่ได้เปลี่ยนทุกวินาที)
-    res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=60");
+    // ไม่ cache — ประกาศระดับ/เปิด-ปิดศูนย์ฯ ต้องเห็นผลทันที (query เบามาก: 1 doc + โซนไม่กี่อัน)
+    res.setHeader("Cache-Control", "no-store");
     return res.status(200).json({
       centerOpen: settings.centerOpen,
       level: effectiveSituation(settings.situationOverride, situationLevel(zones)),
