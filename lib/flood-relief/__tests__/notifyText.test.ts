@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatNewRequestText } from "../notifyText";
+import { formatNewRequestFlex } from "../notifyText";
 
 const base = {
   ticket: "FL-0142",
@@ -14,22 +14,44 @@ const base = {
   createdAt: new Date("2026-09-26T01:32:00Z"), // 08:32 น.
 };
 
-describe("formatNewRequestText", () => {
-  it("มีเลขที่ ประเภท ความเร่งด่วน ชุมชน/โซน ลิงก์นำทาง และเวลาไทย", () => {
-    const t = formatNewRequestText(base, "https://example.go.th/admin/flood-relief?ticket=FL-0142");
-    expect(t).toContain("FL-0142");
-    expect(t).toContain("อพยพผู้ป่วย · ด่วนมาก");
-    expect(t).toContain("ชุมชนรจนา · โซน A (วิกฤต)");
-    expect(t).toContain("https://www.google.com/maps/dir/?api=1&destination=15.253910,100.351080");
-    expect(t).toContain("เปิดในแดชบอร์ด: https://example.go.th/admin/flood-relief?ticket=FL-0142");
-    expect(t).toContain("08:32 น.");
+const json = (v: unknown) => JSON.stringify(v);
+
+describe("formatNewRequestFlex — บล็อกพิเศษเข้ากลุ่มเจ้าหน้าที่", () => {
+  it("altText สรุปเลขที่ ประเภท ความเร่งด่วน พื้นที่ (โชว์ในแจ้งเตือนมือถือ)", () => {
+    const m = formatNewRequestFlex(base);
+    expect(m.type).toBe("flex");
+    expect(m.altText).toBe("🆘 FL-0142 อพยพผู้ป่วย · ด่วนมาก · ชุมชนรจนา · โซน A (วิกฤต)");
+    expect(m.altText.length).toBeLessThanOrEqual(400);
   });
 
-  it("ไม่ทราบชุมชน/ไม่มีโซน/ไม่มีลิงก์แดชบอร์ด ก็ยังส่งได้", () => {
-    const t = formatNewRequestText({ ...base, communityName: null, zoneName: null, zoneLevel: null, landmark: "", peopleCount: null });
-    expect(t).toContain("📍 ไม่ทราบชุมชน");
+  it("หัวการ์ดสีตามความเร่งด่วน", () => {
+    const bg = (u: "critical" | "urgent" | "normal") =>
+      (formatNewRequestFlex({ ...base, urgency: u }).contents as { header: { backgroundColor: string } }).header
+        .backgroundColor;
+    expect(bg("critical")).toBe("#C62839");
+    expect(bg("urgent")).toBe("#9E6206");
+    expect(bg("normal")).toBe("#4A4458");
+  });
+
+  it("มีปุ่มนำทาง Google Maps · ปุ่มแดชบอร์ดมีเมื่อตั้ง URL · เวลาไทย", () => {
+    const withUrl = json(formatNewRequestFlex(base, "https://example.go.th/admin/flood-relief?ticket=FL-0142"));
+    expect(withUrl).toContain("https://www.google.com/maps/dir/?api=1&destination=15.253910,100.351080");
+    expect(withUrl).toContain("https://example.go.th/admin/flood-relief?ticket=FL-0142");
+    expect(withUrl).toContain("08:32 น.");
+    expect(json(formatNewRequestFlex(base))).not.toContain("แดชบอร์ด");
+  });
+
+  it("ไม่ทราบชุมชน/ไม่มีโซน/ช่องไม่บังคับว่าง ก็ยังสร้างการ์ดได้", () => {
+    const t = json(
+      formatNewRequestFlex({ ...base, communityName: null, zoneName: null, zoneLevel: null, landmark: "", peopleCount: null })
+    );
+    expect(t).toContain("ไม่ทราบชุมชน");
     expect(t).not.toContain("โซน");
-    expect(t).not.toContain("แดชบอร์ด");
     expect(t).not.toContain("คนในบ้าน");
+    expect(t).not.toContain("จุดสังเกต");
+  });
+
+  it("ไม่มีข้อความว่างในการ์ด (LINE ปฏิเสธ text ว่างทั้งใบ)", () => {
+    expect(json(formatNewRequestFlex({ ...base, landmark: "" }))).not.toMatch(/"text":""/);
   });
 });
