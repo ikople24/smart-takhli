@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Crosshair, LoaderCircle, MapPin } from "lucide-react";
 import { accuracyTier, formatCoords, TAKHLI_CENTER, type LatLng } from "@/lib/flood-relief/geo";
+import { BaseMapToggle, type BaseMap } from "./BaseTiles";
 
 const MiniMap = dynamic(() => import("./MiniMap"), {
   ssr: false,
@@ -25,6 +26,8 @@ export default function LocationPicker({
   const [gps, setGps] = useState<GpsState>("idle");
   const [manual, setManual] = useState(false); // เปิดแผนที่ให้ปักเองโดยยังไม่มีพิกัด
   const [expanded, setExpanded] = useState(false);
+  // ค่าเริ่มต้นดาวเทียม — ชาวบ้านหาหลังคาบ้านตัวเองได้ง่ายกว่าแผนที่ถนน (เจ้าของขอ 2026-09-26)
+  const [baseMap, setBaseMap] = useState<BaseMap>("satellite");
   const [community, setCommunity] = useState<string | null | undefined>(undefined); // undefined = กำลังหา
 
   const locate = useCallback(() => {
@@ -113,7 +116,12 @@ export default function LocationPicker({
       )}
       <div className="mt-2.5 overflow-hidden rounded-2xl border border-tk-flood-line bg-white shadow-tk-md">
         <div className="relative" style={{ height }}>
-          <MiniMap point={center} accuracyM={value?.accuracyM ?? null} height={height} onMove={move} />
+          <MiniMap point={center} accuracyM={value?.accuracyM ?? null} height={height} onMove={move} baseMap={baseMap} />
+          <BaseMapToggle
+            value={baseMap}
+            onChange={setBaseMap}
+            className="absolute bottom-2.5 left-2.5 z-[400] bg-white/95 shadow"
+          />
           {value && tier !== "manual" && (
             <span
               className={`pointer-events-none absolute left-2.5 top-2.5 z-[400] inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[10.5px] font-semibold ${

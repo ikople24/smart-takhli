@@ -1,11 +1,12 @@
 // components/flood-relief/MiniMap.tsx — client only (import ผ่าน next/dynamic ssr:false)
-// แผนที่ย่อในฟอร์ม: หมุดน้ำเงิน (divIcon ไม่ต้องใช้ไฟล์รูป) + วงรัศมีความแม่นยำ GPS
+// แผนที่ย่อในฟอร์ม: หมุดน้ำเงิน (divIcon ไม่ต้องใช้ไฟล์รูป) + วงรัศมีความแม่นยำ GPS · พื้นแผนที่ถนน/ดาวเทียม (BaseTiles)
 // ลากหมุด หรือแตะแผนที่ = ย้ายพิกัด (ใช้ทั้ง "ขยับหมุด" และ "ปักหมุดเอง" ตอนไม่ได้ GPS)
 import { useEffect, useMemo } from "react";
-import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { Circle, MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { LatLng } from "@/lib/flood-relief/geo";
+import BaseTiles, { type BaseMap } from "./BaseTiles";
 
 const PIN = L.divIcon({
   className: "",
@@ -42,11 +43,13 @@ export default function MiniMap({
   accuracyM,
   height,
   onMove,
+  baseMap,
 }: {
   point: LatLng;
   accuracyM: number | null;
   height: number;
   onMove: (p: LatLng) => void;
+  baseMap: BaseMap;
 }) {
   const handlers = useMemo(
     () => ({
@@ -66,12 +69,12 @@ export default function MiniMap({
       attributionControl={false}
       style={{ height, width: "100%" }}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <BaseTiles baseMap={baseMap} />
       {accuracyM != null && accuracyM > 0 && (
         <Circle
           center={[point.lat, point.lng]}
           radius={accuracyM}
-          pathOptions={{ color: "#1D4299", weight: 1, fillColor: "#1D4299", fillOpacity: 0.12 }}
+          pathOptions={{ color: "#fff", weight: 1.5, fillColor: "#4C8DFF", fillOpacity: 0.18 }}
         />
       )}
       <Marker position={[point.lat, point.lng]} icon={PIN} draggable eventHandlers={handlers} />

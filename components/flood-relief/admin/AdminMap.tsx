@@ -3,13 +3,14 @@
 // เลือกหมุด ↔ รายการซ้าย ↔ แผงขวา ผ่าน selectedId ใน useFloodReliefStore
 // โซนสี/ศูนย์พักพิง/เครื่องมือวาดโซน (Geoman) มาในขั้น 5–6
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Marker, Tooltip, useMap, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
 import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
+import BaseTiles, { BaseMapToggle } from "../BaseTiles";
 import { pinColor } from "./labels";
 import type { AdminRequest, AdminTeam } from "./types";
 
@@ -63,26 +64,7 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
       >
         {/* ปุ่มซูมมุมขวาล่างตามดีไซน์ — ค่าเริ่มต้นมุมซ้ายบนทับแผงชั้นข้อมูล */}
         <ZoomControl position="bottomright" />
-        {baseMap === "satellite" ? (
-          <>
-            {/* ภาพดาวเทียม Google แบบ hybrid (lyrs=y มีชื่อถนน/สถานที่ในตัว) — ชัดกว่า Esri ในเขตตาคลี (เจ้าของขอ 2026-09-26)
-                แหล่งเดียวกับ components/MapBaseTileLayers.js */}
-            <TileLayer
-              key="sat"
-              url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-              subdomains={["mt0", "mt1", "mt2", "mt3"]}
-              attribution="Imagery &copy; Google"
-              maxNativeZoom={20}
-              maxZoom={21}
-            />
-          </>
-        ) : (
-          <TileLayer
-            key="osm"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
-          />
-        )}
+        <BaseTiles baseMap={baseMap} />
         {layers.communities && communities && (
           <GeoJSON
             data={communities}
@@ -139,28 +121,7 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
 
       {/* ชั้นข้อมูล */}
       <div className="absolute left-3.5 top-3.5 z-[500] flex flex-col gap-1 rounded-[14px] bg-white/95 p-2 shadow-tk-xl">
-        {/* สลับแผนที่ถนน / ภาพดาวเทียม */}
-        <div role="radiogroup" aria-label="รูปแบบแผนที่" className="mb-1 grid grid-cols-2 gap-1 rounded-[10px] bg-tk-unclaimed-soft p-0.5">
-          {(
-            [
-              ["street", "แผนที่"],
-              ["satellite", "ดาวเทียม"],
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={baseMap === k}
-              onClick={() => setBaseMap(k)}
-              className={`h-7 rounded-lg px-2 text-[11.5px] font-bold ${
-                baseMap === k ? "bg-white text-tk-flood shadow-tk-xs" : "text-tk-ink-4"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <BaseMapToggle value={baseMap} onChange={setBaseMap} className="mb-1" />
         <span className="px-1.5 pb-1 pt-0.5 text-[10.5px] font-bold tracking-[0.5px] text-tk-ink-4">ชั้นข้อมูล</span>
         {(
           [
