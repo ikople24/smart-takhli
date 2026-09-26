@@ -10,7 +10,8 @@ import type { FeatureCollection } from "geojson";
 import { REQUEST_TYPE_META, isRequestType } from "@/lib/flood-relief/status";
 import { TAKHLI_CENTER } from "@/lib/flood-relief/geo";
 import { useFloodReliefStore } from "@/stores/useFloodReliefStore";
-import BaseTiles, { BaseMapToggle } from "../BaseTiles";
+import BaseMapToggle from "../BaseMapToggle";
+import BaseTiles from "../BaseTiles";
 import { pinColor } from "./labels";
 import type { AdminRequest, AdminTeam } from "./types";
 
