@@ -17,7 +17,7 @@ const TILE_LABEL: Record<RequestType, [string, string]> = {
   evac: ["การอพยพ", "ผู้ป่วย"],
   drain: ["การระบาย", "น้ำ"],
   sand: ["ขอรับ", "กระสอบทราย"],
-  other: ["ผลกระทบ", "อื่นๆ"],
+  other: ["อาหาร", "น้ำดื่ม"],
 };
 
 export default function FloodReliefCard() {
