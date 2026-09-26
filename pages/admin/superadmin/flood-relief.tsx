@@ -5,12 +5,24 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useUser } from "@clerk/nextjs";
 import Swal from "sweetalert2";
+import type { SituationOverride } from "@/lib/flood-relief/settings";
+import { SITUATION_META } from "@/lib/flood-relief/zones";
+
+/** ตัวเลือกระดับสถานการณ์บนบล็อกหน้าแรก — auto ก่อน แล้วเรียงจากเบาไปหนัก */
+const SITUATION_CHOICES: Array<{ value: SituationOverride; label: string; dot: string; hint: string }> = [
+  { value: "auto", label: "อัตโนมัติ", dot: "conic-gradient(#3DD68C 0 33%, #F5B544 0 66%, #FF6B7D 0)", hint: "ตามโซนสีสูงสุดบนแผนที่" },
+  { value: "normal", label: SITUATION_META.normal.label, dot: SITUATION_META.normal.dot, hint: "สถานการณ์ปกติ" },
+  { value: "watch", label: SITUATION_META.watch.label, dot: SITUATION_META.watch.dot, hint: "น้ำกำลังขึ้น" },
+  { value: "danger", label: SITUATION_META.danger.label, dot: SITUATION_META.danger.dot, hint: "เตรียมอพยพ" },
+  { value: "critical", label: SITUATION_META.critical.label, dot: SITUATION_META.critical.dot, hint: "อพยพทันที" },
+];
 
 type Settings = {
   centerOpen: boolean;
   hotline: string;
   callbackSlaMin: number;
   announcement: string;
+  situationOverride: SituationOverride;
   updatedAt: string | null;
   updatedBy: string;
 };
@@ -106,7 +118,37 @@ export default function FloodReliefSettingsPage() {
       </div>
 
       <div className="mt-4 rounded-[20px] bg-white p-5 shadow-tk-md">
-        <label className="block text-[12.5px] font-semibold text-tk-ink-3" htmlFor="hotline">
+        <div className="text-[12.5px] font-semibold text-tk-ink-3" id="situation-label">
+          ระดับสถานการณ์บนบล็อกหน้าแรก
+        </div>
+        <p className="mt-0.5 text-[11.5px] text-tk-ink-4">
+          &ldquo;อัตโนมัติ&rdquo; ใช้ระดับโซนสีสูงสุดที่เปิดใช้งาน (ยังไม่มีโซน = ปกติ) · เลือกระดับอื่นเพื่อประกาศทับ แล้วกดบันทึก
+        </p>
+        <div role="radiogroup" aria-labelledby="situation-label" className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {SITUATION_CHOICES.map((c) => {
+            const on = form.situationOverride === c.value;
+            return (
+              <button
+                key={c.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setForm({ ...form, situationOverride: c.value })}
+                className={`flex flex-col items-start gap-1 rounded-xl border-[1.5px] px-3 py-2 text-left ${
+                  on ? "border-tk-flood bg-tk-flood-soft" : "border-tk-line bg-white"
+                }`}
+              >
+                <span className="flex items-center gap-1.5 text-[13px] font-bold">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.dot }} />
+                  {c.label}
+                </span>
+                <span className="text-[10.5px] text-tk-ink-4">{c.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="mt-5 block text-[12.5px] font-semibold text-tk-ink-3" htmlFor="hotline">
           เบอร์ศูนย์ฯ (แสดงบนบล็อก ฟอร์ม และหน้าสถานะ)
         </label>
         <input

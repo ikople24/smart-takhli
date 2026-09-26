@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_FLOOD_SETTINGS, normalizeSettings, telHref } from "../settings";
+import { DEFAULT_FLOOD_SETTINGS, effectiveSituation, normalizeSettings, telHref } from "../settings";
 
 describe("normalizeSettings", () => {
   it("ไม่มีเอกสาร = ค่าเริ่มต้น ศูนย์ฯ ปิด", () => {
@@ -23,5 +23,19 @@ describe("normalizeSettings", () => {
 describe("telHref", () => {
   it("ตัดขีดออก", () => {
     expect(telHref("056-261-500")).toBe("tel:056261500");
+  });
+});
+
+describe("situationOverride", () => {
+  it("ค่าเริ่มต้น/ค่าไม่รู้จัก = auto", () => {
+    expect(normalizeSettings(null).situationOverride).toBe("auto");
+    expect(normalizeSettings({ situationOverride: "safe" }).situationOverride).toBe("auto");
+    expect(normalizeSettings({ situationOverride: "critical" }).situationOverride).toBe("critical");
+  });
+
+  it("auto ใช้ระดับตามโซน · ประกาศทับชนะเสมอ (ทั้งขึ้นและลง)", () => {
+    expect(effectiveSituation("auto", "danger")).toBe("danger");
+    expect(effectiveSituation("critical", "normal")).toBe("critical");
+    expect(effectiveSituation("normal", "critical")).toBe("normal");
   });
 });
