@@ -24,6 +24,16 @@ export async function findCommunityName(point: LatLng): Promise<string | null> {
   return pickCommunity(hits.filter((h) => typeof h.name === "string" && h.name));
 }
 
+/** รูปชุมชนจาก basemap (อ่านอย่างเดียว) สำหรับโซนแบบเติมสี · ไม่พบ/ไม่ใช่ Polygon = null */
+export async function findCommunityGeometry(name: string): Promise<{ type: "Polygon"; coordinates: number[][][] } | null> {
+  const db = await getDb();
+  const doc = await db
+    .collection("geojsonfeatures")
+    .findOne({ active: true, name }, { projection: { _id: 0, geometry: 1 } });
+  const g = doc?.geometry as { type?: string; coordinates?: number[][][] } | undefined;
+  return g?.type === "Polygon" && Array.isArray(g.coordinates) ? { type: "Polygon", coordinates: g.coordinates } : null;
+}
+
 export type ZoneHit = { _id: Types.ObjectId; name: string; level: string };
 
 export async function findZone(point: LatLng): Promise<ZoneHit | null> {

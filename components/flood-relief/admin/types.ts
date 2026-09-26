@@ -64,6 +64,8 @@ export type Me = { name: string; canRewind: boolean; isSuperAdmin: boolean };
 export type AdminZone = {
   id: string;
   name: string;
+  /** โซนแบบเติมสีทั้งชุมชน · null = โซนที่วาดเองแบบเดิม */
+  communityName: string | null;
   level: string;
   geometry: { type: "Polygon"; coordinates: number[][][] };
   active: boolean;
