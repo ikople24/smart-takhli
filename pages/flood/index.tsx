@@ -1,0 +1,243 @@
+// pages/flood/index.tsx — หน้าติดตามสถานการณ์น้ำท่วมสาธารณะ (โมดูล flood-relief)
+// ลิงก์สั้นให้หน่วยงานอื่น/ผู้สนใจติดตาม · ไม่ต้องล็อกอิน · **ห้ามเปลี่ยน path** หลังแชร์ออกไปแล้ว
+// แสดงเฉพาะระดับ/โซนชุมชน/ตัวเลขรวม — ไม่มีหมุดหรือรายละเอียดคำขอรายบ้าน
+import { useCallback, useEffect, useState } from "react";
+import Head from "next/head";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { ChevronLeft, LoaderCircle, Phone, Share2, TriangleAlert } from "lucide-react";
+import CitizenShell from "@/components/citizen/CitizenShell";
+import BaseMapToggle, { type BaseMap } from "@/components/flood-relief/BaseMapToggle";
+import { TypeIcon } from "@/components/flood-relief/icons";
+import type { PublicZone } from "@/components/flood-relief/PublicZoneMap";
+import type { PublicStats } from "@/lib/flood-relief/publicStats";
+import { DEFAULT_FLOOD_SETTINGS, telHref } from "@/lib/flood-relief/settings";
+import { REQUEST_TYPE_META, REQUEST_TYPES } from "@/lib/flood-relief/status";
+import { thaiWhen } from "@/lib/flood-relief/time";
+import { SITUATION_META, ZONE_LEVELS, ZONE_META, type SituationLevel, type ZoneLevel } from "@/lib/flood-relief/zones";
+
+const PublicZoneMap = dynamic(() => import("@/components/flood-relief/PublicZoneMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-[#E6ECF4]" />,
+});
+
+const REFRESH_MS = 60_000;
+
+type Situation = {
+  centerOpen: boolean;
+  level: SituationLevel;
+  updatedAt: string | null;
+  hotline: string;
+  announcement: string;
+  zones: PublicZone[];
+  stats: PublicStats;
+};
+
+export default function FloodSituationPage() {
+  const [data, setData] = useState<Situation | null>(null);
+  const [error, setError] = useState(false);
+  const [baseMap, setBaseMap] = useState<BaseMap>("satellite");
+  const [copied, setCopied] = useState(false);
+
+  const load = useCallback(() => {
+    fetch("/api/flood-relief/public/situation", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((j) => {
+        setData(j);
+        setError(false);
+      })
+      .catch(() => setError(true));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, REFRESH_MS);
+    const onVisible = () => document.visibilityState === "visible" && load();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
+
+  const hotline = data?.hotline ?? DEFAULT_FLOOD_SETTINGS.hotline;
+  const situation = SITUATION_META[data?.level ?? "normal"] ?? SITUATION_META.normal;
+
+  const share = async () => {
+    const url = `${window.location.origin}/flood`;
+    const text = "ติดตามสถานการณ์น้ำท่วม เทศบาลเมืองตาคลี";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: text, text, url });
+      } catch {
+        /* ผู้ใช้ยกเลิก */
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("คัดลอกลิงก์นี้", url);
+    }
+  };
+
+  const zonesByLevel = ZONE_LEVELS.map((l) => ({
+    level: l,
+    names: (data?.zones ?? []).filter((z) => z.level === l).map((z) => z.name).sort((a, b) => a.localeCompare(b, "th")),
+  })).filter((g) => g.names.length > 0);
+
+  return (
+    <>
+      <Head>
+        <title>สถานการณ์น้ำท่วม · เทศบาลเมืองตาคลี</title>
+        <meta name="description" content="ติดตามสถานการณ์น้ำท่วมเทศบาลเมืองตาคลี แผนที่ระดับน้ำรายชุมชนและการช่วยเหลือ อัปเดตอัตโนมัติ" />
+        <meta property="og:title" content="สถานการณ์น้ำท่วม · เทศบาลเมืองตาคลี" />
+        <meta property="og:description" content="แผนที่ระดับน้ำรายชุมชนและการช่วยเหลือผู้ประสบภัย อัปเดตอัตโนมัติ" />
+      </Head>
+      <CitizenShell hideNav>
+        {/* หัวแดงฉุกเฉิน */}
+        <div className="bg-tk-emergency px-4 pb-4 pt-2 text-white">
+          <div className="flex items-center justify-between">
+            <Link href="/" aria-label="กลับหน้าแรก" className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full">
+              <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
+            </Link>
+            <button
+              type="button"
+              onClick={share}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/15 px-3 text-[12px] font-semibold"
+            >
+              <Share2 size={14} aria-hidden />
+              {copied ? "คัดลอกลิงก์แล้ว" : "แชร์ลิงก์"}
+            </button>
+          </div>
+          <h1 className="mt-1 text-[22px] font-bold leading-tight">สถานการณ์น้ำท่วม</h1>
+          <p className="text-[12.5px] text-white/85">เทศบาลเมืองตาคลี · อัปเดตอัตโนมัติทุก 1 นาที</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[13px] font-bold">
+              <span className="relative inline-block h-2.5 w-2.5">
+                <span className="flood-ring absolute inset-0 rounded-full" style={{ background: situation.dot }} />
+                <span className="absolute inset-0 rounded-full ring-[1.5px] ring-white" style={{ background: situation.dot }} />
+              </span>
+              ระดับ{situation.label}
+            </span>
+            {data?.updatedAt && <span className="text-[11.5px] text-white/80">อัปเดต {thaiWhen(data.updatedAt)}</span>}
+          </div>
+          {data?.announcement && (
+            <p className="mt-3 flex gap-2 rounded-xl bg-black/15 px-3 py-2 text-[12.5px] leading-normal">
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+              {data.announcement}
+            </p>
+          )}
+        </div>
+
+        {!data ? (
+          <div className="flex justify-center py-16 text-tk-flood">
+            {error ? (
+              <p className="text-[13px] text-tk-overdue-ink">โหลดข้อมูลไม่สำเร็จ — จะลองใหม่อัตโนมัติ</p>
+            ) : (
+              <LoaderCircle className="animate-spin" aria-label="กำลังโหลด" />
+            )}
+          </div>
+        ) : (
+          <>
+            {/* แผนที่โซน */}
+            <section className="mx-4 mt-4 overflow-hidden rounded-[20px] border border-tk-line bg-white shadow-tk-md">
+              <div className="relative h-[340px]">
+                <PublicZoneMap zones={data.zones} baseMap={baseMap} />
+                <BaseMapToggle value={baseMap} onChange={setBaseMap} className="absolute left-2.5 top-2.5 z-[400] bg-white/95 shadow" />
+                {data.zones.length === 0 && (
+                  <span className="pointer-events-none absolute inset-x-0 top-12 z-[400] mx-auto w-fit rounded-full bg-white/95 px-3 py-1 text-[12px] font-semibold text-tk-done-ink shadow">
+                    ยังไม่มีพื้นที่ประกาศเฝ้าระวัง
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-tk-line px-3.5 py-2.5 text-[11.5px] font-semibold">
+                {ZONE_LEVELS.map((l) => (
+                  <span key={l} className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-3.5 rounded-[3px]" style={{ background: ZONE_META[l].fill, opacity: 0.75 }} />
+                    {ZONE_META[l].label}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            {/* ตัวเลขรวม */}
+            <section className="mx-4 mt-3 grid grid-cols-3 gap-2">
+              {(
+                [
+                  ["รอความช่วยเหลือ", data.stats.waiting, "bg-tk-overdue-soft text-tk-overdue-ink"],
+                  ["กำลังช่วยเหลือ", data.stats.helping, "bg-tk-due-soft text-tk-due-ink"],
+                  ["ช่วยเหลือแล้ว", data.stats.doneTotal, "bg-tk-done-soft text-tk-done-ink"],
+                ] as const
+              ).map(([label, n, cls]) => (
+                <div key={label} className={`rounded-2xl px-3 py-3 text-center ${cls}`}>
+                  <div className="text-[24px] font-bold leading-none tabular-nums">{n}</div>
+                  <div className="mt-1 text-[11.5px] font-semibold">{label}</div>
+                </div>
+              ))}
+            </section>
+            <p className="mx-4 mt-1.5 text-right text-[11px] text-tk-ink-4">ช่วยเหลือเสร็จวันนี้ {data.stats.doneToday} ราย</p>
+
+            <section className="mx-4 mt-2 rounded-[20px] bg-white p-4 shadow-tk-md">
+              <h2 className="text-[14px] font-bold">คำขอที่ยังดำเนินการ แยกตามเรื่อง</h2>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                {REQUEST_TYPES.map((t) => (
+                  <div key={t} className="flex items-center gap-2.5 rounded-xl bg-tk-bg px-3 py-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-tk-flood-soft text-tk-flood">
+                      <TypeIcon type={t} size={20} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold">{REQUEST_TYPE_META[t].label}</span>
+                    <span className="text-[16px] font-bold tabular-nums">{data.stats.openByType[t]}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {zonesByLevel.length > 0 && (
+              <section className="mx-4 mt-3 rounded-[20px] bg-white p-4 shadow-tk-md">
+                <h2 className="text-[14px] font-bold">พื้นที่ตามระดับ</h2>
+                <ul className="mt-2 flex flex-col gap-2">
+                  {zonesByLevel.map((g) => (
+                    <li key={g.level} className="text-[12.5px]">
+                      <span className="inline-flex items-center gap-1.5 font-bold">
+                        <span className="h-2.5 w-3.5 rounded-[3px]" style={{ background: ZONE_META[g.level as ZoneLevel].fill }} />
+                        {ZONE_META[g.level as ZoneLevel].label}
+                        <span className="font-normal text-tk-ink-4">· {ZONE_META[g.level as ZoneLevel].meaning}</span>
+                      </span>
+                      <div className="mt-0.5 leading-normal text-tk-ink-2">{g.names.join(" · ")}</div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <section className="mx-4 mb-8 mt-3 grid grid-cols-2 gap-2.5">
+              <a
+                href={telHref(hotline)}
+                className="flex h-[50px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-tk-flood bg-white text-[13.5px] font-bold text-tk-flood"
+              >
+                <Phone size={18} aria-hidden />
+                โทร {hotline}
+              </a>
+              {data.centerOpen ? (
+                <Link
+                  href="/flood/request"
+                  className="flex h-[50px] items-center justify-center gap-2 rounded-[14px] bg-tk-emergency text-[13.5px] font-bold text-white shadow-tk-emergency"
+                >
+                  <TriangleAlert size={18} aria-hidden />
+                  ขอความช่วยเหลือ
+                </Link>
+              ) : (
+                <span className="flex h-[50px] items-center justify-center rounded-[14px] bg-tk-unclaimed-soft px-2 text-center text-[12px] font-semibold text-tk-ink-3">
+                  ศูนย์ฯ ปิดรับทางเว็บ — โทรแทน
+                </span>
+              )}
+            </section>
+          </>
+        )}
+      </CitizenShell>
+    </>
+  );
+}
