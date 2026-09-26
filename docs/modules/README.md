@@ -16,6 +16,7 @@
 | Smart Waste (ขยะรีไซเคิล) | [smart-waste.md](smart-waste.md) | `/admin/smart-waste` |
 | ทะเบียนท่อประปา (Smart Water) | [smart-water.md](smart-water.md) | `/admin/smart-water` |
 | ตารางเดินรถเก็บขยะ (Garbage) | [garbage.md](garbage.md) | `/garbage`, `/admin/garbage` |
+| ศูนย์ช่วยเหลือน้ำท่วม (Flood relief) | [flood-relief.md](flood-relief.md) | `/flood/request`, `/admin/flood-relief` |
 | งานเจ้าหน้าที่ (Officer tasks) | [tasks.md](tasks.md) | `/admin/my-tasks` (เฟส 1: logic/API/components) |
 | มาตรา 10 (นำเข้า/normalize ข้อมูลกรมที่ดิน) | [m10-ingest.md](m10-ingest.md) | `/admin/m10-ingest`, `/admin/m10-review`, `/admin/m10-records` |
 | Superadmin / สิทธิ์ | [superadmin-permissions.md](superadmin-permissions.md) | `/admin/superadmin` |
