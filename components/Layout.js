@@ -92,6 +92,7 @@ const Layout = ({ children }) => {
   const isCitizenRoute =
     ["/", "/report", "/activities"].includes(router.pathname) ||
     router.pathname.startsWith("/status") ||
+    router.pathname === "/flood" ||
     router.pathname.startsWith("/flood/");
   if (isCitizenRoute) {
     return <>{children}</>;

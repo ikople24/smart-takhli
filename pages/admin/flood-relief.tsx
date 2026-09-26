@@ -35,6 +35,7 @@ export default function FloodReliefDashboard() {
   const [centerOpen, setCenterOpen] = useState<boolean | null>(null);
   const [lastAt, setLastAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const pickedFromQuery = useRef(false);
 
   const load = useCallback(async () => {
@@ -104,10 +105,25 @@ export default function FloodReliefDashboard() {
             อัปเดตอัตโนมัติทุก 30 วิ{lastAt ? ` · ล่าสุด ${clockFmt.format(new Date(lastAt))}` : ""}
           </span>
           {error && <span className="text-[11.5px] font-semibold text-tk-overdue-ink">{error}</span>}
+          <button
+            type="button"
+            onClick={() => {
+              const url = `${window.location.origin}/flood`;
+              navigator.clipboard?.writeText(url).then(
+                () => setLinkCopied(true),
+                () => window.prompt("คัดลอกลิงก์นี้", url)
+              );
+              setTimeout(() => setLinkCopied(false), 2000);
+            }}
+            title="หน้าติดตามสถานการณ์สาธารณะ — ส่งให้หน่วยงานอื่น/ผู้สนใจ (ไม่มีข้อมูลรายบ้าน)"
+            className="ml-auto inline-flex h-9 items-center rounded-full bg-tk-unclaimed-soft px-3.5 text-[12.5px] font-semibold text-tk-ink-2"
+          >
+            {linkCopied ? "คัดลอกแล้ว" : "คัดลอกลิงก์สาธารณะ"}
+          </button>
           {me?.isSuperAdmin && (
             <Link
               href="/admin/superadmin/flood-relief"
-              className="ml-auto inline-flex h-9 items-center rounded-full border-[1.5px] border-tk-flood px-3.5 text-[12.5px] font-bold text-tk-flood"
+              className="inline-flex h-9 items-center rounded-full border-[1.5px] border-tk-flood px-3.5 text-[12.5px] font-bold text-tk-flood"
             >
               ตั้งค่าศูนย์ฯ
             </Link>

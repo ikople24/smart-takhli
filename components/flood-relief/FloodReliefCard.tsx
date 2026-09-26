@@ -49,7 +49,11 @@ export default function FloodReliefCard() {
 
         <div className="relative flex flex-col">
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 py-[5px] pl-2.5 pr-[11px] text-[11.5px] font-semibold text-white">
+            {/* ชิปสถานการณ์กดไปหน้าติดตามสถานการณ์สาธารณะ /flood */}
+            <Link
+              href="/flood"
+              className="inline-flex items-center gap-2 rounded-full bg-white/15 py-[5px] pl-2.5 pr-[11px] text-[11.5px] font-semibold text-white"
+            >
               <span className="relative inline-block h-2 w-2">
                 <span className="flood-ring absolute inset-0 rounded-full" style={{ background: situation.dot }} />
                 <span
@@ -58,7 +62,8 @@ export default function FloodReliefCard() {
                 />
               </span>
               สถานการณ์น้ำ · {situation.label}
-            </span>
+              <ChevronRight size={13} strokeWidth={2.6} aria-hidden className="-mr-1 opacity-80" />
+            </Link>
             {summary.updatedAt && (
               <span className="text-[10.5px] text-white/80">อัปเดต {thaiClock(summary.updatedAt)}</span>
             )}
