@@ -90,7 +90,7 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
         {layers.communities && communities && (
           <GeoJSON
             data={communities}
-            style={{ color: "#6B6880", weight: 1.2, dashArray: "4 3", fillOpacity: 0.03 }}
+            style={{ color: "#2F80FF", weight: 2, dashArray: "6 4", fillColor: "#2F80FF", fillOpacity: 0.04 }}
             onEachFeature={(f, layer) => layer.bindTooltip(String(f.properties?.name ?? ""), { sticky: true })}
           />
         )}
