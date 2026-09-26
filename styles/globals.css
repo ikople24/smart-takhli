@@ -1162,6 +1162,27 @@ body.survey-form-open .app-bottom-nav {
   --shadow-tk-purple: 0 8px 18px rgba(124, 58, 237, 0.28);
   --shadow-tk-purple-card: 0 14px 30px rgba(124, 58, 237, 0.26);
   --shadow-tk-purple-fab: 0 10px 22px rgba(124, 58, 237, 0.4);
+
+  /* โมดูลศูนย์ช่วยเหลือน้ำท่วม (flood-relief) — docs/design_handoff_flood_relief/README.md § Design Tokens
+     น้ำเงินเข้มเป็นสีประจำโมดูล (ไม่ใช่ม่วง tk-primary และไม่แตะ --color-primary) */
+  --color-tk-flood: #1D4299;          /* การ์ด ปุ่ม header */
+  --color-tk-flood-dark: #16337A;     /* hover / ตัวอักษรบนพื้นอ่อน */
+  --color-tk-flood-wave: #2250B3;     /* คลื่นชั้นหลัง */
+  --color-tk-flood-wave-2: #2A5DC6;   /* คลื่นชั้นหน้า */
+  --color-tk-flood-soft: #E8EEFA;     /* แถวที่เลือก / icon tile / กล่องแจ้งเตือน */
+  --color-tk-flood-line: #C9D6F2;     /* ขอบการ์ดแผนที่ / select */
+  --color-tk-flood-tint: #FBFCFF;     /* พื้นกล่องมอบหมายทีม */
+  --color-tk-emergency: #C62839;      /* ปุ่มส่งฟอร์ม ไอคอนเตือน หมุดด่วนมาก */
+  --color-tk-urgent-pin: #E8891D;     /* หมุดด่วน */
+  --color-tk-zone-critical: #E0455B;
+  --color-tk-zone-danger: #F2A93B;
+  --color-tk-zone-watch: #E8C547;
+  --color-tk-zone-watch-line: #D4AF1F;
+  --color-tk-zone-safe: #1B935A;
+  --color-tk-line-oa: #06C755;        /* ปุ่มแชร์ LINE */
+  --shadow-tk-flood-card: 0 12px 26px rgba(29, 66, 153, 0.32);
+  --shadow-tk-flood-btn: 0 8px 18px rgba(29, 66, 153, 0.3);
+  --shadow-tk-emergency: 0 10px 22px rgba(198, 40, 57, 0.32);
 }
 
 /* accordion กลุ่มงาน: ขยาย/ยุบตาม README (220ms cubic-bezier) — ใช้ grid-rows trick ไม่ต้องรู้ความสูง */
@@ -1288,4 +1309,23 @@ body.survey-form-open .app-bottom-nav {
   /* ประหยัดกระดาษ: แผ่นที่ไม่มีสคริปต์ขั้นตอนอยู่ได้ 2 รายการ/หน้า */
   .m10p-compact .m10p-sheet { break-after: auto; padding-bottom: 8px; border-bottom: 1px dashed #000; }
   .m10p-compact .m10p-divider { break-after: page; }
+}
+
+/* flood-relief: จุดสถานการณ์กระพริบ (ring 1.8s) · จุดสถานะกำลังจัดทีม (pulse) · ปุ่มวงกลมยกตอน hover */
+@keyframes flood-ring {
+  0% { transform: scale(1); opacity: 0.75; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@keyframes flood-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 169, 59, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(242, 169, 59, 0); }
+}
+.flood-ring { animation: flood-ring 1.8s ease-out infinite; }
+.flood-pulse { animation: flood-pulse 1.6s ease-in-out infinite; }
+.flood-tile .flood-disc { transition: transform 0.15s ease; }
+.flood-tile:hover .flood-disc { transform: translateY(-2px) scale(1.05); }
+@media (prefers-reduced-motion: reduce) {
+  .flood-ring,
+  .flood-pulse { animation: none; }
+  .flood-tile:hover .flood-disc { transform: none; }
 }

@@ -48,6 +48,8 @@ const AuditLogSchema = new mongoose.Schema({
       'assignment_transfer_requested',
       'department_head_set',
       'complaint_deleted',
+      // Flood relief
+      'flood_settings_updated',
       // General
       'data_exported',
       'login',

@@ -108,24 +108,33 @@ type PublicSource = RequestLike & {
   onSiteAt?: DateLike;
 };
 
-/** แปลงเอกสารเป็นข้อมูลที่ผู้แจ้ง/ญาติเห็นได้ — whitelist ทีละฟิลด์ ไม่ spread เอกสารเดิม */
-export function publicRequest(doc: PublicSource) {
-  return {
+/**
+ * แปลงเอกสารเป็นข้อมูลหน้าสถานะ — whitelist ทีละฟิลด์ ไม่ spread เอกสารเดิม
+ * full = มีกุญแจถูกต้อง (ผู้แจ้ง/ญาติที่ได้ลิงก์) → เห็นจุดสังเกต ชุมชน จำนวนคน เบอร์ที่ปิดบางส่วน
+ * ไม่มีกุญแจ → เห็นแค่ประเภท ความเร่งด่วน และความคืบหน้า (เลขที่เรียงกัน ไล่เดาได้)
+ */
+export function publicRequest(doc: PublicSource, full = false) {
+  const base = {
     ticket: doc.ticket ?? "",
     type: doc.type ?? "",
     urgency: doc.urgency ?? "",
     status: doc.status ?? "received",
     citizenStep: citizenStepIndex(doc.status),
-    landmark: doc.landmark ?? "",
-    peopleCount: doc.peopleCount ?? null,
-    communityName: doc.communityName ?? null,
-    zoneLabel: zoneLabel(doc.zoneName),
-    phoneMasked: maskPhone(doc.phone),
     createdAt: doc.createdAt ?? null,
     assignedAt: doc.assignedAt ?? null,
     dispatchedAt: doc.dispatchedAt ?? null,
     onSiteAt: doc.onSiteAt ?? null,
     doneAt: doc.doneAt ?? null,
     cancelledAt: doc.cancelledAt ?? null,
+    full,
+  };
+  if (!full) return base;
+  return {
+    ...base,
+    landmark: doc.landmark ?? "",
+    peopleCount: doc.peopleCount ?? null,
+    communityName: doc.communityName ?? null,
+    zoneLabel: zoneLabel(doc.zoneName),
+    phoneMasked: maskPhone(doc.phone),
   };
 }

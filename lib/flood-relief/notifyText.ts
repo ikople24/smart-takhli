@@ -1,7 +1,8 @@
 // lib/flood-relief/notifyText.ts
 // การ์ด LINE ของศูนย์ฯ (logic ล้วน — แยกจาก notify.ts ที่ยิง LINE จริง เพื่อให้เทสได้)
 // ส่งเป็น "บล็อกพิเศษ" (Flex) เข้ากลุ่มเจ้าหน้าที่ smart-takhli เดิม — หัวการ์ดสีตามความเร่งด่วน ให้เด่นจากการ์ดร้องเรียนปกติ
-// ไม่ใส่ชื่อ/เบอร์ผู้แจ้ง (README § LINE) — เจ้าหน้าที่เปิดดูเบอร์ในแดชบอร์ดที่ต้องล็อกอิน
+// มีปุ่ม "โทรหาผู้แจ้ง" (tel:) ให้เจ้าหน้าที่กดโทรได้ทันทียามฉุกเฉิน — เจ้าของอนุมัติ 2026-09-26 (เดิม README ไม่ใส่เบอร์)
+// เบอร์อยู่ในปุ่มเท่านั้น ไม่พิมพ์ในเนื้อการ์ด/altText (altText โผล่ในแจ้งเตือนมือถือและพรีวิวแชต) · ไม่ใส่ชื่อผู้แจ้ง
 
 import type { FlexMessage } from "@/lib/lineMessaging";
 import { formatCoords, googleMapsDirUrl, type LatLng } from "./geo";
@@ -30,6 +31,8 @@ export type NewRequestSummary = {
   zoneLevel: string | null;
   landmark?: string;
   peopleCount?: number | null;
+  /** เบอร์ผู้แจ้ง (normalize แล้ว) — ใช้ในปุ่มโทรเท่านั้น */
+  phone: string;
   createdAt: Date;
 };
 
@@ -106,6 +109,13 @@ export function formatNewRequestFlex(r: NewRequestSummary, dashboardUrl?: string
           {
             type: "button",
             style: "primary",
+            color: "#1B935A",
+            height: "sm",
+            action: { type: "uri", label: "📞 โทรหาผู้แจ้ง", uri: `tel:${r.phone.replace(/\D/g, "")}` },
+          },
+          {
+            type: "button",
+            style: "primary",
             color: FLOOD_BLUE,
             height: "sm",
             action: { type: "uri", label: "นำทาง Google Maps", uri: googleMapsDirUrl(r.point) },
@@ -116,7 +126,7 @@ export function formatNewRequestFlex(r: NewRequestSummary, dashboardUrl?: string
                   type: "button",
                   style: "secondary",
                   height: "sm",
-                  action: { type: "uri", label: "เปิดในแดชบอร์ด · ดูเบอร์ผู้แจ้ง", uri: dashboardUrl },
+                  action: { type: "uri", label: "เปิดในแดชบอร์ด", uri: dashboardUrl },
                 },
               ]
             : []),

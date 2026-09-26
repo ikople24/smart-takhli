@@ -117,9 +117,9 @@ describe("publicRequest — หน้าสถานะสาธารณะ", (
     createdAt: T0,
   };
 
-  it("ไม่หลุดเบอร์เต็ม / lineUserId / notes / ชื่อผู้แจ้ง / พิกัด / IP", () => {
-    const p = publicRequest(doc) as Record<string, unknown>;
-    for (const k of ["phone", "lineUserId", "notes", "reporterName", "location", "clientIp"]) {
+  it("ไม่หลุดเบอร์เต็ม / lineUserId / notes / ชื่อผู้แจ้ง / พิกัด / IP / กุญแจ แม้มีกุญแจ", () => {
+    const p = publicRequest({ ...doc, accessKey: "abcdefghijklmnop" } as typeof doc, true) as Record<string, unknown>;
+    for (const k of ["phone", "lineUserId", "notes", "reporterName", "location", "clientIp", "accessKey"]) {
       expect(p).not.toHaveProperty(k);
     }
     expect(JSON.stringify(p)).not.toContain("0812344421");
@@ -128,12 +128,20 @@ describe("publicRequest — หน้าสถานะสาธารณะ", (
 
   it("แปลงสถานะเป็นขั้นที่ประชาชนเห็น", () => {
     expect(publicRequest(doc).citizenStep).toBe(1);
-    expect(publicRequest(doc).zoneLabel).toBe("โซน A");
+    expect(publicRequest(doc, true)).toMatchObject({ zoneLabel: "โซน A", landmark: "ซ.มาลัย 2", peopleCount: 3 });
+  });
+
+  it("ไม่มีกุญแจ = เห็นแค่ความคืบหน้า ไม่เห็นจุดสังเกต/ชุมชน/จำนวนคน/เบอร์", () => {
+    const p = publicRequest(doc) as Record<string, unknown>;
+    for (const k of ["landmark", "communityName", "peopleCount", "phoneMasked", "zoneLabel"]) {
+      expect(p).not.toHaveProperty(k);
+    }
+    expect(p).toMatchObject({ ticket: "FL-0142", type: "evac", status: "dispatched", full: false });
   });
 
   it("projection สาธารณะไม่มีฟิลด์ต้องห้าม", () => {
     const fields = PUBLIC_REQUEST_SELECT.split(/\s+/);
-    for (const k of ["lineUserId", "notes", "reporterName", "location", "clientIp", "timeline"]) {
+    for (const k of ["lineUserId", "notes", "reporterName", "location", "clientIp", "timeline", "accessKey", "+accessKey"]) {
       expect(fields).not.toContain(k);
     }
   });
