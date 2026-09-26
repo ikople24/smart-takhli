@@ -3,7 +3,7 @@
 // เลือกหมุด ↔ รายการซ้าย ↔ แผงขวา ผ่าน selectedId ใน useFloodReliefStore
 // โซนสี/ศูนย์พักพิง/เครื่องมือวาดโซน (Geoman) มาในขั้น 5–6
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Marker, TileLayer, Tooltip, useMap, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { FeatureCollection } from "geojson";
@@ -55,7 +55,14 @@ export default function AdminMap({ items, teams }: { items: AdminRequest[]; team
 
   return (
     <div className="relative h-full w-full">
-      <MapContainer center={[TAKHLI_CENTER.lat, TAKHLI_CENTER.lng]} zoom={14} style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        center={[TAKHLI_CENTER.lat, TAKHLI_CENTER.lng]}
+        zoom={14}
+        zoomControl={false}
+        style={{ height: "100%", width: "100%" }}
+      >
+        {/* ปุ่มซูมมุมขวาล่างตามดีไซน์ — ค่าเริ่มต้นมุมซ้ายบนทับแผงชั้นข้อมูล */}
+        <ZoomControl position="bottomright" />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
