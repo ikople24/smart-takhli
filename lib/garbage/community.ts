@@ -14,11 +14,5 @@ export function normalizePlaceName(s: string | null | undefined): string {
     .toLowerCase();
 }
 
-/**
- * เลือกชุมชนจาก polygon ที่จุดตกอยู่
- * พื้นที่ทับซ้อนต้องได้คำตอบเดิมทุกครั้ง จึงเรียงชื่อแล้วเอาตัวแรก ไม่ใช่เชื่อลำดับที่ DB คืนมา
- */
-export function pickCommunity(matches: Array<{ name: string }>): string | null {
-  if (matches.length === 0) return null;
-  return [...matches].map((m) => m.name).sort((a, b) => a.localeCompare(b, "th"))[0];
-}
+// ย้ายไปเป็นไฟล์กลาง lib/geo/community.ts (แชร์กับโมดูล flood-relief) — re-export ให้ import เดิมใช้ได้
+export { pickCommunity } from "@/lib/geo/community";
