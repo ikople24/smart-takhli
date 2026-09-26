@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Crosshair, LoaderCircle, MapPin } from "lucide-react";
 import { accuracyTier, formatCoords, TAKHLI_CENTER, type LatLng } from "@/lib/flood-relief/geo";
-import { BaseMapToggle, type BaseMap } from "./BaseTiles";
+import BaseMapToggle, { type BaseMap } from "./BaseMapToggle";
 
 const MiniMap = dynamic(() => import("./MiniMap"), {
   ssr: false,

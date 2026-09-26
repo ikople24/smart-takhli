@@ -6,7 +6,8 @@ import { Circle, MapContainer, Marker, useMap, useMapEvents } from "react-leafle
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { LatLng } from "@/lib/flood-relief/geo";
-import BaseTiles, { type BaseMap } from "./BaseTiles";
+import type { BaseMap } from "./BaseMapToggle";
+import BaseTiles from "./BaseTiles";
 
 const PIN = L.divIcon({
   className: "",
