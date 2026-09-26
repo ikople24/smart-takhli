@@ -60,3 +60,15 @@ export type AdminTeam = {
 };
 
 export type Me = { name: string; canRewind: boolean; isSuperAdmin: boolean };
+
+export type AdminZone = {
+  id: string;
+  name: string;
+  level: string;
+  geometry: { type: "Polygon"; coordinates: number[][][] };
+  active: boolean;
+  openCount: number;
+  createdBy: string;
+  updatedBy: string;
+  updatedAt: string | null;
+};

@@ -1389,3 +1389,20 @@ body.survey-form-open .app-bottom-nav {
   .flood-siren { animation: none; box-shadow: 0 12px 26px rgba(198, 40, 57, 0.34); }
   .flood-siren::before { animation: none; }
 }
+
+/* flood-relief แดชบอร์ด: ป้ายกลางโซน "A · วิกฤต · 14" — ล้างกรอบขาว/ลูกศรของ Leaflet tooltip เหลือแค่เม็ดยาสีตามระดับ */
+.leaflet-tooltip.flood-zone-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.leaflet-tooltip.flood-zone-label::before { display: none; }
+.leaflet-tooltip.flood-zone-label > span {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 11px;
+  color: #fff;
+  font: 700 12px/1.2 'Anuphan', 'IBM Plex Sans Thai', sans-serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
