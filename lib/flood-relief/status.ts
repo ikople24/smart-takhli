@@ -134,7 +134,7 @@ export function statusTransition(from: string, to: string, opts: { canRewind?: b
 
 // ─── ไทม์ไลน์ฝั่งประชาชน 4 ขั้น ────────────────────────────────
 
-export const CITIZEN_STEPS = Object.freeze(["รับเรื่องแล้ว", "กำลังจัดทีม", "เจ้าหน้าที่ถึงจุด", "ช่วยเหลือเสร็จสิ้น"]);
+export const CITIZEN_STEPS = Object.freeze(["รับเรื่องแล้ว", "กำลังจัดทีม", "เจ้าหน้าที่ถึงจุด", "ช่วยเหลือสำเร็จ"]);
 
 /**
  * สถานะ → ขั้นที่ประชาชนเห็น (0–3) · assigning+dispatched รวมเป็นขั้น "กำลังจัดทีม"
