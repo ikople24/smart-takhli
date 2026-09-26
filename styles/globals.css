@@ -1406,3 +1406,9 @@ body.survey-form-open .app-bottom-nav {
   font: 700 12px/1.2 'Anuphan', 'IBM Plex Sans Thai', sans-serif;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
+
+/* flood-relief แผนที่แดชบอร์ด: คลิกรูปชุมชน/โซนแล้ว Chrome วาดกรอบโฟกัสสี่เหลี่ยมรอบ SVG path บังแผนที่ (เจ้าของแจ้ง 2026-09-26)
+   ปิดเฉพาะตอนโฟกัสจากเมาส์/นิ้ว — ใช้คีย์บอร์ด (:focus-visible) ยังเห็นกรอบตามเดิม */
+.flood-map .leaflet-interactive:focus:not(:focus-visible) {
+  outline: none;
+}
