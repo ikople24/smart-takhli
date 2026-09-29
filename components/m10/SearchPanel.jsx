@@ -42,7 +42,11 @@ export default function SearchPanel() {
   // หน่วงก่อนยิง เพื่อไม่ให้ query ทุกตัวอักษรที่พิมพ์
   useEffect(() => {
     const q = query.trim();
-    if (q.length < MIN_Q) { setRows([]); setHasMore(false); setSearched(false); setError(""); return; }
+    if (q.length < MIN_Q) {
+      reqIdRef.current += 1; // ทิ้งผลของคำค้นก่อนหน้าที่ยังค้างอยู่ ไม่ให้เด้งกลับมาหลังล้างช่องค้นหา
+      setRows([]); setHasMore(false); setSearched(false); setError("");
+      return;
+    }
     const timer = setTimeout(() => runSearch(q, 0), 300);
     return () => clearTimeout(timer);
   }, [query, runSearch]);
