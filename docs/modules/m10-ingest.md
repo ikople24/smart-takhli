@@ -25,9 +25,11 @@ npm run m10:ingest -- public/60070001_60010000.zip --period 2569-01
 - **records เกิดตอน confirm เท่านั้น** (human-in-the-loop §4.1); as-of = replay confirmed txn ที่ txnDate ≤ cutoff
 - **datum shift บังคับ** — proj4 Indian 1975 + towgs84; ห้ามใช้ EPSG:32647
 - recordKey ฟังก์ชันเดียวทั้ง attribute + geometry (`normalize/ravang.ts`)
+- **`เศษ` (SUBWA) = ส่วนสิบของ ตร.ว. เป็นเลขหลักเดียวเสมอ** (เช่น เศษ 6 → .6) — ยืนยันกับเว็บกรมที่ดินจริงแล้ว
+  (2026-09-29, โฉนด 81145: WA=53 SUBWA=6 → เนื้อที่จริง 53.6 ไม่ใช่ 53.06) `/10` ไม่ใช่ `/100`
+  (`normalize/area.ts`); ของเดิมใช้ `/100` ผิด แก้แล้ว + backfill ข้อมูลเก่าด้วย `scripts/m10-fix-subwa-area.ts`
 
 ## Open items
-- ⚠ หน่วย `เศษ` ยืนยันกับ LTAX 1 รายการก่อน production
 - ns3a/construction สถานะเต็มชุด (unknown → quarantine)
 - รอบถัดไป: basemap link, diff/reconcile, worklist→LTAX
 
