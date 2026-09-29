@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { createBatch, insertTransactionDedup, searchM10Transactions, M10Record, M10Transaction } from "./index";
+import { createBatch, insertTransactionDedup, searchM10Transactions, getM10TransactionDetail, M10Record, M10Transaction } from "./index";
 import type { NormalizedTxn } from "../types";
 
 let mongod: MongoMemoryServer;
@@ -163,5 +163,67 @@ describe("searchM10Transactions", () => {
     expect(out.rows).toHaveLength(1);
     expect(out.rows[0].constructionArea).toBe("120.50");
     expect(out.rows[0].area).toBeNull();
+  });
+});
+
+describe("getM10TransactionDetail", () => {
+  it("คืนรายละเอียดเต็มรวม payloadRaw, งวด และ parcelCode", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const t = await insertTransactionDedup(b._id, txn());
+    await M10Record.create({ recordKey: "K1", parcelCode: "01A001" });
+
+    const detail = await getM10TransactionDetail(String(t.doc._id));
+    expect(detail).not.toBeNull();
+    expect(detail!.period).toBe("2569-01");
+    expect(detail!.deedNo).toBe("81145");
+    expect(detail!.parcelCode).toBe("01A001");
+    expect(detail!.payloadRaw.OWN_PERS_ID).toBe("1609700018248");
+    expect(detail!.area).toEqual({ rai: 0, ngan: 0, wa: 53.6, sqm: 214.4 });
+    expect(detail!.reviewStatus).toBe("pending");
+  });
+
+  it("parcelCode ที่ จนท. แก้ ชนะค่า auto", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const t = await insertTransactionDedup(b._id, txn());
+    await M10Record.create({ recordKey: "K1", parcelCode: "01A001", reconcileOverride: { parcelCode: "02B120", status: "resolved" } });
+
+    const detail = await getM10TransactionDetail(String(t.doc._id));
+    expect(detail!.parcelCode).toBe("02B120");
+  });
+
+  it("เก็บเจ้าของร่วมมาด้วย", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const first = await insertTransactionDedup(b._id, txn({
+      payloadRaw: { PARCEL_NO: "81145", LAND_NO: "1100", OWN_LINE_NO: "1", OWN_FNAME: "หนึ่ง" },
+    }));
+    await insertTransactionDedup(b._id, txn({
+      payloadRaw: { PARCEL_NO: "81145", LAND_NO: "1100", OWN_LINE_NO: "2", OWN_FNAME: "สอง" },
+    }));
+
+    const detail = await getM10TransactionDetail(String(first.doc._id));
+    expect(detail!.coOwnerRows).toHaveLength(1);
+    expect(detail!.coOwnerRows[0].OWN_FNAME).toBe("สอง");
+  });
+
+  it("สิ่งปลูกสร้างไม่มี recordKey → parcelCode เป็น null ไม่ throw", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    const t = await insertTransactionDedup(b._id, txn({
+      docType: "CONSTRUCTION", recordKey: null, deedNo: null, area: null,
+      payloadRaw: { AREA: "120.50" },
+    }));
+    const detail = await getM10TransactionDetail(String(t.doc._id));
+    expect(detail!.parcelCode).toBeNull();
+    expect(detail!.recordKey).toBeNull();
+    expect(detail!.payloadRaw.AREA).toBe("120.50");
+  });
+
+  it("ไม่มีรายการนี้ → null (ให้ API ตอบ 404 ได้)", async () => {
+    const detail = await getM10TransactionDetail("000000000000000000000000");
+    expect(detail).toBeNull();
+  });
+
+  it("txnId ที่ไม่ใช่ ObjectId → null ไม่ throw", async () => {
+    const detail = await getM10TransactionDetail("ไม่ใช่ไอดี");
+    expect(detail).toBeNull();
   });
 });
