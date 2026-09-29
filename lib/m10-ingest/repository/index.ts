@@ -1,4 +1,4 @@
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 import type { NormalizedTxn, RejectReason, DocType, ChangeType, Owner, Area } from "../types";
 import { buildWorklistItem, type WorklistItem } from "../worklist/buildWorklistItem";
 import type { PrintTxnRow } from "../print/buildSheet";
@@ -709,4 +709,159 @@ export async function listPrintRows(period: string): Promise<{
   });
 
   return { rows, batchCount: batches.length };
+}
+
+// ---- ค้นหานิติกรรมข้ามงวด (ตรวจสอบย้อนหลัง) ----
+// ไม่กรอง reviewStatus — เครื่องมือตรวจสอบต้องเห็นครบทั้ง pending/confirmed/rejected/auto
+// (หลักการเดียวกับเล่มพิมพ์ ดู print.test.ts)
+export interface SearchTxnRow {
+  txnId: string;
+  period: string | null;
+  txnDate: Date;
+  docType: string;
+  changeType: string;
+  deedNo: string | null;
+  landNo: string | null;
+  recordKey: string | null;
+  ownerName: string | null;
+  area: { rai: number; ngan: number; wa: number; sqm: number } | null;
+  /** เนื้อที่สิ่งปลูกสร้างเป็น ตร.ม. จากไฟล์ดิบ (CONSTRUCTION ไม่มี ไร่-งาน-วา → area เป็น null) */
+  constructionArea: string | null;
+  reviewStatus: string;
+  ltaxStatus: string | null;
+  parcelCode: string | null;
+}
+
+export async function searchM10Transactions(
+  q: string,
+  opts: { skip?: number; limit?: number } = {}
+): Promise<{ rows: SearchTxnRow[]; hasMore: boolean }> {
+  const limit = opts.limit ?? 20;
+  const skip = opts.skip ?? 0;
+  const regex = new RegExp(escapeRegExp(q), "i");
+
+  // parcelCode ไม่ได้เก็บบน transaction ต้องหา recordKey จาก m10_records ก่อน
+  const codeKeys = (await M10Record.find({
+    $or: [{ parcelCode: regex }, { "reconcileOverride.parcelCode": regex }],
+  }).distinct("recordKey")) as string[];
+
+  const or: Record<string, unknown>[] = [
+    { deedNo: regex },
+    { "payloadRaw.LAND_NO": regex },
+    { "owner.fullName": regex },
+  ];
+  if (codeKeys.length > 0) or.push({ recordKey: { $in: codeKeys } });
+
+  // ดึงเกิน 1 แถวเพื่อรู้ว่ายังมีหน้าถัดไปไหม โดยไม่ต้อง count ทั้ง collection
+  // payloadRaw ดึงเฉพาะ LAND_NO/AREA — ห้ามดึงทั้งก้อนเพราะมีเลขบัตร 13 หลัก
+  const txns = await M10Transaction.find({ $or: or })
+    // txnDate ไม่มีเวลา + createdAt ชนกันได้ง่ายตอน import ทีละ ~150 แถวในลูป
+    // ต้องมี _id เป็น tiebreaker สุดท้าย ไม่งั้น skip/limit ข้ามหน้าจะเห็นแถวซ้ำ/หาย
+    // (ยืนยันแล้ว: ถอด _id ออก → เทสต์ txnDate/createdAt ชนกันข้างล่างพังจริง 15/15 ครั้ง)
+    .sort({ txnDate: -1, createdAt: -1, _id: -1 })
+    .skip(skip)
+    .limit(limit + 1)
+    .select("docType changeType deedNo recordKey owner.fullName area reviewStatus ltaxStatus txnDate batchId payloadRaw.LAND_NO payloadRaw.AREA")
+    .lean();
+
+  const hasMore = txns.length > limit;
+  const page = txns.slice(0, limit);
+  if (page.length === 0) return { rows: [], hasMore: false };
+
+  const batchIds = [...new Set(page.map((t: { batchId: unknown }) => String(t.batchId)))];
+  const batches = await M10ImportBatch.find({ _id: { $in: batchIds } }).select("_id period").lean();
+  const periodOf = new Map<string, string>(
+    batches.map((b: { _id: unknown; period: string }) => [String(b._id), b.period])
+  );
+
+  const recordKeys = [...new Set(page.map((t: { recordKey?: string }) => t.recordKey).filter(Boolean))] as string[];
+  const records = await M10Record.find({ recordKey: { $in: recordKeys } })
+    .select("recordKey parcelCode reconcileOverride.parcelCode")
+    .lean();
+  const codeByKey = new Map<string, string | null>();
+  for (const r of records) {
+    codeByKey.set(r.recordKey, r.reconcileOverride?.parcelCode ?? r.parcelCode ?? null);
+  }
+
+  const rows: SearchTxnRow[] = page.map((t: Record<string, unknown>) => {
+    const recordKey = (t.recordKey as string) ?? null;
+    return {
+      txnId: String(t._id),
+      period: periodOf.get(String(t.batchId)) ?? null,
+      txnDate: t.txnDate as Date,
+      docType: (t.docType as string) ?? "",
+      changeType: (t.changeType as string) ?? "",
+      deedNo: (t.deedNo as string) ?? null,
+      landNo: (t.payloadRaw as { LAND_NO?: string } | undefined)?.LAND_NO ?? null,
+      recordKey,
+      ownerName: (t.owner as { fullName?: string } | undefined)?.fullName ?? null,
+      area: (t.area as SearchTxnRow["area"]) ?? null,
+      constructionArea: (t.payloadRaw as { AREA?: string } | undefined)?.AREA ?? null,
+      reviewStatus: (t.reviewStatus as string) ?? "",
+      ltaxStatus: (t.ltaxStatus as string) ?? null,
+      parcelCode: recordKey ? codeByKey.get(recordKey) ?? null : null,
+    };
+  });
+
+  return { rows, hasMore };
+}
+
+export interface SearchTxnDetail {
+  txnId: string;
+  period: string | null;
+  txnDate: Date;
+  docType: string;
+  changeType: string;
+  rawStatus: string;
+  deedNo: string | null;
+  recordKey: string | null;
+  ownerName: string | null;
+  area: { rai: number; ngan: number; wa: number; sqm: number } | null;
+  regAmount: number | null;
+  reviewStatus: string;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  ltaxStatus: string | null;
+  ltaxKeyedBy: string | null;
+  ltaxKeyedAt: Date | null;
+  ltaxNote: string | null;
+  parcelCode: string | null;
+  payloadRaw: Record<string, string>;
+  coOwnerRows: Record<string, string>[];
+}
+
+/** รายละเอียดเต็มของนิติกรรมเดียว — มีเลขบัตร 13 หลัก ใช้เฉพาะตอน จนท. คลิกดูรายการนั้น */
+export async function getM10TransactionDetail(txnId: string): Promise<SearchTxnDetail | null> {
+  if (!Types.ObjectId.isValid(txnId)) return null;
+  const t = await M10Transaction.findById(txnId).lean();
+  if (!t) return null;
+
+  const batch = t.batchId ? await M10ImportBatch.findById(t.batchId).select("period").lean() : null;
+  const record = t.recordKey
+    ? await M10Record.findOne({ recordKey: t.recordKey }).select("parcelCode reconcileOverride.parcelCode").lean()
+    : null;
+
+  return {
+    txnId: String(t._id),
+    period: batch?.period ?? null,
+    txnDate: t.txnDate,
+    docType: t.docType ?? "",
+    changeType: t.changeType ?? "",
+    rawStatus: t.rawStatus ?? "",
+    deedNo: t.deedNo ?? null,
+    recordKey: t.recordKey ?? null,
+    ownerName: t.owner?.fullName ?? null,
+    area: t.area ?? null,
+    regAmount: t.regAmount ?? null,
+    reviewStatus: t.reviewStatus ?? "",
+    reviewedBy: t.reviewedBy ?? null,
+    reviewedAt: t.reviewedAt ?? null,
+    ltaxStatus: t.ltaxStatus ?? null,
+    ltaxKeyedBy: t.ltaxKeyedBy ?? null,
+    ltaxKeyedAt: t.ltaxKeyedAt ?? null,
+    ltaxNote: t.ltaxNote ?? null,
+    parcelCode: record?.reconcileOverride?.parcelCode ?? record?.parcelCode ?? null,
+    payloadRaw: t.payloadRaw ?? {},
+    coOwnerRows: t.coOwnerRows ?? [],
+  };
 }
