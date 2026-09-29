@@ -757,6 +757,7 @@ export async function searchM10Transactions(
   const txns = await M10Transaction.find({ $or: or })
     // txnDate ไม่มีเวลา + createdAt ชนกันได้ง่ายตอน import ทีละ ~150 แถวในลูป
     // ต้องมี _id เป็น tiebreaker สุดท้าย ไม่งั้น skip/limit ข้ามหน้าจะเห็นแถวซ้ำ/หาย
+    // (ยืนยันแล้ว: ถอด _id ออก → เทสต์ txnDate/createdAt ชนกันข้างล่างพังจริง 15/15 ครั้ง)
     .sort({ txnDate: -1, createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit + 1)

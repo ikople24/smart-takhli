@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { createBatch, insertTransactionDedup, searchM10Transactions, M10Record } from "./index";
+import { createBatch, insertTransactionDedup, searchM10Transactions, M10Record, M10Transaction } from "./index";
 import type { NormalizedTxn } from "../types";
 
 let mongod: MongoMemoryServer;
@@ -110,10 +110,14 @@ describe("searchM10Transactions", () => {
 
   it("txnDate/createdAt ชนกัน — แบ่งหน้าไม่ซ้ำไม่หาย ด้วย _id เป็น tiebreaker", async () => {
     const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
-    // วันที่เดียวกันหมด (createdAt ก็ชนกันได้ง่ายเพราะ insert ในลูปเดียวกัน)
     for (let i = 0; i < 4; i++) {
       await insertTransactionDedup(b._id, txn({ recordKey: `K${i}`, txnDate: "2026-01-05" }));
     }
+    // บังคับ createdAt ให้เท่ากันเป๊ะทุกแถว (แค่ txnDate ตรงกันไม่พอ — insert เรียงกันจริง
+    // มักได้ createdAt คนละ ms กัน sort จะไม่ชนกันจริง) ให้ sort key 2 ตัวแรกเหมือนกันหมด
+    // MongoDB จึงต้องพึ่ง _id เป็นตัวตัดสินลำดับเท่านั้น
+    await M10Transaction.updateMany({}, { $set: { createdAt: new Date("2026-01-05T00:00:00.000Z") } });
+
     const p1 = await searchM10Transactions("81145", { limit: 2 });
     expect(p1.rows).toHaveLength(2);
     expect(p1.hasMore).toBe(true);
