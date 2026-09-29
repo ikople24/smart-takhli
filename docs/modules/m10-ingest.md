@@ -29,6 +29,17 @@ npm run m10:ingest -- public/60070001_60010000.zip --period 2569-01
   (2026-09-29, โฉนด 81145: WA=53 SUBWA=6 → เนื้อที่จริง 53.6 ไม่ใช่ 53.06) `/10` ไม่ใช่ `/100`
   (`normalize/area.ts`); ของเดิมใช้ `/100` ผิด แก้แล้ว + backfill ข้อมูลเก่าด้วย `scripts/m10-fix-subwa-area.ts`
 
+## ค้นหานิติกรรมย้อนหลัง (2026-09-29)
+- แท็บ **"ค้นหาย้อนหลัง"** ใน `/admin/m10` (`components/m10/SearchPanel.jsx`) — ค้นข้ามทุกงวด ไม่ต้องเลือกเดือนก่อน ใช้ตอนต้องตรวจสอบย้อนหลัง
+- `searchM10Transactions()` ใน `repository/index.ts`: `$or` ข้าม `deedNo` · `payloadRaw.LAND_NO` · `owner.fullName` · `recordKey` ที่ parcelCode ตรง (ต้อง join `m10_records` ก่อนเพราะ parcelCode ไม่ได้เก็บบน transaction) · **ไม่กรอง reviewStatus** เห็นครบทั้ง pending/confirmed/rejected/auto (หลักการเดียวกับเล่มพิมพ์)
+- **เรียงด้วย `{ txnDate: -1, createdAt: -1, _id: -1 }` ห้ามถอด `_id` ออก** — `txnDate` ไม่มีเวลา และ `createdAt` ชนกันได้ตอน import ทีละ ~150 แถว ถ้าไม่มี tiebreaker แถวจะซ้ำ/หายตอนแบ่งหน้า (เทสต์ `search.test.ts` พังจริง 15/15 ครั้งเมื่อถอดออก)
+- คำค้นมาจากผู้ใช้ → escape ด้วย `escapeRegExp` ตัวเดิมในไฟล์เดียวกัน (**อย่าสร้าง helper ใหม่ มีอยู่แล้ว** ใช้ร่วมกับ `searchBasemap`)
+- **ลิสต์ไม่ส่ง `payloadRaw`/เลขบัตร 13 หลัก** — `.select()` ดึงเฉพาะ `payloadRaw.LAND_NO`/`payloadRaw.AREA`; เลขบัตรส่งเฉพาะ `GET /api/m10-ingest/search/[txnId]` ตอนคลิกดูรายการเดียว (แบบเดียวกับ focus endpoint ของ worklist จึงไม่ต้อง audit log ต่างจากหน้าพิมพ์เล่มที่ export ทั้งงวด)
+- API: `GET /api/m10-ingest/search?q=&skip=` (q สั้นกว่า 2 ตัว → 400, หน้าละ 20) · `GET /api/m10-ingest/search/[txnId]` (ไม่พบ → 404) ทั้งคู่ gate ด้วย `requireM10Admin`
+- **ยังไม่รองรับ:** ค้นด้วยชื่อ**เจ้าของร่วม** (คนที่ 2+ อยู่ใน `coOwnerRows` เป็น raw payload ไม่ได้ต่อเป็น fullName) · ไม่เพิ่ม text index ให้ `owner.fullName`/`payloadRaw.LAND_NO` (ข้อมูล ~1,200 แถว โต ~150/เดือน regex scan ยังพอ)
+
+Spec: `docs/superpowers/specs/2026-09-29-m10-cross-month-search-design.md` · Plan: `docs/superpowers/plans/2026-09-29-m10-cross-month-search.md`
+
 ## Open items
 - ns3a/construction สถานะเต็มชุด (unknown → quarantine)
 - รอบถัดไป: basemap link, diff/reconcile, worklist→LTAX
