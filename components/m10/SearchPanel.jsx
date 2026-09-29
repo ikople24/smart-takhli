@@ -20,6 +20,8 @@ export default function SearchPanel() {
   const [detailLoading, setDetailLoading] = useState(false);
   // กันผลลัพธ์ของคำค้นเก่ามาทับคำค้นใหม่ (พิมพ์เร็ว ๆ แล้ว response สลับคิวกัน)
   const reqIdRef = useRef(0);
+  const loadedQueryRef = useRef(""); // คำค้นที่เป็นเจ้าของแถวที่แสดงอยู่ตอนนี้
+  const detailReqRef = useRef(0);
 
   const runSearch = useCallback(async (q, skip) => {
     const myReq = ++reqIdRef.current;
@@ -29,6 +31,7 @@ export default function SearchPanel() {
       const data = await res.json();
       if (myReq !== reqIdRef.current) return; // มีคำค้นใหม่แซงแล้ว ทิ้งผลเก่า
       if (!res.ok) throw new Error(data.error || "ค้นหาไม่สำเร็จ");
+      if (skip === 0) loadedQueryRef.current = q;
       setRows((prev) => (skip === 0 ? data.rows : [...prev, ...data.rows]));
       setHasMore(data.hasMore);
       setSearched(true);
@@ -44,7 +47,7 @@ export default function SearchPanel() {
     const q = query.trim();
     if (q.length < MIN_Q) {
       reqIdRef.current += 1; // ทิ้งผลของคำค้นก่อนหน้าที่ยังค้างอยู่ ไม่ให้เด้งกลับมาหลังล้างช่องค้นหา
-      setRows([]); setHasMore(false); setSearched(false); setError("");
+      setRows([]); setHasMore(false); setSearched(false); setError(""); setLoading(false);
       return;
     }
     const timer = setTimeout(() => runSearch(q, 0), 300);
@@ -52,17 +55,26 @@ export default function SearchPanel() {
   }, [query, runSearch]);
 
   async function openDetail(txnId) {
+    const myReq = ++detailReqRef.current;
     setDetailLoading(true); setDetail(null); setError("");
     try {
       const res = await fetch(`/api/m10-ingest/search/${txnId}`);
       const data = await res.json();
+      if (myReq !== detailReqRef.current) return; // มีคลิกใหม่แซงแล้ว ทิ้งผลเก่า
       if (!res.ok) throw new Error(data.error || "โหลดรายละเอียดไม่สำเร็จ");
       setDetail(data);
-    } catch (e) { setError(e.message); }
-    finally { setDetailLoading(false); }
+    } catch (e) {
+      if (myReq === detailReqRef.current) setError(e.message);
+    } finally {
+      if (myReq === detailReqRef.current) setDetailLoading(false);
+    }
   }
 
-  function closeDetail() { setDetail(null); setDetailLoading(false); }
+  function closeDetail() {
+    detailReqRef.current += 1; // ทิ้งผลที่ยังค้าง ไม่ให้ modal เด้งกลับมาหลังปิด
+    setDetail(null);
+    setDetailLoading(false);
+  }
 
   return (
     <div>
@@ -97,7 +109,14 @@ export default function SearchPanel() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.txnId} className="cursor-pointer hover" onClick={() => openDetail(r.txnId)}>
+                <tr
+                  key={r.txnId}
+                  className="cursor-pointer hover"
+                  tabIndex={0}
+                  role="button"
+                  onClick={() => openDetail(r.txnId)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(r.txnId); } }}
+                >
                   <td className="whitespace-nowrap">{periodLabel(r.period)}</td>
                   <td className="whitespace-nowrap">{String(r.txnDate).slice(0, 10)}</td>
                   <td>{docTypeLabel(r.docType)}</td>
@@ -124,7 +143,7 @@ export default function SearchPanel() {
       {loading && <div className="mt-3"><span className="loading loading-spinner" /></div>}
 
       {hasMore && !loading && (
-        <button className="btn btn-sm mt-3" onClick={() => runSearch(query.trim(), rows.length)}>
+        <button className="btn btn-sm mt-3" onClick={() => runSearch(loadedQueryRef.current, rows.length)}>
           โหลดเพิ่ม
         </button>
       )}
