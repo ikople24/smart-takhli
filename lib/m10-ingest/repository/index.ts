@@ -5,7 +5,6 @@ import type { PrintTxnRow } from "../print/buildSheet";
 import { matchParcel, type BasemapCandidate } from "../basemap/match";
 import { suggestForRecord } from "../parcelcode/suggest";
 import { normalizeEditedGeometry } from "../basemap/load";
-import { escapeRegex } from "../search/escapeRegex";
 import { bbox as turfBbox, bboxPolygon as turfBboxPolygon, area as turfArea, intersect as turfIntersect, feature as turfFeature, featureCollection as turfFC } from "@turf/turf";
 
 // models เป็น CommonJS (module.exports) — require ตรง ๆ ให้ doc เป็น any
@@ -739,7 +738,7 @@ export async function searchM10Transactions(
 ): Promise<{ rows: SearchTxnRow[]; hasMore: boolean }> {
   const limit = opts.limit ?? 20;
   const skip = opts.skip ?? 0;
-  const regex = new RegExp(escapeRegex(q), "i");
+  const regex = new RegExp(escapeRegExp(q), "i");
 
   // parcelCode ไม่ได้เก็บบน transaction ต้องหา recordKey จาก m10_records ก่อน
   const codeKeys = (await M10Record.find({
@@ -756,7 +755,9 @@ export async function searchM10Transactions(
   // ดึงเกิน 1 แถวเพื่อรู้ว่ายังมีหน้าถัดไปไหม โดยไม่ต้อง count ทั้ง collection
   // payloadRaw ดึงเฉพาะ LAND_NO/AREA — ห้ามดึงทั้งก้อนเพราะมีเลขบัตร 13 หลัก
   const txns = await M10Transaction.find({ $or: or })
-    .sort({ txnDate: -1, createdAt: -1 })
+    // txnDate ไม่มีเวลา + createdAt ชนกันได้ง่ายตอน import ทีละ ~150 แถวในลูป
+    // ต้องมี _id เป็น tiebreaker สุดท้าย ไม่งั้น skip/limit ข้ามหน้าจะเห็นแถวซ้ำ/หาย
+    .sort({ txnDate: -1, createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit + 1)
     .select("docType changeType deedNo recordKey owner.fullName area reviewStatus ltaxStatus txnDate batchId payloadRaw.LAND_NO payloadRaw.AREA")

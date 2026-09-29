@@ -108,6 +108,25 @@ describe("searchM10Transactions", () => {
     expect(p2.hasMore).toBe(false);
   });
 
+  it("txnDate/createdAt ชนกัน — แบ่งหน้าไม่ซ้ำไม่หาย ด้วย _id เป็น tiebreaker", async () => {
+    const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
+    // วันที่เดียวกันหมด (createdAt ก็ชนกันได้ง่ายเพราะ insert ในลูปเดียวกัน)
+    for (let i = 0; i < 4; i++) {
+      await insertTransactionDedup(b._id, txn({ recordKey: `K${i}`, txnDate: "2026-01-05" }));
+    }
+    const p1 = await searchM10Transactions("81145", { limit: 2 });
+    expect(p1.rows).toHaveLength(2);
+    expect(p1.hasMore).toBe(true);
+
+    const p2 = await searchM10Transactions("81145", { skip: 2, limit: 2 });
+    expect(p2.rows).toHaveLength(2);
+    expect(p2.hasMore).toBe(false);
+
+    const ids = [...p1.rows, ...p2.rows].map((r) => r.txnId);
+    expect(new Set(ids).size).toBe(4); // ไม่มีแถวซ้ำข้ามหน้า
+    expect(ids).toHaveLength(4);       // ครบทุกแถวที่ใส่ไว้ ไม่มีตกหล่น
+  });
+
   it("ไม่พบ → คืน array ว่าง ไม่ throw", async () => {
     const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
     await insertTransactionDedup(b._id, txn());
