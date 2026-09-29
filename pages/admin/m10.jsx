@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import IngestPanel from "@/components/m10/IngestPanel";
 import ReviewPanel from "@/components/m10/ReviewPanel";
 import RecordsPanel from "@/components/m10/RecordsPanel";
+import SearchPanel from "@/components/m10/SearchPanel";
 import WorklistPanel from "@/components/m10/WorklistPanel";
 import SummaryPanel from "@/components/m10/SummaryPanel";
 import ReconcilePanel from "@/components/m10/ReconcilePanel";
@@ -14,6 +15,7 @@ const TABS = [
   { key: "ingest", label: "นำเข้าข้อมูล", Panel: IngestPanel },
   { key: "review", label: "คิวยืนยัน", Panel: ReviewPanel },
   { key: "records", label: "ทะเบียน (as-of)", Panel: RecordsPanel },
+  { key: "search", label: "ค้นหาย้อนหลัง", Panel: SearchPanel },
   { key: "reconcile", label: "จับคู่ basemap", Panel: ReconcilePanel },
   { key: "newcode", label: "รหัสแปลงใหม่", Panel: NewCodePanel },
   { key: "worklist", label: "Worklist → LTAX", Panel: WorklistPanel },
