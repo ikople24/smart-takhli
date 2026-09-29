@@ -16,7 +16,7 @@ function txn(over: Partial<NormalizedTxn> = {}): NormalizedTxn {
     txnDate: "2026-01-05", regAmount: null,
     owner: { title: "นางสาว", name: "วรารีย์", surname: "ชาลีรัตน์", fullName: "นางสาว วรารีย์ ชาลีรัตน์", idHash: "h" },
     area: { rai: 0, ngan: 0, wa: 53.6, sqm: 214.4 },
-    payloadRaw: { PARCEL_NO: "81145", LAND_NO: "1100", OWN_PERS_ID: "1609700018248" },
+    payloadRaw: { PARCEL_NO: "81145", LAND_NO: "1100", OWN_PERS_ID: "1234567890123" },
     ...over,
   };
 }
@@ -150,7 +150,7 @@ describe("searchM10Transactions", () => {
     const b = await createBatch({ fileHash: "h1", period: "2569-01", files: [], counts: {} });
     await insertTransactionDedup(b._id, txn());
     const out = await searchM10Transactions("81145");
-    expect(JSON.stringify(out.rows)).not.toContain("1609700018248");
+    expect(JSON.stringify(out.rows)).not.toContain("1234567890123");
   });
 
   it("สิ่งปลูกสร้างเอาเนื้อที่ ตร.ม. จาก payloadRaw.AREA มาด้วย", async () => {
@@ -177,7 +177,7 @@ describe("getM10TransactionDetail", () => {
     expect(detail!.period).toBe("2569-01");
     expect(detail!.deedNo).toBe("81145");
     expect(detail!.parcelCode).toBe("01A001");
-    expect(detail!.payloadRaw.OWN_PERS_ID).toBe("1609700018248");
+    expect(detail!.payloadRaw.OWN_PERS_ID).toBe("1234567890123");
     expect(detail!.area).toEqual({ rai: 0, ngan: 0, wa: 53.6, sqm: 214.4 });
     expect(detail!.reviewStatus).toBe("pending");
   });
