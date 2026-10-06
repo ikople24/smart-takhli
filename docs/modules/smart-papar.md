@@ -42,6 +42,7 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
 - Logic ล้วน + เทสต์: `lib/smart-papar/flushing.js` (`validateFlushingInput`, `canModifyFlushingLog`,
   `summarizeFlushing`, `bangkokDayRange`) · `lib/smart-papar/__tests__/flushing.test.js`
 - Components: `components/smart-papar/FlushingForm.js`, `FlushingList.js`, `FlushingMap.js` (leaflet — โหลดผ่าน `dynamic(..., { ssr:false })`)
+- ชั้นขอบเขตชุมชนบนแผนที่: `GET /api/smart-papar/communities` อ่าน `geojsonfeatures` (ของแอปพี่น้อง app_b — **อ่านอย่างเดียว** ผ่าน native driver) แยกจาก endpoint ของ flood-relief เพราะสิทธิ์คนละชุด
 - กติกา:
   - ต้องมีพิกัด GPS, ชื่อจุด, ระยะเวลา (1–600 นาที), ผล (`clear`/`still_turbid`) และรูปอย่างน้อย 1 รูป · NTU ไม่บังคับ
   - รูปช่องละ ≤ 3, URL ต้องเป็น `https://res.cloudinary.com/` · ย่อฝั่ง client (`lib/smart-papar/resizeImage.js`) ก่อนอัปโหลด
