@@ -47,3 +47,18 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
   - ต้องมีพิกัด GPS, ชื่อจุด, ระยะเวลา (1–600 นาที), ผล (`clear`/`still_turbid`) และรูปอย่างน้อย 1 รูป · NTU ไม่บังคับ
   - รูปช่องละ ≤ 3, URL ต้องเป็น `https://res.cloudinary.com/` · ย่อฝั่ง client (`lib/smart-papar/resizeImage.js`) ก่อนอัปโหลด
   - แก้/ลบ: เจ้าของภายใน 7 วันนับจาก **`createdAt`** (ไม่ใช่ `flushedAt` ที่เจ้าของแก้เองได้) · superadmin ได้เสมอ
+
+### บันทึกภาคสนาม (ไม่ต้องล็อกอิน)
+
+เจ้าหน้าที่ภาคสนามบันทึกโบตะกอนจากมือถือได้โดยไม่มีบัญชี Clerk
+
+- หน้า `/papar/flushing` (นอก `/admin` โดยตั้งใจ) · ทางเข้า: ลิงก์ "สำหรับเจ้าหน้าที่" ท้ายหน้าแรก และการ์ด
+  `components/smart-papar/FieldFlushingHomeCard.js` บนหน้าแรก (โชว์เฉพาะเครื่องที่ใส่รหัสแล้ว)
+- ใส่ **รหัส (env `FLUSHING_FIELD_PIN`) + ชื่อ** ครั้งเดียว → cookie `sp_field` (HttpOnly, 180 วัน) เซ็น HMAC ด้วย
+  `CLERK_SECRET_KEY` + PIN — **เปลี่ยน PIN = ทุกเครื่องหลุดทันที** · ไม่ตั้ง env = ปิดใช้งาน (unlock ตอบ 503)
+  · **ห้ามเขียน PIN ลงโค้ด/เอกสาร — repo นี้ public**
+- กันเดารหัส: ผิด 5 ครั้ง/IP ล็อก 15 นาที + ผิดรวม 30 ครั้งทุก IP ล็อกทั้งระบบ 15 นาที (ตัวนับในหน่วยความจำ)
+- API `pages/api/smart-papar/field/` — `unlock` (POST), `me` (GET สถานะ / DELETE ออกจากโหมดเจ้าหน้าที่),
+  `flushing` (POST บันทึกอย่างเดียว คืนแค่ `_id`) · logic + เทสต์: `lib/smart-papar/fieldAuth.js`
+- รายการภาคสนามมี `source: "field"`, `fieldDeviceId`, `createdByClerkId: ""` → เจ้าของแก้เองไม่ได้
+  ต้องให้แอดมินแก้ (ลบได้เฉพาะ superadmin ตามกติกาเดิม)
