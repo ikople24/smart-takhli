@@ -12,7 +12,7 @@
 ## ขอบเขต
 
 ทำ:
-- หน้าลูก `/admin/smart-papar/flushing` — ฟอร์มบันทึก (มือถือก่อน) + รายการ + แผนที่จุด
+- หน้าลูก `/admin/smart-papar/water-quality/flushing` — ฟอร์มบันทึก (มือถือก่อน) + รายการ + แผนที่จุด
 - model / API / logic ตรวจข้อมูลพร้อมเทสต์
 
 ไม่ทำรอบนี้:
@@ -52,7 +52,7 @@ Index: `{ deletedAt: 1, flushedAt: -1 }` สำหรับรายการ, `
   (พิกัดต้องเป็นตัวเลข lat −90..90, lng −180..180; ตัดช่องว่าง; แปลง string ตัวเลขเป็น Number;
   ค่าว่างของ NTU → null)
 - `canModifyFlushingLog(log, actor, now)` — superadmin ได้เสมอ; เจ้าของ (`createdByClerkId === actor.userId`)
-  ได้ภายใน 7 วันนับจากวันที่ `flushedAt` ตามปฏิทินไทย (ใช้ `canEditRecordDate` จาก `_auth.js` — ย้ายไป lib ถ้า import ข้ามชั้นไม่สะดวก)
+  ได้ภายใน 7 วันนับจากวันที่**บันทึก** (`createdAt`) ตามปฏิทินไทย — ไม่ใช้ `flushedAt` เพราะเจ้าของแก้ช่องนั้นเองได้ (ยืดเวลาแก้ไขเองได้)
 - `summarizeFlushing(logs)` → `{ total, clear, stillTurbid }`
 - `FLUSHING_RESULT_LABELS` = `{ clear: "ใสแล้ว", still_turbid: "ยังขุ่น" }`
 - เทสต์ vitest: `lib/smart-papar/__tests__/flushing.test.js`
@@ -69,10 +69,11 @@ Index: `{ deletedAt: 1, flushedAt: -1 }` สำหรับรายการ, `
 
 ก่อนสร้าง `[id].js` ตรวจว่าไม่มี dynamic slug ชื่ออื่นในโฟลเดอร์เดียวกัน
 
-## 4. หน้าจอ — `pages/admin/smart-papar/flushing.jsx`
+## 4. หน้าจอ — `pages/admin/smart-papar/water-quality/flushing.jsx`
 
-ห่อด้วย `PermissionGuard requiredPath="/admin/smart-papar/water-quality"` (ยืมสิทธิ์หน้าแม่ — ไม่ลงทะเบียนใน `ALL_PAGES` แยก
-จึง**ไม่ต้องรันสคริปต์ grant**)
+อยู่**ใต้ path หน้าแม่** เพราะ `_app.tsx` ตรวจสิทธิ์ด้วย `router.pathname` จริง — prefix `/admin/smart-papar/water-quality/`
+ทำให้ guard ใน `_app`, `PermissionGuard` และการกรองเมนูใช้สิทธิ์หน้าแม่ได้เอง ไม่ต้องลงทะเบียน `ALL_PAGES` แยก
+และ**ไม่ต้องรันสคริปต์ grant** (ถ้าวางไว้ที่ `/admin/smart-papar/flushing` จะโดน `_app` บล็อก)
 
 Components ใน `components/smart-papar/`:
 - `FlushingForm.js` — modal/sheet เต็มจอบนมือถือ เรียงตามลำดับงานหน้างาน:
