@@ -18,6 +18,9 @@ const FlushingLogSchema = new mongoose.Schema(
     photosAfter: { type: [String], default: [] },
     note: { type: String, default: "" },
 
+    // admin = บันทึกจากหน้าแอดมิน (ล็อกอิน Clerk) · field = เจ้าหน้าที่ภาคสนามที่ใส่รหัสจากหน้าแรก (ไม่มี clerkId)
+    source: { type: String, enum: ["admin", "field"], default: "admin" },
+    fieldDeviceId: { type: String, default: "" },
     createdByClerkId: { type: String, default: "" },
     createdByName: { type: String, default: "" },
     updatedByClerkId: { type: String, default: "" },

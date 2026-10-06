@@ -136,7 +136,13 @@ function PhotoSlot({ label, items, setItems, error }) {
   );
 }
 
-export default function FlushingForm({ log, onClose, onSaved }) {
+// createEndpoint: หน้าแอดมินใช้ค่า default · หน้าภาคสนาม (ไม่ล็อกอิน) ส่ง /api/smart-papar/field/flushing
+export default function FlushingForm({
+  log,
+  onClose,
+  onSaved,
+  createEndpoint = "/api/smart-papar/flushing",
+}) {
   const isEdit = Boolean(log?._id);
   const [form, setForm] = useState(() => initialState(log));
   const [photosBefore, setPhotosBefore] = useState(() => toPhotoItems(log?.photosBefore));
@@ -207,7 +213,7 @@ export default function FlushingForm({ log, onClose, onSaved }) {
     };
     try {
       const res = await fetch(
-        isEdit ? `/api/smart-papar/flushing/${log._id}` : "/api/smart-papar/flushing",
+        isEdit ? `/api/smart-papar/flushing/${log._id}` : createEndpoint,
         {
           method: isEdit ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },

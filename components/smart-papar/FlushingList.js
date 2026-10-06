@@ -51,7 +51,12 @@ export function FlushingList({ logs, onSelect }) {
               <div className="mt-1 text-sm text-slate-600">
                 {fmtDateTime(l.flushedAt)} · {l.durationMin} นาที
               </div>
-              <div className="mt-0.5 truncate text-sm text-slate-500">โดย {l.createdByName || "-"}</div>
+              <div className="mt-0.5 truncate text-sm text-slate-500">
+                โดย {l.createdByName || "-"}
+                {l.source === "field" && (
+                  <span className="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700">ภาคสนาม</span>
+                )}
+              </div>
             </div>
           </button>
         );
@@ -102,7 +107,10 @@ export function FlushingDetail({ log, canModify, onClose, onEdit, onDelete }) {
           <dt className="text-slate-500">ความขุ่นหลัง</dt>
           <dd>{ntu(log.turbidityAfterNtu)}</dd>
           <dt className="text-slate-500">ผู้บันทึก</dt>
-          <dd>{log.createdByName || "-"}</dd>
+          <dd>
+            {log.createdByName || "-"}
+            {log.source === "field" && " (ภาคสนาม)"}
+          </dd>
           {lat != null && (
             <>
               <dt className="text-slate-500">พิกัด</dt>

@@ -3,6 +3,7 @@
 // spec: docs/superpowers/specs/2026-08-18-citizen-home-redesign-design.md
 import { useEffect, useState } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import HeaderCard from "@/components/citizen/home/HeaderCard";
@@ -15,6 +16,7 @@ import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModa
 import EquipmentRow from "@/components/citizen/home/EquipmentRow";
 import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
 import FloodReliefCard from "@/components/flood-relief/FloodReliefCard";
+import FieldFlushingHomeCard from "@/components/smart-papar/FieldFlushingHomeCard";
 import StatsRow from "@/components/citizen/home/StatsRow";
 import Footer from "@/components/Footer";
 import { useMenuStore } from "@/stores/useMenuStore";
@@ -86,6 +88,8 @@ export default function PreviewHome() {
           เทศบาลเมืองตาคลี ยินดีให้บริการทุกช่วงวัย ผู้สูงอายุและผู้พิการสามารถขอยืมกายอุปกรณ์ได้
         </h1>
         <HeaderCard />
+        {/* ทางลัดเจ้าหน้าที่ประปา — โชว์เฉพาะเครื่องที่ใส่รหัสภาคสนามแล้ว */}
+        <FieldFlushingHomeCard />
         {/* ศูนย์ช่วยเหลือน้ำท่วม — โชว์เฉพาะตอนศูนย์ฯ เปิด (FloodSettings.centerOpen) */}
         <FloodReliefCard />
         <EnvCards />
@@ -115,6 +119,9 @@ export default function PreviewHome() {
             <BookOpen size={16} />
             คู่มือประชาชน
           </a>
+          <Link href="/papar/flushing" className="text-[#9590A8] hover:underline">
+            สำหรับเจ้าหน้าที่
+          </Link>
           {deferredPrompt && (
             <button
               type="button"
