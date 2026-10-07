@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
+import Link from "next/link";
 import Swal from "sweetalert2";
 
 function getBangkokYMD(date = new Date()) {
@@ -616,6 +617,12 @@ export default function SmartPaparWaterQualityPage() {
                   <p className="text-blue-200 text-sm mt-1">จุดเดียว: โรงผลิต • แก้ย้อนหลังได้ไม่เกิน 7 วัน</p>
                 </div>
               </div>
+              <Link
+                href="/admin/smart-papar/water-quality/flushing"
+                className="self-start lg:self-auto rounded-xl bg-white/15 hover:bg-white/25 px-4 py-2 text-sm font-semibold text-white"
+              >
+                🚿 บันทึกโบตะกอน →
+              </Link>
             </div>
           </div>
 

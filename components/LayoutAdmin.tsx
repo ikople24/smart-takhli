@@ -34,6 +34,8 @@ const navigationItems = [
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
+  // หน้าลูกใต้ path คุณภาพน้ำ — เห็นเมนูตามสิทธิ์หน้าแม่โดยอัตโนมัติ
+  { label: 'โบตะกอน',          href: '/admin/smart-papar/water-quality/flushing', icon: '🚿', group: 'จัดการ' },
   { label: 'เสาไฟสาธารณะ',     href: '/admin/smart-light',               icon: '💡', group: 'จัดการ' },
   { label: 'ทะเบียนท่อประปา',   href: '/admin/smart-water',              icon: '🚰', group: 'จัดการ' },
   { label: 'ระบบบริหารจัดการขยะ', href: '/admin/smart-waste',               icon: '♻️', group: 'จัดการ' },
