@@ -4,7 +4,10 @@
 // /api/pm25/dashboard (Mongo cache — แนวโน้ม 7 วันจาก dailyAverages ต่อท้ายด้วย
 // ค่าล่าสุดให้จุดปลายตรงกับเลขใหญ่) และ /api/smart-papar/water-quality/public-latest
 // (field recent) · กดการ์ด PM เปิด dashboard ตัวเต็มเดิมใน modal
+// · กดการ์ดน้ำประปา → /papar/flushing (ฟอร์มโบตะกอนของเจ้าหน้าที่ — เครื่องที่ยังไม่ใส่รหัสจะเจอหน้าใส่รหัส
+//   ซึ่งมีลิงก์ให้ประชาชนไปแจ้งน้ำขุ่นที่ /report)
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { pm25Level } from "@/lib/citizen/pm25Level";
 import { waterLevel } from "@/lib/citizen/waterLevel";
@@ -183,7 +186,11 @@ export default function EnvCards() {
             trendLabel="แนวโน้ม PM2.5 เฉลี่ยรายวัน 7 วันย้อนหลังถึงค่าล่าสุด"
           />
         </button>
-        <div className={card}>
+        <Link
+          href="/papar/flushing"
+          aria-label="น้ำประปา — บันทึกโบตะกอน (เจ้าหน้าที่)"
+          className={`${card} transition hover:-translate-y-0.5`}
+        >
           <CardBody
             title="น้ำประปา"
             icon={
@@ -198,7 +205,7 @@ export default function EnvCards() {
             time={waterDate}
             trendLabel="แนวโน้มความขุ่นน้ำประปา 7 วันย้อนหลัง"
           />
-        </div>
+        </Link>
       </div>
 
       {showPmDetail && (
