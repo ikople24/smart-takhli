@@ -60,6 +60,13 @@ function UnlockForm({ onUnlocked }) {
       <button type="submit" disabled={busy} className="w-full rounded-xl bg-sky-600 py-3 text-base font-semibold text-white disabled:opacity-60">
         {busy ? "กำลังตรวจสอบ…" : "ยืนยัน"}
       </button>
+      {/* การ์ดน้ำประปาบนหน้าแรกพาทุกคนมาที่นี่ — ประชาชนที่เจอน้ำขุ่นต้องมีทางไปแจ้งเรื่อง */}
+      <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+        ประชาชนที่พบน้ำขุ่นหรือน้ำไม่ไหล{" "}
+        <Link href="/report" className="font-semibold underline">
+          แจ้งเรื่องที่นี่
+        </Link>
+      </div>
     </form>
   );
 }
