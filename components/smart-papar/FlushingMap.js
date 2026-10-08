@@ -42,13 +42,16 @@ function bindCommunityTooltip(feature, layer) {
 }
 
 // ขยับกล้องเฉพาะตอนชุดจุดเปลี่ยนจริง (เทียบด้วย key) — ไม่ใช่ทุกครั้งที่ parent re-render
-// ไม่มีจุดในช่วงที่เลือก → ซูมให้เห็นทั้งเขตเทศบาล (ขอบชุมชน) แทน
-function FitBounds({ points, communities }) {
+// ไม่มีจุดในช่วงที่เลือก → ซูมให้เห็นหัวโบล์ทั้งหมด (ถ้ายังไม่มี ใช้ขอบชุมชนแทน)
+function FitBounds({ points, communities, fallbackPoints }) {
   const map = useMap();
   const key = points.map((p) => p.join(",")).join("|");
+  const hasFallback = fallbackPoints.length > 0;
   useEffect(() => {
     if (points.length === 0) {
-      if (communities?.features?.length) {
+      if (hasFallback) {
+        map.fitBounds(L.latLngBounds(fallbackPoints), { padding: [20, 20] });
+      } else if (communities?.features?.length) {
         map.fitBounds(L.geoJSON(communities).getBounds(), { padding: [10, 10] });
       }
       return;
@@ -59,7 +62,7 @@ function FitBounds({ points, communities }) {
     }
     map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 17 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, key, communities]);
+  }, [map, key, communities, hasFallback]);
   return null;
 }
 
@@ -109,12 +112,16 @@ export default function FlushingMap({ logs, onSelect }) {
     [withCoords]
   );
 
+  const flushPointLatLngs = useMemo(
+    () => flushPoints.map((p) => [p.location.coordinates[1], p.location.coordinates[0]]),
+    [flushPoints]
+  );
   const selectedPoint = flushPoints.find((p) => String(p._id) === selectedPointId) || null;
 
   // เดสก์ท็อป: 3 คอลัมน์ [สรุปหัวโบล์ | แผนที่ | ข้อมูลหัวที่เลือก] — คอลัมน์ข้างกว้างคงที่ แผนที่จึงไม่เปลี่ยนขนาด
   // (Leaflet ไม่ต้อง invalidateSize) · มือถือ: แผนที่ก่อน สรุปตามหลัง ข้อมูลหัวเป็นแผ่นล่างทับแผนที่
   return (
-    <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
     <div className="order-2 lg:order-1">
       <FlushPointSummary points={flushPoints} kindColors={KIND_COLORS} />
     </div>
@@ -123,7 +130,7 @@ export default function FlushingMap({ logs, onSelect }) {
     <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[380px] w-full lg:h-[520px]" scrollWheelZoom={false}>
       <BaseLayersControl />
       <ClearOnMapClick onClear={() => setSelectedPointId(null)} />
-      <FitBounds points={points} communities={communities} />
+      <FitBounds points={points} communities={communities} fallbackPoints={flushPointLatLngs} />
       <Pane name="flushing-communities" style={{ zIndex: 350 }}>
         {communities && (
           <GeoJSON data={communities} style={COMMUNITY_STYLE} onEachFeature={bindCommunityTooltip} />

@@ -38,7 +38,7 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
       className={
         docked
           ? "flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
-          : "absolute inset-x-2 bottom-2 z-[1000] flex max-h-[75%] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+          : "absolute inset-x-2 bottom-2 z-[1000] flex max-h-[85%] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
       }
       aria-label={`ข้อมูลหัวโบล์ ${point.code}`}
     >
@@ -61,7 +61,8 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {point.photoUrl && (
+        {/* เดสก์ท็อป: รูปใหญ่เต็มความกว้าง · มือถือ (แผ่นล่างทับแผนที่ ที่น้อย): รูปย่อข้างกล่องสถานะ */}
+        {docked && point.photoUrl && (
           <a href={point.photoUrl} target="_blank" rel="noreferrer" className="block bg-slate-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -72,14 +73,24 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
           </a>
         )}
 
-        <div className="px-4 pt-3">
+        <div className="flex gap-3 px-4 pt-3">
+          {!docked && point.photoUrl && (
+            <a href={point.photoUrl} target="_blank" rel="noreferrer" className="block flex-none">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cloudinaryThumb(point.photoUrl, 240)}
+                alt={`รูปหัวโบล์ ${point.code}`}
+                className="h-20 w-24 rounded-lg object-cover"
+              />
+            </a>
+          )}
           {point.lastFlushedAt ? (
-            <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <div className="flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               <div className="font-semibold">โบล่าสุด {fmtDate(point.lastFlushedAt)}</div>
               <div className="text-emerald-700">บันทึกในระบบ {point.flushCount} ครั้ง</div>
             </div>
           ) : (
-            <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+            <div className="flex flex-1 items-center rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
               ยังไม่มีบันทึกโบในระบบ
             </div>
           )}
