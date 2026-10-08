@@ -100,6 +100,12 @@ export function FlushingDetail({ log, canModify, onClose, onEdit, onDelete }) {
         </div>
 
         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+          {log.flushPointCode && (
+            <>
+              <dt className="text-slate-500">หัวโบล์</dt>
+              <dd>{log.flushPointCode}</dd>
+            </>
+          )}
           <dt className="text-slate-500">ระยะเวลา</dt>
           <dd>{log.durationMin} นาที</dd>
           <dt className="text-slate-500">ความขุ่นก่อน</dt>

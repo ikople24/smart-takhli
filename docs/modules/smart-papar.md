@@ -62,3 +62,19 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
   `flushing` (POST บันทึกอย่างเดียว คืนแค่ `_id`) · logic + เทสต์: `lib/smart-papar/fieldAuth.js`
 - รายการภาคสนามมี `source: "field"`, `fieldDeviceId`, `createdByClerkId: ""` → เจ้าของแก้เองไม่ได้
   ต้องให้แอดมินแก้ (ลบได้เฉพาะ superadmin ตามกติกาเดิม)
+
+### ทะเบียนหัวโบล์ (2026-10-08)
+
+จุดหัวโบล์ (อุปกรณ์ที่ใช้โบตะกอน) 203 หัว ตั้งต้นจากแอป Glide เดิม (สำรวจ ม.ค.–ก.พ. 2568) — **ไม่ใช่บันทึกงานโบ**
+และไม่เกี่ยวกับทะเบียนท่อ `smart-water`
+
+- Model `models/smart-papar/FlushPoint.js` → `smart_papar_flush_points` (code unique, kind, location Point, รูปบน Cloudinary, `legacy` = ที่มา)
+- ⚠️ ตัวอักษรนำหน้ารหัส (AT/BP/CN) ในข้อมูลเดิมไม่ตรงกับชนิดจริง ~76 หัว — **ตัดสินชนิดด้วย `kind` เสมอ** เก็บรหัสตามต้นฉบับ
+- นำเข้า: `node --env-file=.env.local scripts/import-flush-points.mjs [ไฟล์.kmz] [--yes] [--skip-photos]`
+  — dry-run เป็นค่าเริ่มต้น · upsert ตาม code · ย้ายรูปจาก Glide เข้า Cloudinary `smart-papar/flush-points` (ไม่อัปซ้ำ)
+  · ไฟล์ต้นฉบับ `docs/point-bortagon.csv.kmz` **gitignore ไว้** (repo public)
+- API `GET /api/smart-papar/flush-points` — แอดมิน (สิทธิ์คุณภาพน้ำ) หรือเครื่องภาคสนามที่ใส่รหัสแล้ว · คืน `lastFlushedAt`/`flushCount` ต่อหัว
+- บันทึกโบตะกอนผูกหัวโบล์ได้ (ไม่บังคับ): `FlushingLog.flushPointId` + `flushPointCode` (สำเนา) — ตรวจว่ามีจริงที่
+  `lib/smart-papar/attachFlushPoint.js` ทุก API ที่เขียน
+- ฟอร์ม: หลังได้ GPS เสนอหัวโบล์ใกล้สุด 3 หัวในรัศมี 150 ม. (`nearestFlushPoints` ใน `lib/smart-papar/flushPoints.js`)
+- แผนที่: หมุดเล็กสีตามชนิด · โปร่ง = ยังไม่เคยมีบันทึกโบที่หัวนี้ · รูปย่อด้วย `lib/smart-papar/cloudinaryThumb.js`

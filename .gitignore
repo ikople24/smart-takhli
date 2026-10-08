@@ -49,3 +49,7 @@ public/60070001_60010000.zip
 # ต้นฉบับตารางรถขยะ + ข้อมูลคนขับ — repo นี้ public ห้าม commit (PDPA)
 data/garbage/*.numbers
 data/garbage/*.local.json
+
+# ทะเบียนหัวโบล์ต้นฉบับจาก Glide (ตำแหน่งอุปกรณ์ประปา + ลิงก์รูป) — repo นี้ public ห้าม commit
+# ใช้กับ scripts/import-flush-points.mjs ในเครื่องเท่านั้น
+docs/point-bortagon*.kmz

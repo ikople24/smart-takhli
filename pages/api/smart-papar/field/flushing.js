@@ -4,6 +4,7 @@ import dbConnect from "@/lib/dbConnect";
 import FlushingLog from "@/models/smart-papar/FlushingLog";
 import { readFieldSession } from "@/lib/smart-papar/fieldAuth";
 import { validateFlushingInput } from "@/lib/smart-papar/flushing";
+import { attachFlushPoint } from "@/lib/smart-papar/attachFlushPoint";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -27,8 +28,14 @@ export default async function handler(req, res) {
 
   try {
     await dbConnect();
+    const fp = await attachFlushPoint(v.value);
+    if (!fp.ok) {
+      return res
+        .status(400)
+        .json({ success: false, message: "ข้อมูลไม่ครบหรือไม่ถูกต้อง", errors: fp.errors });
+    }
     const doc = await FlushingLog.create({
-      ...v.value,
+      ...fp.value,
       source: "field",
       fieldDeviceId: session.deviceId,
       createdByClerkId: "",
