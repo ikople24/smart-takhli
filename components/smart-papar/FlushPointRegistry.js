@@ -11,6 +11,7 @@ import {
   FLUSH_POINT_ISSUE_LABELS,
   diffFlushPoint,
   flushPointIssues,
+  nextFlushPointCode,
   validateFlushPointInput,
 } from "@/lib/smart-papar/flushPointEdit";
 
@@ -110,7 +111,11 @@ export default function FlushPointRegistry() {
     if (!(await confirmDiscard())) return;
     setSelectedId(null);
     setCreating(true);
-    setDraft(draftFromPoint(null));
+    setDraft({
+      ...draftFromPoint(null),
+      code: nextFlushPointCode(points.map((p) => p.code), "unknown"),
+      codeAuto: true,
+    });
     setErrors({});
     setMoveBackup({ lat: null, lng: null });
     setMoving(true); // หัวใหม่ยังไม่มีตำแหน่ง — เริ่มที่โหมดวางหมุดเลย
@@ -171,6 +176,57 @@ export default function FlushPointRegistry() {
       setErrors({ form: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ข้อมูลยังอยู่ — ลองกดบันทึกอีกครั้ง" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ลบได้เฉพาะหัวที่ไม่มีบันทึกโบอ้าง — ถ้ามี API ตอบ 409 แล้วเสนอ "ปิดใช้งาน" แทน
+  const [deleting, setDeleting] = useState(false);
+  const removePoint = async () => {
+    if (!original) return;
+    const ok = await Swal.fire({
+      icon: "warning",
+      title: `ลบหัวโบล์ ${original.code}?`,
+      text: "ลบแล้วกู้คืนไม่ได้ · หัวที่เคยมีบันทึกโบจะลบไม่ได้ (ให้ปิดใช้งานแทน)",
+      showCancelButton: true,
+      confirmButtonText: "ลบ",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#B42318",
+    });
+    if (!ok.isConfirmed) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/smart-papar/flush-points/${original._id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => null);
+      if (res.status === 409) {
+        const off = await Swal.fire({
+          icon: "info",
+          title: "ลบไม่ได้",
+          text: `${data?.message || "หัวนี้มีบันทึกโบอ้างอยู่"} — ต้องการปิดใช้งานหัวนี้แทนไหม?`,
+          showCancelButton: true,
+          confirmButtonText: "ปิดใช้งาน",
+          cancelButtonText: "ไม่ทำ",
+        });
+        if (!off.isConfirmed) return;
+        const r2 = await fetch(`/api/smart-papar/flush-points/${original._id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ active: false }),
+        });
+        const d2 = await r2.json().catch(() => null);
+        if (!r2.ok || !d2?.success) throw new Error(d2?.message || "ปิดใช้งานไม่สำเร็จ");
+        setPoints((prev) => prev.map((p) => (String(p._id) === String(original._id) ? { ...p, ...d2.data } : p)));
+        setDraft(draftFromPoint(d2.data));
+        Swal.fire({ icon: "success", title: "ปิดใช้งานแล้ว", timer: 1300, showConfirmButton: false });
+        return;
+      }
+      if (!res.ok || !data?.success) throw new Error(data?.message || "ลบไม่สำเร็จ");
+      setPoints((prev) => prev.filter((p) => String(p._id) !== String(original._id)));
+      closeEditor();
+      Swal.fire({ icon: "success", title: `ลบ ${data.deleted} แล้ว`, timer: 1300, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: e instanceof TypeError ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้" : e.message });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -429,6 +485,8 @@ export default function FlushPointRegistry() {
                     onStartMove={startMove}
                     onCancel={cancelEditor}
                     onSave={save}
+                    onDelete={removePoint}
+                    deleting={deleting}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 bg-white p-6 text-center">

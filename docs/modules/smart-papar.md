@@ -95,6 +95,11 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
 - เดสก์ท็อป 3 คอลัมน์ [รายการ | แผนที่ | ฟอร์ม] · มือถือ: แผนที่ + รายการ, ฟอร์มเป็นแผ่นเต็มจอ (ซ่อนระหว่างย้ายหมุด) · components `FlushPointAdminMap.js` (react-leaflet, `dynamic ssr:false`) + `FlushPointEditor.js`
 - แก้ได้: ชื่อจุด (`name`), ถนน/ซอย (`roadName` — แยกจากชื่อจุด, เลือกจากชื่อที่มีอยู่ให้สะกดตรงกัน), ประเภท (`kind`), ตำแหน่ง (ลากหมุด/แตะแผนที่/GPS ที่ยืนอยู่/วางพิกัด), รูป, สถานะใช้งาน (`active=false` → ไม่ส่งให้ฟอร์มภาคสนาม)
 - **รหัส (`code`) เปลี่ยนไม่ได้หลังสร้าง** — `FlushingLog.flushPointCode` เป็นสำเนา; เปลี่ยนประเภทแล้วรหัสคงเดิม
+- **รหัสหัวใหม่รันให้อัตโนมัติ** (`nextFlushPointCode`) ต่อรูปแบบเดิม `<อักษรตามชนิด>25<เลขรัน>` — เลขรันชุดเดียวทุกชนิด ไม่เติม 0
+  (ข้อมูลเดิมถึง 204 → หัวถัดไป `AT25205`) · อักษร: ตัวทีใหญ่ AT · พวงมาลัย BP · ตัวทีเล็ก/กลาง CN · ไม่ระบุ AT
+  · อักษรเปลี่ยนตามประเภทที่เลือกจนกว่าจะพิมพ์รหัสเอง · "25" คงที่ (เจ้าของเลือกต่อเลขเดิม ไม่เปลี่ยนตามปี)
+- **ลบหัวโบล์** (`DELETE /api/smart-papar/flush-points/[id]`) ได้เฉพาะหัวที่**ไม่เคยถูกอ้างในบันทึกโบ** (นับรวมบันทึกที่ลบแล้ว)
+  — มีบันทึกอ้าง → 409 แล้วหน้าเว็บเสนอ "ปิดใช้งาน" แทน · ลบจริงไม่มีประวัติเหลือ (log แค่ console) · ไม่ลบรูปใน Cloudinary
 - API: `GET /api/smart-papar/flush-points?scope=admin` (รวมหัวที่ปิด + ประวัติ 10 รายการล่าสุด, `no-store`) · `POST` เพิ่มหัว · `PATCH /api/smart-papar/flush-points/[id]` (merge แล้ว validate ทั้งก้อน) — ไฟล์เดิม `flush-points.js` ย้ายเป็น `flush-points/index.js`
 - ทุกการแก้ลง `FlushPoint.history` (`{at, byName, action, changes:[{field, from, to, movedM?}]}`) เก็บล่าสุด 30 รายการ + `updatedByName`
 - logic ล้วน + เทสต์: `lib/smart-papar/flushPointEdit.js` (`validateFlushPointInput`, `diffFlushPoint`, `flushPointIssues`, `roadNameOptions`) · สีชนิดใช้ร่วม `FLUSH_POINT_KIND_COLORS` ใน `flushPoints.js`

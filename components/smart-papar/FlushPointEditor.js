@@ -2,12 +2,13 @@
 // state ของฟอร์ม (draft) อยู่ที่หน้าแม่ เพราะแผนที่ต้องย้ายหมุดใน draft เดียวกัน
 // รหัสเปลี่ยนไม่ได้หลังสร้าง (FlushingLog เก็บ flushPointCode เป็นสำเนา)
 import { useMemo, useRef, useState } from "react";
-import { Camera, Check, Crosshair, History as HistoryIcon, LocateFixed, MapPin, Move, X } from "lucide-react";
+import { Camera, Check, Crosshair, History as HistoryIcon, LocateFixed, MapPin, Move, Trash2, X } from "lucide-react";
 import { FLUSH_POINT_KIND_COLORS, FLUSH_POINT_KIND_LABELS, distanceM } from "@/lib/smart-papar/flushPoints";
 import {
   FLUSH_POINT_FIELD_LABELS,
   FLUSH_POINT_KINDS,
   diffFlushPoint,
+  nextFlushPointCode,
   roadNameOptions,
   validateFlushPointInput,
 } from "@/lib/smart-papar/flushPointEdit";
@@ -128,6 +129,8 @@ export default function FlushPointEditor({
   onStartMove,
   onCancel,
   onSave,
+  onDelete, // ลบหัวนี้ (เฉพาะหัวเดิม) — หน้าแม่จัดการยืนยัน/กรณีมีบันทึกโบอ้างอยู่
+  deleting = false,
 }) {
   const isCreate = !original;
   const fileRef = useRef(null);
@@ -138,7 +141,13 @@ export default function FlushPointEditor({
   const [coordText, setCoordText] = useState("");
   const [showCoordInput, setShowCoordInput] = useState(false);
 
-  const set = (k, v) => setDraft((d) => ({ ...d, [k]: v }));
+  // หัวใหม่: รหัสรันให้อัตโนมัติ (codeAuto) และเปลี่ยนอักษรตามชนิดที่เลือก จนกว่าจะพิมพ์รหัสเอง
+  const set = (k, v) =>
+    setDraft((d) => {
+      const next = { ...d, [k]: v };
+      if (k === "kind" && d.codeAuto) next.code = nextFlushPointCode((points || []).map((p) => p.code), v);
+      return next;
+    });
   const roads = useMemo(() => roadNameOptions(points), [points]);
 
   const validated = validateFlushPointInput(draft, { isCreate });
@@ -259,8 +268,13 @@ export default function FlushPointEditor({
               value={draft.code}
               maxLength={20}
               placeholder="เช่น BP-210"
-              onChange={(e) => set("code", e.target.value.toUpperCase())}
+              onChange={(e) => setDraft((d) => ({ ...d, code: e.target.value.toUpperCase(), codeAuto: false }))}
             />
+            {draft.codeAuto ? (
+              <p className="mt-1 text-xs text-pp-muted">
+                ระบบรันต่อจากเลขล่าสุดให้ อักษรหน้าเปลี่ยนตามประเภท (ตัวทีใหญ่ AT · พวงมาลัย BP · ตัวทีเล็ก/กลาง CN) — แก้เองได้
+              </p>
+            ) : null}
             <Err msg={errors.code || (draft.code && validated.errors.code)} />
           </div>
         )}
@@ -510,6 +524,17 @@ export default function FlushPointEditor({
           </button>
         </div>
         {moving && <p className="text-xs text-pp-muted">ยืนยันตำแหน่งบนแผนที่ก่อน แล้วจึงบันทึก</p>}
+        {!isCreate && onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting || saving}
+            className="flex w-full items-center justify-center gap-1.5 pt-1 text-sm font-semibold text-pp-danger disabled:opacity-50"
+          >
+            <Trash2 size={16} aria-hidden />
+            {deleting ? "กำลังลบ…" : "ลบหัวโบล์นี้"}
+          </button>
+        )}
       </div>
     </div>
   );
