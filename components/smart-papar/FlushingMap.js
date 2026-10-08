@@ -9,19 +9,14 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { BaseLayersControl } from "@/components/MapBaseTileLayers";
 import { FLUSHING_RESULT_LABELS } from "@/lib/smart-papar/flushing";
+import { FLUSH_POINT_KIND_COLORS } from "@/lib/smart-papar/flushPoints";
 import FlushPointPanel from "./FlushPointPanel";
 import FlushPointSummary from "./FlushPointSummary";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
 // ตรงกับโทเคน pp-clear / pp-turbid ใน globals.css
 const COLORS = { clear: "#0B6E75", still_turbid: "#B45309" };
-const KIND_COLORS = {
-  tee_large: "#4f46e5",
-  tee_medium: "#7c3aed",
-  tee_small: "#a855f7",
-  garland: "#0891b2",
-  unknown: "#64748b",
-};
+const KIND_COLORS = FLUSH_POINT_KIND_COLORS;
 
 const COMMUNITY_STYLE = {
   color: "#2F80FF",
