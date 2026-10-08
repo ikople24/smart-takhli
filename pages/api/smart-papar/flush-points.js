@@ -23,7 +23,16 @@ export default async function handler(req, res) {
     await dbConnect();
     const [points, last] = await Promise.all([
       FlushPoint.find({ active: true })
-        .select({ code: 1, kind: 1, roadName: 1, name: 1, location: 1, photoUrl: 1 })
+        .select({
+          code: 1,
+          kind: 1,
+          roadName: 1,
+          name: 1,
+          location: 1,
+          photoUrl: 1,
+          "legacy.surveyedAt": 1,
+          "legacy.surveyedBy": 1,
+        })
         .sort({ code: 1 })
         .lean(),
       FlushingLog.aggregate([

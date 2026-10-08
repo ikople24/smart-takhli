@@ -2,14 +2,14 @@
 // หมุดเขียว = ใสแล้ว, ส้ม = ยังขุ่น · popup ใช้ <Popup> แบบ React (escape ให้เอง) — ห้ามเปลี่ยนเป็น bindPopup(raw HTML)
 // ชั้นขอบเขตชุมชน (geojsonfeatures ของแอปพี่น้อง อ่านอย่างเดียว) อยู่ pane ล่างสุด ใต้หมุดเสมอ
 // ชั้นหัวโบล์ (ทะเบียน FlushPoint) อยู่เหนือชุมชนแต่ใต้หมุดบันทึกโบ — หมุดโปร่ง = ยังไม่เคยบันทึกโบที่หัวนี้
+// คลิกหมุดหัวโบล์ → แผงข้อมูลด้านขวา (FlushPointPanel) ไม่ใช้ popup เพราะ popup ใน pane ของหมุดถูกหมุดอื่นทับ
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, CircleMarker, GeoJSON, Pane, Popup, useMap } from "react-leaflet";
+import { MapContainer, CircleMarker, GeoJSON, Pane, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { BaseLayersControl } from "@/components/MapBaseTileLayers";
 import { FLUSHING_RESULT_LABELS } from "@/lib/smart-papar/flushing";
-import { FLUSH_POINT_KIND_LABELS } from "@/lib/smart-papar/flushPoints";
-import { cloudinaryThumb } from "@/lib/smart-papar/cloudinaryThumb";
+import FlushPointPanel from "./FlushPointPanel";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
 const COLORS = { clear: "#10b981", still_turbid: "#f97316" };
@@ -20,9 +20,6 @@ const KIND_COLORS = {
   garland: "#0891b2",
   unknown: "#64748b",
 };
-
-const fmtDate = (d) =>
-  new Date(d).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short", year: "2-digit" });
 
 const COMMUNITY_STYLE = {
   color: "#2F80FF",
@@ -65,7 +62,14 @@ function FitBounds({ points, communities }) {
   return null;
 }
 
+// คลิกพื้นแผนที่ว่าง ๆ → ปิดแผงหัวโบล์
+function ClearOnMapClick({ onClear }) {
+  useMapEvents({ click: onClear });
+  return null;
+}
+
 export default function FlushingMap({ logs, onSelect }) {
+  const [selectedPointId, setSelectedPointId] = useState(null);
   const [communities, setCommunities] = useState(null);
   const [flushPoints, setFlushPoints] = useState([]);
   // โหลดหัวโบล์ใหม่ทุกครั้งที่รายการบันทึกเปลี่ยน — "โบล่าสุด" ของแต่ละหัวจะได้ตรงหลังบันทึกงานใหม่
@@ -104,10 +108,14 @@ export default function FlushingMap({ logs, onSelect }) {
     [withCoords]
   );
 
+  const selectedPoint = flushPoints.find((p) => String(p._id) === selectedPointId) || null;
+
   return (
     <>
-    <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[360px] w-full rounded-2xl" scrollWheelZoom={false}>
+    <div className="relative">
+    <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[380px] w-full rounded-2xl lg:h-[460px]" scrollWheelZoom={false}>
       <BaseLayersControl />
+      <ClearOnMapClick onClear={() => setSelectedPointId(null)} />
       <FitBounds points={points} communities={communities} />
       <Pane name="flushing-communities" style={{ zIndex: 350 }}>
         {communities && (
@@ -117,42 +125,22 @@ export default function FlushingMap({ logs, onSelect }) {
       <Pane name="flushing-points" style={{ zIndex: 390 }}>
         {flushPoints.map((p) => {
           const color = KIND_COLORS[p.kind] || KIND_COLORS.unknown;
+          const selected = String(p._id) === selectedPointId;
           return (
             <CircleMarker
               key={p._id}
               pane="flushing-points"
               center={[p.location.coordinates[1], p.location.coordinates[0]]}
-              radius={5}
+              radius={selected ? 9 : 5}
+              bubblingMouseEvents={false}
+              eventHandlers={{ click: () => setSelectedPointId(String(p._id)) }}
               pathOptions={{
-                color,
-                weight: 2,
+                color: selected ? "#0f172a" : color,
+                weight: selected ? 3 : 2,
                 fillColor: p.lastFlushedAt ? color : "#ffffff",
                 fillOpacity: 1,
               }}
-            >
-              <Popup>
-                <div style={{ minWidth: 180 }}>
-                  <div style={{ fontWeight: 600 }}>หัวโบล์ {p.code}</div>
-                  <div>{FLUSH_POINT_KIND_LABELS[p.kind] || "-"}</div>
-                  <div>{[p.name, p.roadName].filter(Boolean).join(" · ") || "-"}</div>
-                  <div style={{ marginTop: 2 }}>
-                    {p.lastFlushedAt
-                      ? `โบล่าสุด ${fmtDate(p.lastFlushedAt)} (${p.flushCount} ครั้ง)`
-                      : "ยังไม่มีบันทึกโบในระบบ"}
-                  </div>
-                  {p.photoUrl && (
-                    <a href={p.photoUrl} target="_blank" rel="noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={cloudinaryThumb(p.photoUrl, 400)}
-                        alt=""
-                        style={{ marginTop: 6, width: 180, height: 120, objectFit: "cover", borderRadius: 8 }}
-                      />
-                    </a>
-                  )}
-                </div>
-              </Popup>
-            </CircleMarker>
+            />
           );
         })}
       </Pane>
@@ -180,6 +168,12 @@ export default function FlushingMap({ logs, onSelect }) {
         </CircleMarker>
       ))}
     </MapContainer>
+    <FlushPointPanel
+      point={selectedPoint}
+      color={KIND_COLORS[selectedPoint?.kind] || KIND_COLORS.unknown}
+      onClose={() => setSelectedPointId(null)}
+    />
+    </div>
     {flushPoints.length > 0 && (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-slate-600">
         <span className="flex items-center gap-1">
