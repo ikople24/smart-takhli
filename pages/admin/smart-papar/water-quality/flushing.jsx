@@ -4,13 +4,25 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import Swal from "sweetalert2";
 import { useUser } from "@clerk/nextjs";
-import { Plus, Search, TriangleAlert } from "lucide-react";
+import { ClipboardList, MapPin, Plus, Search, TriangleAlert } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
 import { FlushingList, FlushingDetail } from "@/components/smart-papar/FlushingList";
 import { bangkokYmd, canModifyFlushingLog, summarizeFlushing } from "@/lib/smart-papar/flushing";
+
+// แท็บทะเบียนหัวโบล์ (แผนที่แก้ไข + leaflet) — โหลดเมื่อเปิดแท็บเท่านั้น
+const FlushPointRegistry = dynamic(() => import("@/components/smart-papar/FlushPointRegistry"), {
+  ssr: false,
+  loading: () => <div className="py-10 text-center text-pp-muted">กำลังโหลด…</div>,
+});
+
+const TABS = [
+  { key: "logs", label: "งานโบตะกอน", icon: ClipboardList },
+  { key: "registry", label: "ทะเบียนหัวโบล์", icon: MapPin },
+];
 
 const FlushingMap = dynamic(() => import("@/components/smart-papar/FlushingMap"), {
   ssr: false,
@@ -46,6 +58,15 @@ const fmtShort = (d) =>
   });
 
 export default function SmartPaparFlushingPage() {
+  // แท็บจำไว้ใน URL (?tab=registry) — รีเฟรช/ส่งลิงก์แล้วเปิดแท็บเดิม
+  const router = useRouter();
+  const tab = router.query.tab === "registry" ? "registry" : "logs";
+  const setTab = (key) =>
+    router.replace(
+      { pathname: router.pathname, query: key === "logs" ? {} : { tab: key } },
+      undefined,
+      { shallow: true }
+    );
   const { user } = useUser();
   const actor = {
     userId: user?.id,
@@ -175,16 +196,42 @@ export default function SmartPaparFlushingPage() {
               <h1 className="font-tk-sans text-3xl font-bold leading-tight lg:text-[34px]">โบตะกอน</h1>
               <p className="text-[15px] text-pp-muted">งานระบายตะกอนในท่อ บันทึกจากหน้างานพร้อมรูปก่อน/หลัง</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setFormLog({})}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-pp-water px-5 text-base font-semibold text-white shadow-[0_6px_16px_rgba(14,110,134,0.25)] hover:bg-pp-deep sm:w-auto"
-            >
-              <Plus size={20} strokeWidth={2.4} aria-hidden />
-              บันทึกโบตะกอน
-            </button>
+            {tab === "logs" && (
+              <button
+                type="button"
+                onClick={() => setFormLog({})}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-pp-water px-5 text-base font-semibold text-white shadow-[0_6px_16px_rgba(14,110,134,0.25)] hover:bg-pp-deep sm:w-auto"
+              >
+                <Plus size={20} strokeWidth={2.4} aria-hidden />
+                บันทึกโบตะกอน
+              </button>
+            )}
           </header>
 
+          <div role="tablist" aria-label="ส่วนของหน้าโบตะกอน" className="flex gap-1 border-b border-pp-line">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={`-mb-px flex h-11 items-center gap-2 border-b-2 px-4 text-[15px] ${
+                  tab === key
+                    ? "border-pp-water font-semibold text-pp-ink"
+                    : "border-transparent text-pp-muted hover:text-pp-ink"
+                }`}
+              >
+                <Icon size={18} aria-hidden />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "registry" ? (
+            <FlushPointRegistry />
+          ) : (
+          <>
           <div className="flex flex-wrap items-center gap-3">
             <div role="group" aria-label="ช่วงเวลา" className="flex gap-1 rounded-xl border border-pp-line bg-white p-1">
               {RANGES.map((r) => (
@@ -315,6 +362,8 @@ export default function SmartPaparFlushingPage() {
                 )}
               </section>
             </>
+          )}
+          </>
           )}
         </div>
       </div>

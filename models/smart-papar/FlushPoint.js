@@ -27,6 +27,23 @@ const FlushPointSchema = new mongoose.Schema(
       surveyedBy: { type: String, default: "" },
     },
     active: { type: Boolean, default: true },
+    // แก้ไขจากหลังบ้าน (/admin/smart-papar/water-quality/flush-points) — เก็บประวัติล่าสุด MAX_HISTORY รายการ
+    createdByName: { type: String, default: "" },
+    updatedByClerkId: { type: String, default: "" },
+    updatedByName: { type: String, default: "" },
+    history: {
+      type: [
+        {
+          _id: false,
+          at: { type: Date, required: true },
+          byClerkId: { type: String, default: "" },
+          byName: { type: String, default: "" },
+          action: { type: String, enum: ["create", "update"], default: "update" },
+          changes: { type: [mongoose.Schema.Types.Mixed], default: [] }, // [{ field, from, to, movedM? }]
+        },
+      ],
+      default: [],
+    },
   },
   { collection: "smart_papar_flush_points", timestamps: true }
 );
