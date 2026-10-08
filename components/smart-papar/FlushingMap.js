@@ -1,5 +1,5 @@
 // แผนที่จุดโบตะกอน — มี leaflet ข้างใน ต้อง import ผ่าน dynamic(..., { ssr: false }) เท่านั้น
-// หมุดเขียว = ใสแล้ว, ส้ม = ยังขุ่น · popup ใช้ <Popup> แบบ React (escape ให้เอง) — ห้ามเปลี่ยนเป็น bindPopup(raw HTML)
+// หมุดเขียวน้ำทะเล = ใสแล้ว, อำพัน = ยังขุ่น · popup ใช้ <Popup> แบบ React (escape ให้เอง) — ห้ามเปลี่ยนเป็น bindPopup(raw HTML)
 // ชั้นขอบเขตชุมชน (geojsonfeatures ของแอปพี่น้อง อ่านอย่างเดียว) อยู่ pane ล่างสุด ใต้หมุดเสมอ
 // ชั้นหัวโบล์ (ทะเบียน FlushPoint) อยู่เหนือชุมชนแต่ใต้หมุดบันทึกโบ — หมุดโปร่ง = ยังไม่เคยบันทึกโบที่หัวนี้
 // คลิกหมุดหัวโบล์ → แผงข้อมูลด้านขวา (FlushPointPanel) ไม่ใช้ popup เพราะ popup ใน pane ของหมุดถูกหมุดอื่นทับ
@@ -13,7 +13,8 @@ import FlushPointPanel from "./FlushPointPanel";
 import FlushPointSummary from "./FlushPointSummary";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
-const COLORS = { clear: "#10b981", still_turbid: "#f97316" };
+// ตรงกับโทเคน pp-clear / pp-turbid ใน globals.css
+const COLORS = { clear: "#0B6E75", still_turbid: "#B45309" };
 const KIND_COLORS = {
   tee_large: "#4f46e5",
   tee_medium: "#7c3aed",
@@ -127,7 +128,7 @@ export default function FlushingMap({ logs, onSelect }) {
     </div>
     <div className="order-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 lg:order-2">
     <div className="relative">
-    <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[380px] w-full lg:h-[520px]" scrollWheelZoom={false}>
+    <MapContainer center={TAKHLI_CENTER} zoom={14} className="flushing-map h-[380px] w-full lg:h-[520px]" scrollWheelZoom={false}>
       <BaseLayersControl />
       <ClearOnMapClick onClear={() => setSelectedPointId(null)} />
       <FitBounds points={points} communities={communities} fallbackPoints={flushPointLatLngs} />

@@ -2,8 +2,10 @@
 //   docked  = คอลัมน์ขวาของแผนที่บนเดสก์ท็อป (ไม่มีหัวที่เลือก → ข้อความแนะนำ)
 //   overlay = แผ่นล่างทับแผนที่บนมือถือ (ไม่มีหัวที่เลือก → ไม่แสดง)
 // อยู่นอก <MapContainer> โดยตั้งใจ: ไม่ถูกหมุดทับ และคลิก/เลื่อนในแผงไม่ไปลากแผนที่
+import { useState } from "react";
 import { FLUSH_POINT_KIND_LABELS } from "@/lib/smart-papar/flushPoints";
 import { cloudinaryThumb } from "@/lib/smart-papar/cloudinaryThumb";
+import PhotoLightbox from "./PhotoLightbox";
 
 const fmtDate = (d) =>
   new Date(d).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short", year: "numeric" });
@@ -18,6 +20,7 @@ function Row({ label, children }) {
 }
 
 export default function FlushPointPanel({ point, color, onClose, docked = false }) {
+  const [photoIndex, setPhotoIndex] = useState(null); // เปิดรูปเต็มจอบนหน้าเดิม ไม่เปิดแท็บใหม่
   if (!point) {
     if (!docked) return null;
     return (
@@ -63,26 +66,36 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
       <div className="flex-1 overflow-y-auto">
         {/* เดสก์ท็อป: รูปใหญ่เต็มความกว้าง · มือถือ (แผ่นล่างทับแผนที่ ที่น้อย): รูปย่อข้างกล่องสถานะ */}
         {docked && point.photoUrl && (
-          <a href={point.photoUrl} target="_blank" rel="noreferrer" className="block bg-slate-100">
+          <button
+            type="button"
+            onClick={() => setPhotoIndex(0)}
+            aria-label={`ดูรูปหัวโบล์ ${point.code} เต็มจอ`}
+            className="block w-full cursor-zoom-in bg-slate-100"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cloudinaryThumb(point.photoUrl, 640)}
               alt={`รูปหัวโบล์ ${point.code}`}
               className="aspect-[4/3] w-full object-cover"
             />
-          </a>
+          </button>
         )}
 
         <div className="flex gap-3 px-4 pt-3">
           {!docked && point.photoUrl && (
-            <a href={point.photoUrl} target="_blank" rel="noreferrer" className="block flex-none">
+            <button
+              type="button"
+              onClick={() => setPhotoIndex(0)}
+              aria-label={`ดูรูปหัวโบล์ ${point.code} เต็มจอ`}
+              className="block flex-none cursor-zoom-in"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={cloudinaryThumb(point.photoUrl, 240)}
                 alt={`รูปหัวโบล์ ${point.code}`}
                 className="h-20 w-24 rounded-lg object-cover"
               />
-            </a>
+            </button>
           )}
           {point.lastFlushedAt ? (
             <div className="flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -115,6 +128,12 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
           </a>
         </footer>
       )}
+      <PhotoLightbox
+        images={point.photoUrl ? [{ src: point.photoUrl, caption: `หัวโบล์ ${point.code}` }] : []}
+        index={photoIndex}
+        onChange={setPhotoIndex}
+        onClose={() => setPhotoIndex(null)}
+      />
     </aside>
   );
 }
