@@ -1,4 +1,6 @@
-// แผงข้อมูลหัวโบล์ — แสดงทับขอบขวาของแผนที่ (มือถือ: แผ่นล่าง) เมื่อคลิกหมุดหัวโบล์
+// แผงข้อมูลหัวโบล์ เมื่อคลิกหมุดหัวโบล์ — 2 แบบ:
+//   docked  = คอลัมน์ขวาของแผนที่บนเดสก์ท็อป (ไม่มีหัวที่เลือก → ข้อความแนะนำ)
+//   overlay = แผ่นล่างทับแผนที่บนมือถือ (ไม่มีหัวที่เลือก → ไม่แสดง)
 // อยู่นอก <MapContainer> โดยตั้งใจ: ไม่ถูกหมุดทับ และคลิก/เลื่อนในแผงไม่ไปลากแผนที่
 import { FLUSH_POINT_KIND_LABELS } from "@/lib/smart-papar/flushPoints";
 import { cloudinaryThumb } from "@/lib/smart-papar/cloudinaryThumb";
@@ -15,8 +17,17 @@ function Row({ label, children }) {
   );
 }
 
-export default function FlushPointPanel({ point, color, onClose }) {
-  if (!point) return null;
+export default function FlushPointPanel({ point, color, onClose, docked = false }) {
+  if (!point) {
+    if (!docked) return null;
+    return (
+      <aside className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5">
+        <div className="grid h-12 w-12 place-items-center rounded-full bg-sky-50 text-2xl">📍</div>
+        <div className="font-semibold text-slate-800">ข้อมูลหัวโบล์</div>
+        <p className="text-sm text-slate-500">คลิกหมุดวงเล็กบนแผนที่ เพื่อดูรูป ชนิด และวันที่โบล่าสุดของหัวนั้น</p>
+      </aside>
+    );
+  }
   const [lng, lat] = point.location?.coordinates || [];
   const surveyed = point.legacy?.surveyedAt
     ? `${fmtDate(point.legacy.surveyedAt)}${point.legacy.surveyedBy ? ` · ${point.legacy.surveyedBy}` : ""}`
@@ -24,7 +35,11 @@ export default function FlushPointPanel({ point, color, onClose }) {
 
   return (
     <aside
-      className="absolute inset-x-2 bottom-2 z-[1000] flex max-h-[75%] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 sm:inset-x-auto sm:bottom-2 sm:right-2 sm:top-2 sm:max-h-none sm:w-80"
+      className={
+        docked
+          ? "flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
+          : "absolute inset-x-2 bottom-2 z-[1000] flex max-h-[75%] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+      }
       aria-label={`ข้อมูลหัวโบล์ ${point.code}`}
     >
       <header className="flex items-start justify-between gap-2 border-b px-4 py-3">

@@ -98,7 +98,7 @@ export default function SmartPaparFlushingPage() {
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-        <div className="mx-auto max-w-[1200px] space-y-4 p-4 lg:p-6">
+        <div className="mx-auto max-w-[1440px] space-y-4 p-4 lg:p-6">
           <div className="dashboard-header">
             <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -165,9 +165,7 @@ export default function SmartPaparFlushingPage() {
             </div>
           ) : (
             <>
-              <div className="dashboard-section overflow-hidden p-0">
-                <FlushingMap logs={logs} onSelect={setSelected} />
-              </div>
+              <FlushingMap logs={logs} onSelect={setSelected} />
               {loading ? (
                 <div className="py-10 text-center text-slate-500">กำลังโหลด…</div>
               ) : (

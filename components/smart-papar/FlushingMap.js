@@ -10,6 +10,7 @@ import L from "leaflet";
 import { BaseLayersControl } from "@/components/MapBaseTileLayers";
 import { FLUSHING_RESULT_LABELS } from "@/lib/smart-papar/flushing";
 import FlushPointPanel from "./FlushPointPanel";
+import FlushPointSummary from "./FlushPointSummary";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
 const COLORS = { clear: "#10b981", still_turbid: "#f97316" };
@@ -110,10 +111,16 @@ export default function FlushingMap({ logs, onSelect }) {
 
   const selectedPoint = flushPoints.find((p) => String(p._id) === selectedPointId) || null;
 
+  // เดสก์ท็อป: 3 คอลัมน์ [สรุปหัวโบล์ | แผนที่ | ข้อมูลหัวที่เลือก] — คอลัมน์ข้างกว้างคงที่ แผนที่จึงไม่เปลี่ยนขนาด
+  // (Leaflet ไม่ต้อง invalidateSize) · มือถือ: แผนที่ก่อน สรุปตามหลัง ข้อมูลหัวเป็นแผ่นล่างทับแผนที่
   return (
-    <>
+    <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
+    <div className="order-2 lg:order-1">
+      <FlushPointSummary points={flushPoints} kindColors={KIND_COLORS} />
+    </div>
+    <div className="order-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 lg:order-2">
     <div className="relative">
-    <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[380px] w-full rounded-2xl lg:h-[460px]" scrollWheelZoom={false}>
+    <MapContainer center={TAKHLI_CENTER} zoom={14} className="h-[380px] w-full lg:h-[520px]" scrollWheelZoom={false}>
       <BaseLayersControl />
       <ClearOnMapClick onClear={() => setSelectedPointId(null)} />
       <FitBounds points={points} communities={communities} />
@@ -168,11 +175,13 @@ export default function FlushingMap({ logs, onSelect }) {
         </CircleMarker>
       ))}
     </MapContainer>
-    <FlushPointPanel
-      point={selectedPoint}
-      color={KIND_COLORS[selectedPoint?.kind] || KIND_COLORS.unknown}
-      onClose={() => setSelectedPointId(null)}
-    />
+    <div className="lg:hidden">
+      <FlushPointPanel
+        point={selectedPoint}
+        color={KIND_COLORS[selectedPoint?.kind] || KIND_COLORS.unknown}
+        onClose={() => setSelectedPointId(null)}
+      />
+    </div>
     </div>
     {flushPoints.length > 0 && (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-slate-600">
@@ -188,9 +197,17 @@ export default function FlushingMap({ logs, onSelect }) {
         <span className="flex items-center gap-1">
           <span className="h-2.5 w-2.5 rounded-full border-2 bg-white" style={{ borderColor: KIND_COLORS.tee_large }} /> หัวโบล์ (ยังไม่เคยโบ)
         </span>
-        <span>· หัวโบล์ {flushPoints.length} หัว</span>
       </div>
     )}
-    </>
+    </div>
+    <div className="order-3 hidden lg:block">
+      <FlushPointPanel
+        docked
+        point={selectedPoint}
+        color={KIND_COLORS[selectedPoint?.kind] || KIND_COLORS.unknown}
+        onClose={() => setSelectedPointId(null)}
+      />
+    </div>
+    </div>
   );
 }
