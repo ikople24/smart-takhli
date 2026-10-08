@@ -5,6 +5,7 @@ import dbConnect from "@/lib/dbConnect";
 import FlushingLog from "@/models/smart-papar/FlushingLog";
 import { requireSmartPaparAdmin } from "../water-quality/_auth";
 import { validateFlushingInput, canModifyFlushingLog } from "@/lib/smart-papar/flushing";
+import { attachFlushPoint } from "@/lib/smart-papar/attachFlushPoint";
 
 const EDIT_FIELDS = [
   "flushedAt",
@@ -16,6 +17,7 @@ const EDIT_FIELDS = [
   "photosBefore",
   "photosAfter",
   "note",
+  "flushPointId",
 ];
 
 export default async function handler(req, res) {
@@ -59,9 +61,15 @@ export default async function handler(req, res) {
           .status(400)
           .json({ success: false, message: "ข้อมูลไม่ครบหรือไม่ถูกต้อง", errors: v.errors });
       }
+      const fp = await attachFlushPoint(v.value);
+      if (!fp.ok) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ข้อมูลไม่ครบหรือไม่ถูกต้อง", errors: fp.errors });
+      }
       const updated = await FlushingLog.findByIdAndUpdate(
         id,
-        { $set: { ...v.value, updatedByClerkId: auth.userId, updatedByName: auth.name || "" } },
+        { $set: { ...fp.value, updatedByClerkId: auth.userId, updatedByName: auth.name || "" } },
         { new: true }
       ).lean();
       return res.status(200).json({ success: true, data: updated });

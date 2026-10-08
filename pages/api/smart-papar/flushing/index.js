@@ -7,6 +7,7 @@ import {
   summarizeFlushing,
   bangkokDayRange,
 } from "@/lib/smart-papar/flushing";
+import { attachFlushPoint } from "@/lib/smart-papar/attachFlushPoint";
 
 const LIST_LIMIT = 500;
 
@@ -51,8 +52,14 @@ export default async function handler(req, res) {
           .status(400)
           .json({ success: false, message: "ข้อมูลไม่ครบหรือไม่ถูกต้อง", errors: v.errors });
       }
+      const fp = await attachFlushPoint(v.value);
+      if (!fp.ok) {
+        return res
+          .status(400)
+          .json({ success: false, message: "ข้อมูลไม่ครบหรือไม่ถูกต้อง", errors: fp.errors });
+      }
       const doc = await FlushingLog.create({
-        ...v.value,
+        ...fp.value,
         createdByClerkId: auth.userId,
         createdByName: auth.name || "",
         updatedByClerkId: auth.userId,

@@ -1,9 +1,12 @@
 // ฟอร์มบันทึก/แก้ไขงานโบตะกอน — ออกแบบให้ใช้บนมือถือหน้างานเป็นหลัก
 // เรียงตามลำดับงานจริง: ตำแหน่ง → รูปก่อน → ระยะเวลา/NTU → รูปหลัง → ผล → บันทึก
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
 import { resizeImage } from "@/lib/smart-papar/resizeImage";
 import { MAX_PHOTOS_PER_SLOT } from "@/lib/smart-papar/flushing";
+import { FLUSH_POINT_KIND_LABELS, flushPointLabel, nearestFlushPoints } from "@/lib/smart-papar/flushPoints";
+
+const NEAR_RADIUS_M = 150;
 
 function toLocalInputValue(date) {
   const d = new Date(date);
@@ -21,6 +24,7 @@ function initialState(log) {
       lng: null,
       accuracy: null,
       locationName: "",
+      flushPointId: "",
       durationMin: "",
       turbidityBeforeNtu: "",
       turbidityAfterNtu: "",
@@ -34,6 +38,7 @@ function initialState(log) {
     lng: log.location?.coordinates?.[0] ?? null,
     accuracy: null,
     locationName: log.locationName || "",
+    flushPointId: log.flushPointId ? String(log.flushPointId) : "",
     durationMin: String(log.durationMin ?? ""),
     turbidityBeforeNtu: log.turbidityBeforeNtu ?? "",
     turbidityAfterNtu: log.turbidityAfterNtu ?? "",
@@ -151,6 +156,34 @@ export default function FlushingForm({
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showNote, setShowNote] = useState(Boolean(log?.note));
+  const [flushPoints, setFlushPoints] = useState(null); // null = กำลังโหลด/โหลดไม่ได้
+
+  // ทะเบียนหัวโบล์ (หลักร้อยจุด) โหลดครั้งเดียวแล้วหาตัวใกล้สุดฝั่ง client
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/smart-papar/flush-points")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && Array.isArray(d?.data)) setFlushPoints(d.data);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const nearby = useMemo(
+    () => nearestFlushPoints(flushPoints || [], form.lat, form.lng, { limit: 3, maxM: NEAR_RADIUS_M }),
+    [flushPoints, form.lat, form.lng]
+  );
+  const selectedPoint = (flushPoints || []).find((p) => String(p._id) === form.flushPointId) || null;
+
+  const pickPoint = (p) =>
+    setForm((f) =>
+      p
+        ? { ...f, flushPointId: String(p._id), locationName: flushPointLabel(p) }
+        : { ...f, flushPointId: "" }
+    );
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -203,6 +236,7 @@ export default function FlushingForm({
       lat: form.lat,
       lng: form.lng,
       locationName: form.locationName,
+      flushPointId: form.flushPointId || null,
       durationMin: form.durationMin,
       turbidityBeforeNtu: form.turbidityBeforeNtu,
       turbidityAfterNtu: form.turbidityAfterNtu,
@@ -265,6 +299,55 @@ export default function FlushingForm({
               </p>
             )}
             <FieldError msg={errors.location} />
+            {form.lat != null && flushPoints && (
+              <div className="mt-2 space-y-1.5">
+                {nearby.length > 0 ? (
+                  <>
+                    <div className="text-sm text-slate-600">หัวโบล์ใกล้คุณ — แตะเพื่อเลือก</div>
+                    {nearby.map(({ point, distanceM }) => {
+                      const on = form.flushPointId === String(point._id);
+                      return (
+                        <button
+                          key={point._id}
+                          type="button"
+                          onClick={() => pickPoint(point)}
+                          className={`flex w-full items-center justify-between gap-2 rounded-xl border-2 px-3 py-2.5 text-left ${
+                            on ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-white"
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-semibold text-slate-900">
+                              {on && "✓ "}
+                              {point.code}
+                            </span>
+                            <span className="block truncate text-sm text-slate-600">
+                              {[point.name || point.roadName, FLUSH_POINT_KIND_LABELS[point.kind]].filter(Boolean).join(" · ")}
+                            </span>
+                          </span>
+                          <span className="flex-none text-sm text-slate-500">{distanceM} ม.</span>
+                        </button>
+                      );
+                    })}
+                    {form.flushPointId && (
+                      <button type="button" onClick={() => pickPoint(null)} className="text-sm text-slate-500 underline">
+                        ไม่ใช่หัวในรายการ (พิมพ์ชื่อจุดเอง)
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-sm text-slate-500">ไม่พบหัวโบล์ในรัศมี {NEAR_RADIUS_M} ม. — พิมพ์ชื่อจุดเองได้เลย</div>
+                )}
+                {selectedPoint && !nearby.some((n) => String(n.point._id) === form.flushPointId) && (
+                  <div className="flex items-center justify-between rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-800">
+                    <span>เลือกไว้: {flushPointLabel(selectedPoint)}</span>
+                    <button type="button" onClick={() => pickPoint(null)} className="underline">
+                      ยกเลิก
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <FieldError msg={errors.flushPointId} />
             <input
               className={`${inputCls} mt-2`}
               placeholder="ชื่อจุด/ถนน เช่น หัวดับเพลิงหน้าตลาดสด"

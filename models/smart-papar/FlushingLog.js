@@ -17,6 +17,9 @@ const FlushingLogSchema = new mongoose.Schema(
     photosBefore: { type: [String], default: [] },
     photosAfter: { type: [String], default: [] },
     note: { type: String, default: "" },
+    // หัวโบล์จากทะเบียน (FlushPoint) — ไม่บังคับ · flushPointCode เก็บสำเนาไว้ เผื่อทะเบียนเปลี่ยนรหัสภายหลัง
+    flushPointId: { type: mongoose.Schema.Types.ObjectId, ref: "FlushPoint", default: null },
+    flushPointCode: { type: String, default: "" },
 
     // admin = บันทึกจากหน้าแอดมิน (ล็อกอิน Clerk) · field = เจ้าหน้าที่ภาคสนามที่ใส่รหัสจากหน้าแรก (ไม่มี clerkId)
     source: { type: String, enum: ["admin", "field"], default: "admin" },
@@ -32,6 +35,7 @@ const FlushingLogSchema = new mongoose.Schema(
 
 FlushingLogSchema.index({ deletedAt: 1, flushedAt: -1 });
 FlushingLogSchema.index({ location: "2dsphere" });
+FlushingLogSchema.index({ flushPointId: 1, flushedAt: -1 }, { partialFilterExpression: { flushPointId: { $type: "objectId" } } });
 
 export default mongoose.models.FlushingLog ||
   mongoose.model("FlushingLog", FlushingLogSchema);
