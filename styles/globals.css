@@ -1409,6 +1409,37 @@ body.survey-form-open .app-bottom-nav {
 
 /* flood-relief แผนที่แดชบอร์ด: คลิกรูปชุมชน/โซนแล้ว Chrome วาดกรอบโฟกัสสี่เหลี่ยมรอบ SVG path บังแผนที่ (เจ้าของแจ้ง 2026-09-26)
    ปิดเฉพาะตอนโฟกัสจากเมาส์/นิ้ว — ใช้คีย์บอร์ด (:focus-visible) ยังเห็นกรอบตามเดิม */
-.flood-map .leaflet-interactive:focus:not(:focus-visible) {
+.flood-map .leaflet-interactive:focus:not(:focus-visible),
+/* แผนที่โบตะกอน (smart-papar): ปัญหาเดียวกันตอนคลิกขอบชุมชน/หมุด (เจ้าของแจ้ง 2026-10-08) */
+.flushing-map .leaflet-interactive:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* ============================================================
+   โทเคนดีไซน์ "โบตะกอน" (smart-papar) — น้ำเงินน้ำลึก + สถานะ ใส (เขียวน้ำทะเล) / ขุ่น (อำพัน)
+   ใช้ผ่าน utility: bg-pp-water · text-pp-clear-ink · bg-pp-turbid-tint · border-pp-line
+   สถานะ ใส/ขุ่น ต้องต่างกันทั้งสีและไอคอน (✓ / △) ไม่พึ่งสีอย่างเดียว
+   ============================================================ */
+@theme {
+  --color-pp-water: #0E6E86;
+  --color-pp-deep: #08465A;
+  --color-pp-sky: #A9D3DE;
+  --color-pp-sky-2: #CFE7EE;
+  --color-pp-tint: #E3F1F5;
+  --color-pp-tint-2: #F2F9FB;
+  --color-pp-dash: #8CC3D1;
+  --color-pp-ground: #F3F6F8;
+  --color-pp-line: #DCE5EB;
+  --color-pp-line-2: #C9D6DE;
+  --color-pp-ink: #0B2233;
+  --color-pp-muted: #4A5D6B;
+  --color-pp-clear: #0B6E75;
+  --color-pp-clear-ink: #0B5F66;
+  --color-pp-clear-tint: #E0F2F1;
+  --color-pp-turbid: #B45309;
+  --color-pp-turbid-ink: #8A4A05;
+  --color-pp-turbid-tint: #FCEFD9;
+  --color-pp-turbid-line: #F2D8A7;
+  --color-pp-turbid-wash: #FDF6EA;
+  --color-pp-danger: #B42318;
 }

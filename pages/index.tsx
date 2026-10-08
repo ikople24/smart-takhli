@@ -16,7 +16,6 @@ import SchoolSurveyModal from "@/components/smart-school/survey/SchoolSurveyModa
 import EquipmentRow from "@/components/citizen/home/EquipmentRow";
 import GarbageHomeCard from "@/components/garbage/GarbageHomeCard";
 import FloodReliefCard from "@/components/flood-relief/FloodReliefCard";
-import FieldFlushingHomeCard from "@/components/smart-papar/FieldFlushingHomeCard";
 import StatsRow from "@/components/citizen/home/StatsRow";
 import Footer from "@/components/Footer";
 import { useMenuStore } from "@/stores/useMenuStore";
@@ -88,8 +87,6 @@ export default function PreviewHome() {
           เทศบาลเมืองตาคลี ยินดีให้บริการทุกช่วงวัย ผู้สูงอายุและผู้พิการสามารถขอยืมกายอุปกรณ์ได้
         </h1>
         <HeaderCard />
-        {/* ทางลัดเจ้าหน้าที่ประปา — โชว์เฉพาะเครื่องที่ใส่รหัสภาคสนามแล้ว */}
-        <FieldFlushingHomeCard />
         {/* ศูนย์ช่วยเหลือน้ำท่วม — โชว์เฉพาะตอนศูนย์ฯ เปิด (FloodSettings.centerOpen) */}
         <FloodReliefCard />
         <EnvCards />
