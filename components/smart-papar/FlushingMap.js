@@ -18,6 +18,8 @@ const TAKHLI_CENTER = [15.2605, 100.3555];
 // ตรงกับโทเคน pp-clear / pp-turbid ใน globals.css
 const COLORS = { clear: "#0B6E75", still_turbid: "#B45309" };
 const KIND_COLORS = FLUSH_POINT_KIND_COLORS;
+// ชุมชนที่โบแล้วใสทั้งหมด = ฟ้าทึบ (เจ้าของขอ 2026-10-14) — ต่างจาก "ไม่มีบันทึก" ที่เป็นเส้นประฟ้าจาง
+const CLEAR_AREA = "#0284C7";
 
 const COMMUNITY_STYLE = {
   color: "#2F80FF",
@@ -34,7 +36,7 @@ const escapeHtml = (v) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
 
-// ระบายสีชุมชนตามผลล่าสุดของจุดโบในช่วงที่เลือก: ยังขุ่น = อำพัน (เข้มขึ้นตามจำนวนจุด) · ใสทั้งหมด = เขียวน้ำทะเล
+// ระบายสีชุมชนตามผลล่าสุดของจุดโบในช่วงที่เลือก: ยังขุ่น = อำพัน (เข้มขึ้นตามจำนวนจุด) · ใสทั้งหมด = ฟ้า
 // ไม่มีบันทึก = เส้นประฟ้าแบบเดิม
 function communityStyle(stat) {
   if (stat?.status === "turbid") {
@@ -47,7 +49,7 @@ function communityStyle(stat) {
     };
   }
   if (stat?.status === "clear") {
-    return { color: COLORS.clear, weight: 2, dashArray: null, fillColor: COLORS.clear, fillOpacity: 0.12 };
+    return { color: CLEAR_AREA, weight: 2, dashArray: null, fillColor: CLEAR_AREA, fillOpacity: 0.2 };
   }
   return COMMUNITY_STYLE;
 }
@@ -267,7 +269,7 @@ export default function FlushingMap({ logs, statusLogs, onSelect }) {
           <span className="h-3 w-4 rounded-sm border-2" style={{ borderColor: COLORS.still_turbid, background: `${COLORS.still_turbid}55` }} /> ชุมชนยังขุ่น
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-3 w-4 rounded-sm border-2" style={{ borderColor: COLORS.clear, background: `${COLORS.clear}22` }} /> ชุมชนใสแล้ว
+          <span className="h-3 w-4 rounded-sm border-2" style={{ borderColor: CLEAR_AREA, background: `${CLEAR_AREA}33` }} /> ชุมชนใสแล้ว
         </span>
       </div>
     )}
