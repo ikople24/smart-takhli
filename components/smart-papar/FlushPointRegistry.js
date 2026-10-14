@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Swal from "sweetalert2";
 import { Check, Move, Plus, Search, X } from "lucide-react";
 import FlushPointEditor, { draftFromPoint } from "@/components/smart-papar/FlushPointEditor";
+import FlushPointRecheckPanel from "@/components/smart-papar/FlushPointRecheckPanel";
 import { FLUSH_POINT_KIND_COLORS, FLUSH_POINT_KIND_LABELS, distanceM } from "@/lib/smart-papar/flushPoints";
 import {
   FLUSH_POINT_ISSUE_LABELS,
@@ -24,6 +25,7 @@ const FILTERS = [
   { key: "all", label: "ทั้งหมด" },
   { key: "check", label: "ต้องตรวจข้อมูล" },
   { key: "inactive", label: "ปิดใช้งาน" },
+  { key: "recheck", label: "รีเช็คจากงานโบ" },
 ];
 
 export default function FlushPointRegistry() {
@@ -41,6 +43,28 @@ export default function FlushPointRegistry() {
   const [moveBackup, setMoveBackup] = useState(null);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // รีเช็คจากงานโบ: บันทึกโบที่ยังไม่ผูกหัว — อาจเป็นหัวใหม่ที่ทะเบียนยังไม่มี
+  const [recheckLogs, setRecheckLogs] = useState([]);
+  const [selectedLogId, setSelectedLogId] = useState(null);
+  const [recheckBusy, setRecheckBusy] = useState(false);
+  const [pendingLinkLogId, setPendingLinkLogId] = useState(null); // สร้างหัวใหม่จากบันทึกนี้ → ผูกให้หลังบันทึกหัว
+  const loadRecheck = useCallback(async () => {
+    try {
+      const res = await fetch("/api/smart-papar/flush-points/recheck");
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) setRecheckLogs(data.data);
+    } catch {
+      /* รายการเสริม — โหลดไม่ได้ก็ยังใช้ทะเบียนได้ */
+    }
+  }, []);
+  useEffect(() => {
+    loadRecheck();
+  }, [loadRecheck]);
+  const selectedLog = useMemo(
+    () => recheckLogs.find((l) => String(l._id) === selectedLogId) || null,
+    [recheckLogs, selectedLogId]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,6 +112,7 @@ export default function FlushPointRegistry() {
   };
 
   const closeEditor = () => {
+    setPendingLinkLogId(null);
     setSelectedId(null);
     setCreating(false);
     setDraft(null);
@@ -100,6 +125,8 @@ export default function FlushPointRegistry() {
     if (id === selectedId && !creating) return;
     if (!(await confirmDiscard())) return;
     const p = points.find((x) => String(x._id) === id);
+    setSelectedLogId(null);
+    setPendingLinkLogId(null);
     setCreating(false);
     setSelectedId(id);
     setDraft(draftFromPoint(p));
@@ -109,6 +136,8 @@ export default function FlushPointRegistry() {
 
   const startCreate = async () => {
     if (!(await confirmDiscard())) return;
+    setSelectedLogId(null);
+    setPendingLinkLogId(null);
     setSelectedId(null);
     setCreating(true);
     setDraft({
@@ -163,6 +192,10 @@ export default function FlushPointRegistry() {
         const merged = { ...old, ...saved, lastFlushedAt: old?.lastFlushedAt ?? null, flushCount: old?.flushCount ?? 0 };
         return old ? prev.map((p) => (String(p._id) === id ? merged : p)) : [...prev, merged].sort((a, b) => a.code.localeCompare(b.code));
       });
+      if (creating && pendingLinkLogId) {
+        await linkLogTo(pendingLinkLogId, saved, { quiet: true });
+        setPendingLinkLogId(null);
+      }
       setCreating(false);
       setSelectedId(id);
       setDraft(draftFromPoint(saved));
@@ -230,13 +263,94 @@ export default function FlushPointRegistry() {
     }
   };
 
+  const selectLog = async (id) => {
+    if (!(await confirmDiscard())) return;
+    closeEditor();
+    setSelectedLogId(id);
+  };
+
+  // ผูกบันทึกโบเข้ากับหัวในทะเบียน → หายจากรายการรีเช็ค
+  const linkLogTo = async (logId, point, { quiet = false } = {}) => {
+    setRecheckBusy(true);
+    try {
+      const res = await fetch("/api/smart-papar/flush-points/recheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logId, action: "link", flushPointId: point._id }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.message || "ผูกหัวไม่สำเร็จ");
+      setRecheckLogs((prev) => prev.filter((l) => String(l._id) !== String(logId)));
+      setSelectedLogId(null);
+      setPoints((prev) =>
+        prev.map((p) => (String(p._id) === String(point._id) ? { ...p, flushCount: (p.flushCount || 0) + 1 } : p))
+      );
+      if (!quiet) Swal.fire({ icon: "success", title: `ผูกกับ ${point.code} แล้ว`, timer: 1300, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: e instanceof TypeError ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้" : e.message });
+      loadRecheck();
+    } finally {
+      setRecheckBusy(false);
+    }
+  };
+
+  const dismissLog = async (log) => {
+    const ok = await Swal.fire({
+      icon: "question",
+      title: "ยืนยันว่าจุดนี้ไม่ใช่หัวโบล์?",
+      text: log.locationName,
+      showCancelButton: true,
+      confirmButtonText: "ไม่ใช่หัวโบล์",
+      cancelButtonText: "ยกเลิก",
+    });
+    if (!ok.isConfirmed) return;
+    setRecheckBusy(true);
+    try {
+      const res = await fetch("/api/smart-papar/flush-points/recheck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logId: log._id, action: "dismiss" }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.message || "บันทึกไม่สำเร็จ");
+      setRecheckLogs((prev) => prev.filter((l) => String(l._id) !== String(log._id)));
+      setSelectedLogId(null);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: e instanceof TypeError ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้" : e.message });
+    } finally {
+      setRecheckBusy(false);
+    }
+  };
+
+  // สร้างหัวใหม่จากบันทึกโบ: ตำแหน่ง/ชื่อ/รูปจากหน้างาน · รหัสรันให้ · บันทึกหัวแล้วผูกบันทึกให้อัตโนมัติ
+  const createFromLog = (log) => {
+    const [lng, lat] = log.location.coordinates;
+    setSelectedLogId(null);
+    setSelectedId(null);
+    setCreating(true);
+    setPendingLinkLogId(String(log._id));
+    setDraft({
+      ...draftFromPoint(null),
+      code: nextFlushPointCode(points.map((p) => p.code), "unknown"),
+      codeAuto: true,
+      lat,
+      lng,
+      name: String(log.locationName || "").slice(0, 120),
+      photoUrl: log.photosBefore?.[0] || log.photosAfter?.[0] || "",
+    });
+    setErrors({});
+    setMoving(false);
+    setMoveBackup(null);
+  };
+
   const counts = useMemo(
     () => ({
       all: points.length,
       check: points.filter((p) => p.active !== false && flushPointIssues(p).length > 0).length,
       inactive: points.filter((p) => p.active === false).length,
+      recheck: recheckLogs.length,
     }),
-    [points]
+    [points, recheckLogs]
   );
 
   const shown = useMemo(() => {
@@ -339,13 +453,50 @@ export default function FlushPointRegistry() {
                     ))}
                   </select>
                 </div>
+                {filter === "recheck" && (
+                  <p className="text-xs leading-relaxed text-pp-muted">
+                    จุดที่โบแล้วแต่ไม่ได้ผูกหัวโบล์ (จุดแดงบนแผนที่) — อาจเป็นหัวใหม่ที่ทะเบียนยังไม่มี เลือกเพื่อผูกหัวเดิมหรือสร้างหัวใหม่
+                  </p>
+                )}
                 {filter === "check" && (
                   <p className="text-xs leading-relaxed text-pp-muted">
                     ต้องตรวจ = ยังไม่มีชื่อจุด · ยังไม่ระบุถนน/ซอย · ชนิดไม่ระบุ
                   </p>
                 )}
                 <div className="-mx-1 max-h-[50vh] flex-1 overflow-y-auto px-1 lg:max-h-none">
-                  {loading ? (
+                  {filter === "recheck" ? (
+                    recheckLogs.length === 0 ? (
+                      <div className="py-10 text-center text-sm text-pp-muted">ทุกจุดที่โบแล้วผูกกับหัวในทะเบียนครบ</div>
+                    ) : (
+                      <ul className="space-y-1">
+                        {recheckLogs.map((l) => {
+                          const id = String(l._id);
+                          const on = id === selectedLogId;
+                          return (
+                            <li key={id}>
+                              <button
+                                type="button"
+                                aria-current={on || undefined}
+                                onClick={() => selectLog(id)}
+                                className={`flex w-full items-start gap-2.5 rounded-xl p-2.5 text-left ${
+                                  on ? "bg-pp-tint-2 ring-2 ring-pp-water" : "hover:bg-pp-ground"
+                                }`}
+                              >
+                                <span className="mt-1.5 h-2.5 w-2.5 flex-none rounded-full bg-[#E11D48]" />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-semibold">{l.locationName}</span>
+                                  <span className="block truncate text-xs text-pp-muted">
+                                    {new Date(l.flushedAt).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short" })} ·{" "}
+                                    {l.createdByName || "-"}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )
+                  ) : loading ? (
                     <div className="py-10 text-center text-pp-muted">กำลังโหลด…</div>
                   ) : shown.length === 0 ? (
                     <div className="py-10 text-center text-sm text-pp-muted">ไม่พบหัวโบล์ที่ตรงเงื่อนไข</div>
@@ -412,6 +563,16 @@ export default function FlushPointRegistry() {
                   draftKind={draft?.kind}
                   onMove={onMove}
                   className="h-full w-full"
+                  logMarkers={
+                    filter === "recheck" || selectedLogId || pendingLinkLogId
+                      ? recheckLogs.map((l) => ({
+                          id: String(l._id),
+                          latLng: [l.location.coordinates[1], l.location.coordinates[0]],
+                        }))
+                      : []
+                  }
+                  selectedLogId={selectedLogId}
+                  onSelectLog={selectLog}
                 />
                 {moving && (
                   <>
@@ -469,7 +630,7 @@ export default function FlushPointRegistry() {
               <section
                 aria-label="แก้ไขหัวโบล์"
                 className={`order-3 lg:block ${
-                  editing && !moving ? "fixed inset-0 z-[1000] lg:static lg:z-auto" : "hidden"
+                  (editing && !moving) || selectedLog ? "fixed inset-0 z-[1000] lg:static lg:z-auto" : "hidden"
                 } overflow-hidden lg:h-[calc(100dvh-190px)] lg:min-h-[560px] lg:rounded-2xl`}
               >
                 {editing ? (
@@ -487,6 +648,17 @@ export default function FlushPointRegistry() {
                     onSave={save}
                     onDelete={removePoint}
                     deleting={deleting}
+                  />
+                ) : selectedLog ? (
+                  <FlushPointRecheckPanel
+                    key={selectedLogId}
+                    log={selectedLog}
+                    points={points}
+                    busy={recheckBusy}
+                    onLink={(point) => linkLogTo(selectedLog._id, point)}
+                    onCreate={() => createFromLog(selectedLog)}
+                    onDismiss={() => dismissLog(selectedLog)}
+                    onClose={() => setSelectedLogId(null)}
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 bg-white p-6 text-center">

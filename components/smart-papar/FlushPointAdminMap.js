@@ -64,6 +64,10 @@ export default function FlushPointAdminMap({
   draftKind = "unknown",
   onMove,
   className = "",
+  // รีเช็คจากงานโบ: จุดที่โบแล้วแต่ไม่ผูกหัว (วงแดงกุหลาบ) — [{ id, latLng }]
+  logMarkers = [],
+  selectedLogId = null,
+  onSelectLog,
 }) {
   const icon = useMemo(() => dragIcon(FLUSH_POINT_KIND_COLORS[draftKind] || FLUSH_POINT_KIND_COLORS.unknown), [draftKind]);
   const withCoords = useMemo(() => points.filter((p) => Array.isArray(p.location?.coordinates)), [points]);
@@ -78,6 +82,10 @@ export default function FlushPointAdminMap({
       <FitAll points={withCoords} />
       <FocusSelected target={draftLatLng || originalLatLng} focusKey={selectedId || "none"} />
       <ClickToPlace enabled={moving} onPlace={onMove} />
+      <FocusSelected
+        target={logMarkers.find((m) => m.id === selectedLogId)?.latLng || null}
+        focusKey={`log:${selectedLogId || "none"}`}
+      />
 
       {withCoords.map((p) => {
         const id = String(p._id);
@@ -100,6 +108,24 @@ export default function FlushPointAdminMap({
           >
             <Tooltip direction="top" offset={[0, -6]}>
               {p.code}
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
+
+      {logMarkers.map((m) => {
+        const on = m.id === selectedLogId;
+        return (
+          <CircleMarker
+            key={`log-${m.id}`}
+            center={m.latLng}
+            radius={on ? 10 : 7}
+            bubblingMouseEvents={false}
+            eventHandlers={{ click: () => !moving && onSelectLog?.(m.id) }}
+            pathOptions={{ color: on ? "#0B2233" : "#ffffff", weight: on ? 3 : 2, fillColor: "#E11D48", fillOpacity: 0.95 }}
+          >
+            <Tooltip direction="top" offset={[0, -6]}>
+              จุดโบที่ยังไม่ผูกหัว
             </Tooltip>
           </CircleMarker>
         );
