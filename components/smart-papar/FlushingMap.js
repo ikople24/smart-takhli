@@ -174,7 +174,7 @@ export default function FlushingMap({ logs, statusLogs, onSelect }) {
     </div>
     <div className="order-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 lg:order-2">
     <div className="relative">
-    <MapContainer center={TAKHLI_CENTER} zoom={14} className="flushing-map h-[380px] w-full lg:h-[520px]" scrollWheelZoom={false}>
+    <MapContainer center={TAKHLI_CENTER} zoom={14} maxZoom={21} className="flushing-map h-[380px] w-full lg:h-[520px]" scrollWheelZoom>
       <BaseLayersControl />
       <ClearOnMapClick onClear={() => setSelectedPointId(null)} />
       <FitBounds points={points} communities={communities} fallbackPoints={flushPointLatLngs} />
