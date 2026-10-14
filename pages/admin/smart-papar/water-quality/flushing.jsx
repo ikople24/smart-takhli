@@ -128,8 +128,10 @@ export default function SmartPaparFlushingPage() {
 
   const stats = useMemo(() => {
     const officers = new Set(logs.map((l) => l.createdByName).filter(Boolean)).size;
-    const avgMin = logs.length
-      ? Math.round(logs.reduce((s, l) => s + (Number(l.durationMin) || 0), 0) / logs.length)
+    // เฉลี่ยเฉพาะครั้งที่ได้เปิดน้ำจริง — ครั้งที่เปิดไม่ได้ (สิ่งกีดขวาง/หัวชำรุด) บันทึก 0 นาที ไม่นับ
+    const flushed = logs.filter((l) => Number(l.durationMin) > 0);
+    const avgMin = flushed.length
+      ? Math.round(flushed.reduce((s, l) => s + Number(l.durationMin), 0) / flushed.length)
       : 0;
     const turbidPoints = new Set(logs.filter((l) => l.result === "still_turbid").map(pointKey)).size;
     return { officers, avgMin, turbidPoints };

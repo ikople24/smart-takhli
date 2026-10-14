@@ -6,7 +6,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, Droplet, Plus, TriangleAlert } from "lucide-react";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
-import { ntuChangePct } from "@/lib/smart-papar/flushing";
+import { durationText, ntuChangePct } from "@/lib/smart-papar/flushing";
 
 const fmtTime = (d) =>
   new Date(d).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
@@ -167,7 +167,7 @@ function SavedScreen({ last, count, onNext, onHome }) {
           <div className="min-w-0">
             {code && <div className="font-tk-mono">{code}</div>}
             <div className="truncate text-sm text-pp-muted">
-              {name} · {fmtTime(last.flushedAt || Date.now())} · {last.durationMin} นาที
+              {name} · {fmtTime(last.flushedAt || Date.now())} · {durationText(last)}
             </div>
           </div>
           <ResultChip result={last.result} />
@@ -355,7 +355,7 @@ export default function FieldFlushingPage() {
                               {name}
                             </span>
                             <span className={`block text-[13px] ${clear ? "text-pp-muted" : "text-pp-turbid-ink"}`}>
-                              {fmtTime(s.flushedAt || Date.now())} · {s.durationMin} นาที · {clear ? "ใสแล้ว" : "ยังขุ่น"}
+                              {fmtTime(s.flushedAt || Date.now())} · {durationText(s)} · {clear ? "ใสแล้ว" : "ยังขุ่น"}
                             </span>
                           </span>
                         </div>
