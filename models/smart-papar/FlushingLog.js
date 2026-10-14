@@ -22,6 +22,8 @@ const FlushingLogSchema = new mongoose.Schema(
     // หัวโบล์จากทะเบียน (FlushPoint) — ไม่บังคับ · flushPointCode เก็บสำเนาไว้ เผื่อทะเบียนเปลี่ยนรหัสภายหลัง
     flushPointId: { type: mongoose.Schema.Types.ObjectId, ref: "FlushPoint", default: null },
     flushPointCode: { type: String, default: "" },
+    // รีเช็คทะเบียน (แท็บทะเบียนหัวโบล์ → รีเช็คจากงานโบ): "dismissed" = แอดมินยืนยันว่าจุดนี้ไม่ใช่หัวโบล์ ไม่ต้องขึ้นรายการอีก
+    flushPointReview: { type: String, enum: ["", "dismissed"], default: "" },
 
     // admin = บันทึกจากหน้าแอดมิน (ล็อกอิน Clerk) · field = เจ้าหน้าที่ภาคสนามที่ใส่รหัสจากหน้าแรก (ไม่มี clerkId)
     source: { type: String, enum: ["admin", "field"], default: "admin" },
