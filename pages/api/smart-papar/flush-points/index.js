@@ -63,7 +63,16 @@ export default async function handler(req, res) {
         .lean(),
       FlushingLog.aggregate([
         { $match: { deletedAt: null, flushPointId: { $type: "objectId" } } },
-        { $group: { _id: "$flushPointId", lastFlushedAt: { $max: "$flushedAt" }, count: { $sum: 1 } } },
+        { $sort: { flushedAt: -1 } },
+        {
+          $group: {
+            _id: "$flushPointId",
+            lastFlushedAt: { $first: "$flushedAt" },
+            lastResult: { $first: "$result" },
+            lastTurbidCause: { $first: "$turbidCause" },
+            count: { $sum: 1 },
+          },
+        },
       ]),
     ]);
     const byId = new Map(last.map((l) => [String(l._id), l]));
@@ -73,7 +82,13 @@ export default async function handler(req, res) {
       success: true,
       data: points.map((p) => {
         const l = byId.get(String(p._id));
-        return { ...p, lastFlushedAt: l?.lastFlushedAt || null, flushCount: l?.count || 0 };
+        return {
+          ...p,
+          lastFlushedAt: l?.lastFlushedAt || null,
+          lastResult: l?.lastResult || null,
+          lastTurbidCause: l?.lastTurbidCause || "",
+          flushCount: l?.count || 0,
+        };
       }),
     });
   } catch (error) {

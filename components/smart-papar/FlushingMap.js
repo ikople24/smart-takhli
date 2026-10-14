@@ -12,6 +12,7 @@ import { FLUSHING_RESULT_LABELS } from "@/lib/smart-papar/flushing";
 import { FLUSH_POINT_KIND_COLORS } from "@/lib/smart-papar/flushPoints";
 import FlushPointPanel from "./FlushPointPanel";
 import FlushPointSummary from "./FlushPointSummary";
+import { communityTurbidStatus, latestByPoint } from "@/lib/smart-papar/communityStatus";
 
 const TAKHLI_CENTER = [15.2605, 100.3555];
 // ตรงกับโทเคน pp-clear / pp-turbid ใน globals.css
@@ -33,8 +34,29 @@ const escapeHtml = (v) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
 
-function bindCommunityTooltip(feature, layer) {
-  layer.bindTooltip(escapeHtml(feature.properties?.name), { sticky: true });
+// ระบายสีชุมชนตามผลล่าสุดของจุดโบในช่วงที่เลือก: ยังขุ่น = อำพัน (เข้มขึ้นตามจำนวนจุด) · ใสทั้งหมด = เขียวน้ำทะเล
+// ไม่มีบันทึก = เส้นประฟ้าแบบเดิม
+function communityStyle(stat) {
+  if (stat?.status === "turbid") {
+    return {
+      color: COLORS.still_turbid,
+      weight: 2.5,
+      dashArray: null,
+      fillColor: COLORS.still_turbid,
+      fillOpacity: Math.min(0.18 + (stat.turbid - 1) * 0.08, 0.45),
+    };
+  }
+  if (stat?.status === "clear") {
+    return { color: COLORS.clear, weight: 2, dashArray: null, fillColor: COLORS.clear, fillOpacity: 0.12 };
+  }
+  return COMMUNITY_STYLE;
+}
+
+function communityTooltip(name, stat) {
+  const parts = [`<b>${escapeHtml(name)}</b>`];
+  if (stat?.status === "turbid") parts.push(`ยังขุ่น ${stat.turbid} จุด${stat.clear ? ` · ใสแล้ว ${stat.clear} จุด` : ""}`);
+  else if (stat?.status === "clear") parts.push(`ใสแล้วทั้งหมด ${stat.clear} จุด`);
+  return parts.join("<br>");
 }
 
 // ขยับกล้องเฉพาะตอนชุดจุดเปลี่ยนจริง (เทียบด้วย key) — ไม่ใช่ทุกครั้งที่ parent re-render
@@ -68,7 +90,8 @@ function ClearOnMapClick({ onClear }) {
   return null;
 }
 
-export default function FlushingMap({ logs, onSelect }) {
+// statusLogs = บันทึกทั้งหมดในช่วงวัน (ไม่ผ่านตัวกรองผล/ค้นหา) ใช้ระบายสีชุมชน — ไม่ส่งมาใช้ logs แทน
+export default function FlushingMap({ logs, statusLogs, onSelect }) {
   const [selectedPointId, setSelectedPointId] = useState(null);
   const [communities, setCommunities] = useState(null);
   const [flushPoints, setFlushPoints] = useState([]);
@@ -112,13 +135,40 @@ export default function FlushingMap({ logs, onSelect }) {
     () => flushPoints.map((p) => [p.location.coordinates[1], p.location.coordinates[0]]),
     [flushPoints]
   );
+  // สถานะชุมชน — ใช้บันทึกล่าสุดของแต่ละจุดในช่วงที่แสดง (โบซ้ำแล้วใส = นับเป็นใส)
+  const communityStats = useMemo(
+    () => communityTurbidStatus(communities?.features || [], latestByPoint(statusLogs || logs)),
+    [communities, statusLogs, logs]
+  );
+  // react-leaflet <GeoJSON> ไม่อัปเดต style/tooltip เองเมื่อข้อมูลเปลี่ยน — ใช้ key บังคับวาดใหม่
+  const communityKey = [...communityStats.entries()].map(([n, v]) => `${n}:${v.turbid}/${v.clear}`).join("|");
+  const turbidCommunities = [...communityStats.entries()]
+    .filter(([, v]) => v.status === "turbid")
+    .sort((a, b) => b[1].turbid - a[1].turbid);
+
   const selectedPoint = flushPoints.find((p) => String(p._id) === selectedPointId) || null;
 
   // เดสก์ท็อป: 3 คอลัมน์ [สรุปหัวโบล์ | แผนที่ | ข้อมูลหัวที่เลือก] — คอลัมน์ข้างกว้างคงที่ แผนที่จึงไม่เปลี่ยนขนาด
   // (Leaflet ไม่ต้อง invalidateSize) · มือถือ: แผนที่ก่อน สรุปตามหลัง ข้อมูลหัวเป็นแผ่นล่างทับแผนที่
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
-    <div className="order-2 lg:order-1">
+    <div className="order-2 space-y-3 lg:order-1">
+      {turbidCommunities.length > 0 && (
+        <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+          <div className="text-sm font-semibold text-pp-turbid-ink">ชุมชนที่ยังขุ่น</div>
+          <ul className="mt-2 space-y-1.5 text-sm">
+            {turbidCommunities.map(([name, v]) => (
+              <li key={name} className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 flex-none rounded-sm" style={{ background: COLORS.still_turbid }} />
+                  <span className="truncate">{name}</span>
+                </span>
+                <span className="flex-none font-semibold tabular-nums text-pp-turbid-ink">{v.turbid} จุด</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <FlushPointSummary points={flushPoints} kindColors={KIND_COLORS} />
     </div>
     <div className="order-1 min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 lg:order-2">
@@ -129,12 +179,21 @@ export default function FlushingMap({ logs, onSelect }) {
       <FitBounds points={points} communities={communities} fallbackPoints={flushPointLatLngs} />
       <Pane name="flushing-communities" style={{ zIndex: 350 }}>
         {communities && (
-          <GeoJSON data={communities} style={COMMUNITY_STYLE} onEachFeature={bindCommunityTooltip} />
+          <GeoJSON
+            key={communityKey}
+            data={communities}
+            style={(f) => communityStyle(communityStats.get(String(f.properties?.name ?? "")))}
+            onEachFeature={(f, layer) => {
+              const name = String(f.properties?.name ?? "");
+              layer.bindTooltip(communityTooltip(name, communityStats.get(name)), { sticky: true });
+            }}
+          />
         )}
       </Pane>
       <Pane name="flushing-points" style={{ zIndex: 390 }}>
         {flushPoints.map((p) => {
           const color = KIND_COLORS[p.kind] || KIND_COLORS.unknown;
+          const damaged = p.lastResult === "still_turbid" && p.lastTurbidCause === "damaged";
           const selected = String(p._id) === selectedPointId;
           return (
             <CircleMarker
@@ -145,8 +204,9 @@ export default function FlushingMap({ logs, onSelect }) {
               bubblingMouseEvents={false}
               eventHandlers={{ click: () => setSelectedPointId(String(p._id)) }}
               pathOptions={{
-                color: selected ? "#0f172a" : color,
-                weight: selected ? 3 : 2,
+                // ล่าสุดแจ้งว่าหัวโบล์ชำรุด/ฝืด → ขอบแดงหนา เห็นได้ทันทีว่าต้องส่งซ่อม
+                color: selected ? "#0f172a" : damaged ? "#B42318" : color,
+                weight: selected ? 3 : damaged ? 3 : 2,
                 fillColor: p.lastFlushedAt ? color : "#ffffff",
                 fillOpacity: 1,
               }}
@@ -199,6 +259,15 @@ export default function FlushingMap({ logs, onSelect }) {
         </span>
         <span className="flex items-center gap-1">
           <span className="h-2.5 w-2.5 rounded-full border-2 bg-white" style={{ borderColor: KIND_COLORS.tee_large }} /> หัวโบล์ (ยังไม่เคยโบ)
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2.5 w-2.5 rounded-full border-[3px] bg-white" style={{ borderColor: "#B42318" }} /> หัวโบล์แจ้งชำรุด
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-4 rounded-sm border-2" style={{ borderColor: COLORS.still_turbid, background: `${COLORS.still_turbid}55` }} /> ชุมชนยังขุ่น
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-4 rounded-sm border-2" style={{ borderColor: COLORS.clear, background: `${COLORS.clear}22` }} /> ชุมชนใสแล้ว
         </span>
       </div>
     )}

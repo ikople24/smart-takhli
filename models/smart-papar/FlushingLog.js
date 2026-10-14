@@ -14,6 +14,8 @@ const FlushingLogSchema = new mongoose.Schema(
     turbidityBeforeNtu: { type: Number, default: null },
     turbidityAfterNtu: { type: Number, default: null },
     result: { type: String, enum: ["clear", "still_turbid"], required: true },
+    // สาเหตุที่ยังขุ่น (lib/smart-papar/flushing.js TURBID_CAUSES) — "" = ใสแล้ว หรือบันทึกก่อนมีช่องนี้ (2026-10-14)
+    turbidCause: { type: String, enum: ["", "more_flush", "obstacle", "damaged", "other"], default: "" },
     photosBefore: { type: [String], default: [] },
     photosAfter: { type: [String], default: [] },
     note: { type: String, default: "" },

@@ -2,7 +2,7 @@
 // สถานะ ใส/ขุ่น ต่างกันทั้งสีและไอคอน (Check / TriangleAlert) ไม่พึ่งสีอย่างเดียว
 import { useState } from "react";
 import { Check, Clock, ExternalLink, Pencil, Trash2, TriangleAlert, X } from "lucide-react";
-import { EDIT_WINDOW_DAYS, FLUSHING_RESULT_LABELS, ntuChangePct } from "@/lib/smart-papar/flushing";
+import { EDIT_WINDOW_DAYS, FLUSHING_RESULT_LABELS, TURBID_CAUSE_LABELS, ntuChangePct } from "@/lib/smart-papar/flushing";
 import PhotoLightbox from "./PhotoLightbox";
 
 const fmtDateTime = (d) =>
@@ -322,6 +322,14 @@ export function FlushingDetail({ log, history = [], canModify, onClose, onEdit, 
           <NtuBars log={log} />
 
           <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-3 text-[15px]">
+            {log.result === "still_turbid" && (
+              <>
+                <dt className="text-pp-muted">สาเหตุที่ยังขุ่น</dt>
+                <dd className="font-semibold text-pp-turbid-ink">
+                  {TURBID_CAUSE_LABELS[log.turbidCause] || "ยังไม่ระบุ (บันทึกก่อนมีช่องนี้)"}
+                </dd>
+              </>
+            )}
             {others.length > 0 && (
               <>
                 <dt className="text-pp-muted">ประวัติจุดนี้</dt>
