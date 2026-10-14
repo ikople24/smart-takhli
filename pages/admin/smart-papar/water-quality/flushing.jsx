@@ -11,7 +11,15 @@ import { ClipboardList, MapPin, Plus, Search, TriangleAlert } from "lucide-react
 import PermissionGuard from "@/components/PermissionGuard";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
 import { FlushingList, FlushingDetail } from "@/components/smart-papar/FlushingList";
-import { bangkokYmd, canModifyFlushingLog, summarizeFlushing } from "@/lib/smart-papar/flushing";
+import {
+  FOLLOW_UP_GROUPS,
+  TURBID_CAUSE_LABELS,
+  bangkokYmd,
+  canModifyFlushingLog,
+  followUpGroupOf,
+  summarizeFlushing,
+} from "@/lib/smart-papar/flushing";
+import { latestByPoint, pointKeyOf } from "@/lib/smart-papar/communityStatus";
 
 // แท็บทะเบียนหัวโบล์ (แผนที่แก้ไข + leaflet) — โหลดเมื่อเปิดแท็บเท่านั้น
 const FlushPointRegistry = dynamic(() => import("@/components/smart-papar/FlushPointRegistry"), {
@@ -46,7 +54,7 @@ function rangeOf(days) {
   return { from: bangkokYmd(new Date(now.getTime() - days * 86400000)), to: bangkokYmd(now) };
 }
 
-const pointKey = (l) => (l.flushPointId ? String(l.flushPointId) : `name:${l.locationName}`);
+const pointKey = pointKeyOf;
 
 const fmtShort = (d) =>
   new Date(d).toLocaleString("th-TH", {
@@ -120,26 +128,28 @@ export default function SmartPaparFlushingPage() {
 
   const stats = useMemo(() => {
     const officers = new Set(logs.map((l) => l.createdByName).filter(Boolean)).size;
-    const avgMin = logs.length
-      ? Math.round(logs.reduce((s, l) => s + (Number(l.durationMin) || 0), 0) / logs.length)
+    // เฉลี่ยเฉพาะครั้งที่ได้เปิดน้ำจริง — ครั้งที่เปิดไม่ได้ (สิ่งกีดขวาง/หัวชำรุด) บันทึก 0 นาที ไม่นับ
+    const flushed = logs.filter((l) => Number(l.durationMin) > 0);
+    const avgMin = flushed.length
+      ? Math.round(flushed.reduce((s, l) => s + Number(l.durationMin), 0) / flushed.length)
       : 0;
     const turbidPoints = new Set(logs.filter((l) => l.result === "still_turbid").map(pointKey)).size;
     return { officers, avgMin, turbidPoints };
   }, [logs]);
 
-  // จุดที่ "ล่าสุด" ยังขุ่น — ถ้าโบซ้ำแล้วใส จุดนั้นหลุดจากรายการตามซ้ำเอง (logs เรียงใหม่สุดก่อนจาก API)
-  const followUps = useMemo(() => {
-    const latest = new Map();
-    const counts = new Map();
-    for (const l of logs) {
-      const k = pointKey(l);
-      counts.set(k, (counts.get(k) || 0) + 1);
-      if (!latest.has(k)) latest.set(k, l);
-    }
-    return [...latest.entries()]
-      .filter(([, l]) => l.result === "still_turbid")
-      .map(([k, l]) => ({ log: l, times: counts.get(k) }));
-  }, [logs]);
+  // จุดที่ "ล่าสุด" ยังขุ่น — ถ้าโบซ้ำแล้วใส จุดนั้นหลุดจากรายการตามซ้ำเอง · แยกกลุ่มงานตามสาเหตุ
+  const followUps = useMemo(
+    () => latestByPoint(logs).filter(({ log }) => log.result === "still_turbid"),
+    [logs]
+  );
+  const followUpGroups = useMemo(
+    () =>
+      FOLLOW_UP_GROUPS.map((g) => ({
+        ...g,
+        items: followUps.filter(({ log }) => followUpGroupOf(log.turbidCause) === g.key),
+      })).filter((g) => g.items.length > 0),
+    [followUps]
+  );
 
   const historyOf = (log) => logs.filter((l) => pointKey(l) === pointKey(log));
 
@@ -322,33 +332,46 @@ export default function SmartPaparFlushingPage() {
                     <h2 className="flex-1 font-tk-sans text-lg font-semibold">จุดที่ยังขุ่น · ต้องตามซ้ำ</h2>
                     <span className="text-[13px] text-pp-muted">{followUps.length} จุด</span>
                   </div>
-                  <div className="flex gap-2.5 overflow-x-auto pb-1">
-                    {followUps.map(({ log, times }) => (
-                      <button
-                        key={log._id}
-                        type="button"
-                        onClick={() => setSelected(log)}
-                        className="flex min-w-[240px] flex-col gap-0.5 rounded-xl bg-pp-turbid-wash px-3.5 py-3 text-left"
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="truncate font-semibold">
-                            {log.flushPointCode && <span className="font-tk-mono text-sm">{log.flushPointCode} · </span>}
-                            {String(log.locationName || "").replace(` (${log.flushPointCode})`, "")}
-                          </span>
-                          {times > 1 && (
-                            <span className="flex-none rounded-full bg-pp-turbid-tint px-2 py-0.5 text-xs font-semibold text-pp-turbid-ink">
-                              {times} ครั้ง
-                            </span>
-                          )}
+                  {followUpGroups.map((g) => (
+                    <div key={g.key} className="space-y-1.5">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-pp-ink">{g.label}</span>
+                        <span className="text-[13px] text-pp-muted">
+                          {g.items.length} จุด · {g.hint}
                         </span>
-                        <span className="text-[13px] text-pp-muted">ล่าสุด {fmtShort(log.flushedAt)}</span>
-                      </button>
-                    ))}
-                  </div>
+                      </div>
+                      <div className="flex gap-2.5 overflow-x-auto pb-1">
+                        {g.items.map(({ log, times }) => (
+                          <button
+                            key={log._id}
+                            type="button"
+                            onClick={() => setSelected(log)}
+                            className="flex min-w-[240px] flex-col gap-0.5 rounded-xl bg-pp-turbid-wash px-3.5 py-3 text-left"
+                          >
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="truncate font-semibold">
+                                {log.flushPointCode && <span className="font-tk-mono text-sm">{log.flushPointCode} · </span>}
+                                {String(log.locationName || "").replace(` (${log.flushPointCode})`, "")}
+                              </span>
+                              {times > 1 && (
+                                <span className="flex-none rounded-full bg-pp-turbid-tint px-2 py-0.5 text-xs font-semibold text-pp-turbid-ink">
+                                  {times} ครั้ง
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-[13px] text-pp-muted">
+                              ล่าสุด {fmtShort(log.flushedAt)}
+                              {log.turbidCause ? ` · ${TURBID_CAUSE_LABELS[log.turbidCause]}` : log.note ? ` · ${log.note}` : ""}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </section>
               )}
 
-              <FlushingMap logs={shown} onSelect={setSelected} />
+              <FlushingMap logs={shown} statusLogs={logs} onSelect={setSelected} />
 
               <section className="space-y-3 md:rounded-2xl md:bg-white md:p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">

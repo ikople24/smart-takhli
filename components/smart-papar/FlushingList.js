@@ -2,7 +2,7 @@
 // สถานะ ใส/ขุ่น ต่างกันทั้งสีและไอคอน (Check / TriangleAlert) ไม่พึ่งสีอย่างเดียว
 import { useState } from "react";
 import { Check, Clock, ExternalLink, Pencil, Trash2, TriangleAlert, X } from "lucide-react";
-import { EDIT_WINDOW_DAYS, FLUSHING_RESULT_LABELS, ntuChangePct } from "@/lib/smart-papar/flushing";
+import { EDIT_WINDOW_DAYS, FLUSHING_RESULT_LABELS, TURBID_CAUSE_LABELS, durationText, ntuChangePct } from "@/lib/smart-papar/flushing";
 import PhotoLightbox from "./PhotoLightbox";
 
 const fmtDateTime = (d) =>
@@ -108,7 +108,7 @@ export function FlushingList({ logs, onSelect }) {
                   <ResultBadge result={l.result} />
                 </div>
                 <div className="mt-1 text-[13px] text-pp-muted">
-                  {fmtShort(l.flushedAt)} · {l.durationMin} นาที
+                  {fmtShort(l.flushedAt)} · {durationText(l)}
                 </div>
                 <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-pp-muted">
                   {l.createdByName || "-"}
@@ -169,7 +169,7 @@ export function FlushingList({ logs, onSelect }) {
                       <PointName log={l} />
                     </button>
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{l.durationMin}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{Number(l.durationMin) > 0 ? l.durationMin : "–"}</td>
                   <td className="px-3 py-2.5">
                     <NtuCell log={l} />
                   </td>
@@ -312,7 +312,7 @@ export function FlushingDetail({ log, history = [], canModify, onClose, onEdit, 
           <div className="flex flex-wrap items-center gap-2.5">
             <ResultBadge result={log.result} size="lg" />
             <span className="text-sm text-pp-muted">
-              {fmtDateTime(log.flushedAt)} · {log.durationMin} นาที
+              {fmtDateTime(log.flushedAt)} · {durationText(log)}
             </span>
           </div>
         </div>
@@ -322,6 +322,14 @@ export function FlushingDetail({ log, history = [], canModify, onClose, onEdit, 
           <NtuBars log={log} />
 
           <dl className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-3 text-[15px]">
+            {log.result === "still_turbid" && (
+              <>
+                <dt className="text-pp-muted">สาเหตุที่ยังขุ่น</dt>
+                <dd className="font-semibold text-pp-turbid-ink">
+                  {TURBID_CAUSE_LABELS[log.turbidCause] || "ยังไม่ระบุ (บันทึกก่อนมีช่องนี้)"}
+                </dd>
+              </>
+            )}
             {others.length > 0 && (
               <>
                 <dt className="text-pp-muted">ประวัติจุดนี้</dt>

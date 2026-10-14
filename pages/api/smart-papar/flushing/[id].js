@@ -18,6 +18,7 @@ const EDIT_FIELDS = [
   "photosAfter",
   "note",
   "flushPointId",
+  "turbidCause",
 ];
 
 export default async function handler(req, res) {

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Camera, Check, Clock, MapPin, Minus, Plus, RotateCw, TriangleAlert, X } from "lucide-react";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
 import { resizeImage } from "@/lib/smart-papar/resizeImage";
-import { MAX_PHOTOS_PER_SLOT, ntuChangePct } from "@/lib/smart-papar/flushing";
+import { MAX_PHOTOS_PER_SLOT, TURBID_CAUSES, TURBID_CAUSE_LABELS, isNoFlush, ntuChangePct } from "@/lib/smart-papar/flushing";
 import { FLUSH_POINT_KIND_LABELS, flushPointLabel, nearestFlushPoints } from "@/lib/smart-papar/flushPoints";
 
 const NEAR_RADIUS_M = 150;
@@ -33,6 +33,7 @@ function initialState(log) {
       turbidityBeforeNtu: "",
       turbidityAfterNtu: "",
       result: "",
+      turbidCause: "",
       note: "",
     };
   }
@@ -47,6 +48,7 @@ function initialState(log) {
     turbidityBeforeNtu: log.turbidityBeforeNtu ?? "",
     turbidityAfterNtu: log.turbidityAfterNtu ?? "",
     result: log.result || "",
+    turbidCause: log.turbidCause || "",
     note: log.note || "",
   };
 }
@@ -270,19 +272,23 @@ export default function FlushingForm({
   const ntuPct = ntuChangePct(form.turbidityBeforeNtu, form.turbidityAfterNtu);
 
   // ความคืบหน้า 5 ขั้น (แค่ช่วยนำสายตา — ตัวตรวจจริงคือ validateFlushingInput ฝั่ง server)
+  // เปิดน้ำไม่ได้ (สิ่งกีดขวาง/หัวชำรุด) → ไม่ต้องกรอกระยะเวลา/รูปหลังโบ ส่งได้เลย (ยังต้องมีรูปอย่างน้อย 1 รูป)
+  const noFlush = isNoFlush(form.result, form.turbidCause);
   const steps = [
     { label: "ตำแหน่ง", done: form.lat != null && form.locationName.trim() !== "" },
     { label: "รูปก่อน", done: photosBefore.some((p) => p.status === "done") },
-    { label: "ค่าวัด", done: parseInt(form.durationMin, 10) > 0 },
-    { label: "รูปหลัง", done: photosAfter.some((p) => p.status === "done") },
-    { label: "ผล", done: Boolean(form.result) },
+    { label: "ค่าวัด", done: noFlush || parseInt(form.durationMin, 10) > 0 },
+    { label: "รูปหลัง", done: noFlush || photosAfter.some((p) => p.status === "done") },
+    { label: "ผล", done: form.result === "clear" || (form.result === "still_turbid" && Boolean(form.turbidCause)) },
   ];
   const missing = [];
   if (form.lat == null) missing.push("ตำแหน่ง");
   else if (!form.locationName.trim()) missing.push("ชื่อจุด");
-  if (!(parseInt(form.durationMin, 10) > 0)) missing.push("ระยะเวลา");
+  if (!noFlush && !(parseInt(form.durationMin, 10) > 0)) missing.push("ระยะเวลา");
   if (!allPhotos.some((p) => p.status === "done" || p.status === "uploading")) missing.push("รูปอย่างน้อย 1 รูป");
   if (!form.result) missing.push("ผลหลังโบ");
+  else if (form.result === "still_turbid" && !form.turbidCause) missing.push("สาเหตุที่ยังขุ่น");
+  else if (form.result === "still_turbid" && form.turbidCause === "other" && !form.note.trim()) missing.push("หมายเหตุ");
 
   const submit = async () => {
     if (uploading || saving) return;
@@ -303,6 +309,7 @@ export default function FlushingForm({
       turbidityBeforeNtu: form.turbidityBeforeNtu,
       turbidityAfterNtu: form.turbidityAfterNtu,
       result: form.result,
+      turbidCause: form.result === "still_turbid" ? form.turbidCause : "",
       photosBefore: photosBefore.map((p) => p.url),
       photosAfter: photosAfter.map((p) => p.url),
       note: form.note,
@@ -526,6 +533,11 @@ export default function FlushingForm({
                   );
                 })}
               </div>
+              {noFlush && (
+                <p className="mt-1.5 text-[13px] text-pp-turbid-ink">
+                  เลือกสาเหตุว่าเปิดน้ำไม่ได้แล้ว — ไม่ต้องกรอกระยะเวลา และไม่ต้องมีรูปหลังโบ
+                </p>
+              )}
               <FieldError msg={errors.durationMin} />
             </div>
 
@@ -624,6 +636,35 @@ export default function FlushingForm({
               })}
             </div>
             <FieldError msg={errors.result} />
+            {form.result === "still_turbid" && (
+              <div className="mt-3">
+                <div className="mb-2 text-sm font-semibold text-pp-turbid-ink">ยังขุ่นเพราะอะไร?</div>
+                <div role="radiogroup" aria-label="สาเหตุที่ยังขุ่น" className="grid grid-cols-2 gap-2">
+                  {TURBID_CAUSES.map((c) => {
+                    const active = form.turbidCause === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => {
+                          setForm((f) => ({ ...f, turbidCause: c }));
+                          if (c === "other") setShowNote(true);
+                        }}
+                        className={`min-h-12 rounded-xl border-2 px-3 py-2 text-left text-[15px] font-semibold ${
+                          active ? "border-pp-turbid bg-pp-turbid-tint text-pp-turbid-ink" : "border-pp-line bg-white text-pp-ink"
+                        }`}
+                      >
+                        {active && <Check size={16} strokeWidth={3} className="mr-1 inline" aria-hidden />}
+                        {TURBID_CAUSE_LABELS[c]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <FieldError msg={errors.turbidCause} />
+              </div>
+            )}
           </Section>
 
           {/* วันเวลา + หมายเหตุ */}

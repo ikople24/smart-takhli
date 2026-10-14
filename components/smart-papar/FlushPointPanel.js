@@ -4,6 +4,7 @@
 // อยู่นอก <MapContainer> โดยตั้งใจ: ไม่ถูกหมุดทับ และคลิก/เลื่อนในแผงไม่ไปลากแผนที่
 import { useState } from "react";
 import { FLUSH_POINT_KIND_LABELS } from "@/lib/smart-papar/flushPoints";
+import { TURBID_CAUSE_LABELS } from "@/lib/smart-papar/flushing";
 import { cloudinaryThumb } from "@/lib/smart-papar/cloudinaryThumb";
 import PhotoLightbox from "./PhotoLightbox";
 
@@ -97,7 +98,17 @@ export default function FlushPointPanel({ point, color, onClose, docked = false 
               />
             </button>
           )}
-          {point.lastFlushedAt ? (
+          {point.lastFlushedAt && point.lastResult === "still_turbid" ? (
+            <div className="flex-1 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <div className="font-semibold">
+                ล่าสุดยังขุ่น · {fmtDate(point.lastFlushedAt)}
+              </div>
+              <div>
+                {point.lastTurbidCause === "damaged" ? "⚠ แจ้งหัวโบล์ชำรุด/ฝืด — ต้องส่งซ่อม" : TURBID_CAUSE_LABELS[point.lastTurbidCause] || "ยังไม่ระบุสาเหตุ"}
+              </div>
+              <div className="text-amber-800">บันทึกในระบบ {point.flushCount} ครั้ง</div>
+            </div>
+          ) : point.lastFlushedAt ? (
             <div className="flex-1 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               <div className="font-semibold">โบล่าสุด {fmtDate(point.lastFlushedAt)}</div>
               <div className="text-emerald-700">บันทึกในระบบ {point.flushCount} ครั้ง</div>
