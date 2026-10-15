@@ -145,7 +145,7 @@ export default function PaparPublicPage() {
                   <Verdict ok={ntuWithin(latest?.ntu)} />
                   <span className="text-[12px] text-[#6B6880]">ข้อมูลวันที่ {fmtDate(latest?.recordDate, { day: "numeric", month: "long", year: "numeric" })}</span>
                 </div>
-                <p className="relative mt-3 rounded-xl bg-[#F6F5FA]/90 px-3 py-2 text-[12px] leading-relaxed text-[#6B6880]">
+                <p className="relative mt-3 rounded-xl bg-[#F6F5FA]/70 px-3 py-2 text-[12px] leading-relaxed text-[#6B6880]">
                   *ค่ามาตรฐานของกรมอนามัยไม่เกิน {WATER_STANDARDS.ntuMax} NTU สามารถใช้อุปโภคบริโภคได้ (ณ หน้าโรงกรองประปาเทศบาลเมืองตาคลี)
                 </p>
               </section>
