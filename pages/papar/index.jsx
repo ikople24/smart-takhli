@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import CitizenShell from "@/components/citizen/CitizenShell";
-import { waterLevel } from "@/lib/citizen/waterLevel";
+import { ntuShade, waterLevel } from "@/lib/citizen/waterLevel";
 import { WATER_STANDARDS, phWithin, tdsWithin, ntuWithin } from "@/lib/smart-papar/publicSummary";
 
 const fmtDate = (ymd, opts = { day: "numeric", month: "short", year: "2-digit" }) =>
@@ -173,7 +173,18 @@ export default function PaparPublicPage() {
                       {(showAllDays ? data.daily : data.daily.slice(0, DAYS_PREVIEW)).map((r) => (
                         <tr key={r.recordDate} className="border-t border-[#F1F0F5]">
                           <td className="py-2">{fmtDate(r.recordDate)}</td>
-                          <td className={`py-2 text-right tabular-nums ${ntuWithin(r.ntu) === false ? "font-semibold text-[#B91C1C]" : ""}`}>{fmtNum(r.ntu, 2)}</td>
+                          <td className="py-2 text-right">
+                            {r.ntu === null ? (
+                              "–"
+                            ) : (
+                              <span
+                                className="inline-block min-w-[3.25rem] rounded-full px-2 py-0.5 text-center font-semibold tabular-nums"
+                                style={(({ bg, text }) => ({ background: bg, color: text }))(ntuShade(r.ntu))}
+                              >
+                                {fmtNum(r.ntu, 2)}
+                              </span>
+                            )}
+                          </td>
                           <td className={`py-2 text-right tabular-nums ${phWithin(r.ph) === false ? "font-semibold text-[#B91C1C]" : ""}`}>{fmtNum(r.ph, 2)}</td>
                           <td className={`py-2 text-right tabular-nums ${tdsWithin(r.tds) === false ? "font-semibold text-[#B91C1C]" : ""}`}>{fmtNum(r.tds, 0)}</td>
                           <td className="py-2 text-right">
