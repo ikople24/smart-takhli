@@ -1,9 +1,16 @@
 // แผงรีเช็คบันทึกโบที่ยังไม่ผูกหัวโบล์ (แท็บทะเบียน → ตัวกรอง "รีเช็คจากงานโบ")
 // ให้คนที่รู้พื้นที่ตัดสิน 1 ใน 3: เป็นหัวเดิมในทะเบียน / สร้างหัวใหม่ตรงนี้ / ไม่ใช่หัวโบล์
+// หัวเดิม: เลือกจาก "ใกล้สุด" หรือค้นจากรหัสได้ทุกหัว (ตำแหน่งทะเบียนบางหัวคลาดเกิน 100 ม.) แล้วเลือก
+//   "ผูก" (ตำแหน่งหัวไม่เปลี่ยน) หรือ "ผูก + ย้ายหัวมาที่นี่" (แก้ตำแหน่งทะเบียนเป็น GPS หน้างาน ลงประวัติ)
 // ห้ามตัดสินจากชื่อจุดอย่างเดียว — ระยะจาก GPS หน้างานเป็นหลัก (ชื่อซ้ำกันได้ ตำแหน่งในทะเบียนอาจผิด)
 import { useMemo, useState } from "react";
-import { Ban, Link2, MapPinPlus, X } from "lucide-react";
-import { FLUSH_POINT_KIND_COLORS, FLUSH_POINT_KIND_LABELS, nearestFlushPoints } from "@/lib/smart-papar/flushPoints";
+import { Ban, Link2, MapPinPlus, Move, X } from "lucide-react";
+import {
+  FLUSH_POINT_KIND_COLORS,
+  FLUSH_POINT_KIND_LABELS,
+  nearestFlushPoints,
+  searchFlushPoints,
+} from "@/lib/smart-papar/flushPoints";
 import { cloudinaryThumb } from "@/lib/smart-papar/cloudinaryThumb";
 import PhotoLightbox from "./PhotoLightbox";
 
@@ -19,12 +26,61 @@ const fmtDateTime = (d) =>
     minute: "2-digit",
   });
 
+const fmtDist = (m) => (m == null ? "" : m >= 1000 ? `${(m / 1000).toFixed(1)} กม.` : `${m} ม.`);
+
+function CandidateRow({ point, distanceM, busy, onLink }) {
+  return (
+    <li className="rounded-xl border-[1.5px] border-pp-line px-3 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <span
+          className="h-2.5 w-2.5 flex-none rounded-full"
+          style={{ background: FLUSH_POINT_KIND_COLORS[point.kind] || FLUSH_POINT_KIND_COLORS.unknown }}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block font-tk-mono text-sm">{point.code}</span>
+          <span className="block truncate text-[13px] text-pp-muted">
+            {[point.name || point.roadName, FLUSH_POINT_KIND_LABELS[point.kind]].filter(Boolean).join(" · ")}
+          </span>
+        </span>
+        <span className={`flex-none text-sm tabular-nums ${distanceM > 30 ? "text-pp-turbid-ink" : "text-pp-muted"}`}>
+          {fmtDist(distanceM)}
+        </span>
+      </div>
+      <div className="mt-2 flex gap-1.5">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onLink(point, { move: false })}
+          className="flex h-9 flex-1 items-center justify-center gap-1 rounded-lg border-[1.5px] border-pp-line-2 text-[13px] font-semibold disabled:opacity-50"
+        >
+          <Link2 size={15} aria-hidden />
+          ผูก
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onLink(point, { move: true })}
+          className="flex h-9 flex-1 items-center justify-center gap-1 rounded-lg bg-pp-tint text-[13px] font-semibold text-pp-deep disabled:opacity-50"
+        >
+          <Move size={15} aria-hidden />
+          ผูก + ย้ายหัวมาที่นี่
+        </button>
+      </div>
+    </li>
+  );
+}
+
 export default function FlushPointRecheckPanel({ log, points, busy = false, onLink, onCreate, onDismiss, onClose }) {
   const [photoIndex, setPhotoIndex] = useState(null);
   const [lng, lat] = log.location?.coordinates || [];
   const nearby = useMemo(
     () => nearestFlushPoints(points.filter((p) => p.active !== false), lat, lng, { limit: 3, maxM: NEAR_M }),
     [points, lat, lng]
+  );
+  const [query, setQuery] = useState("");
+  const found = useMemo(
+    () => searchFlushPoints(points, query, { lat, lng, limit: 6 }),
+    [points, query, lat, lng]
   );
   const photos = [
     ...(log.photosBefore || []).map((src, i) => ({ src, caption: `รูปก่อนโบ ${i + 1}` })),
@@ -62,38 +118,37 @@ export default function FlushPointRecheckPanel({ log, points, busy = false, onLi
         <div>
           <div className="mb-1.5 text-sm font-semibold">เป็นหัวในทะเบียนนี้ไหม?</div>
           {nearby.length === 0 ? (
-            <p className="text-sm text-pp-muted">ไม่มีหัวในทะเบียนภายใน {NEAR_M} ม. — น่าจะเป็นหัวใหม่</p>
+            <p className="text-sm text-pp-muted">ไม่มีหัวในทะเบียนภายใน {NEAR_M} ม. — ค้นหาจากรหัสด้านล่าง หรือสร้างหัวใหม่</p>
           ) : (
             <ul className="space-y-1.5">
               {nearby.map(({ point, distanceM }) => (
-                <li key={point._id}>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onLink(point)}
-                    className="flex w-full items-center gap-2.5 rounded-xl border-[1.5px] border-pp-line px-3 py-2.5 text-left hover:bg-pp-tint-2 disabled:opacity-50"
-                  >
-                    <span
-                      className="h-2.5 w-2.5 flex-none rounded-full"
-                      style={{ background: FLUSH_POINT_KIND_COLORS[point.kind] || FLUSH_POINT_KIND_COLORS.unknown }}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-tk-mono text-sm">{point.code}</span>
-                      <span className="block truncate text-[13px] text-pp-muted">
-                        {[point.name || point.roadName, FLUSH_POINT_KIND_LABELS[point.kind]].filter(Boolean).join(" · ")}
-                      </span>
-                    </span>
-                    <span className={`flex-none text-sm tabular-nums ${distanceM > 30 ? "text-pp-turbid-ink" : "text-pp-muted"}`}>
-                      {distanceM} ม.
-                    </span>
-                    <Link2 size={16} className="flex-none text-pp-water" aria-hidden />
-                  </button>
-                </li>
+                <CandidateRow key={point._id} point={point} distanceM={distanceM} busy={busy} onLink={onLink} />
               ))}
             </ul>
           )}
+          <label htmlFor="recheck-search" className="mb-1 mt-3 block text-sm text-pp-muted">
+            ไม่อยู่ในรายการ? ค้นหาหัวโบล์ (ไม่จำกัดระยะ)
+          </label>
+          <input
+            id="recheck-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="รหัส / ชื่อจุด / ถนน"
+            className="h-10 w-full rounded-xl border-[1.5px] border-pp-line px-3 text-[15px] focus:border-pp-water focus:outline-none"
+          />
+          {query.trim().length >= 2 && (
+            <ul className="mt-1.5 space-y-1.5">
+              {found.length === 0 ? (
+                <li className="text-sm text-pp-muted">ไม่พบหัวที่ตรงคำค้น</li>
+              ) : (
+                found.map(({ point, distanceM }) => (
+                  <CandidateRow key={point._id} point={point} distanceM={distanceM} busy={busy} onLink={onLink} />
+                ))
+              )}
+            </ul>
+          )}
           <p className="mt-1.5 text-xs text-pp-muted">
-            เลือกแล้วบันทึกโบนี้จะนับเป็นของหัวนั้น (ตำแหน่งหัวไม่เปลี่ยน — ถ้าตำแหน่งทะเบียนผิดให้แก้หัวนั้นต่อ)
+            “ผูก” = นับบันทึกนี้เป็นของหัวนั้น ตำแหน่งหัวไม่เปลี่ยน · “ผูก + ย้ายหัวมาที่นี่” = แก้ตำแหน่งหัวในทะเบียนเป็นจุด GPS หน้างานด้วย (ลงประวัติ)
           </p>
         </div>
       </div>

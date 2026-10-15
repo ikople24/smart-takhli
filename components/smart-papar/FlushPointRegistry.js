@@ -270,22 +270,32 @@ export default function FlushPointRegistry() {
   };
 
   // ผูกบันทึกโบเข้ากับหัวในทะเบียน → หายจากรายการรีเช็ค
-  const linkLogTo = async (logId, point, { quiet = false } = {}) => {
+  const linkLogTo = async (logId, point, { quiet = false, move = false } = {}) => {
     setRecheckBusy(true);
     try {
       const res = await fetch("/api/smart-papar/flush-points/recheck", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logId, action: "link", flushPointId: point._id }),
+        body: JSON.stringify({ logId, action: "link", flushPointId: point._id, moveFlushPoint: move }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) throw new Error(data?.message || "ผูกหัวไม่สำเร็จ");
       setRecheckLogs((prev) => prev.filter((l) => String(l._id) !== String(logId)));
       setSelectedLogId(null);
       setPoints((prev) =>
-        prev.map((p) => (String(p._id) === String(point._id) ? { ...p, flushCount: (p.flushCount || 0) + 1 } : p))
+        prev.map((p) =>
+          String(p._id) === String(point._id)
+            ? { ...p, flushCount: (p.flushCount || 0) + 1, ...(data.movedM != null ? { location: data.location } : {}) }
+            : p
+        )
       );
-      if (!quiet) Swal.fire({ icon: "success", title: `ผูกกับ ${point.code} แล้ว`, timer: 1300, showConfirmButton: false });
+      if (!quiet)
+        Swal.fire({
+          icon: "success",
+          title: data.movedM != null ? `ผูกกับ ${point.code} และย้ายหัว ${data.movedM} ม. แล้ว` : `ผูกกับ ${point.code} แล้ว`,
+          timer: 1600,
+          showConfirmButton: false,
+        });
     } catch (e) {
       Swal.fire({ icon: "error", title: e instanceof TypeError ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้" : e.message });
       loadRecheck();
@@ -655,7 +665,7 @@ export default function FlushPointRegistry() {
                     log={selectedLog}
                     points={points}
                     busy={recheckBusy}
-                    onLink={(point) => linkLogTo(selectedLog._id, point)}
+                    onLink={(point, opts) => linkLogTo(selectedLog._id, point, opts)}
                     onCreate={() => createFromLog(selectedLog)}
                     onDismiss={() => dismissLog(selectedLog)}
                     onClose={() => setSelectedLogId(null)}
