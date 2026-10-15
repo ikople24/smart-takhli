@@ -129,3 +129,12 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
   แล้วผูกบันทึกให้อัตโนมัติ) / ไม่ใช่หัวโบล์ (`FlushingLog.flushPointReview = "dismissed"` ไม่ขึ้นอีก)
 - API `GET|POST /api/smart-papar/flush-points/recheck` — แก้เฉพาะช่องผูกหัว (`flushPointId`/`flushPointCode`/`flushPointReview`)
   ไม่แตะเนื้อหาบันทึก แอดมินผูกหัวให้บันทึกภาคสนามได้ · **ห้ามตัดสินว่าเป็นหัวไหนจากชื่อจุดอย่างเดียว** ใช้ระยะจาก GPS
+
+### หน้าสรุปคุณภาพน้ำสำหรับประชาชน `/papar` (2026-10-15)
+
+- กดจากการ์ด "น้ำประปา" บนหน้าแรก (เดิมไป `/papar/flushing`) · ไม่ต้องล็อกอิน · ใช้ `CitizenShell` (`/papar` exact ใน `components/Layout.js`)
+- การ์ด NTU + หมายเหตุมาตรฐานกรมอนามัย ≤ 5 NTU · การ์ด pH/TDS พร้อมป้าย "อยู่ในเกณฑ์มาตรฐาน" · ตารางผลตรวจ 30 วันล่าสุด
+  (นับเฉพาะวันที่มีข้อมูล) · การ์ดงานโบตะกอน % ใสแล้ววันล่าสุด + 3 วันล่าสุด · ปุ่ม "โบตะกอน" → `/papar/flushing`
+- เกณฑ์ `WATER_STANDARDS` ใน `lib/smart-papar/publicSummary.js`: NTU ≤ 5 · pH 6.5–8.5 · TDS ≤ 600 mg/L (เจ้าของยืนยัน)
+- แสดงเฉพาะน้ำประปาจ่ายออก (`tap`) ไม่แสดงน้ำดิบ · API `GET /api/smart-papar/water-quality/public-summary`
+  **ส่งเฉพาะตัวเลขรวม — ห้ามเพิ่มชื่อเจ้าหน้าที่/ตำแหน่ง/รูป/หมายเหตุงานโบ**

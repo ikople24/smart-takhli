@@ -4,8 +4,7 @@
 // /api/pm25/dashboard (Mongo cache — แนวโน้ม 7 วันจาก dailyAverages ต่อท้ายด้วย
 // ค่าล่าสุดให้จุดปลายตรงกับเลขใหญ่) และ /api/smart-papar/water-quality/public-latest
 // (field recent) · กดการ์ด PM เปิด dashboard ตัวเต็มเดิมใน modal
-// · กดการ์ดน้ำประปา → /papar/flushing (ฟอร์มโบตะกอนของเจ้าหน้าที่ — เครื่องที่ยังไม่ใส่รหัสจะเจอหน้าใส่รหัส
-//   ซึ่งมีลิงก์ให้ประชาชนไปแจ้งน้ำขุ่นที่ /report)
+// · กดการ์ดน้ำประปา → /papar (หน้าสรุปคุณภาพน้ำ 30 วัน + งานโบตะกอน · ปุ่มท้ายหน้าไปฟอร์มโบตะกอนของเจ้าหน้าที่)
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -187,8 +186,8 @@ export default function EnvCards() {
           />
         </button>
         <Link
-          href="/papar/flushing"
-          aria-label="น้ำประปา — บันทึกโบตะกอน (เจ้าหน้าที่)"
+          href="/papar"
+          aria-label="ดูคุณภาพน้ำประปาย้อนหลัง"
           className={`${card} transition hover:-translate-y-0.5`}
         >
           <CardBody
