@@ -149,10 +149,10 @@ export default function PaparPublicPage() {
               </div>
 
               {/* 3. ตาราง 30 วัน */}
-              <section className={card} aria-label="ค่าน้ำประปาย้อนหลัง 30 วัน">
+              <section className={card} aria-label="ผลตรวจน้ำประปา 30 วันล่าสุด">
                 <div className="mb-2 flex items-baseline justify-between">
-                  <h2 className="text-[15px] font-bold">ย้อนหลัง 30 วัน</h2>
-                  <span className="text-[11px] text-[#9590A8]">เฉพาะวันที่มีการตรวจวัด</span>
+                  <h2 className="text-[15px] font-bold">ผลตรวจ 30 วันล่าสุด</h2>
+                  <span className="text-[11px] text-[#9590A8]">นับเฉพาะวันที่มีการตรวจวัด</span>
                 </div>
                 {data.daily.length === 0 ? (
                   <p className="py-6 text-center text-sm text-[#9590A8]">ยังไม่มีข้อมูล</p>
