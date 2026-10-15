@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import { Atom, CalendarDays, Droplet, FlaskConical, ShowerHead } from "lucide-react";
 import CitizenShell from "@/components/citizen/CitizenShell";
 import { ntuShade, waterLevel } from "@/lib/citizen/waterLevel";
 import { WATER_STANDARDS, phWithin, tdsWithin, ntuWithin } from "@/lib/smart-papar/publicSummary";
@@ -14,6 +15,22 @@ const fmtNum = (v, digits) => (v === null || v === undefined ? "–" : Number(v)
 
 const DAYS_PREVIEW = 5;
 const card = "rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]";
+
+// ไอคอนใหญ่จาง ๆ มุมการ์ด (ตกแต่งอย่างเดียว) — สีตามสถานะของค่า: ปกติ = สีของค่า · เกินเกณฑ์ = แดง
+// การ์ดที่ใส่ต้องเป็น relative overflow-hidden และเนื้อหาต้อง relative เพื่ออยู่เหนือไอคอน
+function BgIcon({ icon: Icon, color, size = 110, className = "-bottom-4 -right-4" }) {
+  return (
+    <Icon
+      aria-hidden
+      size={size}
+      strokeWidth={1.4}
+      className={`pointer-events-none absolute ${className}`}
+      style={{ color, opacity: 0.12 }}
+    />
+  );
+}
+
+const statusColor = (ok) => (ok === false ? "#DC2626" : ok === null ? "#9590A8" : "#16A34A");
 
 function Verdict({ ok }) {
   if (ok === null) return <span className="text-xs text-[#9590A8]">ไม่มีข้อมูล</span>;
@@ -28,19 +45,20 @@ function Verdict({ ok }) {
   );
 }
 
-function MetricCard({ title, value, unit, ok, criteria, explain }) {
+function MetricCard({ title, value, unit, ok, criteria, explain, icon }) {
   return (
-    <div className={`${card} flex flex-col gap-2`}>
-      <div className="text-[12px] font-semibold text-[#6B6880]">{title}</div>
-      <div className="flex items-baseline gap-1">
+    <div className={`${card} relative flex flex-col gap-2 overflow-hidden`}>
+      {icon && <BgIcon icon={icon} color={statusColor(ok)} size={96} />}
+      <div className="relative text-[12px] font-semibold text-[#6B6880]">{title}</div>
+      <div className="relative flex items-baseline gap-1">
         <span className="text-[30px] font-bold leading-none tabular-nums">{value}</span>
         {unit && <span className="text-[11px] text-[#9590A8]">{unit}</span>}
       </div>
-      <div>
+      <div className="relative">
         <Verdict ok={ok} />
       </div>
-      <div className="text-[12px] text-[#6B6880]">{criteria}</div>
-      <p className="text-[12px] leading-relaxed text-[#9590A8]">{explain}</p>
+      <div className="relative text-[12px] text-[#6B6880]">{criteria}</div>
+      <p className="relative text-[12px] leading-relaxed text-[#9590A8]">{explain}</p>
     </div>
   );
 }
@@ -103,8 +121,9 @@ export default function PaparPublicPage() {
           {state === "ready" && (
             <>
               {/* 1. NTU */}
-              <section className={card} aria-label="ค่าความขุ่นล่าสุด">
-                <div className="flex items-start justify-between gap-3">
+              <section className={`${card} relative overflow-hidden`} aria-label="ค่าความขุ่นล่าสุด">
+                <BgIcon icon={Droplet} color={level.key === "none" ? "#9590A8" : level.dot} size={150} className="-bottom-6 -right-6" />
+                <div className="relative flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[12px] font-semibold text-[#6B6880]">ความขุ่น (NTU)</div>
                     <div className="mt-1 flex items-baseline gap-1">
@@ -122,11 +141,11 @@ export default function PaparPublicPage() {
                     {level.label}
                   </span>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="relative mt-2 flex flex-wrap items-center justify-between gap-2">
                   <Verdict ok={ntuWithin(latest?.ntu)} />
                   <span className="text-[12px] text-[#6B6880]">ข้อมูลวันที่ {fmtDate(latest?.recordDate, { day: "numeric", month: "long", year: "numeric" })}</span>
                 </div>
-                <p className="mt-3 rounded-xl bg-[#F6F5FA] px-3 py-2 text-[12px] leading-relaxed text-[#6B6880]">
+                <p className="relative mt-3 rounded-xl bg-[#F6F5FA]/90 px-3 py-2 text-[12px] leading-relaxed text-[#6B6880]">
                   *ค่ามาตรฐานของกรมอนามัยไม่เกิน {WATER_STANDARDS.ntuMax} NTU สามารถใช้อุปโภคบริโภคได้ (ณ หน้าโรงกรองประปาเทศบาลเมืองตาคลี)
                 </p>
               </section>
@@ -137,6 +156,7 @@ export default function PaparPublicPage() {
                   title="pH (กรด-ด่าง)"
                   value={fmtNum(latest?.ph, 2)}
                   ok={phWithin(latest?.ph)}
+                  icon={FlaskConical}
                   criteria={`เกณฑ์ ${WATER_STANDARDS.phMin}–${WATER_STANDARDS.phMax}`}
                   explain="ต่ำกว่า 7 เป็นกรด สูงกว่า 7 เป็นด่าง น้ำดื่มควรเป็นกลางหรือด่างอ่อน"
                 />
@@ -145,21 +165,23 @@ export default function PaparPublicPage() {
                   value={fmtNum(latest?.tds, 0)}
                   unit="mg/L"
                   ok={tdsWithin(latest?.tds)}
+                  icon={Atom}
                   criteria={`เกณฑ์ไม่เกิน ${WATER_STANDARDS.tdsMax} mg/L`}
                   explain="ปริมาณแร่ธาตุและสารที่ละลายอยู่ในน้ำ ยิ่งน้อยน้ำยิ่งบริสุทธิ์"
                 />
               </div>
 
               {/* 3. ตาราง 30 วัน */}
-              <section className={card} aria-label="ผลตรวจน้ำประปา 30 วันล่าสุด">
-                <div className="mb-2 flex items-baseline justify-between">
+              <section className={`${card} relative overflow-hidden`} aria-label="ผลตรวจน้ำประปา 30 วันล่าสุด">
+                <BgIcon icon={CalendarDays} color="#7C3AED" size={90} className="-right-4 -top-4" />
+                <div className="relative mb-2 flex items-baseline justify-between">
                   <h2 className="text-[15px] font-bold">ผลตรวจ 30 วันล่าสุด</h2>
                   <span className="text-[11px] text-[#9590A8]">นับเฉพาะวันที่มีการตรวจวัด</span>
                 </div>
                 {data.daily.length === 0 ? (
                   <p className="py-6 text-center text-sm text-[#9590A8]">ยังไม่มีข้อมูล</p>
                 ) : (
-                  <table className="w-full text-[13px]">
+                  <table className="relative w-full text-[13px]">
                     <thead>
                       <tr className="text-left text-[11px] text-[#9590A8]">
                         <th className="py-1.5 font-semibold">วันที่</th>
@@ -206,7 +228,7 @@ export default function PaparPublicPage() {
                     type="button"
                     onClick={() => setShowAllDays((v) => !v)}
                     aria-expanded={showAllDays}
-                    className="mt-2 w-full rounded-xl bg-[#F6F5FA] py-2.5 text-[13px] font-semibold text-[#7C3AED]"
+                    className="relative mt-2 w-full rounded-xl bg-[#F6F5FA] py-2.5 text-[13px] font-semibold text-[#7C3AED]"
                   >
                     {showAllDays ? "ย่อเหลือ 5 วันล่าสุด" : `ดูเพิ่มเติม (${data.daily.length - DAYS_PREVIEW} วัน)`}
                   </button>
@@ -214,14 +236,15 @@ export default function PaparPublicPage() {
               </section>
 
               {/* 4. งานโบตะกอน */}
-              <section className={card} aria-label="ผลงานโบตะกอน">
-                <h2 className="text-[15px] font-bold">งานโบตะกอน</h2>
-                <p className="text-[11px] text-[#9590A8]">ระบายตะกอนในท่อเมื่อน้ำขุ่น · % จุดที่โบแล้วน้ำใส</p>
+              <section className={`${card} relative overflow-hidden`} aria-label="ผลงานโบตะกอน">
+                <BgIcon icon={ShowerHead} color="#3B82F6" size={120} className="-right-5 -top-5" />
+                <h2 className="relative text-[15px] font-bold">งานโบตะกอน</h2>
+                <p className="relative text-[11px] text-[#9590A8]">ระบายตะกอนในท่อเมื่อน้ำขุ่น · % จุดที่โบแล้วน้ำใส</p>
                 {!today ? (
                   <p className="py-6 text-center text-sm text-[#9590A8]">ยังไม่มีงานโบตะกอนใน 30 วันล่าสุด</p>
                 ) : (
                   <>
-                    <div className="mt-3 flex items-end justify-between gap-3">
+                    <div className="relative mt-3 flex items-end justify-between gap-3">
                       <div>
                         <div className="flex items-baseline gap-1">
                           <span className="text-[40px] font-bold leading-none tabular-nums text-[#2563EB]">{today.clearPct}</span>
@@ -232,10 +255,10 @@ export default function PaparPublicPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E6F1FE]">
+                    <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-[#E6F1FE]">
                       <div className="h-full rounded-full bg-[#3B82F6]" style={{ width: `${today.clearPct}%` }} />
                     </div>
-                    <table className="mt-4 w-full text-[13px]">
+                    <table className="relative mt-4 w-full text-[13px]">
                       <thead>
                         <tr className="text-left text-[11px] text-[#9590A8]">
                           <th className="py-1.5 font-semibold">วันที่</th>
