@@ -12,6 +12,7 @@ const fmtDate = (ymd, opts = { day: "numeric", month: "short", year: "2-digit" }
   ymd ? new Date(`${ymd}T00:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", ...opts }) : "-";
 const fmtNum = (v, digits) => (v === null || v === undefined ? "–" : Number(v).toFixed(digits));
 
+const DAYS_PREVIEW = 5;
 const card = "rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]";
 
 function Verdict({ ok }) {
@@ -47,6 +48,7 @@ function MetricCard({ title, value, unit, ok, criteria, explain }) {
 export default function PaparPublicPage() {
   const [data, setData] = useState(null);
   const [state, setState] = useState("loading"); // loading | ready | error
+  const [showAllDays, setShowAllDays] = useState(false); // ตารางแสดง 5 วันล่าสุด กด "ดูเพิ่มเติม" ถึงเห็นครบ 30
 
   useEffect(() => {
     let alive = true;
@@ -168,7 +170,7 @@ export default function PaparPublicPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.daily.map((r) => (
+                      {(showAllDays ? data.daily : data.daily.slice(0, DAYS_PREVIEW)).map((r) => (
                         <tr key={r.recordDate} className="border-t border-[#F1F0F5]">
                           <td className="py-2">{fmtDate(r.recordDate)}</td>
                           <td className={`py-2 text-right tabular-nums ${ntuWithin(r.ntu) === false ? "font-semibold text-[#B91C1C]" : ""}`}>{fmtNum(r.ntu, 2)}</td>
@@ -187,6 +189,16 @@ export default function PaparPublicPage() {
                       ))}
                     </tbody>
                   </table>
+                )}
+                {data.daily.length > DAYS_PREVIEW && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllDays((v) => !v)}
+                    aria-expanded={showAllDays}
+                    className="mt-2 w-full rounded-xl bg-[#F6F5FA] py-2.5 text-[13px] font-semibold text-[#7C3AED]"
+                  >
+                    {showAllDays ? "ย่อเหลือ 5 วันล่าสุด" : `ดูเพิ่มเติม (${data.daily.length - DAYS_PREVIEW} วัน)`}
+                  </button>
                 )}
               </section>
 
