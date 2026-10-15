@@ -25,7 +25,7 @@ function BgIcon({ icon: Icon, color, size = 110, className = "-bottom-4 -right-4
       size={size}
       strokeWidth={1.4}
       className={`pointer-events-none absolute ${className}`}
-      style={{ color, opacity: 0.12 }}
+      style={{ color, opacity: 0.2 }}
     />
   );
 }
