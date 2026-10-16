@@ -267,7 +267,7 @@ export default function PaparReportPage() {
                   <Droplet size={20} className="mt-0.5 flex-none text-[#2563EB]" aria-hidden />
                   <span>
                     ที่โรงกรองล่าสุดน้ำใส <b>{plantNtu.toFixed(2)} NTU</b> ถ้าที่บ้านขุ่น อาจเกิดจากท่อในพื้นที่
-                    การแจ้งจุดช่วยให้เจ้าหน้าที่ไปโบตะกอนได้ตรงที่
+                    การแจ้งจุดช่วยให้เจ้าหน้าที่ไประบายตะกอนได้ตรงที่
                   </span>
                 </div>
               )}

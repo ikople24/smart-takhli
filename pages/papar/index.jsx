@@ -124,7 +124,7 @@ export default function PaparPublicPage() {
     <>
       <Head>
         <title>คุณภาพน้ำประปา | เทศบาลเมืองตาคลี</title>
-        <meta name="description" content="ค่าความขุ่น pH และ TDS ของน้ำประปาเทศบาลเมืองตาคลี ย้อนหลัง 30 วัน และผลงานโบตะกอน" />
+        <meta name="description" content="ค่าความขุ่น pH และ TDS ของน้ำประปาเทศบาลเมืองตาคลี ย้อนหลัง 30 วัน และผลงานระบายตะกอน" />
       </Head>
       <CitizenShell>
         <div className="space-y-3.5 px-4 pb-8 pt-4">
@@ -245,7 +245,7 @@ export default function PaparPublicPage() {
                   unit="mg/L"
                   ok={tdsWithin(latest?.tds)}
                   rangeText={`ไม่เกิน ${WATER_STANDARDS.tdsMax}`}
-                  explain="แร่ธาตุที่ละลายในน้ำ ยิ่งน้อยยิ่งบริสุทธิ์"
+                  explain="แร่ธาตุในน้ำไม่เกิน 600 mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์"
                   band={[0, 100]}
                   markerPct={latest?.tds == null ? null : (Number(latest.tds) / WATER_STANDARDS.tdsMax) * 100}
                 />
@@ -366,20 +366,20 @@ export default function PaparPublicPage() {
               </section>
 
               {/* 4. งานโบตะกอน */}
-              <section aria-label="งานโบตะกอน" className={`${card} space-y-3.5`}>
+              <section aria-label="งานระบายตะกอน" className={`${card} space-y-3.5`}>
                 <div className="flex items-start gap-3">
                   <span className="grid h-11 w-11 flex-none place-items-center rounded-[14px] bg-[#E6F1FE] text-[#2563EB]">
                     <ShowerHead size={22} aria-hidden />
                   </span>
                   <div>
-                    <h2 className="text-[17px] font-bold">งานโบตะกอน</h2>
+                    <h2 className="text-[17px] font-bold">งานระบายตะกอน</h2>
                     <p className="text-[13px] leading-relaxed text-[#6B6880]">
-                      เจ้าหน้าที่เปิดหัวโบล์ระบายตะกอนในท่อ เมื่อมีจุดที่น้ำขุ่น
+                      เจ้าหน้าที่เปิดหัวระบายน้ำไล่ตะกอนในท่อ เมื่อมีจุดที่น้ำขุ่น
                     </p>
                   </div>
                 </div>
                 {weekTotal === 0 ? (
-                  <p className="py-4 text-center text-sm text-[#6B6880]">ไม่มีงานโบตะกอนใน 7 วันล่าสุด</p>
+                  <p className="py-4 text-center text-sm text-[#6B6880]">ไม่มีงานระบายตะกอนใน 7 วันล่าสุด</p>
                 ) : (
                   <>
                     <div className="flex items-center gap-4">
@@ -397,7 +397,7 @@ export default function PaparPublicPage() {
                       <div className="space-y-1">
                         <div className="text-[13px] text-[#6B6880]">7 วันล่าสุด</div>
                         <div className="text-[15px] leading-normal">
-                          โบ <b>{weekTotal} จุด</b> · ใสแล้ว <b className="text-[#2563EB]">{weekClear} จุด</b>
+                          ระบาย <b>{weekTotal} จุด</b> · ใสแล้ว <b className="text-[#2563EB]">{weekClear} จุด</b>
                         </div>
                       </div>
                     </div>
@@ -443,10 +443,10 @@ export default function PaparPublicPage() {
             href="/papar/flushing"
             className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#08465A] text-[15px] font-semibold text-white shadow-sm"
           >
-            โบตะกอน
+            ระบายตะกอน
             <ChevronRight size={16} strokeWidth={2.4} aria-hidden />
           </Link>
-          <p className="text-center text-[11px] text-[#6B6880]">สำหรับเจ้าหน้าที่บันทึกงานโบตะกอน</p>
+          <p className="text-center text-[11px] text-[#6B6880]">สำหรับเจ้าหน้าที่บันทึกงานระบายตะกอน</p>
         </div>
       </CitizenShell>
     </>
