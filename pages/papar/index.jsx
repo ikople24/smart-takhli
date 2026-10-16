@@ -78,7 +78,6 @@ export default function PaparPublicPage() {
   const [data, setData] = useState(null);
   const [state, setState] = useState("loading"); // loading | ready | error
   const [picked, setPicked] = useState(null); // index ในกราฟ (เก่า→ใหม่) · null = วันล่าสุด
-  const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -320,28 +319,25 @@ export default function PaparPublicPage() {
                         )}
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setShowTable((v) => !v)}
-                      aria-expanded={showTable}
-                      className="min-h-11 w-full rounded-[14px] bg-[#F1ECFE] text-sm font-semibold text-[#6D28D9]"
-                    >
-                      {showTable ? "ซ่อนตารางรายวัน" : `ดูตารางรายวัน (${days.length} วัน)`}
-                    </button>
-                    {showTable && (
+                    {/* ตารางรายวันแสดงตลอด สูงพอดี ~5 แถว เลื่อนดูวันก่อนหน้าในกล่อง (เจ้าของขอ 2026-10-16) */}
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-sm font-semibold">ตารางรายวัน</span>
+                      {data.daily.length > 5 && <span className="text-xs text-[#9590A8]">เลื่อนดูวันก่อนหน้า</span>}
+                    </div>
+                    <div className="max-h-[236px] overflow-y-auto overscroll-contain rounded-xl ring-1 ring-[#F1F0F5]">
                       <table className="w-full text-[13px]">
                         <thead>
-                          <tr className="text-left text-xs text-[#6B6880]">
-                            <th className="py-1.5 font-semibold">วันที่</th>
+                          <tr className="sticky top-0 z-10 bg-white text-left text-xs text-[#6B6880]">
+                            <th className="py-1.5 pl-3 font-semibold">วันที่</th>
                             <th className="py-1.5 text-right font-semibold">NTU</th>
                             <th className="py-1.5 text-right font-semibold">pH</th>
-                            <th className="py-1.5 text-right font-semibold">TDS</th>
+                            <th className="py-1.5 pr-3 text-right font-semibold">TDS</th>
                           </tr>
                         </thead>
                         <tbody>
                           {data.daily.map((r) => (
                             <tr key={r.recordDate} className="border-t border-[#F1F0F5]">
-                              <td className="py-2">{fmtDate(r.recordDate)}</td>
+                              <td className="py-2 pl-3">{fmtDate(r.recordDate)}</td>
                               <td className="py-2 text-right">
                                 {r.ntu === null ? (
                                   "–"
@@ -357,14 +353,14 @@ export default function PaparPublicPage() {
                               <td className={`py-2 text-right tabular-nums ${phWithin(r.ph) === false ? "font-semibold text-[#B91C1C]" : ""}`}>
                                 {fmtNum(r.ph, 2)}
                               </td>
-                              <td className={`py-2 text-right tabular-nums ${tdsWithin(r.tds) === false ? "font-semibold text-[#B91C1C]" : ""}`}>
+                              <td className={`py-2 pr-3 text-right tabular-nums ${tdsWithin(r.tds) === false ? "font-semibold text-[#B91C1C]" : ""}`}>
                                 {fmtNum(r.tds, 0)}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    )}
+                    </div>
                   </>
                 )}
               </section>
