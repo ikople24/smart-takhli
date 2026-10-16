@@ -245,7 +245,7 @@ export default function PaparPublicPage() {
                   unit="mg/L"
                   ok={tdsWithin(latest?.tds)}
                   rangeText={`ไม่เกิน ${WATER_STANDARDS.tdsMax}`}
-                  explain="แร่ธาตุที่ละลายในน้ำ ยิ่งน้อยยิ่งบริสุทธิ์"
+                  explain="แร่ธาตุในน้ำไม่เกิน 600 mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์"
                   band={[0, 100]}
                   markerPct={latest?.tds == null ? null : (Number(latest.tds) / WATER_STANDARDS.tdsMax) * 100}
                 />
