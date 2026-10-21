@@ -1,32 +1,7 @@
 import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
-
-function normalizeSessions(sessions) {
-  const arr = Array.isArray(sessions) ? sessions : [];
-  const cleaned = arr
-    .map((s) => ({
-      visitNo: Number(s?.visitNo),
-      dateISO: String(s?.dateISO || "").trim(),
-      note: s?.note ? String(s.note).trim() : null,
-    }))
-    .filter((s) => Number.isFinite(s.visitNo) && s.visitNo >= 1 && s.visitNo <= 16 && /^\d{4}-\d{2}-\d{2}$/.test(s.dateISO));
-
-  // unique by visitNo; keep latest
-  const byVisit = new Map();
-  for (const s of cleaned) byVisit.set(s.visitNo, s);
-  const uniq = Array.from(byVisit.values()).sort((a, b) => a.visitNo - b.visitNo);
-
-  // also ensure dateISO is unique (no duplicate dates)
-  const dateSeen = new Set();
-  const out = [];
-  for (const s of uniq) {
-    if (dateSeen.has(s.dateISO)) continue;
-    dateSeen.add(s.dateISO);
-    out.push(s);
-  }
-  return out;
-}
+import { normalizeDefaults, normalizeSessions } from "@/lib/elderly-school/schedule";
 
 export default async function handler(req, res) {
   const auth = await requireElderlySchoolAdmin(req);
@@ -44,9 +19,12 @@ export default async function handler(req, res) {
 
     if (req.method === "PUT") {
       const sessions = normalizeSessions(req.body?.sessions);
+      const $set = { yearBE, sessions };
+      // ส่ง defaults มาเมื่อไหร่ค่อยเขียน — client เก่าที่ส่งแค่ sessions ไม่ล้างค่าเริ่มต้น
+      if (req.body && "defaults" in req.body) $set.defaults = normalizeDefaults(req.body.defaults);
       const doc = await ElderlySchoolSchedule.findOneAndUpdate(
         { yearBE },
-        { $set: { yearBE, sessions } },
+        { $set },
         { upsert: true, new: true }
       ).lean();
       return res.status(200).json({ success: true, yearBE, schedule: doc });

@@ -3,7 +3,9 @@ import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 import { ObjectId } from "mongodb";
+import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
+import { effectiveSessions } from "@/lib/elderly-school/schedule";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -170,15 +172,27 @@ export default async function handler(req, res) {
         };
       });
 
+      // แท็บ "ตารางเรียน" บนมือถือ + วันที่ประเมิน 2Q ล่าสุด (ไม่ส่งผลประเมินให้หน้าสาธารณะ)
+      const lastAssessment = await ElderlyMentalHealthAssessment.findOne({
+        personId: new ObjectId(personId),
+        yearBE: year,
+      })
+        .sort({ assessedAt: -1 })
+        .select({ assessmentDate: 1 })
+        .lean();
+
       return res.status(200).json({
         success: true,
         yearBE: year,
+        today,
         person: {
           fullName: person.fullName,
           heightCm: person.heightCm ?? null,
         },
         visits: enriched,
         stats: { visitCount: enriched.length },
+        schedule: effectiveSessions(schedule),
+        lastAssessmentDate: lastAssessment?.assessmentDate || null,
       });
     }
 

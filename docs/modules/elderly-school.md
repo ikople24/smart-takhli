@@ -13,7 +13,7 @@
 | `/admin/elderly-school` | หน้าหลักแบบแท็บ `?tab=` (ดูด้านล่าง) — ปีเลือกด้วย `?yearBE=` | เมนู "จัดการ" (รายการเดียวใน Sidebar หลัก) |
 | `/admin/elderly-cards` | **redirect** → `/admin/elderly-school?tab=cards` (คง path ให้ลิงก์เดิม) | hideFromMenu |
 | `/admin/elderly-schedule` | **redirect** → `/admin/elderly-school?tab=schedule` | hideFromMenu |
-| `/elderly/checkin` | **public** — ผู้เรียนเช็คอิน+กรอกค่าวัดเอง (ยืนยันเลขบัตร 4 ตัวท้าย) | ไม่ต้องล็อกอิน |
+| `/elderly/checkin` | **public** (หน้าเต็มจอ ไม่ครอบ layout เดิม) — ยืนยันเลขบัตร 4 ตัวท้ายด้วยแป้นตัวเลขใหญ่ → วันเรียน: กรอกค่าวัด → "สุขภาพของฉัน" 3 แท็บ (สุขภาพ · ประวัติ · ตารางเรียน) | ไม่ต้องล็อกอิน |
 
 ⚠️ **ห้ามเปลี่ยน path `/elderly/checkin`** — QR ที่พิมพ์แจกแล้วฝัง URL นี้
 
@@ -36,8 +36,8 @@
 
 ## API — `pages/api/elderly-school/`
 
-`cards` (รายชื่อทำบัตร), `checkin` (verify/บันทึก/สรุป — public),
-`schedule` (GET/PUT วันเรียน), `dashboard` (aggregation สรุปสุขภาพ — 2026-10 เพิ่ม `totals.registered`,
+`cards` (รายชื่อทำบัตร), `checkin` (verify/บันทึก/สรุป — public; action `summary` ส่ง `schedule` ที่รวมค่าเริ่มต้นแล้ว + `lastAssessmentDate`),
+`schedule` (GET/PUT วันเรียน — PUT รับ `defaults` ด้วย ถ้าไม่ส่งจะไม่ล้างค่าเริ่มต้นเดิม), `dashboard` (aggregation สรุปสุขภาพ — 2026-10 เพิ่ม `totals.registered`,
 `attendance[16]`, `mentalHealthOthers`, และต่อคน `visitId`/`source`/`hasData`/`attendedCount`/`bpReadings`),
 `import` (นำเข้าชีต CSV แบบ upsert), `assessments` (2Q/9Q),
 `people`, `visits`, `sheet-dashboard` (สรุปจาก Google Sheet CSV โดยตรง)
@@ -56,7 +56,7 @@
 | `ElderlyPerson` | `elderly_people` | ข้อมูลบุคคล, citizenId, baseline น้ำหนัก/ส่วนสูง |
 | `ElderlyVisit` | `elderly_visits` | ค่าวัดรายครั้ง (visitNo 1-16, yearBE) |
 | `ElderlyMentalHealthAssessment` | `elderly_mental_health_assessments` | ผล 2Q/9Q, ธงเสี่ยงฆ่าตัวตาย |
-| `ElderlySchoolSchedule` | `elderly_school_schedules` | วันเรียนรายปี |
+| `ElderlySchoolSchedule` | `elderly_school_schedules` | วันเรียนรายปี — `defaults {startTime,endTime,location}` + รายครั้ง `{visitNo,dateISO,note,startTime,endTime,location,prepare}` (ช่องว่าง = ใช้ค่าเริ่มต้น, เพิ่ม 2026-10 ไม่ต้อง migrate) |
 
 ## Components / Lib
 
@@ -67,7 +67,9 @@
 - `components/elderly-school/elderlyTheme.jsx` — โทเคนสี/ปุ่ม/ป้ายสถานะ (`TONE_STYLES`: ok/care/see/low/none/mind)
 - `lib/elderly-school/followUp.js` — ตรรกะล้วนของหน้าแท็บ (ป้ายติดตาม, การ์ดสุขภาพ, สถานะวันเรียน) + เทสต์ `__tests__/followUp.test.js`
 - (ลบ `ElderlySchoolDashboard.js` แดชบอร์ดเดิมแล้ว 2026-10)
-- `components/elderly-school/ElderlyPersonalHealthSummary.tsx` — สรุปสุขภาพรายคน (ใช้ในหน้า checkin)
+- `components/elderly-school/public/CheckinApp.jsx` — หน้าเช็คอินมือถือทั้งหมด (2026-10 แทน `ElderlyPersonalHealthSummary.tsx` ที่ลบแล้ว)
+- `lib/elderly-school/personal.js` — สรุปสุขภาพรายคนภาษาง่ายสำหรับผู้เรียน (`personalSummary`, `personalTrend`) — **ไม่แสดงผล 2Q บนหน้าสาธารณะ** (ส่งแค่วันที่ประเมินล่าสุด)
+- `lib/elderly-school/schedule.js` — `normalizeSessions`/`normalizeDefaults` (ใช้ใน API schedule) + `effectiveSessions` (รวมค่าเริ่มต้นเข้ากับรายครั้ง)
 - `lib/elderly-school/dashboard.js` — parse ชีต CSV + สรุปแถว
 - `lib/elderly-school/import.js` — แปลงแถวชีต → person+visits
 - `lib/elderly-school/mentalHealth.js` — ตรรกะ 2Q/9Q (`is2QPositive`, `score9Q`, …)
