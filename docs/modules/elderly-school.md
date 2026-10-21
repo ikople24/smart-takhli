@@ -10,17 +10,35 @@
 
 | Path | ทำอะไร | สิทธิ์ |
 |---|---|---|
-| `/admin/elderly-school` | แดชบอร์ดหลัก (สรุปสุขภาพ, แก้ข้อมูลบุคคล, 2Q/9Q, import ชีต) | เมนู "จัดการ" |
-| `/admin/elderly-cards` | พิมพ์บัตร QR เช็คอิน | hideFromMenu, ลิงก์จากแดชบอร์ด |
-| `/admin/elderly-schedule` | ตั้งวันเรียนครั้งที่ 1-16 ของปี | hideFromMenu, ลิงก์จากแดชบอร์ด |
+| `/admin/elderly-school` | หน้าหลักแบบแท็บ `?tab=` (ดูด้านล่าง) — ปีเลือกด้วย `?yearBE=` | เมนู "จัดการ" (รายการเดียวใน Sidebar หลัก) |
+| `/admin/elderly-cards` | **redirect** → `/admin/elderly-school?tab=cards` (คง path ให้ลิงก์เดิม) | hideFromMenu |
+| `/admin/elderly-schedule` | **redirect** → `/admin/elderly-school?tab=schedule` | hideFromMenu |
 | `/elderly/checkin` | **public** — ผู้เรียนเช็คอิน+กรอกค่าวัดเอง (ยืนยันเลขบัตร 4 ตัวท้าย) | ไม่ต้องล็อกอิน |
 
 ⚠️ **ห้ามเปลี่ยน path `/elderly/checkin`** — QR ที่พิมพ์แจกแล้วฝัง URL นี้
 
+### แท็บใน `/admin/elderly-school` (ดีไซน์ใหม่ 2026-10)
+
+เมนูย่อยของโมดูลเป็น**แท็บด้านบน** ไม่ใช่เมนูด้านข้าง (กันซ้อนกับ Sidebar หลักของ `LayoutAdmin`)
+ทุกแท็บใช้สิทธิ์ `/admin/elderly-school` ที่เดียว — เพิ่มแท็บใหม่**ไม่ต้อง**ลงทะเบียนสิทธิ์/เมนู
+
+| `?tab=` | ทำอะไร | query เสริม |
+|---|---|---|
+| `overview` (ค่าเริ่มต้น) | ความคืบหน้า 16 ครั้ง, ตัวเลขหลัก, การ์ดสุขภาพทั้งกลุ่ม (ขึ้นต้นด้วย % เกณฑ์ดี), รายชื่อต้องติดตาม, กราฟจำนวนผู้มีผลวัด | — |
+| `visits` | เลือกครั้งที่ → กรอก/แก้ผลวัดทั้งห้องในตาราง, รายชื่อคนที่ยังไม่มีผลวัด | `visit=1..16` |
+| `registry` | ทะเบียนทั้งปี + แผงประวัติรายคน (แก้ข้อมูลคน/ผลวัดรายครั้ง/QR) | `person`, `quick`, `filter` (bp/bmi/whtr/ncd/pulse/2q จากการ์ดภาพรวม) |
+| `screening` | คัดกรอง 2Q (หน้าจอนี้ไม่มี 9Q) | `person`, `list` |
+| `schedule` | ตั้งวันเรียน 1–16 (เดิม `/admin/elderly-schedule`) | — |
+| `cards` | พิมพ์บัตร QR A4 (เดิม `/admin/elderly-cards`) — บัตรยังพิมพ์เลขบัตร 4 ตัวท้ายเหมือนเดิม | — |
+| `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** | — |
+
+"ต้องติดตามใกล้ชิด" = ความดันสูง หรือ NCD 3/3 หรือ 2Q บวก หรือชีพจรผิดปกติ (`needsCloseFollowUp` ใน `lib/elderly-school/followUp.js`)
+
 ## API — `pages/api/elderly-school/`
 
 `cards` (รายชื่อทำบัตร), `checkin` (verify/บันทึก/สรุป — public),
-`schedule` (GET/PUT วันเรียน), `dashboard` (aggregation สรุปสุขภาพ),
+`schedule` (GET/PUT วันเรียน), `dashboard` (aggregation สรุปสุขภาพ — 2026-10 เพิ่ม `totals.registered`,
+`attendance[16]`, `mentalHealthOthers`, และต่อคน `visitId`/`source`/`hasData`/`attendedCount`/`bpReadings`),
 `import` (นำเข้าชีต CSV แบบ upsert), `assessments` (2Q/9Q),
 `people`, `visits`, `sheet-dashboard` (สรุปจาก Google Sheet CSV โดยตรง)
 
@@ -42,7 +60,13 @@
 
 ## Components / Lib
 
-- `components/elderly-school/ElderlySchoolDashboard.js` — แดชบอร์ดหลัก (ใหญ่, มี modal แก้ไข/2Q/import/QR)
+- `components/elderly-school/ElderlySchoolModule.jsx` — shell หน้าหลัก: หัวโมดูล + ตัวเลือกปี + แถบแท็บ (`TABS`)
+- `components/elderly-school/tabs/*Tab.jsx` — หนึ่งไฟล์ต่อแท็บ
+- `components/elderly-school/PersonProfilePanel.jsx`, `VisitEditModal.jsx`, `QrCheckinModal.jsx` — ใช้ร่วมหลายแท็บ
+- `components/elderly-school/useElderlyData.js` — hook ดึง dashboard/roster/schedule + `mergeRoster`
+- `components/elderly-school/elderlyTheme.jsx` — โทเคนสี/ปุ่ม/ป้ายสถานะ (`TONE_STYLES`: ok/care/see/low/none/mind)
+- `lib/elderly-school/followUp.js` — ตรรกะล้วนของหน้าแท็บ (ป้ายติดตาม, การ์ดสุขภาพ, สถานะวันเรียน) + เทสต์ `__tests__/followUp.test.js`
+- (ลบ `ElderlySchoolDashboard.js` แดชบอร์ดเดิมแล้ว 2026-10)
 - `components/elderly-school/ElderlyPersonalHealthSummary.tsx` — สรุปสุขภาพรายคน (ใช้ในหน้า checkin)
 - `lib/elderly-school/dashboard.js` — parse ชีต CSV + สรุปแถว
 - `lib/elderly-school/import.js` — แปลงแถวชีต → person+visits

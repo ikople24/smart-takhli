@@ -35,6 +35,13 @@ function pulseCategory(pulseBpm) {
   return "high";
 }
 
+// ฟิลด์ผลวัด — visit ที่มีค่าอย่างน้อย 1 ช่อง = "มาเรียน/มีผลวัด"
+const HAS_DATA_FIELDS = ["weightKg", "waistCm", "pulseBpm", "bp1Sys", "bp1Dia", "bp2Sys", "bp2Dia"];
+
+function visitHasData(v) {
+  return HAS_DATA_FIELDS.some((f) => v?.[f] !== null && v?.[f] !== undefined);
+}
+
 function metabolicScreeningScore({ bmi, bmiCategory, whtRVal, bpSys, bpDia }) {
   // Screening-only score from fields we have (not a diagnosis).
   // +1: WHtR >= 0.5 (abdominal obesity)
@@ -133,16 +140,35 @@ export default async function handler(req, res) {
 
     const rows = await ElderlyVisit.aggregate(pipeline);
 
+    // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี + จำนวนคนที่มีผลวัดแต่ละครั้ง
+    const [registeredIds, attendanceAgg] = await Promise.all([
+      ElderlyVisit.distinct("personId", { yearBE }),
+      ElderlyVisit.aggregate([
+        { $match: { yearBE } },
+        { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },
+        { $group: { _id: "$visitNo", count: { $sum: 1 } } },
+      ]),
+    ]);
+    const attendanceByNo = new Map((attendanceAgg || []).map((a) => [Number(a._id), a.count]));
+    const attendance = Array.from({ length: 16 }, (_, i) => ({
+      visitNo: i + 1,
+      count: attendanceByNo.get(i + 1) || 0,
+    }));
+
     // Latest mental health assessment per person (same year)
     const personIds = rows
       .map((r) => r?.person?._id || r?.personId)
       .filter(Boolean)
       .map((id) => new ObjectId(String(id)));
 
+    // ดึงผล 2Q ของผู้เรียนทั้งปี (รวมคนที่ยังไม่มีผลวัด) — การ์ดสรุปยังนับเฉพาะ rows เหมือนเดิม
+    const mhIds = includePeople
+      ? registeredIds.map((id) => new ObjectId(String(id)))
+      : personIds;
     const mhByPersonId = new Map();
-    if (personIds.length) {
+    if (mhIds.length) {
       const latestAssessments = await ElderlyMentalHealthAssessment.aggregate([
-        { $match: { yearBE, personId: { $in: personIds } } },
+        { $match: { yearBE, personId: { $in: mhIds } } },
         { $sort: { personId: 1, assessedAt: -1 } },
         { $group: { _id: "$personId", doc: { $first: "$$ROOT" } } },
         { $replaceRoot: { newRoot: "$doc" } },
@@ -376,6 +402,17 @@ export default async function handler(req, res) {
           citizenIdMasked: p.citizenId ? maskCitizenId(p.citizenId) : "",
           yearBE,
           visitNo: r.visitNo,
+          visitId: r._id ? String(r._id) : null,
+          source: r.source || null,
+          hasData: visitHasData(r),
+          attendedCount: (visitsByPersonId.get(personKey) || []).filter(visitHasData).length,
+          // ค่าดิบรอบ 1/2 สำหรับตารางกรอกผลรายครั้ง (bp ด้านล่างเลือกรอบ 1 ก่อน)
+          bpReadings: {
+            bp1Sys: toNum(r.bp1Sys),
+            bp1Dia: toNum(r.bp1Dia),
+            bp2Sys: toNum(r.bp2Sys),
+            bp2Dia: toNum(r.bp2Dia),
+          },
           weightKg: coerceMeasurementNumber(r.weightKg),
           heightCmForBmi: heightCm,
           bmi,
@@ -396,6 +433,18 @@ export default async function handler(req, res) {
       }
     }
 
+    // ผล 2Q ล่าสุดของคนที่ไม่มีผลวัดในชุดนี้ (แท็บคัดกรองต้องเห็นว่าใครประเมินแล้ว)
+    const rowIds = new Set(rows.map((r) => String(r?.person?._id || r?.personId)));
+    const mentalHealthOthers = includePeople
+      ? Array.from(mhByPersonId.values())
+          .filter((a) => !rowIds.has(String(a.personId)))
+          .map((a) => ({
+            personId: String(a.personId),
+            q2Positive: Boolean(a?.q2?.positive),
+            assessmentDate: a?.assessmentDate || null,
+          }))
+      : undefined;
+
     const bpRiskTotal = bpCounts.low + bpCounts.risk + bpCounts.high;
     const filteredPeople = riskOnly ? people.filter((x) => x.overallRisk) : people;
 
@@ -405,7 +454,9 @@ export default async function handler(req, res) {
       visit: visitNo || "latest",
       totals: {
         peopleCounted: rows.length,
+        registered: registeredIds.length,
       },
+      attendance,
       bmi: bmiCounts,
       bmiBreakdown,
       averages: {
@@ -426,6 +477,7 @@ export default async function handler(req, res) {
       metabolic: metabolicCounts,
       mentalHealth: mentalCounts,
       people: includePeople ? filteredPeople : undefined,
+      mentalHealthOthers,
     });
   } catch (error) {
     console.error("elderly dashboard error:", error);

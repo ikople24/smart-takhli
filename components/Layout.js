@@ -13,8 +13,6 @@ const ADMIN_META = {
   '/admin/register-user':             { title: 'จัดการผู้ใช้งาน' },
   '/admin/manage-activities':         { title: 'จัดการกิจกรรม' },
   '/admin/pm25-settings':             { title: 'จัดการ PM2.5' },
-  '/admin/elderly-cards':             { title: 'ข้อมูลผู้สูงอายุ' },
-  '/admin/elderly-schedule':          { title: 'ตารางเยี่ยมผู้สูงอายุ' },
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
   // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
   '/admin/my-tasks':                  { title: 'งานของฉัน' },
