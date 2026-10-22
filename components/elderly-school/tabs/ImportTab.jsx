@@ -1,8 +1,83 @@
 // แท็บ "นำเข้าข้อมูล" (เฉพาะ superadmin เหมือนเดิม) — ตรวจตัวอย่างก่อน แล้วค่อยนำเข้าจริง
 // การนำเข้าอัปเดตเฉพาะช่องที่ชีตมีค่า ไม่ล้างค่าที่แก้ในระบบหรือจากเช็คอิน (ดู pages/api/elderly-school/import.js)
 import React, { useState } from "react";
+import { problemsToCsv } from "@/lib/elderly-school/importProblems";
 import { postJson } from "../useElderlyData";
-import { Notice, StatTile, btnCls, cardCls, inputCls, labelCls, maskCitizen, primaryBtnCls } from "../elderlyTheme";
+import { Chip, Notice, StatTile, btnCls, cardCls, filterCls, inputCls, labelCls, maskCitizen, primaryBtnCls } from "../elderlyTheme";
+
+function downloadCsv(problems, yearBE) {
+  const blob = new Blob([problemsToCsv(problems)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ปัญหานำเข้า-โรงเรียนผู้สูงอายุ-${yearBE}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** ตารางปัญหาที่พบในชีต — ข้ามทั้งแถว (แดง) / เตือนแต่ยังนำเข้า (เหลือง) */
+function ProblemsCard({ problems, summary, yearBE }) {
+  const [level, setLevel] = useState("all");
+  const list = problems.filter((p) => level === "all" || p.level === level);
+  if (!problems.length) {
+    return <Notice tone="ok">ไม่พบปัญหาในชีต — ทุกแถวอ่านได้ครบ</Notice>;
+  }
+  return (
+    <section className={cardCls + " overflow-hidden"} aria-label="ปัญหาที่พบในชีต">
+      <div className="px-5 py-4 border-b border-[#E4E2DA] flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-base font-bold">ปัญหาที่พบในชีต</span>
+          <span className="text-[13px] text-[#5B635F]">แก้ในชีตแล้วกด “ตรวจอีกครั้ง” · แถวที่เตือนยังนำเข้าได้ แต่ช่องที่อ่านไม่ได้จะไม่ถูกนำเข้า</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            ["all", `ทั้งหมด ${problems.length}`],
+            ["skip", `ข้ามทั้งแถว ${summary?.skippedRows ?? 0}`],
+            ["warn", `เตือน ${summary?.warnings ?? 0}`],
+          ].map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={level === k} className={filterCls(level === k)} onClick={() => setLevel(k)}>
+              {label}
+            </button>
+          ))}
+          <button type="button" className={btnCls + " !min-h-10"} onClick={() => downloadCsv(problems, yearBE)}>
+            ดาวน์โหลด CSV
+          </button>
+        </div>
+      </div>
+      <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0">
+            <tr className="bg-[#FBFAF7] text-left text-xs font-semibold text-[#5B635F]">
+              {["แถวในชีต", "ชื่อ-นามสกุล", "เลขบัตร", "ปัญหา"].map((h) => (
+                <th key={h} className="py-2.5 px-3 border-b border-[#E4E2DA] whitespace-nowrap first:pl-5">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((p, i) => (
+              <tr key={`${p.row}-${i}`} className={p.level === "skip" ? "bg-[#FDF3F2]" : ""}>
+                <td className="py-2.5 px-3 pl-5 border-b border-[#EFEDE6] text-[#5B635F] whitespace-nowrap">{p.row}</td>
+                <td className="py-2.5 px-3 border-b border-[#EFEDE6] font-semibold whitespace-nowrap">{p.fullName || "—"}</td>
+                <td className="py-2.5 px-3 border-b border-[#EFEDE6] whitespace-nowrap">{p.citizenLast4 ? `•••• ${p.citizenLast4}` : "—"}</td>
+                <td className="py-2.5 px-3 border-b border-[#EFEDE6]">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Chip tone={p.level === "skip" ? "see" : "care"}>{p.level === "skip" ? "ข้าม" : "เตือน"}</Chip>
+                    {p.message}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {summary?.truncated && <p className="m-0 px-5 py-3 text-[13px] text-[#5B635F]">แสดง 1,000 รายการแรก</p>}
+    </section>
+  );
+}
 
 function Step({ no, label, state }) {
   const done = state === "done";
@@ -59,6 +134,8 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
   };
 
   const t = (result || preview)?.totals || {};
+  const ps = (result || preview)?.problemSummary || {};
+  const problems = (result || preview)?.problems || [];
 
   return (
     <div className="flex flex-col gap-5">
@@ -108,8 +185,16 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
             <StatTile label="แถวในชีต" value={t.rows ?? 0} unit="แถว" />
             <StatTile label="ผู้เรียนที่อ่านได้" value={t.uniquePeople ?? 0} unit="คน" tone="ok" />
             <StatTile label="ผลวัดรายครั้ง" value={t.visitsParsed ?? 0} unit="รายการ" />
-            <StatTile label="แถวที่ข้าม" value={t.peopleSkipped ?? 0} unit="แถว" tone={t.peopleSkipped ? "care" : undefined} sub="ไม่มีเลขบัตร/ชื่อ" />
+            <StatTile
+              label="แถวที่มีปัญหา"
+              value={(ps.skippedRows ?? 0) + (ps.warningRows ?? 0)}
+              unit="แถว"
+              tone={ps.skippedRows ? "see" : ps.warningRows ? "care" : undefined}
+              sub={`ข้าม ${ps.skippedRows ?? 0} · เตือน ${ps.warningRows ?? 0}`}
+            />
           </section>
+
+          {(result || preview)?.problems && <ProblemsCard problems={problems} summary={ps} yearBE={yearBE} />}
 
           <div className="flex flex-wrap gap-5 items-start">
             <section className={cardCls + " flex-[3_1_560px] min-w-0 overflow-hidden"} aria-label="ตัวอย่างข้อมูล">
@@ -147,7 +232,7 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
               ) : (
                 <>
                   <span className="text-sm text-[#3C4541]">
-                    นำเข้า {t.uniquePeople ?? 0} คน ข้าม {t.peopleSkipped ?? 0} แถว · ค่าที่แก้ในระบบหรือจากเช็คอินจะไม่ถูกล้าง (อัปเดตเฉพาะช่องที่ชีตมีค่า)
+                    นำเข้า {t.uniquePeople ?? 0} คน ข้าม {t.peopleSkipped ?? 0} แถว{ps.warningRows ? ` (มีคำเตือน ${ps.warningRows} แถว)` : ""} · ค่าที่แก้ในระบบหรือจากเช็คอินจะไม่ถูกล้าง (อัปเดตเฉพาะช่องที่ชีตมีค่า)
                   </span>
                   <button type="button" className={primaryBtnCls + " w-full !min-h-[52px]"} disabled={busy} onClick={() => run(false)}>
                     {busy ? "กำลังนำเข้า..." : `นำเข้าปี ${yearBE}`}

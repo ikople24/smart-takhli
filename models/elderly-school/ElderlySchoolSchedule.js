@@ -20,6 +20,9 @@ const DefaultsSchema = new mongoose.Schema(
     startTime: { type: String, default: null },
     endTime: { type: String, default: null },
     location: { type: String, default: null },
+    // ผู้ติดต่อ — ผู้เรียนกดโทรจากหน้ามือถือ /elderly/checkin (เพิ่ม 2026-10)
+    contactName: { type: String, default: null },
+    contactPhone: { type: String, default: null },
   },
   { _id: false }
 );

@@ -1,18 +1,20 @@
 // แท็บ "ทะเบียนผู้เรียน" — รายชื่อทั้งปีพร้อมสถานะล่าสุด + แผงประวัติรายคน
 import React, { useMemo, useState } from "react";
-import { bmiChip, bpChip, mhChip, ncdChip, needsCloseFollowUp } from "@/lib/elderly-school/followUp";
+import { MISSED_STREAK_ALERT, bmiChip, bpChip, mhChip, ncdChip, needsCloseFollowUp } from "@/lib/elderly-school/followUp";
 import { mergeRoster, useDashboard, useRoster, useSchedule } from "../useElderlyData";
 import PersonProfilePanel from "../PersonProfilePanel";
 import { Chip, EmptyState, Notice, Spinner, cardCls, filterCls, inputCls, maskCitizen, btnCls } from "../elderlyTheme";
 
 const PAGE_SIZE = 15;
 
+// test รับทั้งแถว (r.metrics = ผลวัดล่าสุด, r.follow = ข้อมูลรวมสำหรับการติดตาม)
 const QUICK = [
   { key: "all", label: "ทั้งหมด", test: () => true },
-  { key: "follow", label: "ต้องติดตาม", test: (m) => needsCloseFollowUp(m) },
-  { key: "bphigh", label: "ความดันสูง", test: (m) => m?.bp?.category === "high" },
-  { key: "q2pos", label: "2Q บวก", test: (m) => m?.mentalHealth?.q2Positive === true },
-  { key: "nodata", label: "ยังไม่มีผลวัด", test: (m) => !m },
+  { key: "follow", label: "ต้องติดตาม", test: (r) => needsCloseFollowUp(r.follow) },
+  { key: "absent", label: `ขาดเรียน ${MISSED_STREAK_ALERT} ครั้งติดกัน`, test: (r) => r.missedStreak >= MISSED_STREAK_ALERT },
+  { key: "bphigh", label: "ความดันสูง", test: (r) => r.metrics?.bp?.category === "high" },
+  { key: "q2pos", label: "2Q บวก", test: (r) => r.mh?.q2Positive === true },
+  { key: "nodata", label: "ยังไม่มีผลวัด", test: (r) => !r.metrics },
 ];
 
 // ตัวกรองจากการ์ด "สุขภาพทั้งกลุ่ม" ในแท็บภาพรวม = คนที่ควรดูแลเพิ่มในตัวชี้วัดนั้น
@@ -41,18 +43,18 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
   const selectedId = q1(query.person) || null;
 
   const rows = useMemo(
-    () => mergeRoster(roster.people, dash.data?.people, dash.data?.mentalHealthOthers),
+    () => mergeRoster(roster.people, dash.data?.people, dash.data?.mentalHealthOthers, dash.data?.attendanceByPerson),
     [roster.people, dash.data]
   );
   const doneSessions = sched.statuses.filter((s) => s.status === "done" || s.status === "today").length;
 
-  const counts = useMemo(() => Object.fromEntries(QUICK.map((f) => [f.key, rows.filter((r) => f.test(r.metrics)).length])), [rows]);
+  const counts = useMemo(() => Object.fromEntries(QUICK.map((f) => [f.key, rows.filter((r) => f.test(r)).length])), [rows]);
 
   const filtered = useMemo(() => {
     const qs = search.trim().toLowerCase();
     const quickTest = (QUICK.find((f) => f.key === quick) || QUICK[0]).test;
     return rows.filter((r) => {
-      if (!quickTest(r.metrics)) return false;
+      if (!quickTest(r)) return false;
       if (indicator && !INDICATOR[indicator].test(r.metrics)) return false;
       if (!qs) return true;
       const digits = String(r.citizenId).replace(/\D/g, "");
@@ -140,7 +142,7 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
                     const bmi = bmiChip(m?.bmiCategory);
                     const ncd = ncdChip(m?.metabolicRiskScore);
                     const mh = mhChip(r.mh);
-                    const att = m?.attendedCount ?? 0;
+                    const att = r.attended;
                     const on = r.personId === selectedId;
                     return (
                       <tr
@@ -158,7 +160,7 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
                               setQuery({ person: r.personId });
                             }}
                           >
-                            <span className="font-semibold">{r.fullName || "-"}</span>
+                            <span className="font-semibold whitespace-nowrap">{r.fullName || "-"}</span>
                             <span className="text-xs text-[#5B635F]">{maskCitizen(r.citizenId)}</span>
                           </button>
                         </td>
@@ -169,6 +171,7 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
                             </span>
                             {att}
                             {doneSessions ? `/${doneSessions}` : ""}
+                            {r.missedStreak >= MISSED_STREAK_ALERT && <Chip tone="care">ขาด {r.missedStreak} ติดกัน</Chip>}
                           </span>
                         </td>
                         <td className="py-3 px-3 border-b border-[#EFEDE6]">
@@ -211,6 +214,7 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
               key={selectedId}
               personId={selectedId}
               metrics={selected?.metrics || null}
+              follow={selected?.follow || null}
               yearBE={yearBE}
               statuses={sched.statuses}
               onChanged={() => {

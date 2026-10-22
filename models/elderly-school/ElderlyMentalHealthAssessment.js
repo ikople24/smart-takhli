@@ -36,6 +36,13 @@ const ElderlyMentalHealthAssessmentSchema = new mongoose.Schema(
       suicidalRisk: { type: Boolean, default: null, index: true }, // derived from item 9 > 0
     },
 
+    // 2Q บวก → แจ้งเจ้าหน้าที่สาธารณสุขให้ติดตามต่อแล้วหรือยัง (เพิ่ม 2026-10, เอกสารเก่าไม่มี = ยังไม่แจ้ง)
+    referral: {
+      notified: { type: Boolean, default: false, index: true },
+      notifiedAt: { type: Date, default: null },
+      notifiedBy: { type: String, default: null }, // Clerk userId ของคนกดบันทึก
+    },
+
     // metadata
     assessedAt: { type: Date, default: () => new Date(), index: true },
     assessedBy: { type: String, default: null }, // optional user id/name

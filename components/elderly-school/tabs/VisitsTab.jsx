@@ -107,7 +107,11 @@ export default function VisitsTab({ yearBE, query, setQuery, go }) {
   const dirtyIds = attendees.map((p) => p.personId).filter(isDirty);
 
   const attendeeIds = new Set(attendees.map((p) => p.personId));
-  const absent = roster.people.filter((r) => !attendeeIds.has(String(r.personId)));
+  const streakById = new Map((dash.data?.attendanceByPerson || []).map((a) => [String(a.personId), a.missedStreak]));
+  const absent = roster.people
+    .filter((r) => !attendeeIds.has(String(r.personId)))
+    .map((r) => ({ ...r, missedStreak: streakById.get(String(r.personId)) || 0 }))
+    .sort((a, b) => b.missedStreak - a.missedStreak);
   const registered = roster.people.length;
   const viaQr = attendees.filter((p) => p.source === "public-checkin").length;
   const abnormal = attendees.filter((p) => {
@@ -354,7 +358,14 @@ export default function VisitsTab({ yearBE, query, setQuery, go }) {
                   <ul className="m-0 p-0 list-none">
                     {(showAllAbsent ? absent : absent.slice(0, 8)).map((a) => (
                       <li key={a.personId} className="flex items-center gap-2.5 py-2.5 border-t border-[#EFEDE6] first:border-t-0">
-                        <span className="flex-1 min-w-0 text-[15px] font-semibold truncate">{a.fullName || "-"}</span>
+                        <span className="flex-1 min-w-0 flex flex-col">
+                          <span className="text-[15px] font-semibold truncate">{a.fullName || "-"}</span>
+                          {a.missedStreak > 0 && (
+                            <span className={"text-xs " + (a.missedStreak >= 3 ? "text-[#8E1F18] font-semibold" : "text-[#5B635F]")}>
+                              ขาดติดกัน {a.missedStreak} ครั้งก่อนหน้านี้
+                            </span>
+                          )}
+                        </span>
                         <button
                           type="button"
                           className={btnCls + " !min-h-10 !px-3 text-sm"}

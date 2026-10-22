@@ -38,7 +38,7 @@ function MetricTile({ label, value, sub, tone }) {
   );
 }
 
-export default function PersonProfilePanel({ personId, metrics, yearBE, statuses, onChanged, go }) {
+export default function PersonProfilePanel({ personId, metrics, follow, yearBE, statuses, onChanged, go }) {
   const [person, setPerson] = useState(null);
   const [visits, setVisits] = useState([]);
   const [assessments, setAssessments] = useState([]);
@@ -158,7 +158,8 @@ export default function PersonProfilePanel({ personId, metrics, yearBE, statuses
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {metrics && needsCloseFollowUp(metrics) && <Chip tone="see">ต้องติดตาม</Chip>}
+        {needsCloseFollowUp(follow || metrics) && <Chip tone="see">ต้องติดตาม</Chip>}
+        {(follow?.missedStreak ?? 0) >= 3 && <Chip tone="care">ขาดเรียน {follow.missedStreak} ครั้งติดกัน</Chip>}
         {person?.phone && <Chip tone="none">โทร {person.phone}</Chip>}
         {person?.address && <Chip tone="none">{person.address}</Chip>}
         <button type="button" className="text-sm font-semibold text-[#0E5A55] underline" onClick={() => setQrOpen(true)}>

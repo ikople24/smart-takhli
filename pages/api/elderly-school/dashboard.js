@@ -3,6 +3,9 @@ import dbConnect from "@/lib/dbConnect";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/health/metrics";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
+import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
+import { missedStreak } from "@/lib/elderly-school/followUp";
+import { normalizeSessions } from "@/lib/elderly-school/schedule";
 import { ObjectId } from "mongodb";
 
 function maskCitizenId(id) {
@@ -150,6 +153,37 @@ export default async function handler(req, res) {
       ]),
     ]);
     const attendanceByNo = new Map((attendanceAgg || []).map((a) => [Number(a._id), a.count]));
+
+    // ขาดเรียนติดกันรายคน (ทุกคนในปี) — นับเฉพาะวันเรียนที่ผ่านไปแล้ว ไม่นับวันนี้
+    const attendanceByPerson = [];
+    const streakByPersonId = new Map();
+    if (includePeople) {
+      const todayISO = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      const [scheduleDoc, attendedAgg] = await Promise.all([
+        ElderlySchoolSchedule.findOne({ yearBE }).lean(),
+        ElderlyVisit.aggregate([
+          { $match: { yearBE } },
+          { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },
+          { $group: { _id: "$personId", visitNos: { $addToSet: "$visitNo" } } },
+        ]),
+      ]);
+      const doneNos = normalizeSessions(scheduleDoc?.sessions)
+        .filter((x) => x.dateISO < todayISO)
+        .map((x) => x.visitNo);
+      const attendedById = new Map((attendedAgg || []).map((a) => [String(a._id), a.visitNos || []]));
+      for (const id of registeredIds) {
+        const key = String(id);
+        const nos = attendedById.get(key) || [];
+        const streak = missedStreak(doneNos, nos);
+        streakByPersonId.set(key, streak);
+        attendanceByPerson.push({ personId: key, attended: nos.length, missedStreak: streak });
+      }
+    }
     const attendance = Array.from({ length: 16 }, (_, i) => ({
       visitNo: i + 1,
       count: attendanceByNo.get(i + 1) || 0,
@@ -313,6 +347,8 @@ export default async function handler(req, res) {
               typeof assessment?.q9?.suicidalRisk === "boolean" ? assessment.q9.suicidalRisk : null,
             assessedAt: assessment?.assessedAt || null,
             assessmentDate: assessment?.assessmentDate || null,
+            assessmentId: assessment?._id ? String(assessment._id) : null,
+            referred: assessment?.referral?.notified === true,
           }
         : null;
 
@@ -406,6 +442,7 @@ export default async function handler(req, res) {
           source: r.source || null,
           hasData: visitHasData(r),
           attendedCount: (visitsByPersonId.get(personKey) || []).filter(visitHasData).length,
+          missedStreak: streakByPersonId.get(personKey) ?? 0,
           // ค่าดิบรอบ 1/2 สำหรับตารางกรอกผลรายครั้ง (bp ด้านล่างเลือกรอบ 1 ก่อน)
           bpReadings: {
             bp1Sys: toNum(r.bp1Sys),
@@ -442,6 +479,8 @@ export default async function handler(req, res) {
             personId: String(a.personId),
             q2Positive: Boolean(a?.q2?.positive),
             assessmentDate: a?.assessmentDate || null,
+            assessmentId: a?._id ? String(a._id) : null,
+            referred: a?.referral?.notified === true,
           }))
       : undefined;
 
@@ -478,6 +517,7 @@ export default async function handler(req, res) {
       mentalHealth: mentalCounts,
       people: includePeople ? filteredPeople : undefined,
       mentalHealthOthers,
+      attendanceByPerson: includePeople ? attendanceByPerson : undefined,
     });
   } catch (error) {
     console.error("elderly dashboard error:", error);

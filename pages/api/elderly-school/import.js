@@ -4,6 +4,7 @@ import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { fetchAndParseSheetCSV } from "@/lib/elderly-school/dashboard";
 import { parseSheetRowToPersonAndVisits } from "@/lib/elderly-school/import";
+import { collectProblems } from "@/lib/elderly-school/importProblems";
 
 function hasSheetString(v) {
   if (v === null || v === undefined) return false;
@@ -90,8 +91,11 @@ export default async function handler(req, res) {
     const peopleByCitizenId = new Map();
     const visitsByCitizenId = new Map();
 
-    for (const row of rows) {
+    const parsedEntries = [];
+    for (const [i, row] of rows.entries()) {
       const parsed = parseSheetRowToPersonAndVisits({ headers, row, yearBE: year });
+      // แถวในชีต: หัวตาราง = 1 (นับเฉพาะแถวที่ไม่ว่าง เพราะ parser ข้ามแถวว่าง)
+      parsedEntries.push({ row: i + 2, parsed });
       if (parsed.skip) {
         peopleSkipped++;
         continue;
@@ -113,8 +117,17 @@ export default async function handler(req, res) {
       }
     }
 
+    const problemSummary = collectProblems(parsedEntries);
+
     if (dryRun) {
       return res.status(200).json({
+        problems: problemSummary.problems,
+        problemSummary: {
+          skippedRows: problemSummary.skippedRows,
+          warningRows: problemSummary.warningRows,
+          warnings: problemSummary.warnings,
+          truncated: problemSummary.truncated,
+        },
         success: true,
         dryRun: true,
         yearBE: year,
@@ -196,6 +209,13 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
+      problems: problemSummary.problems,
+      problemSummary: {
+        skippedRows: problemSummary.skippedRows,
+        warningRows: problemSummary.warningRows,
+        warnings: problemSummary.warnings,
+        truncated: problemSummary.truncated,
+      },
       success: true,
       dryRun: false,
       yearBE: year,

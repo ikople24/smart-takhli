@@ -7,7 +7,7 @@ import {
   nextSession,
   formatThaiDate,
 } from "@/lib/elderly-school/followUp";
-import { useDashboard, useSchedule } from "../useElderlyData";
+import { mergeRoster, useDashboard, useRoster, useSchedule } from "../useElderlyData";
 import {
   TONE_STYLES,
   Chip,
@@ -88,13 +88,15 @@ export default function OverviewTab({ yearBE, go }) {
 
   const tiles = useMemo(() => indicatorTiles(data), [data]);
   const registered = data?.totals?.registered ?? 0;
+  const roster = useRoster(yearBE);
+  // รวมคนที่ยังไม่มีผลวัดด้วย (เช่น ขาดเรียนติดกัน) — ไม่ใช่แค่คนที่มีผลวัดล่าสุด
   const followUps = useMemo(
     () =>
-      people
-        .filter(needsCloseFollowUp)
-        .map((p) => ({ p, flags: followUpFlags(p) }))
+      mergeRoster(roster.people, people, data?.mentalHealthOthers, data?.attendanceByPerson)
+        .filter((r) => needsCloseFollowUp(r.follow))
+        .map((r) => ({ p: r, flags: followUpFlags(r.follow) }))
         .sort((a, b) => b.flags.length - a.flags.length || a.p.fullName.localeCompare(b.p.fullName, "th")),
-    [people]
+    [roster.people, people, data]
   );
   const screened =
     (data?.mentalHealth?.ok ?? 0) + (data?.mentalHealth?.risk ?? 0) + (data?.mentalHealthOthers?.length ?? 0);
@@ -170,7 +172,7 @@ export default function OverviewTab({ yearBE, go }) {
         >
           {lastAttended && <ProgressBar value={lastAttended.count} max={registered} />}
         </StatTile>
-        <StatTile label="ต้องติดตามใกล้ชิด" value={followUps.length} unit="คน" tone={followUps.length ? "see" : undefined} sub="ความดันสูง · NCD 3/3 · 2Q บวก · ชีพจรผิดปกติ" />
+        <StatTile label="ต้องติดตามใกล้ชิด" value={followUps.length} unit="คน" tone={followUps.length ? "see" : undefined} sub="ความดันสูง · NCD 3/3 · 2Q บวก · ชีพจรผิดปกติ · ขาดเรียน 3 ครั้งติดกัน" />
         <StatTile label="ยังไม่ได้คัดกรอง 2Q ปีนี้" value={notScreened} unit="คน" tone={notScreened ? "care" : undefined}>
           {notScreened > 0 && (
             <button type="button" className="self-start text-[13px] font-semibold text-[#0E5A55] underline" onClick={() => go("screening")}>

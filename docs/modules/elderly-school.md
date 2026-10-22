@@ -32,14 +32,18 @@
 | `cards` | พิมพ์บัตร QR A4 (เดิม `/admin/elderly-cards`) — บัตรยังพิมพ์เลขบัตร 4 ตัวท้ายเหมือนเดิม | — |
 | `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** | — |
 
-"ต้องติดตามใกล้ชิด" = ความดันสูง หรือ NCD 3/3 หรือ 2Q บวก หรือชีพจรผิดปกติ (`needsCloseFollowUp` ใน `lib/elderly-school/followUp.js`)
+"ต้องติดตามใกล้ชิด" = ความดันสูง หรือ NCD 3/3 หรือ 2Q บวก หรือชีพจรผิดปกติ หรือ**ขาดเรียน 3 ครั้งติดกัน** (`needsCloseFollowUp` ใน `lib/elderly-school/followUp.js`)
+
+- **ขาดเรียนติดกัน** (`missedStreak`) นับย้อนจากวันเรียนครั้งล่าสุดที่**ผ่านไปแล้ว (ไม่นับวันนี้)** จนเจอครั้งที่มีผลวัด — คำนวณฝั่ง API dashboard (`attendanceByPerson`, `people[].missedStreak`)
+- **2Q บวก → แจ้งเจ้าหน้าที่สาธารณสุข**: `ElderlyMentalHealthAssessment.referral {notified, notifiedAt, notifiedBy}` — บันทึกตอนประเมิน (`referred` ใน POST) หรือภายหลังด้วย `PATCH /api/elderly-school/assessments?id=` (เฉพาะผลที่เป็นบวก)
+- **ผู้ติดต่อ**: `ElderlySchoolSchedule.defaults.contactName/contactPhone` (ตั้งในแท็บตั้งค่าวันเรียน) → ปุ่ม "โทรหาเจ้าหน้าที่" บน `/elderly/checkin` และพิมพ์บนบัตร QR ได้
 
 ## API — `pages/api/elderly-school/`
 
 `cards` (รายชื่อทำบัตร), `checkin` (verify/บันทึก/สรุป — public; action `summary` ส่ง `schedule` ที่รวมค่าเริ่มต้นแล้ว + `lastAssessmentDate`),
 `schedule` (GET/PUT วันเรียน — PUT รับ `defaults` ด้วย ถ้าไม่ส่งจะไม่ล้างค่าเริ่มต้นเดิม), `dashboard` (aggregation สรุปสุขภาพ — 2026-10 เพิ่ม `totals.registered`,
 `attendance[16]`, `mentalHealthOthers`, และต่อคน `visitId`/`source`/`hasData`/`attendedCount`/`bpReadings`),
-`import` (นำเข้าชีต CSV แบบ upsert), `assessments` (2Q/9Q),
+`import` (นำเข้าชีต CSV แบบ upsert — ตอบ `problems[]` + `problemSummary`: แถวที่ข้าม/คำเตือนรายช่อง/เลขบัตรซ้ำ จาก `lib/elderly-school/importProblems.js`), `assessments` (2Q/9Q),
 `people`, `visits`, `sheet-dashboard` (สรุปจาก Google Sheet CSV โดยตรง)
 
 - ✅ **Auth (2026-06-19):** endpoint admin ทั้ง 8 (`cards`, `dashboard`, `import`,

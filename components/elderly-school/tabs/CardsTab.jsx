@@ -1,7 +1,8 @@
 // แท็บ "บัตร QR" — พิมพ์บัตรเช็คอินรายคน (เดิมหน้า /admin/elderly-cards)
 // ลิงก์บนบัตรชี้ /elderly/checkin (ห้ามเปลี่ยน path) — ผู้เรียนยืนยันเลขบัตร 4 ตัวท้ายก่อนบันทึก
 import React, { useMemo, useState } from "react";
-import { useRoster } from "../useElderlyData";
+import { scheduleContact } from "@/lib/elderly-school/schedule";
+import { useRoster, useSchedule } from "../useElderlyData";
 import { makeCheckinUrl, siteOrigin } from "../QrCheckinModal";
 import { EmptyState, Notice, Spinner, btnCls, cardCls, filterCls, inputCls, primaryBtnCls } from "../elderlyTheme";
 
@@ -17,6 +18,9 @@ const PRINT_CSS = `
 
 export default function CardsTab({ yearBE, isSuperAdmin }) {
   const roster = useRoster(yearBE);
+  const sched = useSchedule(yearBE);
+  const contact = scheduleContact(sched.data?.schedule);
+  const [showPhone, setShowPhone] = useState(true);
   const [mode, setMode] = useState("all"); // all | pick
   const [picked, setPicked] = useState(() => new Set());
   const [search, setSearch] = useState("");
@@ -117,6 +121,21 @@ export default function CardsTab({ yearBE, isSuperAdmin }) {
               </ul>
             </>
           )}
+          <label className="flex items-start gap-3 min-h-11 cursor-pointer">
+            <input
+              type="checkbox"
+              className="w-5 h-5 mt-0.5 accent-[#0E5A55]"
+              checked={showPhone && Boolean(contact)}
+              disabled={!contact}
+              onChange={(e) => setShowPhone(e.target.checked)}
+            />
+            <span className="flex flex-col">
+              <span className="text-[15px] font-semibold">พิมพ์เบอร์ติดต่อเจ้าหน้าที่บนบัตร</span>
+              <span className="text-[13px] text-[#5B635F]">
+                {contact ? contact.phone : "ยังไม่ได้ตั้งเบอร์ — ตั้งได้ที่แท็บตั้งค่าวันเรียน"}
+              </span>
+            </span>
+          </label>
           <div className="p-3.5 rounded-xl bg-[#F4F3EE] text-[13px] text-[#3C4541] flex flex-col gap-1">
             <span className="font-bold">วิธีใช้</span>
             <span>1. กด “สร้าง QR” 2. กด “พิมพ์” (กระดาษ A4 ได้ 8 ใบ) 3. ตัดตามเส้นประ</span>
@@ -159,6 +178,7 @@ export default function CardsTab({ yearBE, isSuperAdmin }) {
                         {p.citizenId ? String(p.citizenId).replace(/\D/g, "").slice(-4) : "????"}
                       </span>
                       <span className="text-[11px] text-[#3C4541] mt-1">สแกนเพื่อเช็คอินและดูผลสุขภาพ</span>
+                      {showPhone && contact && <span className="text-[11px] font-semibold text-[#1D2421]">ติดต่อเจ้าหน้าที่ {contact.phone}</span>}
                     </div>
                   </div>
                 </div>

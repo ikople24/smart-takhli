@@ -36,7 +36,13 @@ function fromApi(sessions) {
 }
 
 function defaultsFromApi(d) {
-  return { startTime: d?.startTime || "", endTime: d?.endTime || "", location: d?.location || "" };
+  return {
+    startTime: d?.startTime || "",
+    endTime: d?.endTime || "",
+    location: d?.location || "",
+    contactName: d?.contactName || "",
+    contactPhone: d?.contactPhone || "",
+  };
 }
 
 export default function ScheduleTab({ yearBE }) {
@@ -77,6 +83,11 @@ export default function ScheduleTab({ yearBE }) {
   const save = async () => {
     if (dupDates.size) {
       setError("มีวันที่ซ้ำกัน — แต่ละครั้งต้องเป็นคนละวัน");
+      return;
+    }
+    const phoneDigits = defaults.contactPhone.replace(/\D/g, "");
+    if (defaults.contactPhone.trim() && (phoneDigits.length < 9 || phoneDigits.length > 10)) {
+      setError("เบอร์โทรเจ้าหน้าที่ต้องเป็นตัวเลข 9–10 หลัก");
       return;
     }
     const badTime = rows.find((r) => r.dateISO && r.startTime && r.endTime && r.endTime <= r.startTime);
@@ -151,7 +162,7 @@ export default function ScheduleTab({ yearBE }) {
       <div className="flex flex-wrap gap-5 items-stretch">
       <section className={cardCls + " flex-[3_1_560px] min-w-0 p-5 flex flex-wrap gap-4 items-end"} aria-label="ค่าเริ่มต้น">
         <span className="basis-full text-base font-bold">
-          ค่าเริ่มต้นทุกครั้ง <span className="text-[13px] font-medium text-[#5B635F]">ครั้งไหนต่างจากนี้ แก้ในตารางด้านล่าง</span>
+          ค่าเริ่มต้นและผู้ติดต่อของปี <span className="text-[13px] font-medium text-[#5B635F]">ครั้งไหนต่างจากนี้ แก้ในตารางด้านล่าง</span>
         </span>
         <label className="flex flex-col gap-1">
           <span className={labelCls}>เวลาเริ่ม</span>
@@ -171,6 +182,28 @@ export default function ScheduleTab({ yearBE }) {
             onChange={(e) => setDefaults((d) => ({ ...d, location: e.target.value }))}
           />
         </label>
+        <label className="flex-[1_1_220px] flex flex-col gap-1 min-w-0">
+          <span className={labelCls}>ชื่อผู้ติดต่อ (แสดงบนมือถือผู้เรียน)</span>
+          <input
+            className={inputCls}
+            value={defaults.contactName}
+            maxLength={80}
+            placeholder="เช่น ครูประจำโรงเรียนผู้สูงอายุ"
+            onChange={(e) => setDefaults((d) => ({ ...d, contactName: e.target.value }))}
+          />
+        </label>
+        <label className="flex-[1_1_180px] flex flex-col gap-1 min-w-0">
+          <span className={labelCls}>เบอร์โทรเจ้าหน้าที่</span>
+          <input
+            className={inputCls}
+            type="tel"
+            inputMode="tel"
+            value={defaults.contactPhone}
+            maxLength={20}
+            placeholder="0XX-XXX-XXXX"
+            onChange={(e) => setDefaults((d) => ({ ...d, contactPhone: e.target.value }))}
+          />
+        </label>
       </section>
       <section className={cardCls + " flex-[1_1_300px] min-w-0 p-5 flex flex-col gap-3"} aria-label="ตัวอย่างที่ผู้เรียนเห็น">
         <h3 className="m-0 text-base font-bold">ผู้เรียนจะเห็นบนมือถือ</h3>
@@ -185,6 +218,11 @@ export default function ScheduleTab({ yearBE }) {
         ) : (
           <span className="text-sm text-[#5B635F]">ยังไม่มีวันเรียน</span>
         )}
+        <span className="text-[13px] text-[#5B635F]">
+          {defaults.contactPhone.trim()
+            ? `ปุ่ม "โทรหาเจ้าหน้าที่" จะโทรไปที่ ${defaults.contactPhone.trim()}`
+            : "ยังไม่ได้ตั้งเบอร์ — หน้ามือถือจะไม่แสดงปุ่มโทรหาเจ้าหน้าที่"}
+        </span>
       </section>
       </div>
 

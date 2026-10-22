@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    const { personId, yearBE, assessmentDate, q2, q9, assessedBy, note } = req.body || {};
+    const { personId, yearBE, assessmentDate, q2, q9, assessedBy, note, referred } = req.body || {};
     if (!personId) return res.status(400).json({ success: false, message: "Missing personId" });
     const year = Number(yearBE);
     if (!Number.isFinite(year) || year < 2500 || year > 2700) {
@@ -69,6 +69,11 @@ export default async function handler(req, res) {
       assessedBy: assessedBy ? String(assessedBy).trim() : null,
       note: note ? String(note).trim() : null,
     };
+    // แจ้งเจ้าหน้าที่ได้เฉพาะผล 2Q บวก — ส่ง referred มาเมื่อไหร่ค่อยเขียน (client เก่าไม่ส่ง = ไม่แตะค่าเดิม)
+    if (referred !== undefined) {
+      const on = positive && referred === true;
+      update.referral = { notified: on, notifiedAt: on ? new Date() : null, notifiedBy: on ? auth.userId : null };
+    }
 
     try {
       await ElderlyMentalHealthAssessment.updateOne(
@@ -94,6 +99,26 @@ export default async function handler(req, res) {
       assessmentDate: dateISO,
     }).lean();
 
+    return res.status(200).json({ success: true, item });
+  }
+
+  // บันทึก/ยกเลิก "แจ้งเจ้าหน้าที่สาธารณสุขแล้ว" ของผลประเมินที่มีอยู่ (เฉพาะ 2Q บวก)
+  if (req.method === "PATCH") {
+    const { id } = req.query;
+    if (!id || !ObjectId.isValid(String(id))) {
+      return res.status(400).json({ success: false, message: "Missing id" });
+    }
+    const doc = await ElderlyMentalHealthAssessment.findOne({ _id: new ObjectId(String(id)) }).lean();
+    if (!doc) return res.status(404).json({ success: false, message: "ไม่พบผลประเมิน" });
+    if (!doc?.q2?.positive) {
+      return res.status(400).json({ success: false, message: "แจ้งเจ้าหน้าที่ได้เฉพาะผล 2Q บวก" });
+    }
+    const on = req.body?.referred === true;
+    await ElderlyMentalHealthAssessment.updateOne(
+      { _id: doc._id },
+      { $set: { referral: { notified: on, notifiedAt: on ? new Date() : null, notifiedBy: on ? auth.userId : null } } }
+    );
+    const item = await ElderlyMentalHealthAssessment.findOne({ _id: doc._id }).lean();
     return res.status(200).json({ success: true, item });
   }
 

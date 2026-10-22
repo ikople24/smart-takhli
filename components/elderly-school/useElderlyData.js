@@ -81,10 +81,23 @@ export function useSchedule(yearBE) {
  * รวมรายชื่อทั้งปี (roster) กับผลวัดล่าสุดจาก dashboard
  * คนที่ยังไม่มีผลวัด → metrics = null
  */
-export function mergeRoster(roster, dashboardPeople, mentalHealthOthers) {
+export function mergeRoster(roster, dashboardPeople, mentalHealthOthers, attendanceByPerson) {
   const byId = new Map((dashboardPeople || []).map((p) => [String(p.personId), p]));
   const mhOthers = new Map((mentalHealthOthers || []).map((m) => [String(m.personId), m]));
-  const withMh = (row) => ({ ...row, mh: row.metrics?.mentalHealth || mhOthers.get(row.personId) || null });
+  const att = new Map((attendanceByPerson || []).map((a) => [String(a.personId), a]));
+  // follow = ข้อมูลรวมสำหรับ needsCloseFollowUp/followUpFlags (ผลวัดล่าสุด + 2Q + ขาดเรียนติดกัน)
+  const withMh = (row) => {
+    const mh = row.metrics?.mentalHealth || mhOthers.get(row.personId) || null;
+    const a = att.get(row.personId) || null;
+    const missedStreak = a?.missedStreak ?? row.metrics?.missedStreak ?? 0;
+    return {
+      ...row,
+      mh,
+      attended: a?.attended ?? row.metrics?.attendedCount ?? 0,
+      missedStreak,
+      follow: { ...(row.metrics || {}), mentalHealth: mh, missedStreak },
+    };
+  };
   const rows = (roster || []).map((r) =>
     withMh({
       personId: String(r.personId),

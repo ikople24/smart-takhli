@@ -5,7 +5,7 @@ import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule
 import { ObjectId } from "mongodb";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
-import { effectiveSessions } from "@/lib/elderly-school/schedule";
+import { effectiveSessions, scheduleContact } from "@/lib/elderly-school/schedule";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -107,6 +107,7 @@ export default async function handler(req, res) {
           yearBE: year,
           today,
           person: { fullName: person.fullName },
+          contact: scheduleContact(schedule),
           canSubmitToday: false,
           alreadySubmittedToday: false,
           scheduledVisitNo: null,
@@ -122,6 +123,7 @@ export default async function handler(req, res) {
           yearBE: year,
           today,
           person: { fullName: person.fullName },
+          contact: scheduleContact(schedule),
           canSubmitToday: false,
           alreadySubmittedToday: Boolean(existingToday || existingVisitNo),
           scheduledVisitNo,
@@ -135,6 +137,7 @@ export default async function handler(req, res) {
         yearBE: year,
         today,
         person: { fullName: person.fullName },
+        contact: scheduleContact(schedule),
         canSubmitToday: true,
         alreadySubmittedToday: false,
         scheduledVisitNo,
@@ -192,6 +195,7 @@ export default async function handler(req, res) {
         visits: enriched,
         stats: { visitCount: enriched.length },
         schedule: effectiveSessions(schedule),
+        contact: scheduleContact(schedule),
         lastAssessmentDate: lastAssessment?.assessmentDate || null,
       });
     }

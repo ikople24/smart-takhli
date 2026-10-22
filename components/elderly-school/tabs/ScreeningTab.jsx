@@ -24,7 +24,8 @@ const QUESTIONS = [
 
 const FILTERS = [
   { key: "todo", label: "ยังไม่คัดกรอง", test: (r) => !r.mh },
-  { key: "positive", label: "2Q บวก", test: (r) => r.mh?.q2Positive === true },
+  { key: "unreferred", label: "2Q บวก · ยังไม่แจ้ง", test: (r) => r.mh?.q2Positive === true && !r.mh?.referred },
+  { key: "positive", label: "2Q บวกทั้งหมด", test: (r) => r.mh?.q2Positive === true },
   { key: "all", label: "ทั้งหมด", test: () => true },
 ];
 
@@ -51,6 +52,8 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
   const [answers, setAnswers] = useState({ q1: null, q2: null });
   const [dateISO, setDateISO] = useState(bangkokTodayISO());
   const [note, setNote] = useState("");
+  const [referred, setReferred] = useState(false);
+  const [referBusy, setReferBusy] = useState(false);
   const [history, setHistory] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -59,6 +62,7 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
   useEffect(() => {
     setAnswers({ q1: null, q2: null });
     setNote("");
+    setReferred(false);
     setError("");
     setSaved("");
     setDateISO(bangkokTodayISO());
@@ -89,6 +93,7 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
         q2: { q1: answers.q1, q2: answers.q2 },
         q9: null,
         note: note.trim() || null,
+        referred: isPositive ? referred : false,
       });
       dash.reload();
       setSaved(`บันทึกผลของ ${selected.fullName} แล้ว`);
@@ -110,6 +115,23 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
 
   const loading = (dash.loading && !dash.data) || (roster.loading && !roster.data);
 
+  // ผลล่าสุดเป็น 2Q บวก → บันทึก/ยกเลิก "แจ้งเจ้าหน้าที่สาธารณสุขแล้ว" ได้โดยไม่ต้องประเมินใหม่
+  const latestPositive = selected?.mh?.q2Positive && selected.mh.assessmentId ? selected.mh : null;
+  const toggleReferral = async (on) => {
+    if (!latestPositive) return;
+    setReferBusy(true);
+    setError("");
+    try {
+      await postJson(`/api/elderly-school/assessments?id=${encodeURIComponent(latestPositive.assessmentId)}`, { referred: on }, "PATCH");
+      dash.reload();
+      setSaved(on ? "บันทึกว่าแจ้งเจ้าหน้าที่สาธารณสุขแล้ว" : "ยกเลิกสถานะการแจ้งแล้ว");
+    } catch (e) {
+      setError(e?.message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setReferBusy(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
@@ -122,7 +144,13 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
           <ProgressBar value={screened} max={registered} />
         </StatTile>
         <StatTile label="2Q ปกติ" value={screened - positive} unit="คน" tone="ok" />
-        <StatTile label="2Q บวก · ต้องติดตาม" value={positive} unit="คน" tone={positive ? "mind" : undefined} />
+        <StatTile
+          label="2Q บวก · ต้องติดตาม"
+          value={positive}
+          unit="คน"
+          tone={positive ? "mind" : undefined}
+          sub={positive ? `แจ้งเจ้าหน้าที่แล้ว ${rows.filter((r) => r.mh?.q2Positive && r.mh?.referred).length} คน` : undefined}
+        />
         <StatTile label="ยังไม่คัดกรอง" value={registered - screened} unit="คน" tone={registered - screened ? "care" : undefined} />
       </section>
 
@@ -196,6 +224,26 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
                 </label>
               </div>
               <div className="px-6 py-5 flex flex-col gap-4">
+                {latestPositive && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl border border-[#D9CDEE] bg-[#F7F3FC]">
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-[15px] font-semibold text-[#4B2E83]">
+                        ผลล่าสุด {formatThaiDate(latestPositive.assessmentDate)}: 2Q บวก
+                      </span>
+                      <span className="text-sm text-[#4B2E83]">
+                        {latestPositive.referred ? "แจ้งเจ้าหน้าที่สาธารณสุขแล้ว" : "ยังไม่ได้แจ้งเจ้าหน้าที่สาธารณสุข"}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className={latestPositive.referred ? btnCls : primaryBtnCls}
+                      disabled={referBusy}
+                      onClick={() => toggleReferral(!latestPositive.referred)}
+                    >
+                      {latestPositive.referred ? "ยกเลิกสถานะแจ้งแล้ว" : "บันทึกว่าแจ้งแล้ว"}
+                    </button>
+                  </div>
+                )}
                 <h3 className="m-0 text-[17px] font-bold">
                   แบบคัดกรอง 2Q <span className="text-sm font-medium text-[#5B635F]">ใน 2 สัปดาห์ที่ผ่านมา รวมวันนี้</span>
                 </h3>
@@ -232,8 +280,19 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
                       : "ผล 2Q ปกติ (ตอบ “ไม่ใช่” ทั้ง 2 ข้อ)"}
                   </Notice>
                 )}
+                {complete && isPositive && (
+                  <label className="flex items-center gap-3 min-h-11 text-[15px] font-semibold">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 accent-[#0E5A55]"
+                      checked={referred}
+                      onChange={(e) => setReferred(e.target.checked)}
+                    />
+                    แจ้งเจ้าหน้าที่สาธารณสุขให้ติดตามต่อแล้ว
+                  </label>
+                )}
                 <label className="flex flex-col gap-1.5">
-                  <span className={labelCls}>บันทึกเพิ่มเติม (เห็นเฉพาะเจ้าหน้าที่) เช่น แจ้งเจ้าหน้าที่สาธารณสุขแล้ว</span>
+                  <span className={labelCls}>บันทึกเพิ่มเติม (เห็นเฉพาะเจ้าหน้าที่)</span>
                   <textarea
                     rows={2}
                     value={note}
@@ -250,7 +309,9 @@ export default function ScreeningTab({ yearBE, query, setQuery }) {
                       {history.map((h) => (
                         <li key={String(h._id || h.assessmentDate)} className="flex justify-between gap-3 py-1.5 border-b border-[#EFEDE6]">
                           <span>{formatThaiDate(h.assessmentDate) || h.assessmentDate}</span>
-                          <Chip tone={h?.q2?.positive ? "mind" : "ok"}>{h?.q2?.positive ? "2Q บวก" : "ปกติ"}</Chip>
+                          <Chip tone={h?.q2?.positive ? "mind" : "ok"}>
+                            {h?.q2?.positive ? (h?.referral?.notified ? "2Q บวก · แจ้งแล้ว" : "2Q บวก · ยังไม่แจ้ง") : "ปกติ"}
+                          </Chip>
                         </li>
                       ))}
                     </ul>

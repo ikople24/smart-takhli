@@ -44,7 +44,24 @@ const ICONS = {
   clock: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2",
   pin: "M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11zM12 8a2 2 0 100 4 2 2 0 000-4z",
   info: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 8v5M12 16h.01",
+  phone: "M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2",
 };
+
+/** ปุ่มโทรหาเจ้าหน้าที่ (แสดงเมื่อแอดมินตั้งเบอร์ในแท็บตั้งค่าวันเรียน) */
+function CallButton({ contact, variant = "primary" }) {
+  if (!contact?.tel) return null;
+  return (
+    <a href={`tel:${contact.tel}`} className={variant === "primary" ? bigBtn + " !text-xl" : ghostBtn}>
+      <Icon d={ICONS.phone} />
+      <span className="flex flex-col items-start leading-tight">
+        <span>โทรหาเจ้าหน้าที่</span>
+        <span className={"text-[15px] font-medium " + (variant === "primary" ? "opacity-90" : "text-[#5B635F]")}>
+          {[contact.name, contact.phone].filter(Boolean).join(" · ")}
+        </span>
+      </span>
+    </a>
+  );
+}
 
 function Banner({ tone = "ok", children }) {
   const t = TONE_STYLES[tone] || TONE_STYLES.ok;
@@ -212,7 +229,7 @@ function BpField({ label, optional, value, onChange }) {
   );
 }
 
-function FormStep({ fullName, visitNo, onSubmit, onSkip }) {
+function FormStep({ fullName, visitNo, contact, onSubmit, onSkip }) {
   const [form, setForm] = useState({ weightKg: "", waistCm: "", pulseBpm: "" });
   const [bp1, setBp1] = useState({ sys: "", dia: "" });
   const [bp2, setBp2] = useState({ sys: "", dia: "" });
@@ -259,6 +276,7 @@ function FormStep({ fullName, visitNo, onSubmit, onSkip }) {
         <BpField label="ความดัน รอบที่ 1" value={bp1} onChange={setBp1} />
         <BpField label="ความดัน รอบที่ 2" optional value={bp2} onChange={setBp2} />
         {error && <Banner tone="see">{error}</Banner>}
+        <CallButton contact={contact} variant="ghost" />
       </div>
       <div className="px-6 pt-4 pb-7 bg-white border-t border-[#E4E2DA] flex flex-col gap-2.5">
         <button type="button" className={bigBtn} onClick={submit} disabled={loading}>
@@ -371,6 +389,8 @@ function HealthTab({ data, banner, successVisitNo }) {
           </span>
         )}
       </div>
+
+      <CallButton contact={data.contact} />
 
       <p className="m-0 px-1 text-sm text-[#5B635F] leading-relaxed">
         ผลนี้เป็นการคัดกรองเบื้องต้น ไม่ใช่การวินิจฉัย หากมีอาการผิดปกติหรือไม่แน่ใจ ปรึกษาเจ้าหน้าที่ได้ทุกครั้ง
@@ -509,7 +529,12 @@ function ScheduleTabView({ data }) {
   const [showAll, setShowAll] = useState(false);
 
   if (!sessions.length) {
-    return <Banner tone="none">ยังไม่มีตารางเรียนของปีนี้ — สอบถามเจ้าหน้าที่ได้ค่ะ</Banner>;
+    return (
+      <div className="flex flex-col gap-3.5">
+        <Banner tone="none">ยังไม่มีตารางเรียนของปีนี้ — สอบถามเจ้าหน้าที่ได้ค่ะ</Banner>
+        <CallButton contact={data.contact} variant="ghost" />
+      </div>
+    );
   }
   return (
     <div className="flex flex-col gap-3.5">
@@ -552,6 +577,7 @@ function ScheduleTabView({ data }) {
           </ul>
         </>
       )}
+      <CallButton contact={data.contact} variant="ghost" />
     </div>
   );
 }
@@ -682,6 +708,7 @@ export default function CheckinApp({ personId, yearBE, nameHint }) {
           <FormStep
             fullName={verifyInfo?.person?.fullName}
             visitNo={verifyInfo?.scheduledVisitNo}
+            contact={verifyInfo?.contact}
             onSubmit={onSubmit}
             onSkip={async () => {
               setBanner("ยังไม่ได้บันทึกค่าของวันนี้ — กลับมาบันทึกได้โดยสแกน QR อีกครั้ง");
