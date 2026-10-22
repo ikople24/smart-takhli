@@ -20,19 +20,28 @@ export function postJson(url, body, method = "POST") {
   });
 }
 
+// แคชผล GET ระดับโมดูล — สลับแท็บแล้วแสดงข้อมูลเดิมทันที แล้วค่อยดึงใหม่เบื้องหลัง (stale-while-revalidate)
+// แท็บถูก remount ทุกครั้งที่เปลี่ยน (key ใน ElderlySchoolModule) จึงต้องแคชนอก component
+const responseCache = new Map();
+
 function useApi(url) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(Boolean(url));
+  const [data, setData] = useState(() => (url ? responseCache.get(url) ?? null : null));
+  const [loading, setLoading] = useState(Boolean(url) && !responseCache.has(url));
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!url) return undefined;
     let alive = true;
-    setLoading(true);
+    const cached = responseCache.get(url);
+    if (cached) setData(cached);
+    setLoading(!cached);
     setError("");
     fetchJson(url)
       .then((json) => {
+        // ข้อมูลไม่เปลี่ยน → คง reference เดิม ไม่ให้ฟอร์มที่ sync จาก data (ตั้งค่าวันเรียน/กรอกผลวัด) ถูกรีเซ็ตกลางการพิมพ์
+        if (cached && JSON.stringify(cached) === JSON.stringify(json)) return;
+        responseCache.set(url, json);
         if (alive) setData(json);
       })
       .catch((e) => {

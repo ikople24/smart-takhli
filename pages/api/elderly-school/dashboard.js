@@ -6,7 +6,6 @@ import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMental
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 import { missedStreak } from "@/lib/elderly-school/followUp";
 import { normalizeSessions } from "@/lib/elderly-school/schedule";
-import { ObjectId } from "mongodb";
 
 function maskCitizenId(id) {
   const s = String(id || "").replace(/\D/g, "");
@@ -141,16 +140,30 @@ export default async function handler(req, res) {
       { $unwind: { path: "$person", preserveNullAndEmptyArrays: true } },
     ];
 
-    const rows = await ElderlyVisit.aggregate(pipeline);
-
-    // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี + จำนวนคนที่มีผลวัดแต่ละครั้ง
-    const [registeredIds, attendanceAgg] = await Promise.all([
+    // ทุก query ยิงพร้อมกันรอบเดียว (DB อยู่ไกล = แต่ละรอบแพง) — ข้อมูลทั้งปีมีแค่หลักพันแถว
+    // ผล 2Q และประวัติ visit ดึงของทั้งปีมาก่อน แล้วค่อยกรองตามคนใน JS (ผลเท่าเดิม)
+    const [rows, registeredIds, attendanceAgg, latestAssessments, allVisits, scheduleDoc] = await Promise.all([
+      ElderlyVisit.aggregate(pipeline),
+      // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี + จำนวนคนที่มีผลวัดแต่ละครั้ง
       ElderlyVisit.distinct("personId", { yearBE }),
       ElderlyVisit.aggregate([
         { $match: { yearBE } },
         { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },
         { $group: { _id: "$visitNo", count: { $sum: 1 } } },
       ]),
+      // Latest mental health assessment per person (same year)
+      ElderlyMentalHealthAssessment.aggregate([
+        { $match: { yearBE } },
+        { $sort: { personId: 1, assessedAt: -1 } },
+        { $group: { _id: "$personId", doc: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$doc" } },
+      ]),
+      // Visits history (for trend fields) - only when includePeople
+      includePeople
+        ? ElderlyVisit.find({ yearBE }).sort({ personId: 1, visitNo: 1 }).lean()
+        : Promise.resolve([]),
+      // วันเรียน (สำหรับนับขาดเรียนติดกัน) - only when includePeople
+      includePeople ? ElderlySchoolSchedule.findOne({ yearBE }).lean() : Promise.resolve(null),
     ]);
     const attendanceByNo = new Map((attendanceAgg || []).map((a) => [Number(a._id), a.count]));
 
@@ -164,18 +177,18 @@ export default async function handler(req, res) {
         month: "2-digit",
         day: "2-digit",
       }).format(new Date());
-      const [scheduleDoc, attendedAgg] = await Promise.all([
-        ElderlySchoolSchedule.findOne({ yearBE }).lean(),
-        ElderlyVisit.aggregate([
-          { $match: { yearBE } },
-          { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },
-          { $group: { _id: "$personId", visitNos: { $addToSet: "$visitNo" } } },
-        ]),
-      ]);
       const doneNos = normalizeSessions(scheduleDoc?.sessions)
         .filter((x) => x.dateISO < todayISO)
         .map((x) => x.visitNo);
-      const attendedById = new Map((attendedAgg || []).map((a) => [String(a._id), a.visitNos || []]));
+      // ครั้งที่มีผลวัดรายคน — ใช้ allVisits ที่ดึงมาแล้ว (ไม่ยิง query เพิ่ม)
+      const attendedById = new Map();
+      for (const v of allVisits || []) {
+        if (!visitHasData(v)) continue;
+        const k = String(v.personId);
+        const arr = attendedById.get(k) || [];
+        if (!arr.includes(v.visitNo)) arr.push(v.visitNo);
+        attendedById.set(k, arr);
+      }
       for (const id of registeredIds) {
         const key = String(id);
         const nos = attendedById.get(key) || [];
@@ -189,41 +202,22 @@ export default async function handler(req, res) {
       count: attendanceByNo.get(i + 1) || 0,
     }));
 
-    // Latest mental health assessment per person (same year)
-    const personIds = rows
-      .map((r) => r?.person?._id || r?.personId)
-      .filter(Boolean)
-      .map((id) => new ObjectId(String(id)));
+    const personIds = new Set(rows.map((r) => r?.person?._id || r?.personId).filter(Boolean).map(String));
 
-    // ดึงผล 2Q ของผู้เรียนทั้งปี (รวมคนที่ยังไม่มีผลวัด) — การ์ดสรุปยังนับเฉพาะ rows เหมือนเดิม
-    const mhIds = includePeople
-      ? registeredIds.map((id) => new ObjectId(String(id)))
-      : personIds;
+    // ผล 2Q ของผู้เรียนทั้งปี (รวมคนที่ยังไม่มีผลวัด) — การ์ดสรุปยังนับเฉพาะ rows เหมือนเดิม
+    const mhIds = includePeople ? new Set(registeredIds.map(String)) : personIds;
     const mhByPersonId = new Map();
-    if (mhIds.length) {
-      const latestAssessments = await ElderlyMentalHealthAssessment.aggregate([
-        { $match: { yearBE, personId: { $in: mhIds } } },
-        { $sort: { personId: 1, assessedAt: -1 } },
-        { $group: { _id: "$personId", doc: { $first: "$$ROOT" } } },
-        { $replaceRoot: { newRoot: "$doc" } },
-      ]);
-      for (const a of latestAssessments || []) {
-        mhByPersonId.set(String(a.personId), a);
-      }
+    for (const a of latestAssessments || []) {
+      if (mhIds.has(String(a.personId))) mhByPersonId.set(String(a.personId), a);
     }
 
-    // Visits history (for trend fields) - only when includePeople
     const visitsByPersonId = new Map();
-    if (includePeople && personIds.length) {
-      const allVisits = await ElderlyVisit.find({ yearBE, personId: { $in: personIds } })
-        .sort({ personId: 1, visitNo: 1 })
-        .lean();
-      for (const v of allVisits || []) {
-        const k = String(v.personId);
-        const arr = visitsByPersonId.get(k) || [];
-        arr.push(v);
-        visitsByPersonId.set(k, arr);
-      }
+    for (const v of allVisits || []) {
+      const k = String(v.personId);
+      if (!personIds.has(k)) continue;
+      const arr = visitsByPersonId.get(k) || [];
+      arr.push(v);
+      visitsByPersonId.set(k, arr);
     }
 
     // Compute summary + people list
