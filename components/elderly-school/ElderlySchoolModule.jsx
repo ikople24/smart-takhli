@@ -1,7 +1,7 @@
 // components/elderly-school/ElderlySchoolModule.jsx
 // หน้าหลักโรงเรียนผู้สูงอายุแบบแท็บ — เมนูย่อยทั้งหมดอยู่ใน ?tab= ของ /admin/elderly-school
 // (ไม่มีหน้า/เมนู sidebar แยก จึงไม่ต้องลงทะเบียนสิทธิ์เพิ่ม — ใช้สิทธิ์ /admin/elderly-school ที่เดียว)
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import { usePermissions } from "@/components/PermissionGuard";
 import { currentYearBE } from "@/lib/elderly-school/followUp";
@@ -71,8 +71,17 @@ export default function ElderlySchoolModule() {
 
   const ActiveTab = active?.Component;
 
+  // เปลี่ยนแท็บแล้วเลื่อนกลับไปหัวโมดูล — กล่องที่เลื่อนคือ <div overflow-auto> ของ LayoutAdmin ไม่ใช่ window
+  // จึงใช้ scrollIntoView แทน option scroll ของ router (ไม่เลื่อนตอนโหลดหน้าครั้งแรก)
+  const rootRef = useRef(null);
+  const prevTab = useRef(active?.key);
+  useEffect(() => {
+    if (prevTab.current !== active?.key) rootRef.current?.scrollIntoView({ block: "start" });
+    prevTab.current = active?.key;
+  }, [active?.key]);
+
   return (
-    <div className="min-h-screen bg-[#F4F3EE] text-[#1D2421]">
+    <div ref={rootRef} className="min-h-screen bg-[#F4F3EE] text-[#1D2421]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-12 flex flex-col gap-5">
         <div className="flex flex-col gap-3.5">
           <div className="flex flex-wrap items-center justify-between gap-3">

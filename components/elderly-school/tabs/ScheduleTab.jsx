@@ -2,7 +2,7 @@
 // มีผลกับหน้าเช็คอินสาธารณะ: ผู้เรียนบันทึกได้เฉพาะวันที่ตั้งไว้ และเห็นตารางเรียนในแท็บ "ตารางเรียน" บนมือถือ
 import React, { useEffect, useMemo, useState } from "react";
 import { bangkokTodayISO, formatThaiDate, sessionStatuses } from "@/lib/elderly-school/followUp";
-import { effectiveSessions, formatTimeRange } from "@/lib/elderly-school/schedule";
+import { effectiveSessions, formatTimeRange, outOfOrderVisits } from "@/lib/elderly-school/schedule";
 import { postJson, useSchedule } from "../useElderlyData";
 import { Chip, Notice, Spinner, btnCls, cardCls, inputCls, labelCls, primaryBtnCls } from "../elderlyTheme";
 
@@ -68,12 +68,17 @@ export default function ScheduleTab({ yearBE }) {
     return new Set([...seen].filter(([, n]) => n > 1).map(([d]) => d));
   }, [rows]);
 
-  // ตัวอย่างที่ผู้เรียนเห็น: ครั้งถัดไป (หรือครั้งแรก) หลังรวมค่าเริ่มต้น
-  const preview = useMemo(() => {
+  // วันที่ย้อนลำดับ (มักพิมพ์ผิด) — เตือนอย่างเดียว ไม่บล็อกการบันทึก
+  const disorder = useMemo(() => outOfOrderVisits(rows), [rows]);
+  const disorderNos = useMemo(() => new Set(disorder.map((d) => d.visitNo)), [disorder]);
+
+  // ตัวอย่างที่ผู้เรียนเห็น: ครั้งถัดไป/วันนี้ หลังรวมค่าเริ่มต้น — ผ่านครบทุกครั้งแล้ว = ไม่มีการ์ดครั้งถัดไป
+  const today = bangkokTodayISO();
+  const { preview, allPast } = useMemo(() => {
     const eff = effectiveSessions({ defaults, sessions: rows });
-    const today = bangkokTodayISO();
-    return eff.find((s) => s.dateISO >= today) || eff[0] || null;
-  }, [defaults, rows]);
+    const next = eff.find((s) => s.dateISO >= today) || null;
+    return { preview: next, allPast: !next && eff.length > 0 };
+  }, [defaults, rows, today]);
 
   const setRow = (no, patch) => {
     setRows((prev) => prev.map((r) => (r.visitNo === no ? { ...r, ...patch } : r)));
@@ -158,6 +163,12 @@ export default function ScheduleTab({ yearBE }) {
       {sched.error && <Notice tone="see">{sched.error}</Notice>}
       {error && <Notice tone="see">{error}</Notice>}
       {success && <Notice tone="ok">{success}</Notice>}
+      {disorder.length > 0 && (
+        <Notice tone="care">
+          วันที่ไม่เรียงตามลำดับครั้ง:{" "}
+          {disorder.map((d) => `ครั้งที่ ${d.visitNo} อยู่ก่อนครั้งที่ ${d.prevVisitNo}`).join(", ")} — ตรวจว่าพิมพ์วันที่ผิดหรือไม่
+        </Notice>
+      )}
 
       <div className="flex flex-wrap gap-5 items-stretch">
       <section className={cardCls + " flex-[3_1_560px] min-w-0 p-5 flex flex-wrap gap-4 items-end"} aria-label="ค่าเริ่มต้น">
@@ -209,12 +220,14 @@ export default function ScheduleTab({ yearBE }) {
         <h3 className="m-0 text-base font-bold">ผู้เรียนจะเห็นบนมือถือ</h3>
         {preview ? (
           <div className="p-4 rounded-2xl bg-[#0E5A55] text-white flex flex-col gap-1.5">
-            <span className="text-[13px] opacity-90">ครั้งถัดไป · ครั้งที่ {preview.visitNo}</span>
+            <span className="text-[13px] opacity-90">{preview.dateISO === today ? "วันนี้" : "ครั้งถัดไป"} · ครั้งที่ {preview.visitNo}</span>
             <span className="text-xl font-bold">{formatThaiDate(preview.dateISO)}</span>
             <span className="text-sm">
               {[formatTimeRange(preview.startTime, preview.endTime), preview.location].filter(Boolean).join(" · ") || "ยังไม่ระบุเวลาและสถานที่"}
             </span>
           </div>
+        ) : allPast ? (
+          <span className="text-sm text-[#5B635F]">เรียนครบทุกครั้งที่ตั้งไว้แล้ว — มือถือจะแสดงแค่รายการ &quot;ผ่านมาแล้ว&quot; ไม่มีการ์ดครั้งถัดไป</span>
         ) : (
           <span className="text-sm text-[#5B635F]">ยังไม่มีวันเรียน</span>
         )}
@@ -260,7 +273,7 @@ export default function ScheduleTab({ yearBE }) {
                             aria-label={`วันที่ครั้งที่ ${r.visitNo}`}
                             value={r.dateISO}
                             onChange={(e) => setRow(r.visitNo, { dateISO: e.target.value })}
-                            className={smallInput + " w-[150px]" + (dup ? " !border-[#C0473E] !bg-[#FDF3F2]" : !r.dateISO ? " border-dashed bg-[#FBFAF7]" : "")}
+                            className={smallInput + " w-[150px]" + (dup ? " !border-[#C0473E] !bg-[#FDF3F2]" : disorderNos.has(r.visitNo) ? " !border-[#C99A2E] !bg-[#FDF8EC]" : !r.dateISO ? " border-dashed bg-[#FBFAF7]" : "")}
                           />
                         </td>
                         <td className="py-1.5 px-1.5 border-b border-[#EFEDE6] whitespace-nowrap">

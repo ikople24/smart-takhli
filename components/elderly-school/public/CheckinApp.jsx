@@ -441,19 +441,19 @@ function HistoryTab({ data }) {
           <span className="py-6 text-center text-base text-[#5B635F]">ยังไม่มีข้อมูล</span>
         ) : (
           <>
-            <div className="h-[150px] flex gap-2 items-end border-b border-[#D6D3C8]">
+            {/* แท่ง + ตัวเลขค่า + เลขครั้ง อยู่คอลัมน์เดียวกัน → ไม่เหลื่อมกัน และ grid minmax(0,1fr) ไม่ล้นการ์ดแม้ครบ 16 ครั้ง */}
+            <div
+              className="grid gap-1.5"
+              style={{ gridTemplateColumns: `repeat(${trend.length}, minmax(0, 1fr))`, maxWidth: `${trend.length * 44}px` }}
+            >
               {trend.map((t) => (
-                <div key={t.visitNo} className="flex-1 max-w-10 h-full flex flex-col items-center justify-end gap-1">
-                  <span className="text-xs font-semibold text-[#3C4541]">{t.value}</span>
-                  <div className="w-full rounded-t-md" style={{ height: `${24 + ((t.value - min) / span) * 96}px`, background: toneBar[t.tone] }} />
+                <div key={t.visitNo} className="min-w-0 flex flex-col items-center">
+                  <div className="h-[150px] w-full flex flex-col items-center justify-end gap-1 border-b border-[#D6D3C8]">
+                    <span className={"font-semibold text-[#3C4541] whitespace-nowrap " + (trend.length > 12 ? "text-[10px]" : "text-xs")}>{t.value}</span>
+                    <div className="w-full rounded-t-md" style={{ height: `${24 + ((t.value - min) / span) * 96}px`, background: toneBar[t.tone] }} />
+                  </div>
+                  <span className="pt-1 text-xs text-center text-[#5B635F]">{t.visitNo}</span>
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-2 -mt-1.5">
-              {trend.map((t) => (
-                <span key={t.visitNo} className="flex-1 max-w-10 text-xs text-center text-[#5B635F]">
-                  {t.visitNo}
-                </span>
               ))}
             </div>
             <span className="text-sm text-[#5B635F]">ตัวเลขใต้แท่ง = ครั้งที่</span>
@@ -538,7 +538,11 @@ function ScheduleTabView({ data }) {
   }
   return (
     <div className="flex flex-col gap-3.5">
-      {upcoming[0] && <SessionCard s={upcoming[0]} highlight today={data.today} />}
+      {upcoming[0] ? (
+        <SessionCard s={upcoming[0]} highlight today={data.today} />
+      ) : (
+        <Banner tone="ok">เรียนครบทุกครั้งของปีนี้แล้ว ขอบคุณที่มาร่วมเรียนค่ะ</Banner>
+      )}
       {upcoming.length > 1 && (
         <>
           <span className="px-1 text-[15px] font-bold text-[#5B635F]">กำลังจะมาถึง</span>

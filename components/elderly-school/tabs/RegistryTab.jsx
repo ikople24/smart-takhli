@@ -1,5 +1,5 @@
 // แท็บ "ทะเบียนผู้เรียน" — รายชื่อทั้งปีพร้อมสถานะล่าสุด + แผงประวัติรายคน
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MISSED_STREAK_ALERT, bmiChip, bpChip, mhChip, ncdChip, needsCloseFollowUp } from "@/lib/elderly-school/followUp";
 import { mergeRoster, useDashboard, useRoster, useSchedule } from "../useElderlyData";
 import PersonProfilePanel from "../PersonProfilePanel";
@@ -41,6 +41,20 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
   const quick = q1(query.quick) || "all";
   const indicator = INDICATOR[q1(query.filter)] ? q1(query.filter) : null;
   const selectedId = q1(query.person) || null;
+
+  // จอแคบ แผงประวัติอยู่ใต้ตาราง → เลือกชื่อแล้วเลื่อนลงไปให้เห็น (จอกว้างแผงอยู่ข้างตาราง ไม่ต้องเลื่อน)
+  const panelRef = useRef(null);
+  const prevSelected = useRef(selectedId);
+  useEffect(() => {
+    if (selectedId && prevSelected.current !== selectedId) {
+      const el = panelRef.current;
+      if (el && el.getBoundingClientRect().top > window.innerHeight * 0.5) {
+        // ไม่ใช้ smooth — แผงถูก remount (key=personId) ระหว่างแอนิเมชันทำให้การเลื่อนถูกยกเลิก
+        requestAnimationFrame(() => el.scrollIntoView({ block: "start" }));
+      }
+    }
+    prevSelected.current = selectedId;
+  }, [selectedId]);
 
   const rows = useMemo(
     () => mergeRoster(roster.people, dash.data?.people, dash.data?.mentalHealthOthers, dash.data?.attendanceByPerson),
@@ -208,7 +222,7 @@ export default function RegistryTab({ yearBE, query, setQuery, go }) {
           </div>
         </section>
 
-        <div className="flex-[2_1_400px] min-w-0">
+        <div ref={panelRef} className="flex-[2_1_400px] min-w-0 scroll-mt-4">
           {selectedId ? (
             <PersonProfilePanel
               key={selectedId}
