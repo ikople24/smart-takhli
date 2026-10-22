@@ -5,7 +5,7 @@ import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule
 import { ObjectId } from "mongodb";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
-import { effectiveSessions, scheduleContact } from "@/lib/elderly-school/schedule";
+import { effectiveSessions, resolveCheckinYear, scheduleContact } from "@/lib/elderly-school/schedule";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -54,8 +54,8 @@ export default async function handler(req, res) {
     const { personId, yearBE, citizenIdLast4 } = req.body || {};
 
     if (!personId) return res.status(400).json({ success: false, message: "Missing personId" });
-    const year = Number(yearBE) || getCurrentYearBE();
-    if (!Number.isFinite(year) || year < 2500 || year > 2700) {
+    const cardYear = Number(yearBE) || getCurrentYearBE();
+    if (!Number.isFinite(cardYear) || cardYear < 2500 || cardYear > 2700) {
       return res.status(400).json({ success: false, message: "Invalid yearBE" });
     }
 
@@ -75,6 +75,10 @@ export default async function handler(req, res) {
     }
 
     const today = getBangkokISODate();
+
+    // บัตรใบเดิมใช้ข้ามปีได้: หลักสูตรปีใหม่กว่าบัตรเริ่มแล้ว → บันทึก/แสดงเป็นปีใหม่ (lib/elderly-school/schedule.js)
+    const newerSchedules = await ElderlySchoolSchedule.find({ yearBE: { $gt: cardYear } }, { yearBE: 1, "sessions.dateISO": 1 }).lean();
+    const year = resolveCheckinYear(cardYear, newerSchedules, today);
 
     // Resolve today's session -> visitNo
     const schedule = await ElderlySchoolSchedule.findOne({ yearBE: year }).lean();

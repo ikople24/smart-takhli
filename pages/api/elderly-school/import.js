@@ -5,6 +5,7 @@ import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { fetchAndParseSheetCSV } from "@/lib/elderly-school/dashboard";
 import { parseSheetRowToPersonAndVisits } from "@/lib/elderly-school/import";
 import { collectProblems } from "@/lib/elderly-school/importProblems";
+import { resolveMissingCitizenIds } from "@/lib/elderly-school/nameMatch";
 
 function hasSheetString(v) {
   if (v === null || v === undefined) return false;
@@ -91,11 +92,20 @@ export default async function handler(req, res) {
     const peopleByCitizenId = new Map();
     const visitsByCitizenId = new Map();
 
-    const parsedEntries = [];
-    for (const [i, row] of rows.entries()) {
-      const parsed = parseSheetRowToPersonAndVisits({ headers, row, yearBE: year });
+    const parsedEntries = rows.map((row, i) => ({
       // แถวในชีต: หัวตาราง = 1 (นับเฉพาะแถวที่ไม่ว่าง เพราะ parser ข้ามแถวว่าง)
-      parsedEntries.push({ row: i + 2, parsed });
+      row: i + 2,
+      parsed: parseSheetRowToPersonAndVisits({ headers, row, yearBE: year }),
+    }));
+
+    // แถวที่ไม่มีเลขบัตร → จับคู่กับผู้เรียนเดิมด้วยชื่อ (คนใหม่ยังต้องมีเลขบัตร — ข้ามพร้อมเหตุผล)
+    let nameMatch = { matched: 0, unmatched: 0 };
+    if (parsedEntries.some((e) => e.parsed.needsNameMatch)) {
+      const existing = await ElderlyPerson.find({}, { citizenId: 1, fullName: 1 }).lean();
+      nameMatch = resolveMissingCitizenIds(parsedEntries, existing);
+    }
+
+    for (const { parsed } of parsedEntries) {
       if (parsed.skip) {
         peopleSkipped++;
         continue;
@@ -113,6 +123,7 @@ export default async function handler(req, res) {
           heightCm: parsed.person.heightCm,
           visitsCount: parsed.visits.length,
           latest: parsed.latest,
+          matchedByName: parsed.matchedByName || null,
         });
       }
     }
@@ -137,6 +148,8 @@ export default async function handler(req, res) {
           peopleSkipped,
           visitsParsed,
           uniquePeople: peopleByCitizenId.size,
+          matchedByName: nameMatch.matched,
+          unmatchedNoCitizenId: nameMatch.unmatched,
         },
         preview,
       });
@@ -225,6 +238,8 @@ export default async function handler(req, res) {
         peopleSkipped,
         visitsParsed,
         uniquePeople: peopleByCitizenId.size,
+        matchedByName: nameMatch.matched,
+        unmatchedNoCitizenId: nameMatch.unmatched,
         peopleUpserted: upsertOps.length,
         visitsUpserted: visitOps.length,
       },

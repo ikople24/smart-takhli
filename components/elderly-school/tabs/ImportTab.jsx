@@ -183,7 +183,13 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
         <>
           <section aria-label="ผลการตรวจ" className="grid gap-3.5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
             <StatTile label="แถวในชีต" value={t.rows ?? 0} unit="แถว" />
-            <StatTile label="ผู้เรียนที่อ่านได้" value={t.uniquePeople ?? 0} unit="คน" tone="ok" />
+            <StatTile
+              label="ผู้เรียนที่อ่านได้"
+              value={t.uniquePeople ?? 0}
+              unit="คน"
+              tone="ok"
+              sub={t.matchedByName ? `ไม่มีเลขบัตร จับคู่จากชื่อ ${t.matchedByName} คน` : undefined}
+            />
             <StatTile label="ผลวัดรายครั้ง" value={t.visitsParsed ?? 0} unit="รายการ" />
             <StatTile
               label="แถวที่มีปัญหา"
@@ -193,6 +199,13 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
               sub={`ข้าม ${ps.skippedRows ?? 0} · เตือน ${ps.warningRows ?? 0}`}
             />
           </section>
+
+          {t.unmatchedNoCitizenId > 0 && (
+            <Notice tone="see">
+              {t.unmatchedNoCitizenId} แถวไม่มีเลขบัตรและจับคู่กับผู้เรียนเดิมไม่ได้ (ผู้เรียนใหม่ หรือชื่อซ้ำหลายคน) — จะถูกข้าม
+              ดาวน์โหลดรายการปัญหาด้านล่างเพื่อขอเลขบัตรจากเจ้าหน้าที่ แล้วเติมในชีตก่อนนำเข้าซ้ำ
+            </Notice>
+          )}
 
           {(result || preview)?.problems && <ProblemsCard problems={problems} summary={ps} yearBE={yearBE} />}
 
@@ -214,7 +227,10 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
                     {(preview?.preview || []).map((r) => (
                       <tr key={r.citizenId}>
                         <td className="py-2.5 px-3 pl-5 border-b border-[#EFEDE6] font-semibold">{r.fullName || "-"}</td>
-                        <td className="py-2.5 px-3 border-b border-[#EFEDE6]">{maskCitizen(r.citizenId)}</td>
+                        <td className="py-2.5 px-3 border-b border-[#EFEDE6]">
+                          {maskCitizen(r.citizenId)}
+                          {r.matchedByName && <span className="ml-1.5 text-xs text-[#8A5A00]">(จับคู่จากชื่อ)</span>}
+                        </td>
                         <td className="py-2.5 px-3 border-b border-[#EFEDE6]">{r.heightCm ?? "—"}</td>
                         <td className="py-2.5 px-3 border-b border-[#EFEDE6]">{r.visitsCount ?? 0}</td>
                       </tr>

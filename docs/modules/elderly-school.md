@@ -13,7 +13,7 @@
 | `/admin/elderly-school` | หน้าหลักแบบแท็บ `?tab=` (ดูด้านล่าง) — ปีเลือกด้วย `?yearBE=` | เมนู "จัดการ" (รายการเดียวใน Sidebar หลัก) |
 | `/admin/elderly-cards` | **redirect** → `/admin/elderly-school?tab=cards` (คง path ให้ลิงก์เดิม) | hideFromMenu |
 | `/admin/elderly-schedule` | **redirect** → `/admin/elderly-school?tab=schedule` | hideFromMenu |
-| `/elderly/checkin` | **public** (หน้าเต็มจอ ไม่ครอบ layout เดิม) — ยืนยันเลขบัตร 4 ตัวท้ายด้วยแป้นตัวเลขใหญ่ → วันเรียน: กรอกค่าวัด → "สุขภาพของฉัน" 3 แท็บ (สุขภาพ · ประวัติ · ตารางเรียน) | ไม่ต้องล็อกอิน |
+| `/elderly/checkin` | **public** (หน้าเต็มจอ ไม่ครอบ layout เดิม) — บัตรใบเดิมใช้ข้ามปีได้: ถ้าหลักสูตรปีที่ใหม่กว่าปีบนบัตรเริ่มแล้ว server บันทึกเป็นปีใหม่ (`resolveCheckinYear`) — ยืนยันเลขบัตร 4 ตัวท้ายด้วยแป้นตัวเลขใหญ่ → วันเรียน: กรอกค่าวัด → "สุขภาพของฉัน" 3 แท็บ (สุขภาพ · ประวัติ · ตารางเรียน) | ไม่ต้องล็อกอิน |
 
 ⚠️ **ห้ามเปลี่ยน path `/elderly/checkin`** — QR ที่พิมพ์แจกแล้วฝัง URL นี้
 
@@ -30,7 +30,7 @@
 | `screening` | คัดกรอง 2Q (หน้าจอนี้ไม่มี 9Q) | `person`, `list` |
 | `schedule` | ตั้งวันเรียน 1–16 (เดิม `/admin/elderly-schedule`) | — |
 | `cards` | พิมพ์บัตร QR A4 (เดิม `/admin/elderly-cards`) — บัตรยังพิมพ์เลขบัตร 4 ตัวท้ายเหมือนเดิม | — |
-| `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** | — |
+| `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** · แถวที่ไม่มีเลขบัตรจะจับคู่กับผู้เรียนเดิมด้วยชื่อ (`lib/elderly-school/nameMatch.js` — ไม่สนช่องว่าง, ลองตัดคำนำหน้า นาย/นาง/นางสาว ถ้าไม่ตรง, ชื่อซ้ำหลายคน/คนใหม่ = ข้ามพร้อมเหตุผล) — **ผู้เรียนใหม่ยังต้องมีเลขบัตร** เพราะ `ElderlyPerson.citizenId` required+unique และใช้ยืนยันตอนเช็คอิน | — |
 
 "ต้องติดตามใกล้ชิด" = ความดันสูง หรือ NCD 3/3 หรือ 2Q บวก หรือชีพจรผิดปกติ หรือ**ขาดเรียน 3 ครั้งติดกัน** (`needsCloseFollowUp` ใน `lib/elderly-school/followUp.js`)
 
