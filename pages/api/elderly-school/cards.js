@@ -1,7 +1,7 @@
 import { requireElderlySchoolAdmin } from "./_auth";
 import dbConnect from "@/lib/dbConnect";
 import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
-import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
+import { yearPersonIds } from "@/lib/elderly-school/enrollment";
 
 export default async function handler(req, res) {
   const auth = await requireElderlySchoolAdmin(req);
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
     await dbConnect();
 
-    const personIds = await ElderlyVisit.distinct("personId", { yearBE });
+    const personIds = await yearPersonIds(yearBE);
     const people = await ElderlyPerson.find({ _id: { $in: personIds } })
       .select({ fullName: 1, citizenId: 1 })
       .lean();

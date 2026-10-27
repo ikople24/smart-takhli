@@ -53,6 +53,8 @@ export default async function handler(req, res) {
       "birthDateText",
       "bloodType",
       "address",
+      "community",
+      "chronicDiseases",
       "phone",
       "occupation",
       "heightCm",

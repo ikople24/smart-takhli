@@ -3,7 +3,10 @@ import dbConnect from "@/lib/dbConnect";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { computeBMI, bmiCategoryThai, bpCategory, coerceMeasurementNumber } from "@/lib/health/metrics";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
-import { ObjectId } from "mongodb";
+import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
+import { missedStreak } from "@/lib/elderly-school/followUp";
+import { normalizeSessions } from "@/lib/elderly-school/schedule";
+import { yearPersonIds } from "@/lib/elderly-school/enrollment";
 
 function maskCitizenId(id) {
   const s = String(id || "").replace(/\D/g, "");
@@ -33,6 +36,13 @@ function pulseCategory(pulseBpm) {
   if (p < 50) return "low";
   if (p <= 100) return "normal";
   return "high";
+}
+
+// ฟิลด์ผลวัด — visit ที่มีค่าอย่างน้อย 1 ช่อง = "มาเรียน/มีผลวัด"
+const HAS_DATA_FIELDS = ["weightKg", "waistCm", "pulseBpm", "bp1Sys", "bp1Dia", "bp2Sys", "bp2Dia"];
+
+function visitHasData(v) {
+  return HAS_DATA_FIELDS.some((f) => v?.[f] !== null && v?.[f] !== undefined);
 }
 
 function metabolicScreeningScore({ bmi, bmiCategory, whtRVal, bpSys, bpDia }) {
@@ -131,39 +141,84 @@ export default async function handler(req, res) {
       { $unwind: { path: "$person", preserveNullAndEmptyArrays: true } },
     ];
 
-    const rows = await ElderlyVisit.aggregate(pipeline);
-
-    // Latest mental health assessment per person (same year)
-    const personIds = rows
-      .map((r) => r?.person?._id || r?.personId)
-      .filter(Boolean)
-      .map((id) => new ObjectId(String(id)));
-
-    const mhByPersonId = new Map();
-    if (personIds.length) {
-      const latestAssessments = await ElderlyMentalHealthAssessment.aggregate([
-        { $match: { yearBE, personId: { $in: personIds } } },
+    // ทุก query ยิงพร้อมกันรอบเดียว (DB อยู่ไกล = แต่ละรอบแพง) — ข้อมูลทั้งปีมีแค่หลักพันแถว
+    // ผล 2Q และประวัติ visit ดึงของทั้งปีมาก่อน แล้วค่อยกรองตามคนใน JS (ผลเท่าเดิม)
+    const [rows, registeredIds, attendanceAgg, latestAssessments, allVisits, scheduleDoc] = await Promise.all([
+      ElderlyVisit.aggregate(pipeline),
+      // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี (รวมผู้ลงทะเบียนที่ยังไม่มีผลวัด) + จำนวนคนที่มีผลวัดแต่ละครั้ง
+      yearPersonIds(yearBE),
+      ElderlyVisit.aggregate([
+        { $match: { yearBE } },
+        { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },
+        { $group: { _id: "$visitNo", count: { $sum: 1 } } },
+      ]),
+      // Latest mental health assessment per person (same year)
+      ElderlyMentalHealthAssessment.aggregate([
+        { $match: { yearBE } },
         { $sort: { personId: 1, assessedAt: -1 } },
         { $group: { _id: "$personId", doc: { $first: "$$ROOT" } } },
         { $replaceRoot: { newRoot: "$doc" } },
-      ]);
-      for (const a of latestAssessments || []) {
-        mhByPersonId.set(String(a.personId), a);
+      ]),
+      // Visits history (for trend fields) - only when includePeople
+      includePeople
+        ? ElderlyVisit.find({ yearBE }).sort({ personId: 1, visitNo: 1 }).lean()
+        : Promise.resolve([]),
+      // วันเรียน (สำหรับนับขาดเรียนติดกัน) - only when includePeople
+      includePeople ? ElderlySchoolSchedule.findOne({ yearBE }).lean() : Promise.resolve(null),
+    ]);
+    const attendanceByNo = new Map((attendanceAgg || []).map((a) => [Number(a._id), a.count]));
+
+    // ขาดเรียนติดกันรายคน (ทุกคนในปี) — นับเฉพาะวันเรียนที่ผ่านไปแล้ว ไม่นับวันนี้
+    const attendanceByPerson = [];
+    const streakByPersonId = new Map();
+    if (includePeople) {
+      const todayISO = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Bangkok",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      const doneNos = normalizeSessions(scheduleDoc?.sessions)
+        .filter((x) => x.dateISO < todayISO)
+        .map((x) => x.visitNo);
+      // ครั้งที่มีผลวัดรายคน — ใช้ allVisits ที่ดึงมาแล้ว (ไม่ยิง query เพิ่ม)
+      const attendedById = new Map();
+      for (const v of allVisits || []) {
+        if (!visitHasData(v)) continue;
+        const k = String(v.personId);
+        const arr = attendedById.get(k) || [];
+        if (!arr.includes(v.visitNo)) arr.push(v.visitNo);
+        attendedById.set(k, arr);
+      }
+      for (const id of registeredIds) {
+        const key = String(id);
+        const nos = attendedById.get(key) || [];
+        const streak = missedStreak(doneNos, nos);
+        streakByPersonId.set(key, streak);
+        attendanceByPerson.push({ personId: key, attended: nos.length, missedStreak: streak });
       }
     }
+    const attendance = Array.from({ length: 16 }, (_, i) => ({
+      visitNo: i + 1,
+      count: attendanceByNo.get(i + 1) || 0,
+    }));
 
-    // Visits history (for trend fields) - only when includePeople
+    const personIds = new Set(rows.map((r) => r?.person?._id || r?.personId).filter(Boolean).map(String));
+
+    // ผล 2Q ของผู้เรียนทั้งปี (รวมคนที่ยังไม่มีผลวัด) — การ์ดสรุปยังนับเฉพาะ rows เหมือนเดิม
+    const mhIds = includePeople ? new Set(registeredIds.map(String)) : personIds;
+    const mhByPersonId = new Map();
+    for (const a of latestAssessments || []) {
+      if (mhIds.has(String(a.personId))) mhByPersonId.set(String(a.personId), a);
+    }
+
     const visitsByPersonId = new Map();
-    if (includePeople && personIds.length) {
-      const allVisits = await ElderlyVisit.find({ yearBE, personId: { $in: personIds } })
-        .sort({ personId: 1, visitNo: 1 })
-        .lean();
-      for (const v of allVisits || []) {
-        const k = String(v.personId);
-        const arr = visitsByPersonId.get(k) || [];
-        arr.push(v);
-        visitsByPersonId.set(k, arr);
-      }
+    for (const v of allVisits || []) {
+      const k = String(v.personId);
+      if (!personIds.has(k)) continue;
+      const arr = visitsByPersonId.get(k) || [];
+      arr.push(v);
+      visitsByPersonId.set(k, arr);
     }
 
     // Compute summary + people list
@@ -287,6 +342,8 @@ export default async function handler(req, res) {
               typeof assessment?.q9?.suicidalRisk === "boolean" ? assessment.q9.suicidalRisk : null,
             assessedAt: assessment?.assessedAt || null,
             assessmentDate: assessment?.assessmentDate || null,
+            assessmentId: assessment?._id ? String(assessment._id) : null,
+            referred: assessment?.referral?.notified === true,
           }
         : null;
 
@@ -376,6 +433,18 @@ export default async function handler(req, res) {
           citizenIdMasked: p.citizenId ? maskCitizenId(p.citizenId) : "",
           yearBE,
           visitNo: r.visitNo,
+          visitId: r._id ? String(r._id) : null,
+          source: r.source || null,
+          hasData: visitHasData(r),
+          attendedCount: (visitsByPersonId.get(personKey) || []).filter(visitHasData).length,
+          missedStreak: streakByPersonId.get(personKey) ?? 0,
+          // ค่าดิบรอบ 1/2 สำหรับตารางกรอกผลรายครั้ง (bp ด้านล่างเลือกรอบ 1 ก่อน)
+          bpReadings: {
+            bp1Sys: toNum(r.bp1Sys),
+            bp1Dia: toNum(r.bp1Dia),
+            bp2Sys: toNum(r.bp2Sys),
+            bp2Dia: toNum(r.bp2Dia),
+          },
           weightKg: coerceMeasurementNumber(r.weightKg),
           heightCmForBmi: heightCm,
           bmi,
@@ -396,6 +465,20 @@ export default async function handler(req, res) {
       }
     }
 
+    // ผล 2Q ล่าสุดของคนที่ไม่มีผลวัดในชุดนี้ (แท็บคัดกรองต้องเห็นว่าใครประเมินแล้ว)
+    const rowIds = new Set(rows.map((r) => String(r?.person?._id || r?.personId)));
+    const mentalHealthOthers = includePeople
+      ? Array.from(mhByPersonId.values())
+          .filter((a) => !rowIds.has(String(a.personId)))
+          .map((a) => ({
+            personId: String(a.personId),
+            q2Positive: Boolean(a?.q2?.positive),
+            assessmentDate: a?.assessmentDate || null,
+            assessmentId: a?._id ? String(a._id) : null,
+            referred: a?.referral?.notified === true,
+          }))
+      : undefined;
+
     const bpRiskTotal = bpCounts.low + bpCounts.risk + bpCounts.high;
     const filteredPeople = riskOnly ? people.filter((x) => x.overallRisk) : people;
 
@@ -405,7 +488,9 @@ export default async function handler(req, res) {
       visit: visitNo || "latest",
       totals: {
         peopleCounted: rows.length,
+        registered: registeredIds.length,
       },
+      attendance,
       bmi: bmiCounts,
       bmiBreakdown,
       averages: {
@@ -426,6 +511,8 @@ export default async function handler(req, res) {
       metabolic: metabolicCounts,
       mentalHealth: mentalCounts,
       people: includePeople ? filteredPeople : undefined,
+      mentalHealthOthers,
+      attendanceByPerson: includePeople ? attendanceByPerson : undefined,
     });
   } catch (error) {
     console.error("elderly dashboard error:", error);

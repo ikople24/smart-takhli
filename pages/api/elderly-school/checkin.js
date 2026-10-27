@@ -3,7 +3,9 @@ import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 import { ObjectId } from "mongodb";
+import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
+import { effectiveSessions, resolveCheckinYear, scheduleContact } from "@/lib/elderly-school/schedule";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -52,8 +54,8 @@ export default async function handler(req, res) {
     const { personId, yearBE, citizenIdLast4 } = req.body || {};
 
     if (!personId) return res.status(400).json({ success: false, message: "Missing personId" });
-    const year = Number(yearBE) || getCurrentYearBE();
-    if (!Number.isFinite(year) || year < 2500 || year > 2700) {
+    const cardYear = Number(yearBE) || getCurrentYearBE();
+    if (!Number.isFinite(cardYear) || cardYear < 2500 || cardYear > 2700) {
       return res.status(400).json({ success: false, message: "Invalid yearBE" });
     }
 
@@ -73,6 +75,10 @@ export default async function handler(req, res) {
     }
 
     const today = getBangkokISODate();
+
+    // บัตรใบเดิมใช้ข้ามปีได้: หลักสูตรปีใหม่กว่าบัตรเริ่มแล้ว → บันทึก/แสดงเป็นปีใหม่ (lib/elderly-school/schedule.js)
+    const newerSchedules = await ElderlySchoolSchedule.find({ yearBE: { $gt: cardYear } }, { yearBE: 1, "sessions.dateISO": 1 }).lean();
+    const year = resolveCheckinYear(cardYear, newerSchedules, today);
 
     // Resolve today's session -> visitNo
     const schedule = await ElderlySchoolSchedule.findOne({ yearBE: year }).lean();
@@ -105,6 +111,7 @@ export default async function handler(req, res) {
           yearBE: year,
           today,
           person: { fullName: person.fullName },
+          contact: scheduleContact(schedule),
           canSubmitToday: false,
           alreadySubmittedToday: false,
           scheduledVisitNo: null,
@@ -120,6 +127,7 @@ export default async function handler(req, res) {
           yearBE: year,
           today,
           person: { fullName: person.fullName },
+          contact: scheduleContact(schedule),
           canSubmitToday: false,
           alreadySubmittedToday: Boolean(existingToday || existingVisitNo),
           scheduledVisitNo,
@@ -133,6 +141,7 @@ export default async function handler(req, res) {
         yearBE: year,
         today,
         person: { fullName: person.fullName },
+        contact: scheduleContact(schedule),
         canSubmitToday: true,
         alreadySubmittedToday: false,
         scheduledVisitNo,
@@ -170,15 +179,28 @@ export default async function handler(req, res) {
         };
       });
 
+      // แท็บ "ตารางเรียน" บนมือถือ + วันที่ประเมิน 2Q ล่าสุด (ไม่ส่งผลประเมินให้หน้าสาธารณะ)
+      const lastAssessment = await ElderlyMentalHealthAssessment.findOne({
+        personId: new ObjectId(personId),
+        yearBE: year,
+      })
+        .sort({ assessedAt: -1 })
+        .select({ assessmentDate: 1 })
+        .lean();
+
       return res.status(200).json({
         success: true,
         yearBE: year,
+        today,
         person: {
           fullName: person.fullName,
           heightCm: person.heightCm ?? null,
         },
         visits: enriched,
         stats: { visitCount: enriched.length },
+        schedule: effectiveSessions(schedule),
+        contact: scheduleContact(schedule),
+        lastAssessmentDate: lastAssessment?.assessmentDate || null,
       });
     }
 

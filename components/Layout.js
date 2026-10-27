@@ -13,8 +13,6 @@ const ADMIN_META = {
   '/admin/register-user':             { title: 'จัดการผู้ใช้งาน' },
   '/admin/manage-activities':         { title: 'จัดการกิจกรรม' },
   '/admin/pm25-settings':             { title: 'จัดการ PM2.5' },
-  '/admin/elderly-cards':             { title: 'ข้อมูลผู้สูงอายุ' },
-  '/admin/elderly-schedule':          { title: 'ตารางเยี่ยมผู้สูงอายุ' },
   '/admin/feedback-analysis':         { title: 'วิเคราะห์ความคิดเห็น' },
   // subtitle/breadcrumbs ตัดออก — หน้ามี header card ของเจ้าหน้าที่เอง (โฉมใหม่ 2026-09)
   '/admin/my-tasks':                  { title: 'งานของฉัน' },
@@ -89,12 +87,14 @@ const Layout = ({ children }) => {
 
   // หน้าฝั่งประชาชนโฉมใหม่ (citizen shell) มี chrome ของตัวเอง — ไม่ครอบ layout เดิม
   // (/, /report, /status, /activities, /papar + /papar/report (exact — /papar/flushing ยังใช้ layout เดิม), /flood/* —
-  //  หน้า public อื่นเช่น /garbage /complaint ยังใช้ layout เดิม)
+  //  /elderly/checkin — หน้า public อื่นเช่น /garbage /complaint ยังใช้ layout เดิม)
   const isCitizenRoute =
     ["/", "/report", "/activities", "/papar", "/papar/report"].includes(router.pathname) ||
     router.pathname.startsWith("/status") ||
     router.pathname === "/flood" ||
-    router.pathname.startsWith("/flood/");
+    router.pathname.startsWith("/flood/") ||
+    // เช็คอินโรงเรียนผู้สูงอายุ — หน้าเต็มจอมีแถบเมนูล่างของตัวเอง (2026-10)
+    router.pathname === "/elderly/checkin";
   if (isCitizenRoute) {
     return <>{children}</>;
   }

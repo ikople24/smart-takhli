@@ -4,6 +4,10 @@ import ElderlyPerson from "@/models/elderly-school/ElderlyPerson";
 import ElderlyVisit from "@/models/elderly-school/ElderlyVisit";
 import { fetchAndParseSheetCSV } from "@/lib/elderly-school/dashboard";
 import { parseSheetRowToPersonAndVisits } from "@/lib/elderly-school/import";
+import { collectProblems } from "@/lib/elderly-school/importProblems";
+import { resolveMissingCitizenIds } from "@/lib/elderly-school/nameMatch";
+import { resolveCitizenIds } from "@/lib/elderly-school/citizenId";
+import ElderlyEnrollment from "@/models/elderly-school/ElderlyEnrollment";
 
 function hasSheetString(v) {
   if (v === null || v === undefined) return false;
@@ -27,6 +31,8 @@ function mergePersonFieldsFromSheet(incoming, existing, yearBE) {
     birthDateText: pick(incoming.birthDateText, ex?.birthDateText),
     bloodType: pick(incoming.bloodType, ex?.bloodType),
     address: pick(incoming.address, ex?.address),
+    community: pick(incoming.community, ex?.community),
+    chronicDiseases: pick(incoming.chronicDiseases, ex?.chronicDiseases),
     phone: pick(incoming.phone, ex?.phone),
     occupation: pick(incoming.occupation, ex?.occupation),
     heightCm: incoming.heightCm != null ? incoming.heightCm : ex?.heightCm ?? null,
@@ -90,8 +96,19 @@ export default async function handler(req, res) {
     const peopleByCitizenId = new Map();
     const visitsByCitizenId = new Map();
 
-    for (const row of rows) {
-      const parsed = parseSheetRowToPersonAndVisits({ headers, row, yearBE: year });
+    const parsedEntries = rows.map((row, i) => ({
+      // แถวในชีต: หัวตาราง = 1 (นับเฉพาะแถวที่ไม่ว่าง เพราะ parser ข้ามแถวว่าง)
+      row: i + 2,
+      parsed: parseSheetRowToPersonAndVisits({ headers, row, yearBE: year }),
+    }));
+
+    // แถวที่ไม่มีเลขบัตร → จับคู่กับผู้เรียนเดิมด้วยชื่อ (คนใหม่ยังต้องมีเลขบัตร — ข้ามพร้อมเหตุผล)
+    // แล้วเทียบเลขบัตรกับคนในระบบด้วยตัวเลขล้วน (ชีตไม่มีขีด / ระบบมีขีด) — กันคนเดิมถูกสร้างซ้ำ
+    const existing = await ElderlyPerson.find({}, { citizenId: 1, fullName: 1 }).lean();
+    const nameMatch = resolveMissingCitizenIds(parsedEntries, existing);
+    const idMatch = resolveCitizenIds(parsedEntries, existing);
+
+    for (const { parsed } of parsedEntries) {
       if (parsed.skip) {
         peopleSkipped++;
         continue;
@@ -109,12 +126,23 @@ export default async function handler(req, res) {
           heightCm: parsed.person.heightCm,
           visitsCount: parsed.visits.length,
           latest: parsed.latest,
+          matchedByName: parsed.matchedByName || null,
+          isNew: Boolean(parsed.isNew),
         });
       }
     }
 
+    const problemSummary = collectProblems(parsedEntries);
+
     if (dryRun) {
       return res.status(200).json({
+        problems: problemSummary.problems,
+        problemSummary: {
+          skippedRows: problemSummary.skippedRows,
+          warningRows: problemSummary.warningRows,
+          warnings: problemSummary.warnings,
+          truncated: problemSummary.truncated,
+        },
         success: true,
         dryRun: true,
         yearBE: year,
@@ -124,9 +152,31 @@ export default async function handler(req, res) {
           peopleSkipped,
           visitsParsed,
           uniquePeople: peopleByCitizenId.size,
+          matchedByName: nameMatch.matched,
+          unmatchedNoCitizenId: nameMatch.unmatched,
+          existingPeople: idMatch.existing,
+          newPeople: idMatch.created,
+          citizenIdChanged: idMatch.changed,
         },
         preview,
       });
+    }
+
+    // เปลี่ยนเลขบัตรของคนเดิมเป็นเลขจากชีตนี้ก่อน (ชื่อตรงแต่เลขต่าง) — ต้องทำก่อนอ่านข้อมูลเดิมไป merge
+    // ไม่งั้น upsert ด้วยเลขใหม่จะสร้างคนซ้ำ และช่องว่างในชีตจะทับข้อมูลเดิม
+    const renameOps = parsedEntries
+      .filter((e) => !e.parsed.skip && e.parsed.replacesCitizenId && e.parsed.existingPersonId)
+      .map(({ parsed }) => ({
+        updateOne: {
+          filter: { _id: parsed.existingPersonId, citizenId: parsed.replacesCitizenId },
+          update: {
+            $set: { citizenId: parsed.person.citizenId },
+            $addToSet: { previousCitizenIds: parsed.replacesCitizenId },
+          },
+        },
+      }));
+    if (renameOps.length) {
+      await ElderlyPerson.bulkWrite(renameOps, { ordered: true });
     }
 
     const citizenIdsForMerge = Array.from(peopleByCitizenId.keys());
@@ -149,6 +199,8 @@ export default async function handler(req, res) {
               birthDateText: merged.birthDateText ?? null,
               bloodType: merged.bloodType ?? null,
               address: merged.address ?? null,
+              community: merged.community ?? null,
+              chronicDiseases: merged.chronicDiseases ?? null,
               phone: merged.phone ?? null,
               occupation: merged.occupation ?? null,
               heightCm: merged.heightCm ?? null,
@@ -195,7 +247,26 @@ export default async function handler(req, res) {
       await ElderlyVisit.bulkWrite(visitOps, { ordered: false });
     }
 
+    // ลงทะเบียนเรียนปีนี้ทุกคนในชีต (รวมคนที่ยังไม่มีผลวัด) — ทะเบียน/บัตร QR ของปีนี้อ่านจากตรงนี้
+    const enrollOps = Array.from(personIdByCitizenId.values()).map((personId) => ({
+      updateOne: {
+        filter: { personId, yearBE: year },
+        update: { $setOnInsert: { personId, yearBE: year, source: `sheet${year}` } },
+        upsert: true,
+      },
+    }));
+    if (enrollOps.length) {
+      await ElderlyEnrollment.bulkWrite(enrollOps, { ordered: false });
+    }
+
     return res.status(200).json({
+      problems: problemSummary.problems,
+      problemSummary: {
+        skippedRows: problemSummary.skippedRows,
+        warningRows: problemSummary.warningRows,
+        warnings: problemSummary.warnings,
+        truncated: problemSummary.truncated,
+      },
       success: true,
       dryRun: false,
       yearBE: year,
@@ -205,8 +276,14 @@ export default async function handler(req, res) {
         peopleSkipped,
         visitsParsed,
         uniquePeople: peopleByCitizenId.size,
+        matchedByName: nameMatch.matched,
+        unmatchedNoCitizenId: nameMatch.unmatched,
+        existingPeople: idMatch.existing,
+        newPeople: idMatch.created,
+        citizenIdChanged: idMatch.changed,
         peopleUpserted: upsertOps.length,
         visitsUpserted: visitOps.length,
+        enrolled: enrollOps.length,
       },
       preview,
     });
