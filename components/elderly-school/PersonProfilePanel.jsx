@@ -69,6 +69,8 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
         baselineWeightKg: p.person?.baselineWeightKg ?? "",
         phone: p.person?.phone || "",
         address: p.person?.address || "",
+        community: p.person?.community || "",
+        chronicDiseases: p.person?.chronicDiseases || "",
       });
     } catch (e) {
       setError(e?.message || "โหลดข้อมูลไม่สำเร็จ");
@@ -109,6 +111,8 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
           baselineWeightKg: num(form.baselineWeightKg),
           phone: form.phone || null,
           address: form.address || null,
+          community: form.community || null,
+          chronicDiseases: form.chronicDiseases || null,
         },
         "PUT"
       );
@@ -162,6 +166,8 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
         {(follow?.missedStreak ?? 0) >= 3 && <Chip tone="care">ขาดเรียน {follow.missedStreak} ครั้งติดกัน</Chip>}
         {person?.phone && <Chip tone="none">โทร {person.phone}</Chip>}
         {person?.address && <Chip tone="none">{person.address}</Chip>}
+        {person?.community && <Chip tone="none">ชุมชน{person.community}</Chip>}
+        {person?.chronicDiseases && <Chip tone="care">โรคประจำตัว: {person.chronicDiseases}</Chip>}
         <button type="button" className="text-sm font-semibold text-[#0E5A55] underline" onClick={() => setQrOpen(true)}>
           QR เช็คอิน
         </button>
@@ -174,6 +180,8 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
             ["phone", "เบอร์โทร"],
             ["heightCm", "ส่วนสูง (ซม.)"],
             ["baselineWeightKg", "น้ำหนักตั้งต้น (กก.)"],
+            ["community", "ชุมชน"],
+            ["chronicDiseases", "โรคประจำตัว"],
           ].map(([k, label]) => (
             <label key={k} className="flex flex-col gap-1">
               <span className={labelCls}>{label}</span>

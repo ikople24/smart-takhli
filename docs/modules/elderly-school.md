@@ -30,7 +30,7 @@
 | `screening` | คัดกรอง 2Q (หน้าจอนี้ไม่มี 9Q) | `person`, `list` |
 | `schedule` | ตั้งวันเรียน 1–16 (เดิม `/admin/elderly-schedule`) | — |
 | `cards` | พิมพ์บัตร QR A4 (เดิม `/admin/elderly-cards`) — บัตรยังพิมพ์เลขบัตร 4 ตัวท้ายเหมือนเดิม | — |
-| `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** · แถวที่ไม่มีเลขบัตรจะจับคู่กับผู้เรียนเดิมด้วยชื่อ (`lib/elderly-school/nameMatch.js` — ไม่สนช่องว่าง, ลองตัดคำนำหน้า นาย/นาง/นางสาว ถ้าไม่ตรง, ชื่อซ้ำหลายคน/คนใหม่ = ข้ามพร้อมเหตุผล) — **ผู้เรียนใหม่ยังต้องมีเลขบัตร** เพราะ `ElderlyPerson.citizenId` required+unique และใช้ยืนยันตอนเช็คอิน | — |
+| `import` | นำเข้า Google Sheet (ตรวจตัวอย่าง → นำเข้า) — **แสดงเฉพาะ superadmin เหมือนเดิม** · แถวที่ไม่มีเลขบัตรจะจับคู่กับผู้เรียนเดิมด้วยชื่อ (`lib/elderly-school/nameMatch.js` — ไม่สนช่องว่าง, ลองตัดคำนำหน้า นาย/นาง/นางสาว ถ้าไม่ตรง, ชื่อซ้ำหลายคน/คนใหม่ = ข้ามพร้อมเหตุผล) — **ผู้เรียนใหม่ยังต้องมีเลขบัตร** เพราะ `ElderlyPerson.citizenId` required+unique และใช้ยืนยันตอนเช็คอิน · **เลขบัตรเทียบด้วยตัวเลขล้วน** (`lib/elderly-school/citizenId.js` — ชีตไม่มีขีด/มีจุลภาค ระบบมีขีด; ไม่ทำ = คนเดิมถูกสร้างซ้ำ) เลขไม่ครบ 13 หลัก/เป็นทศนิยม หรือชื่อตรงคนเดิมแต่เลขต่าง = ข้ามพร้อมเหตุผล · รองรับชีตใบสมัครปี 2570 (`ชื่อ`+`สกุล` แยก, วันเกิด `วัน`/`เดือน`/`ปี`, `เลขที่`+`ถนน/ซอย`, `ชุมชน`, `โรคประจำตัว`) ที่ไม่มีผลวัด — ทุกคนในชีตลงทะเบียนปีนั้น (`ElderlyEnrollment`) | — |
 
 "ต้องติดตามใกล้ชิด" = ความดันสูง หรือ NCD 3/3 หรือ 2Q บวก หรือชีพจรผิดปกติ หรือ**ขาดเรียน 3 ครั้งติดกัน** (`needsCloseFollowUp` ใน `lib/elderly-school/followUp.js`)
 
@@ -57,7 +57,8 @@
 
 | Model | Collection | เก็บอะไร |
 |---|---|---|
-| `ElderlyPerson` | `elderly_people` | ข้อมูลบุคคล, citizenId, baseline น้ำหนัก/ส่วนสูง |
+| `ElderlyPerson` | `elderly_people` | ข้อมูลบุคคล, citizenId (รูปแบบ `1-2345-67890-12-3` เสมอ), baseline น้ำหนัก/ส่วนสูง, `community`/`chronicDiseases` (เพิ่ม 2026-10 จากชีตใบสมัคร ไม่ต้อง migrate) |
+| `ElderlyEnrollment` | `elderly_enrollments` | ลงทะเบียนเรียนรายปี (คน × ปี, unique) — นำเข้าชีตสร้างให้ทุกคนในชีต. **ผู้เรียนของปี = enrollment ∪ มี visit ปีนั้น** อ่านผ่าน `lib/elderly-school/enrollment.js#yearPersonIds` ที่เดียว (ทะเบียน/บัตร QR/การ์ดภาพรวม) — ปีก่อน 2570 ไม่มีเอกสาร ไม่ต้อง migrate |
 | `ElderlyVisit` | `elderly_visits` | ค่าวัดรายครั้ง (visitNo 1-16, yearBE) |
 | `ElderlyMentalHealthAssessment` | `elderly_mental_health_assessments` | ผล 2Q/9Q, ธงเสี่ยงฆ่าตัวตาย |
 | `ElderlySchoolSchedule` | `elderly_school_schedules` | วันเรียนรายปี — `defaults {startTime,endTime,location}` + รายครั้ง `{visitNo,dateISO,note,startTime,endTime,location,prepare}` (ช่องว่าง = ใช้ค่าเริ่มต้น, เพิ่ม 2026-10 ไม่ต้อง migrate) |

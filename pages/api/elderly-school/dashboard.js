@@ -6,6 +6,7 @@ import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMental
 import ElderlySchoolSchedule from "@/models/elderly-school/ElderlySchoolSchedule";
 import { missedStreak } from "@/lib/elderly-school/followUp";
 import { normalizeSessions } from "@/lib/elderly-school/schedule";
+import { yearPersonIds } from "@/lib/elderly-school/enrollment";
 
 function maskCitizenId(id) {
   const s = String(id || "").replace(/\D/g, "");
@@ -144,8 +145,8 @@ export default async function handler(req, res) {
     // ผล 2Q และประวัติ visit ดึงของทั้งปีมาก่อน แล้วค่อยกรองตามคนใน JS (ผลเท่าเดิม)
     const [rows, registeredIds, attendanceAgg, latestAssessments, allVisits, scheduleDoc] = await Promise.all([
       ElderlyVisit.aggregate(pipeline),
-      // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี + จำนวนคนที่มีผลวัดแต่ละครั้ง
-      ElderlyVisit.distinct("personId", { yearBE }),
+      // ภาพรวมทั้งปี (ไม่ขึ้นกับครั้งที่เลือก): จำนวนผู้เรียนในปี (รวมผู้ลงทะเบียนที่ยังไม่มีผลวัด) + จำนวนคนที่มีผลวัดแต่ละครั้ง
+      yearPersonIds(yearBE),
       ElderlyVisit.aggregate([
         { $match: { yearBE } },
         { $match: { $or: HAS_DATA_FIELDS.map((f) => ({ [f]: { $ne: null } })) } },

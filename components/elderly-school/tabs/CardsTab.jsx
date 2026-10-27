@@ -53,7 +53,7 @@ export default function CardsTab({ yearBE, isSuperAdmin }) {
       const entries = await Promise.all(
         chosen.map(async (p) => [
           p.personId,
-          await QRCode.toDataURL(makeCheckinUrl(origin, p.personId, yearBE, p.fullName), { margin: 1, width: 200 }),
+          await QRCode.toDataURL(makeCheckinUrl(origin, p.personId, yearBE, p.fullName), { margin: 1, width: 400 }),
         ])
       );
       setQrMap((m) => ({ ...m, ...Object.fromEntries(entries) }));
@@ -160,11 +160,11 @@ export default function CardsTab({ yearBE, isSuperAdmin }) {
                   className="border border-dashed border-[#B9B5A8] rounded-[10px] overflow-hidden flex flex-col break-inside-avoid print:h-[54mm]"
                 >
                   <div className="px-2.5 py-1.5 bg-[#0E5A55] text-white text-[11px] font-semibold flex justify-between [print-color-adjust:exact]">
-                    <span>โรงเรียนผู้สูงอายุ</span>
+                    <span>โรงเรียนผู้สูงอายุ เทศบาลเมืองตาคลี</span>
                     <span>ปี {yearBE}</span>
                   </div>
                   <div className="flex-1 flex gap-3 p-2.5 items-center">
-                    <div className="w-[84px] h-[84px] shrink-0 border border-[#1D2421] rounded flex items-center justify-center overflow-hidden">
+                    <div className="w-[124px] h-[124px] print:w-[38mm] print:h-[38mm] shrink-0 border border-[#1D2421] rounded flex items-center justify-center overflow-hidden">
                       {qrMap[p.personId] ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={qrMap[p.personId]} alt={`QR ${p.fullName}`} className="w-full h-full object-contain" />

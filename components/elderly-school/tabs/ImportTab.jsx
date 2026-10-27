@@ -188,7 +188,12 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
               value={t.uniquePeople ?? 0}
               unit="คน"
               tone="ok"
-              sub={t.matchedByName ? `ไม่มีเลขบัตร จับคู่จากชื่อ ${t.matchedByName} คน` : undefined}
+              sub={[
+                t.existingPeople != null ? `คนเดิม ${t.existingPeople} · ใหม่ ${t.newPeople ?? 0}` : null,
+                t.matchedByName ? `จับคู่จากชื่อ ${t.matchedByName}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || undefined}
             />
             <StatTile label="ผลวัดรายครั้ง" value={t.visitsParsed ?? 0} unit="รายการ" />
             <StatTile
@@ -199,6 +204,13 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
               sub={`ข้าม ${ps.skippedRows ?? 0} · เตือน ${ps.warningRows ?? 0}`}
             />
           </section>
+
+          {t.citizenIdChanged > 0 && (
+            <Notice tone="care">
+              {t.citizenIdChanged} คนชื่อตรงกับผู้เรียนเดิมแต่เลขบัตรต่างกัน — จะนำเข้าและใช้เลขบัตรจากชีตนี้แทน (เลขเดิมเก็บไว้ในประวัติ)
+              ผู้เรียนต้องใช้เลข 4 ตัวท้ายใหม่ตอนเช็คอิน · ตรวจกับบัตรจริงตามรายการด้านล่าง ถ้าเลขในชีตผิด แก้ชีตแล้วนำเข้าซ้ำได้
+            </Notice>
+          )}
 
           {t.unmatchedNoCitizenId > 0 && (
             <Notice tone="see">
@@ -230,6 +242,7 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
                         <td className="py-2.5 px-3 border-b border-[#EFEDE6]">
                           {maskCitizen(r.citizenId)}
                           {r.matchedByName && <span className="ml-1.5 text-xs text-[#8A5A00]">(จับคู่จากชื่อ)</span>}
+                          {r.isNew && <span className="ml-1.5 text-xs text-[#0E5A55] font-semibold">ใหม่</span>}
                         </td>
                         <td className="py-2.5 px-3 border-b border-[#EFEDE6]">{r.heightCm ?? "—"}</td>
                         <td className="py-2.5 px-3 border-b border-[#EFEDE6]">{r.visitsCount ?? 0}</td>
@@ -243,12 +256,12 @@ export default function ImportTab({ yearBE, isSuperAdmin }) {
             <section className={cardCls + " flex-[1_1_300px] min-w-0 p-5 flex flex-col gap-3"} aria-label="ยืนยัน">
               {result ? (
                 <Notice tone="ok">
-                  นำเข้าแล้ว: ผู้เรียน {result.totals?.peopleUpserted ?? 0} คน · ผลวัด {result.totals?.visitsUpserted ?? 0} รายการ
+                  นำเข้าแล้ว: ผู้เรียน {result.totals?.peopleUpserted ?? 0} คน (ลงทะเบียนปี {yearBE} {result.totals?.enrolled ?? 0} คน) · ผลวัด {result.totals?.visitsUpserted ?? 0} รายการ
                 </Notice>
               ) : (
                 <>
                   <span className="text-sm text-[#3C4541]">
-                    นำเข้า {t.uniquePeople ?? 0} คน ข้าม {t.peopleSkipped ?? 0} แถว{ps.warningRows ? ` (มีคำเตือน ${ps.warningRows} แถว)` : ""} · ค่าที่แก้ในระบบหรือจากเช็คอินจะไม่ถูกล้าง (อัปเดตเฉพาะช่องที่ชีตมีค่า)
+                    นำเข้าและลงทะเบียนปี {yearBE} {t.uniquePeople ?? 0} คน ข้าม {t.peopleSkipped ?? 0} แถว{ps.warningRows ? ` (มีคำเตือน ${ps.warningRows} แถว)` : ""} · ค่าที่แก้ในระบบหรือจากเช็คอินจะไม่ถูกล้าง (อัปเดตเฉพาะช่องที่ชีตมีค่า)
                   </span>
                   <button type="button" className={primaryBtnCls + " w-full !min-h-[52px]"} disabled={busy} onClick={() => run(false)}>
                     {busy ? "กำลังนำเข้า..." : `นำเข้าปี ${yearBE}`}
