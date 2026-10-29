@@ -43,7 +43,7 @@ function useJson(url) {
 
 function Kpi({ label, value, unit, cls = "", sub }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(11,34,51,0.06)]">
+    <div className="min-w-0 break-words rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(11,34,51,0.06)]">
       <div className="text-sm text-pp-muted">{label}</div>
       <div className={`font-tk-sans text-4xl font-bold tabular-nums ${cls}`}>
         {value}
@@ -315,7 +315,7 @@ function QueueSection({ reloadKey }) {
       {loading && !data && <p className="py-8 text-center text-pp-muted">กำลังโหลด…</p>}
 
       {data && (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid items-start gap-3 lg:grid-cols-2">
           {QUEUE_SECTIONS.map((s) => {
             const items = shown.filter((i) => i.bucket === s.key);
             const Icon = s.key === "blocked" ? TriangleAlert : s.key === "later" || s.key === "never" ? Check : CalendarClock;
