@@ -1,6 +1,6 @@
 // GET /api/smart-papar/field/queue — คิวโบตะกอนของทีมที่เครื่องนี้สังกัด (cookie จากการใส่รหัส)
 // ทีมหาจากชื่อที่ใส่ตอนปลดล็อก (แอดมินจับคู่ชื่อ → ทีมที่แท็บรายงาน) · ชื่อไม่อยู่ทีมไหน = { team: null }
-// คืนเฉพาะเลยกำหนด / วันนี้ / 7 วันข้างหน้า และเฉพาะข้อมูลที่ต้องใช้เลือกหัวในฟอร์ม (ไม่มีชื่อคนอื่น)
+// คืนเฉพาะเลยกำหนด / วันนี้ / 7 วันข้างหน้า และเฉพาะข้อมูลที่ต้องใช้เลือกหัว/นำทาง/แยกประเภทงาน (ไม่มีชื่อคนอื่น)
 import dbConnect from "@/lib/dbConnect";
 import { readFieldSession } from "@/lib/smart-papar/fieldAuth";
 import { teamResolver } from "@/lib/smart-papar/flushingSchedule";
@@ -41,6 +41,11 @@ export default async function handler(req, res) {
           daysLeft: i.daysLeft,
           bucket: i.bucket,
           lastResult: i.lastLog?.result || null,
+          // ใช้แยกประเภทงาน (โบซ้ำ / ตรวจสอบ / ครบรอบ) + ปุ่มนำทาง — ยังไม่มีชื่อคนบันทึก/รูป
+          lastTurbidCause: i.lastLog?.turbidCause || "",
+          lastYmd: i.lastYmd,
+          lastNtuAfter: i.lastLog?.turbidityAfterNtu ?? null,
+          coordinates: i.point.location?.coordinates || null,
         })),
     });
   } catch (error) {

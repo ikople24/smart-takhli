@@ -4,9 +4,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { CalendarClock, Check, ChevronLeft, ChevronRight, Droplet, Plus, TriangleAlert } from "lucide-react";
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Droplet, Navigation, Plus, TriangleAlert } from "lucide-react";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
 import { durationText, ntuChangePct } from "@/lib/smart-papar/flushing";
+import { fieldTaskOf } from "@/lib/smart-papar/flushingWork";
 
 const fmtTime = (d) =>
   new Date(d).toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit" });
@@ -38,73 +39,155 @@ function ResultChip({ result }) {
 const fmtDue = (ymd) =>
   new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short" });
 
-const QUEUE_PREVIEW = 6;
+const UPCOMING_PREVIEW = 3;
 
-// คิวทีมของฉัน — หัวที่ครบรอบโบ (ใสแล้ว +15 วัน · ยังขุ่น +5 วัน) ของทีมที่ชื่อนี้สังกัด · แตะ = เปิดฟอร์มพร้อมเลือกหัว
+// ประเภทงานในคิวทีม (lib/smart-papar/flushingWork.js#fieldTaskOf) — สีต่างกันที่ความสว่าง + มีป้ายข้อความเสมอ
+const TASKS = {
+  reflush: { label: "โบซ้ำ", hint: "ครั้งก่อนยังขุ่น ระบายให้นานขึ้น", chip: "bg-pp-turbid-tint text-pp-turbid-ink" },
+  inspect: { label: "ตรวจสอบ", hint: "ครั้งก่อนยังขุ่น ดูสภาพหน้างานก่อน", chip: "bg-[#E7ECF0] text-pp-ink" },
+  routine: { label: "ครบรอบ", hint: "ใสแล้ว ระบายตามรอบ 15 วัน", chip: "bg-pp-tint text-pp-water" },
+};
+const mapsUrl = (c) => `https://www.google.com/maps/dir/?api=1&destination=${c[1]},${c[0]}`;
+
+function TaskCard({ i, onPick }) {
+  const t = TASKS[fieldTaskOf(i)];
+  const late = i.bucket === "overdue";
+  const due = late ? `เลยกำหนด ${-i.daysLeft} วัน` : i.bucket === "today" ? "ครบวันนี้" : `ครบ ${fmtDue(i.dueYmd)} (อีก ${i.daysLeft} วัน)`;
+  const last =
+    i.lastResult === "clear"
+      ? "ใสแล้ว"
+      : `ยังขุ่น${i.lastNtuAfter !== null && i.lastNtuAfter !== undefined ? ` ${i.lastNtuAfter} NTU` : ""}`;
+  return (
+    <li className="space-y-2.5 rounded-2xl bg-white p-3.5">
+      <div className="flex items-start gap-2.5">
+        <span className={`flex-none rounded-full px-2.5 py-1 text-[13px] font-semibold ${t.chip}`}>{t.label}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">
+            <span className="font-tk-mono text-sm">{i.code}</span>
+            {i.name && ` · ${i.name}`}
+          </span>
+          {i.roadName && <span className="block truncate text-[13px] text-pp-muted">{i.roadName}</span>}
+        </span>
+      </div>
+      <p className="text-[13px] leading-relaxed text-pp-muted">
+        <span className={late ? "font-semibold text-pp-danger" : "font-semibold text-pp-ink"}>{due}</span>
+        {i.lastYmd && ` · ครั้งก่อน ${fmtDue(i.lastYmd)} ${last}`}
+        <span className="block">{t.hint}</span>
+      </p>
+      <div className="flex gap-2">
+        {i.coordinates && (
+          <a
+            href={mapsUrl(i.coordinates)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-pp-line-2 text-sm font-semibold text-pp-ink"
+          >
+            <Navigation size={17} aria-hidden />
+            นำทาง
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={() => onPick(i.pointId)}
+          className="flex h-11 flex-[1.4] items-center justify-center gap-1.5 rounded-xl bg-pp-water text-sm font-semibold text-white"
+        >
+          <Plus size={17} strokeWidth={2.4} aria-hidden />
+          บันทึกผลหัวนี้
+        </button>
+      </div>
+    </li>
+  );
+}
+
+// งานที่ต้องไป — คิวของทีมที่ชื่อนี้สังกัด (โบซ้ำ / ตรวจสอบ: รอบ 5 วัน · ครบรอบ: ใสแล้ว 15 วัน)
+// หัวที่รอแก้ไข (สิ่งกีดขวาง/หัวชำรุด) ไม่อยู่ในคิวภาคสนาม — หัวหน้าจัดการจากแท็บรายงาน
 function TeamQueue({ queue, onPick }) {
-  const [all, setAll] = useState(false);
+  const [type, setType] = useState("all");
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   if (!queue) return null;
   if (!queue.team) {
     return (
       <div className="rounded-2xl border-[1.5px] border-dashed border-pp-line-2 bg-white px-4 py-3 text-sm text-pp-muted">
-        ชื่อนี้ยังไม่ได้จัดทีม จึงยังไม่มีคิวงาน — แจ้งแอดมินให้จัดทีมในระบบ
+        ชื่อนี้ยังไม่ได้จัดทีม จึงยังไม่มีรายการงาน — แจ้งแอดมินให้จัดทีมในระบบ
       </div>
     );
   }
-  const due = queue.items.filter((i) => i.bucket !== "upcoming");
-  const list = all ? queue.items : queue.items.slice(0, QUEUE_PREVIEW);
+  const counts = { all: queue.items.length, reflush: 0, inspect: 0, routine: 0 };
+  for (const i of queue.items) counts[fieldTaskOf(i)] += 1;
+  const shown = queue.items.filter((i) => type === "all" || fieldTaskOf(i) === type);
+  const now = shown.filter((i) => i.bucket === "overdue" || i.bucket === "today");
+  const upcoming = shown.filter((i) => i.bucket === "upcoming");
+  const upcomingList = showAllUpcoming ? upcoming : upcoming.slice(0, UPCOMING_PREVIEW);
+
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       <div className="flex items-end justify-between gap-2">
-        <h2 className="font-tk-sans text-lg font-semibold">คิวทีมของฉัน</h2>
+        <h2 className="font-tk-sans text-lg font-semibold">งานที่ต้องไป</h2>
         <span className="text-[13px] text-pp-muted">{queue.team.label}</span>
       </div>
       {queue.items.length === 0 ? (
-        <div className="rounded-2xl bg-white px-4 py-3 text-sm text-pp-muted">ไม่มีหัวที่ครบรอบใน 7 วันนี้</div>
+        <div className="rounded-2xl bg-white px-4 py-3 text-sm text-pp-muted">ไม่มีหัวที่ต้องไปใน 7 วันนี้</div>
       ) : (
         <>
-          <p className="text-[13px] text-pp-muted">
-            ครบรอบแล้ว {due.length} หัว · ใน 7 วันข้างหน้า {queue.items.length - due.length} หัว
-          </p>
-          <ul className="space-y-2">
-            {list.map((i) => {
-              const late = i.bucket === "overdue";
-              const now = i.bucket === "today";
-              return (
-                <li key={i.pointId}>
-                  <button
-                    type="button"
-                    onClick={() => onPick(i.pointId)}
-                    className="flex w-full items-center gap-3 rounded-2xl bg-white px-3.5 py-3 text-left"
-                  >
-                    <span
-                      className={`grid h-10 w-10 flex-none place-items-center rounded-xl ${
-                        late ? "bg-pp-turbid-tint text-pp-danger" : now ? "bg-pp-turbid-tint text-pp-turbid-ink" : "bg-pp-tint text-pp-water"
-                      }`}
-                    >
-                      <CalendarClock size={20} aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">
-                        <span className="font-tk-mono text-sm">{i.code}</span>
-                        {(i.name || i.roadName) && ` · ${i.name || i.roadName}`}
-                      </span>
-                      <span className={`block text-[13px] ${late ? "font-semibold text-pp-danger" : "text-pp-muted"}`}>
-                        {late ? `เลยกำหนด ${-i.daysLeft} วัน` : now ? "ครบกำหนดวันนี้" : `ครบ ${fmtDue(i.dueYmd)} (อีก ${i.daysLeft} วัน)`}
-                        {" · ครั้งก่อน "}
-                        {i.lastResult === "clear" ? "ใสแล้ว" : "ยังขุ่น"}
-                      </span>
-                    </span>
-                    <ChevronRight size={20} className="flex-none text-pp-muted" aria-hidden />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          {queue.items.length > QUEUE_PREVIEW && (
-            <button type="button" onClick={() => setAll((v) => !v)} className="min-h-11 w-full text-sm font-semibold text-pp-water">
-              {all ? "ย่อรายการ" : `ดูทั้งหมด ${queue.items.length} หัว`}
-            </button>
+          <div role="group" aria-label="ประเภทงาน" className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {[
+              { key: "all", label: "ทั้งหมด" },
+              { key: "reflush", label: TASKS.reflush.label },
+              { key: "inspect", label: TASKS.inspect.label },
+              { key: "routine", label: TASKS.routine.label },
+            ]
+              .filter((f) => f.key === "all" || counts[f.key] > 0)
+              .map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={type === f.key}
+                  onClick={() => setType(f.key)}
+                  className={`h-10 flex-none rounded-full border-[1.5px] px-3.5 text-sm ${
+                    type === f.key ? "border-pp-deep bg-pp-deep font-semibold text-white" : "border-pp-line bg-white"
+                  }`}
+                >
+                  {f.label} <span className="tabular-nums opacity-75">{counts[f.key]}</span>
+                </button>
+              ))}
+          </div>
+
+          <section className="space-y-2" aria-label="ต้องไปวันนี้">
+            <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">
+              <CalendarClock size={18} className="text-pp-turbid-ink" aria-hidden />
+              ต้องไปวันนี้ <span className="tabular-nums text-pp-muted">{now.length}</span>
+            </h3>
+            {now.length === 0 ? (
+              <p className="rounded-2xl bg-white px-4 py-3 text-sm text-pp-muted">วันนี้ไม่มีหัวที่ครบรอบ</p>
+            ) : (
+              <ul className="space-y-2">
+                {now.map((i) => (
+                  <TaskCard key={i.pointId} i={i} onPick={onPick} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {upcoming.length > 0 && (
+            <section className="space-y-2" aria-label="7 วันข้างหน้า">
+              <h3 className="text-[15px] font-semibold">
+                7 วันข้างหน้า <span className="tabular-nums text-pp-muted">{upcoming.length}</span>
+              </h3>
+              <ul className="space-y-2">
+                {upcomingList.map((i) => (
+                  <TaskCard key={i.pointId} i={i} onPick={onPick} />
+                ))}
+              </ul>
+              {upcoming.length > UPCOMING_PREVIEW && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllUpcoming((v) => !v)}
+                  className="min-h-11 w-full text-sm font-semibold text-pp-water"
+                >
+                  {showAllUpcoming ? "ย่อรายการ" : `ดูทั้งหมด ${upcoming.length} หัว`}
+                </button>
+              )}
+            </section>
           )}
         </>
       )}

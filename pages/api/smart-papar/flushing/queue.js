@@ -33,6 +33,10 @@ export default async function handler(req, res) {
         lastResult: lastLog?.result || null,
         lastTurbidCause: lastLog?.turbidCause || "",
         lastByName: lastLog?.createdByName || "",
+        lastNtuBefore: lastLog?.turbidityBeforeNtu ?? null,
+        lastNtuAfter: lastLog?.turbidityAfterNtu ?? null,
+        lastPhotos: [...(lastLog?.photosBefore || []), ...(lastLog?.photosAfter || [])],
+        lastNote: lastLog?.note || "",
       })),
     });
   } catch (error) {
