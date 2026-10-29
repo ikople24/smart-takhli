@@ -188,11 +188,13 @@ function PhotoSlot({ step, label, items, setItems, error }) {
 // createEndpoint: หน้าแอดมินใช้ค่า default · หน้าภาคสนาม (ไม่ล็อกอิน) ส่ง /api/smart-papar/field/flushing
 // onSaved(data, submitted) — submitted = สิ่งที่ส่งไป (+ flushPointCode) ให้หน้าภาคสนามโชว์สรุปได้
 // เพราะ API ภาคสนามคืนแค่ _id
+// initialFlushPointId: เปิดฟอร์มจากคิวงาน — เลือกหัวนั้นไว้ให้เมื่อโหลดทะเบียนเสร็จ (เฉพาะบันทึกใหม่)
 export default function FlushingForm({
   log,
   onClose,
   onSaved,
   createEndpoint = "/api/smart-papar/flushing",
+  initialFlushPointId = "",
 }) {
   const isEdit = Boolean(log?._id);
   const [form, setForm] = useState(() => initialState(log));
@@ -242,6 +244,12 @@ export default function FlushingForm({
         ? { ...f, flushPointId: String(p._id), locationName: flushPointLabel(p) }
         : { ...f, flushPointId: "" }
     );
+
+  useEffect(() => {
+    if (isEdit || !initialFlushPointId || !flushPoints) return;
+    const p = flushPoints.find((x) => String(x._id) === String(initialFlushPointId));
+    if (p) setForm((f) => (f.flushPointId ? f : { ...f, flushPointId: String(p._id), locationName: flushPointLabel(p) }));
+  }, [flushPoints, initialFlushPointId, isEdit]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 

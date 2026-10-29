@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, Droplet, Plus, TriangleAlert } from "lucide-react";
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Droplet, Plus, TriangleAlert } from "lucide-react";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
 import { durationText, ntuChangePct } from "@/lib/smart-papar/flushing";
 
@@ -32,6 +32,83 @@ function ResultChip({ result }) {
       <Icon size={14} strokeWidth={2.6} aria-hidden />
       {clear ? "ใสแล้ว" : "ยังขุ่น"}
     </span>
+  );
+}
+
+const fmtDue = (ymd) =>
+  new Date(`${ymd}T12:00:00+07:00`).toLocaleDateString("th-TH", { timeZone: "Asia/Bangkok", day: "numeric", month: "short" });
+
+const QUEUE_PREVIEW = 6;
+
+// คิวทีมของฉัน — หัวที่ครบรอบโบ (ใสแล้ว +15 วัน · ยังขุ่น +5 วัน) ของทีมที่ชื่อนี้สังกัด · แตะ = เปิดฟอร์มพร้อมเลือกหัว
+function TeamQueue({ queue, onPick }) {
+  const [all, setAll] = useState(false);
+  if (!queue) return null;
+  if (!queue.team) {
+    return (
+      <div className="rounded-2xl border-[1.5px] border-dashed border-pp-line-2 bg-white px-4 py-3 text-sm text-pp-muted">
+        ชื่อนี้ยังไม่ได้จัดทีม จึงยังไม่มีคิวงาน — แจ้งแอดมินให้จัดทีมในระบบ
+      </div>
+    );
+  }
+  const due = queue.items.filter((i) => i.bucket !== "upcoming");
+  const list = all ? queue.items : queue.items.slice(0, QUEUE_PREVIEW);
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-end justify-between gap-2">
+        <h2 className="font-tk-sans text-lg font-semibold">คิวทีมของฉัน</h2>
+        <span className="text-[13px] text-pp-muted">{queue.team.label}</span>
+      </div>
+      {queue.items.length === 0 ? (
+        <div className="rounded-2xl bg-white px-4 py-3 text-sm text-pp-muted">ไม่มีหัวที่ครบรอบใน 7 วันนี้</div>
+      ) : (
+        <>
+          <p className="text-[13px] text-pp-muted">
+            ครบรอบแล้ว {due.length} หัว · ใน 7 วันข้างหน้า {queue.items.length - due.length} หัว
+          </p>
+          <ul className="space-y-2">
+            {list.map((i) => {
+              const late = i.bucket === "overdue";
+              const now = i.bucket === "today";
+              return (
+                <li key={i.pointId}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(i.pointId)}
+                    className="flex w-full items-center gap-3 rounded-2xl bg-white px-3.5 py-3 text-left"
+                  >
+                    <span
+                      className={`grid h-10 w-10 flex-none place-items-center rounded-xl ${
+                        late ? "bg-pp-turbid-tint text-pp-danger" : now ? "bg-pp-turbid-tint text-pp-turbid-ink" : "bg-pp-tint text-pp-water"
+                      }`}
+                    >
+                      <CalendarClock size={20} aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">
+                        <span className="font-tk-mono text-sm">{i.code}</span>
+                        {(i.name || i.roadName) && ` · ${i.name || i.roadName}`}
+                      </span>
+                      <span className={`block text-[13px] ${late ? "font-semibold text-pp-danger" : "text-pp-muted"}`}>
+                        {late ? `เลยกำหนด ${-i.daysLeft} วัน` : now ? "ครบกำหนดวันนี้" : `ครบ ${fmtDue(i.dueYmd)} (อีก ${i.daysLeft} วัน)`}
+                        {" · ครั้งก่อน "}
+                        {i.lastResult === "clear" ? "ใสแล้ว" : "ยังขุ่น"}
+                      </span>
+                    </span>
+                    <ChevronRight size={20} className="flex-none text-pp-muted" aria-hidden />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {queue.items.length > QUEUE_PREVIEW && (
+            <button type="button" onClick={() => setAll((v) => !v)} className="min-h-11 w-full text-sm font-semibold text-pp-water">
+              {all ? "ย่อรายการ" : `ดูทั้งหมด ${queue.items.length} หัว`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -208,6 +285,8 @@ function SavedScreen({ last, count, onNext, onHome }) {
 export default function FieldFlushingPage() {
   const [state, setState] = useState({ loading: true, unlocked: false, name: "" });
   const [formOpen, setFormOpen] = useState(false);
+  const [formPointId, setFormPointId] = useState("");
+  const [queue, setQueue] = useState(null); // null = ยังไม่โหลด/โหลดไม่ได้ → ไม่แสดงกล่องคิว
   const [saved, setSaved] = useState([]); // สิ่งที่ส่งในรอบนี้ ใหม่สุดก่อน
   const [showSaved, setShowSaved] = useState(false);
 
@@ -224,6 +303,25 @@ export default function FieldFlushingPage() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const loadQueue = useCallback(async () => {
+    try {
+      const res = await fetch("/api/smart-papar/field/queue");
+      const data = await res.json();
+      setQueue(res.ok && data?.success ? data : null);
+    } catch {
+      setQueue(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (state.unlocked) loadQueue();
+  }, [state.unlocked, loadQueue]);
+
+  const openForm = (pointId = "") => {
+    setFormPointId(pointId);
+    setFormOpen(true);
+  };
 
   const logout = async () => {
     await fetch("/api/smart-papar/field/me", { method: "DELETE" }).catch(() => {});
@@ -261,7 +359,7 @@ export default function FieldFlushingPage() {
                 count={saved.length}
                 onNext={() => {
                   setShowSaved(false);
-                  setFormOpen(true);
+                  openForm();
                 }}
                 onHome={() => setShowSaved(false)}
               />
@@ -321,7 +419,7 @@ export default function FieldFlushingPage() {
 
                 <button
                   type="button"
-                  onClick={() => setFormOpen(true)}
+                  onClick={() => openForm()}
                   className="flex items-center gap-4 rounded-2xl bg-pp-water p-5 text-left text-white shadow-[0_8px_20px_rgba(14,110,134,0.28)]"
                 >
                   <span className="grid h-[52px] w-[52px] flex-none place-items-center rounded-2xl bg-white/15">
@@ -333,6 +431,8 @@ export default function FieldFlushingPage() {
                   </span>
                   <ChevronRight size={22} aria-hidden />
                 </button>
+
+                <TeamQueue queue={queue} onPick={openForm} />
 
                 {saved.length > 0 && (
                   <div className="space-y-2.5">
@@ -380,9 +480,11 @@ export default function FieldFlushingPage() {
         <FlushingForm
           log={null}
           createEndpoint="/api/smart-papar/field/flushing"
+          initialFlushPointId={formPointId}
           onClose={() => setFormOpen(false)}
           onSaved={(_data, submitted) => {
             setFormOpen(false);
+            loadQueue();
             setSaved((prev) => [submitted || {}, ...prev]);
             setShowSaved(true);
             window.scrollTo?.(0, 0);

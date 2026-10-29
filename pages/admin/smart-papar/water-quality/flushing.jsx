@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import Swal from "sweetalert2";
 import { useUser } from "@clerk/nextjs";
-import { ClipboardList, MapPin, Plus, Search, TriangleAlert } from "lucide-react";
+import { BarChart3, ClipboardList, MapPin, Plus, Search, TriangleAlert } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
 import FlushingForm from "@/components/smart-papar/FlushingForm";
 import { FlushingList, FlushingDetail } from "@/components/smart-papar/FlushingList";
@@ -27,8 +27,15 @@ const FlushPointRegistry = dynamic(() => import("@/components/smart-papar/FlushP
   loading: () => <div className="py-10 text-center text-pp-muted">กำลังโหลด…</div>,
 });
 
+// แท็บรายงานผู้บริหาร + คิวงานประจำ
+const FlushingReport = dynamic(() => import("@/components/smart-papar/FlushingReport"), {
+  ssr: false,
+  loading: () => <div className="py-10 text-center text-pp-muted">กำลังโหลด…</div>,
+});
+
 const TABS = [
   { key: "logs", label: "งานโบตะกอน", icon: ClipboardList },
+  { key: "report", label: "รายงานและคิวงาน", icon: BarChart3 },
   { key: "registry", label: "ทะเบียนหัวโบล์", icon: MapPin },
 ];
 
@@ -66,9 +73,9 @@ const fmtShort = (d) =>
   });
 
 export default function SmartPaparFlushingPage() {
-  // แท็บจำไว้ใน URL (?tab=registry) — รีเฟรช/ส่งลิงก์แล้วเปิดแท็บเดิม
+  // แท็บจำไว้ใน URL (?tab=registry / ?tab=report) — รีเฟรช/ส่งลิงก์แล้วเปิดแท็บเดิม
   const router = useRouter();
-  const tab = router.query.tab === "registry" ? "registry" : "logs";
+  const tab = TABS.some((t) => t.key === router.query.tab) ? router.query.tab : "logs";
   const setTab = (key) =>
     router.replace(
       { pathname: router.pathname, query: key === "logs" ? {} : { tab: key } },
@@ -218,7 +225,7 @@ export default function SmartPaparFlushingPage() {
             )}
           </header>
 
-          <div role="tablist" aria-label="ส่วนของหน้าโบตะกอน" className="flex gap-1 border-b border-pp-line">
+          <div role="tablist" aria-label="ส่วนของหน้าโบตะกอน" className="flex gap-1 overflow-x-auto border-b border-pp-line">
             {TABS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -226,7 +233,7 @@ export default function SmartPaparFlushingPage() {
                 role="tab"
                 aria-selected={tab === key}
                 onClick={() => setTab(key)}
-                className={`-mb-px flex h-11 items-center gap-2 border-b-2 px-4 text-[15px] ${
+                className={`-mb-px flex h-11 flex-none items-center gap-2 whitespace-nowrap border-b-2 px-4 text-[15px] ${
                   tab === key
                     ? "border-pp-water font-semibold text-pp-ink"
                     : "border-transparent text-pp-muted hover:text-pp-ink"
@@ -240,6 +247,8 @@ export default function SmartPaparFlushingPage() {
 
           {tab === "registry" ? (
             <FlushPointRegistry />
+          ) : tab === "report" ? (
+            <FlushingReport />
           ) : (
           <>
           <div className="flex flex-wrap items-center gap-3">
