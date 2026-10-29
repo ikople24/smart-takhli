@@ -277,13 +277,19 @@ function QueueSection({ reloadKey }) {
   }, [data]);
   const filters = useMemo(() => {
     const byTeam = data?.counts.byTeam || {};
+    // มีแค่ 2 ทีม — "ยังไม่มีทีมรับผิดชอบ" = หัวที่คนโบล่าสุดยังไม่ได้จัดทีม (ไม่นับหัวที่ยังไม่เคยโบ)
+    // โชว์เฉพาะตอนยังมี จัดทีมครบแล้วปุ่มนี้หายเอง
+    const noTeam = (data?.items || []).filter((i) => !i.teamKey && i.bucket !== "never").length;
     return [
       { key: "all", label: "ทุกทีม", count: data?.items.length ?? 0 },
       ...(data?.teams || []).map((t) => ({ key: t.key, label: t.label, count: byTeam[t.key] || 0 })),
-      { key: "", label: "ยังไม่มีทีมรับผิดชอบ", count: byTeam[""] || 0 },
+      ...(noTeam > 0 ? [{ key: "", label: "ยังไม่มีทีมรับผิดชอบ", count: noTeam }] : []),
     ];
   }, [data]);
-  const shown = (data?.items || []).filter((i) => team === "all" || i.teamKey === team);
+  const activeTeam = filters.some((f) => f.key === team) ? team : "all";
+  const shown = (data?.items || []).filter(
+    (i) => activeTeam === "all" || (i.teamKey === activeTeam && (activeTeam !== "" || i.bucket !== "never"))
+  );
 
   return (
     <section className="space-y-4">
@@ -300,10 +306,10 @@ function QueueSection({ reloadKey }) {
           <button
             key={f.key || "none"}
             type="button"
-            aria-pressed={team === f.key}
+            aria-pressed={activeTeam === f.key}
             onClick={() => setTeam(f.key)}
             className={`h-10 rounded-full border px-4 text-sm ${
-              team === f.key ? "border-pp-deep bg-pp-deep font-semibold text-white" : "border-pp-line bg-white hover:bg-pp-ground"
+              activeTeam === f.key ? "border-pp-deep bg-pp-deep font-semibold text-white" : "border-pp-line bg-white hover:bg-pp-ground"
             }`}
           >
             {f.label} <span className="tabular-nums opacity-75">{f.count}</span>
