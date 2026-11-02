@@ -207,15 +207,18 @@ export default function PaparPublicPage() {
                         <span className="block flex-[40] bg-[#FDE7B0]" />
                         <span className="block flex-[15] bg-[#FBCDB4]" />
                         <span className="block flex-[20] rounded-r-md bg-[#F9C2C7]" />
+                        {/* เส้นประตรงค่ามาตรฐานกรมอนามัย — อยู่ใต้หมุด */}
+                        <span className="absolute -top-[7px] left-[25%] block h-[26px] -translate-x-1/2 border-l-2 border-dashed border-[#1B1830]" />
                         <span
                           className="absolute -top-[5px] block h-[22px] w-[22px] -translate-x-1/2 rounded-full border-4 border-white shadow"
                           style={{ left: `${gaugePct(latest?.ntu)}%`, background: level.chipText }}
                         />
                       </div>
-                      <div className="relative h-4 text-[11px] text-[#6B6880]">
+                      <div className="relative h-8 text-[11px] text-[#6B6880]">
                         <span className="absolute left-0">0</span>
-                        <span className="absolute left-[25%] -translate-x-1/2 font-semibold text-[#1B1830]">
-                          {WATER_STANDARDS.ntuMax} · เกณฑ์
+                        <span className="absolute left-[25%] -translate-x-1/2 whitespace-nowrap text-center leading-tight">
+                          <b className="block text-[12px] text-[#1B1830]">{WATER_STANDARDS.ntuMax} NTU</b>
+                          ค่ามาตรฐานกรมอนามัย
                         </span>
                         <span className="absolute left-[65%] -translate-x-1/2">15</span>
                         <span className="absolute left-[80%] -translate-x-1/2">20</span>
