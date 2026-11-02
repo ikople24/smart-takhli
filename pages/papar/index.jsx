@@ -249,7 +249,7 @@ export default function PaparPublicPage() {
                   unit="mg/L"
                   ok={tdsWithin(latest?.tds)}
                   rangeText={`ไม่เกิน ${WATER_STANDARDS.tdsMax}`}
-                  explain={`แร่ธาตุในน้ำไม่เกิน ${WATER_STANDARDS.tdsMax} mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์กรมอนามัย`}
+                  explain={`แร่ธาตุและสารละลายในน้ำไม่เกิน ${WATER_STANDARDS.tdsMax} mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์กรมอนามัย`}
                   band={[0, 100]}
                   markerPct={latest?.tds == null ? null : (Number(latest.tds) / WATER_STANDARDS.tdsMax) * 100}
                 />
