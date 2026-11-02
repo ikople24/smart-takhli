@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Circle } from "lucide-react";
+import { WATER_STANDARDS } from "@/lib/smart-papar/publicSummary";
 
 const getNtuInfo = (value) => {
   const ntu = typeof value === "number" ? value : parseFloat(value);
@@ -13,8 +14,8 @@ const getNtuInfo = (value) => {
     };
   }
 
-  // เกณฑ์น้ำจ่าย: <5 ปกติ, 5-15 เฝ้าระวัง, 15-20 ตะกอนเล็กน้อย, >20 เริ่มขุ่น
-  if (ntu < 5) {
+  // เกณฑ์น้ำจ่าย (ตรงกับ lib/citizen/waterLevel.js): ≤4 ปกติ (กรมอนามัย 2569), >4-15 เฝ้าระวัง, 15-20 ตะกอนเล็กน้อย, >20 เริ่มขุ่น
+  if (ntu <= WATER_STANDARDS.ntuMax) {
     return {
       color: "text-blue-600",
       bgColor: "bg-blue-50",

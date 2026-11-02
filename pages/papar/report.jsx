@@ -9,6 +9,7 @@ import { Camera, Check, ChevronLeft, Droplet, Droplets, LocateFixed, ShowerHead,
 import CitizenShell from "@/components/citizen/CitizenShell";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
 import { resizeImage } from "@/lib/smart-papar/resizeImage";
+import { WATER_STANDARDS } from "@/lib/smart-papar/publicSummary";
 import { MAX_REPORT_PHOTOS, WATER_SINCE, WATER_SYMPTOMS, maskPhone, validateWaterReportInput } from "@/lib/smart-papar/waterReport";
 
 const ReportLocationMap = dynamic(() => import("@/components/smart-papar/ReportLocationMap"), {
@@ -262,7 +263,7 @@ export default function PaparReportPage() {
             </div>
 
             <div className="flex-1 space-y-3.5 px-4 pb-5 pt-3.5">
-              {plantNtu !== null && plantNtu <= 5 && (
+              {plantNtu !== null && plantNtu <= WATER_STANDARDS.ntuMax && (
                 <div className="flex items-start gap-2.5 rounded-2xl bg-[#E6F1FE] px-3.5 py-3 text-[13px] leading-relaxed text-[#1E3A8A]">
                   <Droplet size={20} className="mt-0.5 flex-none text-[#2563EB]" aria-hidden />
                   <span>
