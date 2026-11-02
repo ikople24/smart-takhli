@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import Swal from "sweetalert2";
+import { waterLevel } from "@/lib/citizen/waterLevel";
 
 function getBangkokYMD(date = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -631,18 +632,9 @@ export default function SmartPaparWaterQualityPage() {
               {latest ? (
                 <>
                   {(() => {
-                    // NTU น้ำจ่าย: <5 ปกติ, 5-15 เฝ้าระวัง, 15-20 ตะกอนเล็กน้อย, >20 เริ่มขุ่น
+                    // ระดับ NTU น้ำจ่ายใช้ waterLevel ตัวเดียวกับหน้าประชาชน (≤ เกณฑ์กรมอนามัย 2569 = ปกติ) — ห้ามตั้งเกณฑ์แยก
                     const tapNtu = numOrNull(latest?.tap?.turbidityNtu);
-                    const tier =
-                      tapNtu === null
-                        ? "none"
-                        : tapNtu < 5
-                          ? "ok"
-                          : tapNtu <= 15
-                            ? "warn"
-                            : tapNtu <= 20
-                              ? "warn2"
-                              : "bad";
+                    const tier = { ok: "ok", watch: "warn", sediment: "warn2", turbid: "bad" }[waterLevel(tapNtu).key] || "none";
 
                     const statusText =
                       tier === "ok"

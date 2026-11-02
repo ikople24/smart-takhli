@@ -20,12 +20,13 @@ const card = "rounded-[20px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05
 const CHART_MAX_NTU = 8; // แท่งที่เกินนี้ถูกตัดที่ยอด (ยังเห็นว่าเกินเส้นเกณฑ์ชัด)
 const CHART_H = 112;
 
-// ตำแหน่งหมุดบนแถบระดับความขุ่น — ช่วงกว้างไม่เท่ากันตามเกณฑ์ waterLevel (0–5 · 5–15 · 15–20 · 20+)
+// ตำแหน่งหมุดบนแถบระดับความขุ่น — ช่วงกว้างไม่เท่ากันตามเกณฑ์ waterLevel (0–เกณฑ์ · –15 · 15–20 · 20+)
 function gaugePct(ntu) {
   const v = Number(ntu);
+  const max = WATER_STANDARDS.ntuMax;
   if (!Number.isFinite(v) || v < 0) return 0;
-  if (v <= 5) return (v / 5) * 25;
-  if (v <= 15) return 25 + ((v - 5) / 10) * 40;
+  if (v <= max) return (v / max) * 25;
+  if (v <= 15) return 25 + ((v - max) / (15 - max)) * 40;
   if (v <= 20) return 65 + ((v - 15) / 5) * 15;
   return 80 + Math.min((v - 20) / 20, 1) * 20;
 }
@@ -206,15 +207,18 @@ export default function PaparPublicPage() {
                         <span className="block flex-[40] bg-[#FDE7B0]" />
                         <span className="block flex-[15] bg-[#FBCDB4]" />
                         <span className="block flex-[20] rounded-r-md bg-[#F9C2C7]" />
+                        {/* เส้นประตรงค่ามาตรฐานกรมอนามัย — อยู่ใต้หมุด */}
+                        <span className="absolute -top-[7px] left-[25%] block h-[26px] -translate-x-1/2 border-l-2 border-dashed border-[#1B1830]" />
                         <span
                           className="absolute -top-[5px] block h-[22px] w-[22px] -translate-x-1/2 rounded-full border-4 border-white shadow"
                           style={{ left: `${gaugePct(latest?.ntu)}%`, background: level.chipText }}
                         />
                       </div>
-                      <div className="relative h-4 text-[11px] text-[#6B6880]">
+                      <div className="relative h-8 text-[11px] text-[#6B6880]">
                         <span className="absolute left-0">0</span>
-                        <span className="absolute left-[25%] -translate-x-1/2 font-semibold text-[#1B1830]">
-                          {WATER_STANDARDS.ntuMax} · เกณฑ์
+                        <span className="absolute left-[25%] -translate-x-1/2 whitespace-nowrap text-center leading-tight">
+                          <b className="block text-[12px] text-[#1B1830]">{WATER_STANDARDS.ntuMax} NTU</b>
+                          ค่ามาตรฐานกรมอนามัย
                         </span>
                         <span className="absolute left-[65%] -translate-x-1/2">15</span>
                         <span className="absolute left-[80%] -translate-x-1/2">20</span>
@@ -222,7 +226,7 @@ export default function PaparPublicPage() {
                     </div>
                   )}
                   <p className="text-[13px] leading-relaxed text-[#6B6880]">
-                    ยิ่งตัวเลขน้อยน้ำยิ่งใส กรมอนามัยกำหนดไม่เกิน {WATER_STANDARDS.ntuMax} NTU วัดที่หน้าโรงกรองประปา
+                    ยิ่งตัวเลขน้อยน้ำยิ่งใส กรมอนามัย (พ.ศ. 2569) กำหนดไม่เกิน {WATER_STANDARDS.ntuMax} NTU วัดที่หน้าโรงกรองประปา
                     น้ำที่บ้านอาจต่างได้ตามสภาพท่อ
                   </p>
                 </div>
@@ -245,7 +249,7 @@ export default function PaparPublicPage() {
                   unit="mg/L"
                   ok={tdsWithin(latest?.tds)}
                   rangeText={`ไม่เกิน ${WATER_STANDARDS.tdsMax}`}
-                  explain="แร่ธาตุในน้ำไม่เกิน 600 mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์"
+                  explain={`แร่ธาตุและสารละลายในน้ำไม่เกิน ${WATER_STANDARDS.tdsMax} mg/L ถือว่าใช้อุปโภคบริโภคได้ตามเกณฑ์กรมอนามัย`}
                   band={[0, 100]}
                   markerPct={latest?.tds == null ? null : (Number(latest.tds) / WATER_STANDARDS.tdsMax) * 100}
                 />
