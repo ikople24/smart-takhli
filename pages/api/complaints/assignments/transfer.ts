@@ -2,13 +2,14 @@
 // POST { assignmentId, toUserId, reason } — โอน / ส่งต่องานให้เจ้าหน้าที่คนอื่น (README หน้าจอ 1: เหตุผลบังคับกรอก → AuditLog)
 // สิทธิ์ (นโยบาย 2026-09-01, lib/tasks/roles.js): **หัวหน้ากอง (งานในกองตัวเอง) หรือ superadmin เท่านั้น** — admin ธรรมดาใช้ "ขอโอนงาน"
 // งานที่ปิดแล้วโอนไม่ได้ · ปลายทางต้องเป็นเจ้าหน้าที่ของแอปนี้ที่ยังไม่ถูก archive · โอนแล้วเคลียร์คำขอโอน + แจ้งผู้รับทางกระดิ่ง
+// · ผู้รับหลักอยู่กองอื่น → complaint.department ย้ายตามผู้รับ (2026-11-09 — เหมือนตอนรับงาน, ไม่งั้นเรื่องที่รับผิดค้างในกองคนรับผิด)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import mongoose from 'mongoose';
 import Assignment from '@/models/Assignment';
 import Complaint from '@/models/Complaint';
 import Notification from '@/models/Notification';
 import { logAuditEvent } from '@/lib/auditLogger';
-import { taskPermissions } from '@/lib/tasks/roles';
+import { departmentAfterClaim, taskPermissions } from '@/lib/tasks/roles';
 import { normalizeDepartment, defaultDepartmentForCategory } from '@/lib/tasks/departments';
 import { getOfficer, userModel, CURRENT_APP_ID } from '@/pages/api/tasks/_auth';
 
@@ -62,6 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const fromUserId = String(assignment.userId);
     const now = new Date();
+    const movedTo = assignment.role === 'coordinator' || !complaint ? null : departmentAfterClaim({ claimerDepartment: target.department, taskDepartment });
     const hadRequest = !!assignment.transferRequest?.requestedAt;
     assignment.userId = target._id;
     assignment.transferRequest = { requestedAt: null, reason: '', byUserId: null, byName: '' };
@@ -72,7 +74,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       byUserId: officer._id,
       byName: officer.name || '',
     });
+    if (movedTo) {
+      assignment.timeline.push({ at: now, kind: 'note', text: `ย้ายเรื่องเข้า${movedTo} (เดิม ${taskDepartment || 'ยังไม่ระบุกอง'})`, byUserId: officer._id, byName: officer.name || '' });
+    }
     await assignment.save();
+    if (movedTo) {
+      await Complaint.updateOne({ _id: assignment.complaintId }, { $set: { department: movedTo } });
+      logAuditEvent({
+        actorClerkId: auth.clerkUserId,
+        actorName: officer.name || 'admin',
+        action: 'complaint_department_set',
+        resourceType: 'complaint',
+        resourceId: String(assignment.complaintId),
+        description: `โอนงานข้ามกอง — ย้ายเรื่อง ${complaint?.complaintId || String(assignment.complaintId).slice(-8)}: "${taskDepartment || '-'}" → "${movedTo}"`,
+        before: { department: complaint?.department ?? '' },
+        after: { department: movedTo },
+      });
+    }
 
     // แจ้งผู้รับงานทางกระดิ่ง (ไม่ใช้ LINE — โควตา)
     if (target.clerkId && target.clerkId !== auth.clerkUserId) {

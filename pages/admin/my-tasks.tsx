@@ -185,7 +185,7 @@ export default function MyTasksPage() {
     try {
       const { data: res } = await axios.post('/api/complaints/assignments/transfer-request', payload);
       setTransferOpen(false);
-      toast(`ส่งคำขอโอนแล้ว — แจ้งหัวหน้ากอง ${res?.notified ?? 0} คน`);
+      toast(`ส่งคำขอโอนแล้ว — แจ้งแอดมินกลาง/หัวหน้ากอง ${res?.notified ?? 0} คน`);
       await load();
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'ส่งคำขอไม่สำเร็จ', text: errorMessage(err, 'ลองใหม่อีกครั้ง') });

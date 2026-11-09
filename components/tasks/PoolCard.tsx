@@ -1,5 +1,5 @@
 // components/tasks/PoolCard.tsx
-// การ์ดเรื่องในกองงานรอรับ (README หน้าจอ 2 § Pool card) — ปุ่มเปลี่ยนตามความสัมพันธ์ของเรื่องกับกองของเจ้าหน้าที่
+// การ์ดเรื่องในกองงานรอรับ (README หน้าจอ 2 § Pool card) — ทุกคนรับได้ทุกเรื่อง (2026-11-09) ปุ่มเปลี่ยนตามความสัมพันธ์กับกอง
 // ข้อความ aging pill / context badges มาจาก lib/tasks/badges.js (ใส่มาใน item แล้ว)
 import React from 'react';
 import clsx from 'clsx';
@@ -9,9 +9,9 @@ import { AlertBadge } from './AlertBadge';
 
 export type PoolAction =
   | 'claim' // กองของตัวเอง → รับงาน (+ มอบหมาย ถ้าเป็นหัวหน้ากอง)
+  | 'claim_other' // กองอื่น → รับงานได้ (รับแล้วเรื่องย้ายเข้ากองคนรับ)
   | 'coordinate' // กองอื่นแต่เราต้องประสาน → รับเป็นผู้ประสาน
-  | 'choose_org' // ยังไม่ระบุกอง → เลือกกอง
-  | 'not_yours'; // กองอื่น → ปุ่มปิด
+  | 'choose_org'; // ยังไม่ระบุกอง → รับงาน + เลือกกอง
 
 export interface PoolCardProps {
   item: PoolItem;
@@ -42,16 +42,24 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
   let buttons: React.ReactNode;
   switch (action) {
     case 'claim':
+    case 'claim_other':
+    case 'choose_org':
       buttons = (
         <>
           <button
             type="button"
             disabled={busy}
             onClick={() => onClaim?.(item)}
+            title={action === 'claim_other' ? 'เรื่องนี้ระบบจัดไว้กองอื่น — รับแล้วเรื่องจะย้ายเข้ากองของคุณ · ถ้ารับผิด กด "ขอโอนงาน" ในหน้างาน' : undefined}
             className={clsx(btn, 'flex-1 text-white', item.isUrgent ? 'bg-tk-overdue hover:brightness-95' : 'bg-tk-primary hover:bg-tk-primary-dark')}
           >
             {item.isUrgent ? 'รับงานด่วน' : mobile ? 'รับงานนี้' : 'รับงาน'}
           </button>
+          {action === 'choose_org' && (
+            <button type="button" disabled={busy} onClick={() => onChooseOrg?.(item)} className={clsx(btn, 'bg-tk-bg px-[11px] text-tk-ink-4 hover:bg-tk-line-light')}>
+              เลือกกอง
+            </button>
+          )}
           {canAssign && (
             <button type="button" disabled={busy} onClick={() => onAssign?.(item)} className={clsx(btn, 'bg-tk-bg px-[11px] text-tk-ink-4 hover:bg-tk-line-light')}>
               มอบหมาย
@@ -67,19 +75,6 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
         </button>
       );
       break;
-    case 'choose_org':
-      buttons = (
-        <button type="button" disabled={busy} onClick={() => onChooseOrg?.(item)} className={clsx(btn, 'flex-1 bg-tk-ink-3 text-white hover:bg-tk-ink-2')}>
-          เลือกกอง
-        </button>
-      );
-      break;
-    default:
-      buttons = (
-        <button type="button" disabled title="เฉพาะเจ้าหน้าที่ในกองนี้" className={clsx(btn, 'flex-1 bg-tk-bg text-tk-ink-4 opacity-80')}>
-          ไม่ใช่กองของคุณ
-        </button>
-      );
   }
 
   return (
@@ -111,6 +106,9 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
         {[item.category, item.community].filter(Boolean).join(' · ') || '—'}
         {item.distanceLabel && <span className="ml-1.5 font-semibold text-tk-blue">· {item.distanceLabel}</span>}
       </p>
+      {action === 'claim_other' && item.department && (
+        <p className="mt-1 text-[11px] text-tk-ink-5">ระบบจัดไว้ {item.department} — รับแล้วย้ายเข้ากองของคุณ</p>
+      )}
 
       {item.contextBadges.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-[5px]">

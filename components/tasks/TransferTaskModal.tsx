@@ -91,7 +91,7 @@ export function TransferTaskModal({ open, tasks, initialTaskId, officers, office
           <div>
             <h3 className="text-[16px] font-bold">{isRequest ? 'ขอโอนงาน' : 'โอน / ส่งต่องาน'}</h3>
             <p className="text-[12px] text-tk-ink-5">
-              {isRequest ? 'หัวหน้ากองจะได้รับแจ้งและเป็นคนย้ายงานให้ — งานยังอยู่กับคุณจนกว่าจะโอน' : 'งานจะย้ายไปอยู่ในกลุ่มงานของผู้รับทันที และบันทึกลงประวัติ'}
+              {isRequest ? 'รับผิดเรื่อง / ไม่ใช่งานของคุณ? แอดมินกลางและหัวหน้ากองจะได้รับแจ้งและเป็นคนย้ายงานให้ — งานยังอยู่กับคุณจนกว่าจะโอน' : 'งานจะย้ายไปอยู่ในกลุ่มงานของผู้รับทันที และบันทึกลงประวัติ'}
             </p>
           </div>
           <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-tk-ink-5 hover:bg-tk-bg" aria-label="ปิด">
