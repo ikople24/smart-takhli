@@ -13,6 +13,7 @@ import ComplaintDetailModal from "@/components/complaints/ComplaintDetailModal";
 import ExportComplaints from "@/components/complaints/ExportComplaints";
 import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
 import Swal from "sweetalert2";
+import { availableFiscalYears, currentFiscalYear, fiscalYearLabel, splitByFiscalYear } from "@/lib/complaints/fiscalYear";
 
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
   ssr: false,
@@ -78,7 +79,8 @@ export default function ManageComplaintsPage() {
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // + "carryover" = เรื่องค้างข้ามปีงบ
+  const [fiscalYear, setFiscalYear] = useState(() => currentFiscalYear()); // number (พ.ศ.) | "all"
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updatedAt");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -158,26 +160,39 @@ export default function ManageComplaintsPage() {
     [assignments]
   );
 
+  // ตัดตามปีงบประมาณ (วันที่แจ้ง) — เรื่องปีก่อนที่ยังไม่เสร็จแยกเป็น "ค้างข้ามปี"
+  const fiscalYearOptions = useMemo(() => availableFiscalYears(complaints), [complaints]);
+  const { inYear: yearComplaints, carryOver, carryOverByYear } = useMemo(
+    () => splitByFiscalYear(complaints, fiscalYear),
+    [complaints, fiscalYear]
+  );
+
+  // ปีงบไม่มีเรื่องค้างแล้ว แต่ยังอยู่แท็บค้างข้ามปี → กลับแท็บทั้งหมด
+  useEffect(() => {
+    if (statusFilter === "carryover" && carryOver.length === 0) setStatusFilter("all");
+  }, [statusFilter, carryOver.length]);
+
   const stats = useMemo(() => ({
-    total: complaints.length,
-    pending: complaints.filter(c => !assignedComplaintIds.has(c._id)).length,
-    inProgress: complaints.filter(c => c.status === "อยู่ระหว่างดำเนินการ").length,
-    completed: complaints.filter(c => c.status === "ดำเนินการเสร็จสิ้น").length
-  }), [complaints, assignedComplaintIds]);
+    total: yearComplaints.length,
+    pending: yearComplaints.filter(c => !assignedComplaintIds.has(c._id)).length,
+    inProgress: yearComplaints.filter(c => c.status === "อยู่ระหว่างดำเนินการ").length,
+    completed: yearComplaints.filter(c => c.status === "ดำเนินการเสร็จสิ้น").length
+  }), [yearComplaints, assignedComplaintIds]);
 
   const uniqueCategories = useMemo(() => 
-    [...new Set(complaints.map(c => c.category))].filter(Boolean),
-    [complaints]
+    [...new Set([...yearComplaints, ...carryOver].map(c => c.category))].filter(Boolean),
+    [yearComplaints, carryOver]
   );
 
   // Filtered and sorted complaints
   const filteredComplaints = useMemo(() => {
-    return complaints
+    const source = statusFilter === "carryover" ? carryOver : yearComplaints;
+    return source
       .filter((complaint) => {
         const matchesSearch = matchesComplaintSearch(complaint, debouncedSearch);
         
         let matchesStatus = false;
-        if (statusFilter === "all") {
+        if (statusFilter === "all" || statusFilter === "carryover") {
           matchesStatus = true;
         } else if (statusFilter === "รอการมอบหมาย") {
           matchesStatus = !assignedComplaintIds.has(complaint._id);
@@ -209,7 +224,7 @@ export default function ManageComplaintsPage() {
         }
         return sortOrder === "desc" ? comparison : -comparison;
       });
-  }, [complaints, debouncedSearch, statusFilter, categoryFilter, sortBy, sortOrder, assignedComplaintIds]);
+  }, [yearComplaints, carryOver, debouncedSearch, statusFilter, categoryFilter, sortBy, sortOrder, assignedComplaintIds]);
 
   // Pagination
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
@@ -221,7 +236,7 @@ export default function ManageComplaintsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, categoryFilter]);
+  }, [debouncedSearch, statusFilter, categoryFilter, fiscalYear]);
 
   // Handlers
   const handleAssign = async (complaintId) => {
@@ -538,10 +553,15 @@ export default function ManageComplaintsPage() {
                 )}
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                รวม {complaints.length.toLocaleString()} เรื่อง • 
+                {fiscalYear === "all"
+                  ? "ทุกปีงบประมาณ"
+                  : `ปีงบประมาณ ${fiscalYear} (${fiscalYearLabel(fiscalYear)})`} • รวม {stats.total.toLocaleString()} เรื่อง • 
                 <span className="text-blue-600 ml-1">
                   {stats.inProgress} กำลังดำเนินการ
                 </span>
+                {carryOver.length > 0 && (
+                  <span className="text-orange-600 ml-1">• ค้างข้ามปี {carryOver.length}</span>
+                )}
                 {!isSuperAdmin && (
                   <span className="text-gray-400 ml-2">
                     • การลบต้องใช้สิทธิ์ Super Admin
@@ -552,7 +572,22 @@ export default function ManageComplaintsPage() {
             
             {/* Quick actions */}
             <div className="flex items-center gap-2">
-              <ExportComplaints complaints={complaints} assignments={assignments} />
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="hidden sm:inline">ปีงบประมาณ</span>
+                <select
+                  value={String(fiscalYear)}
+                  onChange={(e) => setFiscalYear(e.target.value === "all" ? "all" : Number(e.target.value))}
+                  className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700
+                    focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                  aria-label="เลือกปีงบประมาณ"
+                >
+                  {fiscalYearOptions.map((fy) => (
+                    <option key={fy} value={fy}>ปีงบ {fy}</option>
+                  ))}
+                  <option value="all">ทุกปี</option>
+                </select>
+              </label>
+              <ExportComplaints complaints={yearComplaints} assignments={assignments} />
               
               {/* View toggle */}
               <div className="hidden sm:flex items-center bg-white rounded-lg border p-1">
@@ -582,6 +617,39 @@ export default function ManageComplaintsPage() {
             isLoading={loading} 
             onStatClick={handleStatClick}
           />
+
+          {/* แถบเรื่องค้างข้ามปีงบ */}
+          {carryOver.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter("carryover")}
+              className={`w-full mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 rounded-xl border text-left transition-colors
+                ${statusFilter === "carryover"
+                  ? "bg-orange-100 border-orange-300"
+                  : "bg-orange-50 border-orange-200 hover:bg-orange-100"}`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-200/70 text-orange-700 font-bold">
+                  {carryOver.length}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-orange-800">
+                    เรื่องค้างข้ามปีงบประมาณ — แจ้งก่อนปีงบ {fiscalYear} และยังไม่เสร็จ
+                  </p>
+                  <p className="text-xs text-orange-700/80">
+                    {Object.entries(carryOverByYear)
+                      .sort((a, b) => Number(b[0]) - Number(a[0]))
+                      .map(([fy, n]) => `ปีงบ ${fy}: ${n} เรื่อง`)
+                      .join(" · ")}
+                    {" "}— ไม่นับรวมในสถิติปีงบ {fiscalYear}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-medium text-orange-700 whitespace-nowrap">
+                {statusFilter === "carryover" ? "กำลังแสดงในตาราง" : "ดูรายการ →"}
+              </span>
+            </button>
+          )}
 
           {/* Overdue alerts + satisfaction comments */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 items-start">
@@ -613,22 +681,31 @@ export default function ManageComplaintsPage() {
                 { value: "all", label: "ทั้งหมด", count: stats.total },
                 { value: "รอการมอบหมาย", label: "รอมอบหมาย", count: stats.pending },
                 { value: "อยู่ระหว่างดำเนินการ", label: "กำลังดำเนินการ", count: stats.inProgress },
-                { value: "ดำเนินการเสร็จสิ้น", label: "เสร็จสิ้น", count: stats.completed }
+                { value: "ดำเนินการเสร็จสิ้น", label: "เสร็จสิ้น", count: stats.completed },
+                ...(carryOver.length > 0
+                  ? [{ value: "carryover", label: "ค้างข้ามปี", count: carryOver.length, tone: "orange" }]
+                  : [])
               ].map((tab) => (
                 <button
                   key={tab.value}
                   onClick={() => setStatusFilter(tab.value)}
                   className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors
                     ${statusFilter === tab.value 
-                      ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50" 
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      ? tab.tone === "orange"
+                        ? "text-orange-700 border-b-2 border-orange-500 bg-orange-50/60"
+                        : "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50" 
+                      : tab.tone === "orange"
+                        ? "text-orange-600 hover:bg-orange-50"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                     }`}
                 >
                   {tab.label}
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                    statusFilter === tab.value 
-                      ? "bg-blue-100 text-blue-700" 
-                      : "bg-gray-100 text-gray-600"
+                    tab.tone === "orange"
+                      ? "bg-orange-100 text-orange-700"
+                      : statusFilter === tab.value 
+                        ? "bg-blue-100 text-blue-700" 
+                        : "bg-gray-100 text-gray-600"
                   }`}>
                     {tab.count}
                   </span>
