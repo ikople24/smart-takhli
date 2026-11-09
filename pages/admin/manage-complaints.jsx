@@ -18,6 +18,24 @@ const LocationPickerModal = dynamic(() => import("@/components/LocationPickerMod
   ssr: false,
 });
 
+// ค้นหา: เลขคำร้อง (พิมพ์ "700036" หรือ "tkc-700036" ก็เจอ), รายละเอียด, หมวด, ประเภทย่อย, ชุมชน, ชื่อผู้แจ้ง
+function matchesComplaintSearch(complaint, rawQuery) {
+  const q = (rawQuery || "").trim().toLowerCase();
+  if (!q) return true;
+  const id = (complaint.complaintId || "").toLowerCase();
+  if (id && id.includes(q)) return true;
+  const digits = q.replace(/\D/g, "");
+  if (digits.length >= 3 && /^(tkc)?[-\s]*\d+$/.test(q) && id.replace(/\D/g, "").includes(digits)) return true;
+  const fields = [
+    complaint.detail,
+    complaint.category,
+    complaint.community,
+    complaint.fullName,
+    ...(Array.isArray(complaint.problems) ? complaint.problems : []),
+  ];
+  return fields.some((f) => typeof f === "string" && f.toLowerCase().includes(q));
+}
+
 // Debounce hook for search
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -156,10 +174,7 @@ export default function ManageComplaintsPage() {
   const filteredComplaints = useMemo(() => {
     return complaints
       .filter((complaint) => {
-        const matchesSearch = !debouncedSearch || 
-          complaint.detail?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-          complaint.category?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-          complaint.fullName?.toLowerCase().includes(debouncedSearch.toLowerCase());
+        const matchesSearch = matchesComplaintSearch(complaint, debouncedSearch);
         
         let matchesStatus = false;
         if (statusFilter === "all") {
@@ -631,7 +646,7 @@ export default function ManageComplaintsPage() {
                   </svg>
                   <input
                     type="text"
-                    placeholder="ค้นหาจากหัวข้อ, หมวดหมู่, ชื่อผู้แจ้ง..."
+                    placeholder="ค้นหาเลขคำร้อง (เช่น TKC-700036), รายละเอียด, หมวด, ชุมชน..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm 
@@ -730,7 +745,7 @@ export default function ManageComplaintsPage() {
                   <thead>
                     <tr className="bg-gray-50 border-b">
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">#</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">สถานะ</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">เลขคำร้อง / สถานะ</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">หมวดหมู่</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">ภาพ</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
@@ -755,6 +770,9 @@ export default function ManageComplaintsPage() {
                             {(currentPage - 1) * itemsPerPage + index + 1}
                           </td>
                           <td className="px-4 py-3">
+                            <p className="font-mono text-xs font-semibold text-gray-700 whitespace-nowrap mb-1 select-all">
+                              {complaint.complaintId || "—"}
+                            </p>
                             {getStatusBadge(complaint.status, isAssigned)}
                           </td>
                           <td className="px-4 py-3">
@@ -769,6 +787,11 @@ export default function ManageComplaintsPage() {
                               <span className="text-xs text-gray-500 truncate max-w-[80px]">
                                 {complaint.category}
                               </span>
+                              {Array.isArray(complaint.problems) && complaint.problems.length > 0 && (
+                                <span className="text-[10px] text-gray-400 text-center line-clamp-2 max-w-[110px]">
+                                  {complaint.problems.join(", ")}
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -942,6 +965,11 @@ export default function ManageComplaintsPage() {
                     )}
                     
                     <div className="p-4">
+                      {complaint.complaintId && (
+                        <p className="font-mono text-xs font-semibold text-gray-700 mb-2 select-all">
+                          {complaint.complaintId}
+                        </p>
+                      )}
                       {/* Status and Category */}
                       <div className="flex items-center justify-between mb-3">
                         {getStatusBadge(complaint.status, isAssigned)}
