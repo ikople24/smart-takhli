@@ -24,7 +24,7 @@
 - `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (ค้างเกิน `unclaimedAlertDays`
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
   (`?days=all|30|90|365` **default ทั้งหมด — เจ้าของยืนยันหน้านี้ต้องเห็นทุกเรื่อง**) · kanban ต่อคอลัมน์ (กองของตัวเอง + **กองที่มีงานกำลังดำเนินการมีคอลัมน์เสมอ** พร้อมบรรทัด "กำลังดำเนินการ N เรื่อง" ลิงก์ไปงานของกอง — เรื่องที่มีคนรับแล้วไม่อยู่หน้านี้,
-  "ยังไม่ระบุกอง" dashed ท้ายสุด) · การ์ด: รับงาน (optimistic + toast "เลิกทำ" 5 วิ) / มอบหมาย (หัวหน้ากอง) / เลือกกอง / ไม่ใช่กองของคุณ
+  "ยังไม่ระบุกอง" dashed ท้ายสุด) · การ์ด: รับงาน — **ทุกคนรับได้ทุกเรื่อง** (2026-11-09; การ์ดกองอื่นมีบรรทัด "รับแล้วย้ายเข้ากองของคุณ") (optimistic + toast "เลิกทำ" 5 วิ — เลิกทำคืนกองเดิมให้ด้วย) / มอบหมาย (หัวหน้ากอง) / เลือกกอง (เรื่องที่ยังไม่ระบุกอง)
   · ลงทะเบียนครบ (ALL_PAGES + DEFAULT_PERMISSIONS admin + navigationItems; **ไม่ใส่ ADMIN_META title** เพราะหน้ามี h1 เอง — ไม่งั้นชื่อซ้ำ) + `scripts/grant-task-pool-permission.mjs`
 
 ## API (`pages/api/tasks/`)
@@ -36,7 +36,7 @@
 | `GET /api/tasks/pool-count` | จำนวนเรื่องในกองงานรอรับ (30 วัน + เก่ากว่านั้น) สำหรับ badge บน bottom nav มือถือ |
 | `GET /api/tasks/heads` · `PUT` (superadmin) | รายชื่อ user + สถานะหัวหน้ากอง · `PUT { userId, isDepartmentHead: true\|false\|null }` (null = กลับไปดูตำแหน่ง) audit `department_head_set` |
 | `POST /api/complaints/assignments/transfer-request` · `DELETE ?assignmentId=` | เจ้าของงานที่โอนเองไม่ได้ "ขอโอนงาน" (เหตุผลบังคับ) → `Assignment.transferRequest` + timeline + แจ้งกระดิ่งถึงหัวหน้ากอง (`digestRecipients`) · DELETE = เจ้าของยกเลิก / หัวหน้าปฏิเสธ |
-| `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) — **ไม่ส่ง LINE** (โควตา) |
+| `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) **+ LINE กลุ่มเจ้าหน้าที่วันละครั้ง** (เปิดอีกครั้ง 2026-11-09 หลังอัปเกรด LINE OA Starter; dedupe ด้วย audit log `resourceId: stale-digest-line:<วันที่>`; ข้อความจาก `digest.js#buildStaleLineText` ตัวเดียวกับปุ่ม pool-alert) |
 | `GET /api/tasks/[assignmentId]` | หน้าจอ 3: เรื่อง + assignment + derived + ป้าย + ไทม์ไลน์ + `solutionOptions` (AdminOption ของประเภทนั้น) + `canEdit` (เจ้าของ/superadmin) |
 | `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) |
 | `GET /api/tasks/pool?groupBy=&q=&community=&days=&onlyStale=1` | เรื่องที่ยังไม่มี Assignment และยังไม่ปิด (`lib/tasks/loadPool.js`) + derived/ป้าย + `action` ต่อเจ้าหน้าที่ + คอลัมน์ (`groupPool`) + `stale` + `workload` (งานเปิดต่อคน) + `departments` — สิทธิ์ผ่าน `requirePage('/admin/task-pool')` · ไม่คืนชื่อ/เบอร์ผู้แจ้ง |
@@ -45,7 +45,7 @@
 | `DELETE /api/complaints/assignments/[id]` | "เลิกทำ" การรับงาน — เจ้าของ/superadmin, ภายใน 15 นาที, ยังไม่มีความคืบหน้า → audit `assignment_unclaimed` |
 | `GET /api/tasks/settings` · `PUT` (superadmin) | SLA/เกณฑ์เตือน — PUT รับบางฟิลด์ได้ (merge) ลง audit `task_settings_updated` |
 | `pages/api/tasks/_auth.ts` | `getOfficer(req)` (Clerk → users ใน Mongo) · `requireSuperAdmin(req)` |
-| `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints — ใช้ทั้งกองงานรอรับและหน้าการร้องเรียน) **บังคับล็อกอิน + กติกาฝั่ง server (2026-09-02)**: รับเอง → `canClaim` (กองเดียวกัน) · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin · เรื่องที่มี assignment เปิดค้าง → 409 กันรับซ้ำ · ตั้ง `dueDate`/`stage`/timeline `created` |
+| `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints — ใช้ทั้งกองงานรอรับและหน้าการร้องเรียน) **บังคับล็อกอิน + กติกาฝั่ง server (2026-09-02)**: รับเอง → ได้ทุกเรื่องทุกกอง (2026-11-09 — เลิก `canClaim` เพราะระบบเดากองจากหมวดใหญ่ผิดบ่อยจนงานค้าง) · ผู้รับหลักอยู่กองอื่น → ย้าย `complaint.department` เข้ากองผู้รับ (`roles.js#departmentAfterClaim`) + timeline note + audit `complaint_department_set` + คืน `movedFrom` ให้ปุ่มเลิกทำ · รับผิด → "ขอโอนงาน" แจ้ง superadmin + หัวหน้ากอง (`digest.js#transferRequestRecipients`) · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin · เรื่องที่มี assignment เปิดค้าง → 409 กันรับซ้ำ · ตั้ง `dueDate`/`stage`/timeline `created` |
 | `POST /api/complaints/assignments/transfer` | `{ assignmentId, toUserId, reason }` โอนงาน — เจ้าของงาน/superadmin, เหตุผลบังคับ, ปลายทางต้องเป็น user ของแอปนี้ที่ยังไม่ archive → เปลี่ยน `userId` + timeline `transfer` + audit `complaint_reassigned` |
 | `POST /api/complaints/coordination` | `action: set` (ตั้งหน่วยงาน/เลขหนังสือ/วันส่ง/วันติดตาม) · `follow_up` (บันทึกติดตาม → `followUps[]`, ตั้ง `nextFollowUpAt` = ที่ส่งมา หรือวันนี้ + `followUpEveryDays`, audit `assignment_follow_up`) · `notify_line` (สรุปเข้า LINE กลุ่ม ⚠️ นับโควตาตามสมาชิกกลุ่ม — UI ถามยืนยันก่อน) |
 
@@ -78,7 +78,7 @@
 | `badges.js` | ข้อความ+โทนป้าย: `badgesForAssignment`, `agingPill`, `contextBadges`, `statusPillFor`, `coordinationWaitPill` |
 | `summary.js` | หน้าจอ 1: `alertCards` (การ์ดเตือน 4 ใบ), `coordinationRail` (รวมตามหน่วยงาน), `blockedRail`, `dueThisWeekRail` |
 | `departments.js` | **ทะเบียนกองมาตรฐาน + alias** (`normalizeDepartment`, `departmentShort`) และ `defaultDepartmentForCategory` (ประเภทเรื่อง → กอง ค่าเสนอแนะ) |
-| `pool.js` | หน้าจอ 2: `poolAction` (claim / not_yours / choose_org), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
+| `pool.js` | หน้าจอ 2: `poolAction` (claim / claim_other / choose_org — ทุกค่ารับได้), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
 | `roles.js` | **นโยบายสิทธิ์**: `isDepartmentHead(user)` (ติ๊ก `users.isDepartmentHead` มาก่อน, fallback ตำแหน่ง `HEAD_POSITION_RE`), `headsOf`, `taskPermissions` → canAssign / canTransfer (หัวหน้าเฉพาะงานในกอง) / canRequestTransfer |
 | `digest.js` | `buildStaleDigest` (สรุปเรื่องค้างรายกอง + relatedId กันซ้ำรายวัน), `digestRecipients` (หัวหน้ากอง → ไม่มีก็หัวหน้าทุกกอง + superadmin) |
 | `mobile.js` | มือถือ: `haversineKm` / `formatDistanceLabel` / `withDistance` ("ใกล้ฉัน" — พิกัดผู้ใช้อยู่ฝั่ง client ไม่ส่งขึ้น server), `topUrgent` (FAB อัปเดตงานด่วน), `poolChipCounts` |
@@ -90,7 +90,7 @@
 ## Components (`components/tasks/`)
 
 shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupAccordion` (เปิดหลายกลุ่ม, จำใน sessionStorage) ·
-`PoolCard` (ปุ่มตาม `action`: claim / coordinate / choose_org / not_yours) · `StatusStepper` · `CoordinationBlock`
+`PoolCard` (ปุ่มตาม `action`: claim / claim_other / coordinate / choose_org) · `StatusStepper` · `CoordinationBlock`
 
 หน้าจอ 1 (ข้อ 5): `OfficerHeaderCard` · `AlertCards` · `KpiStrip` · `RailCards` (`CoordinationRailCard` / `BlockedRailCard` / `DueThisWeekCard`) ·
 `TransferTaskModal` (รายชื่อจาก `GET /api/users/get-all-user` จัดกลุ่มตามกอง) · `FollowUpModal`

@@ -1,13 +1,18 @@
 // pages/api/cron/tasks/stale-digest.ts
 // cron ตอนเช้า (แนะนำ 30 1 * * * UTC = 08:30 Asia/Bangkok): เรื่องค้างไม่มีคนรับเกินเกณฑ์ → แจ้งเตือนในระบบ (กระดิ่ง)
-// ถึงหัวหน้ากองที่เกี่ยวข้อง — 1 รายการ/กอง/วัน (dedupe ด้วย relatedId) · ไม่ส่ง LINE (โควตา)
+// ถึงหัวหน้ากองที่เกี่ยวข้อง — 1 รายการ/กอง/วัน (dedupe ด้วย relatedId)
+// + ส่ง LINE กลุ่มเจ้าหน้าที่วันละครั้ง (เปิดอีกครั้ง 2026-11-09 หลังอัปเกรด LINE OA Starter) — dedupe ด้วย audit log
+//   ของวันนั้น (cron ยิงซ้ำ/retry ไม่ส่งซ้ำ) · ส่งไม่สำเร็จ (ไม่ตั้ง groupId / โควตาเต็ม) ไม่ทำให้ cron ล้ม
 // ป้องกันด้วย CRON_SECRET (header x-cron-secret หรือ ?secret=) — ห้ามใส่ Clerk
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireCronSecret } from '@/lib/pm25CronAuth';
 import Notification from '@/models/Notification';
 import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { loadPoolItems } from '@/lib/tasks/loadPool';
-import { buildStaleDigest, digestRecipients } from '@/lib/tasks/digest';
+import { buildStaleDigest, buildStaleLineText, digestRecipients } from '@/lib/tasks/digest';
+import AuditLog from '@/models/AuditLog';
+import { logAuditEvent } from '@/lib/auditLogger';
+import { lineNotifyAdminGroup } from '@/lib/lineMessaging';
 import { bangkokDateKey } from '@/lib/tasks/format';
 import { userModel, CURRENT_APP_ID } from '@/pages/api/tasks/_auth';
 
@@ -20,7 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const now = new Date();
     const settings = await getTaskSettings();
     const { items } = await loadPoolItems({ settings, now, days: null });
-    const digest = buildStaleDigest(items, { unclaimedAlertDays: settings.unclaimedAlertDays, dateKey: bangkokDateKey(now) ?? '' });
+    const dateKey = bangkokDateKey(now) ?? '';
+    const digest = buildStaleDigest(items, { unclaimedAlertDays: settings.unclaimedAlertDays, dateKey });
     if (!digest.length) return res.status(200).json({ success: true, created: 0, groups: 0, message: 'ไม่มีเรื่องค้างเกินเกณฑ์' });
 
     const users = await userModel().find({ appId: CURRENT_APP_ID, isArchived: { $ne: true } }).select('clerkId department position role isActive isDepartmentHead').lean();
@@ -42,7 +48,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         created += 1;
       }
     }
-    return res.status(200).json({ success: true, created, groups: digest.length, digest: digest.map((d) => ({ department: d.department, count: d.count, maxDays: d.maxDays })) });
+
+    // LINE กลุ่ม — วันละครั้ง
+    let line: 'sent' | 'already_sent' | 'failed' | 'skipped' = 'skipped';
+    const lineMarker = `stale-digest-line:${dateKey}`;
+    const text = buildStaleLineText(items, {
+      unclaimedAlertDays: settings.unclaimedAlertDays,
+      footer: 'กรุณามอบหมายหรือรับงานที่หน้า "กองงานรอรับ" · สรุปอัตโนมัติประจำวัน',
+    });
+    if (text && dateKey) {
+      if (await AuditLog.exists({ action: 'notification_sent', resourceId: lineMarker })) {
+        line = 'already_sent';
+      } else if (await lineNotifyAdminGroup([{ type: 'text', text }])) {
+        line = 'sent';
+        await logAuditEvent({
+          actorClerkId: 'cron',
+          actorName: 'cron',
+          action: 'notification_sent',
+          resourceType: 'system',
+          resourceId: lineMarker,
+          description: `แจ้ง LINE กลุ่มอัตโนมัติ — เรื่องค้างไม่มีคนรับ ${digest.reduce((n, d) => n + d.count, 0)} เรื่อง`,
+        });
+      } else {
+        line = 'failed';
+      }
+    }
+    return res.status(200).json({ success: true, created, line, groups: digest.length, digest: digest.map((d) => ({ department: d.department, count: d.count, maxDays: d.maxDays })) });
   } catch (err) {
     console.error('[cron] stale-digest failed:', err);
     return res.status(500).json({ success: false, error: 'stale-digest failed' });

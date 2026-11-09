@@ -201,7 +201,7 @@ export interface PoolItem extends DerivedUnclaimed {
   agingPill: Badge | null;
   contextBadges: Badge[];
   /** ปุ่มบนการ์ดสำหรับเจ้าหน้าที่ที่ล็อกอิน (lib/tasks/pool.js#poolAction) */
-  action: 'claim' | 'not_yours' | 'choose_org';
+  action: 'claim' | 'claim_other' | 'choose_org';
 }
 
 export interface PoolColumn {

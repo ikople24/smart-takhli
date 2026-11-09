@@ -210,7 +210,9 @@ function TaskPoolContent() {
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: `รับงานแล้ว — อยู่ในกลุ่มงาน "${item.category || 'อื่นๆ'}" ของคุณ`,
+        title: res?.movedTo
+          ? `รับงานแล้ว — ย้ายเรื่องเข้า ${res.movedTo} · ถ้ารับผิด กด "ขอโอนงาน" ในหน้างาน`
+          : `รับงานแล้ว — อยู่ในกลุ่มงาน "${item.category || 'อื่นๆ'}" ของคุณ`,
         timer: 5000,
         timerProgressBar: true,
         showConfirmButton: true,
@@ -220,6 +222,10 @@ function TaskPoolContent() {
       if (result.isConfirmed && assignmentId) {
         try {
           await axios.delete(`/api/complaints/assignments/${assignmentId}`);
+          // รับข้ามกองแล้วเรื่องย้ายเข้ากองเรา → เลิกทำต้องคืนกองเดิมด้วย
+          if (typeof res?.movedFrom === 'string') {
+            await axios.patch('/api/tasks/set-department', { complaintId: item._id, department: res.movedFrom });
+          }
           toast('เลิกทำแล้ว — เรื่องกลับเข้ากองงานรอรับ', 'info');
         } catch (err) {
           Swal.fire({ icon: 'error', title: 'เลิกทำไม่สำเร็จ', text: errorMessage(err, 'ลองใหม่อีกครั้ง') });

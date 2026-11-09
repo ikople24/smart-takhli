@@ -5,16 +5,19 @@ import mongoose from 'mongoose';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { dueDateFor } from '@/lib/tasks/derived';
-import { canClaim, taskPermissions } from '@/lib/tasks/roles';
+import { departmentAfterClaim, taskPermissions } from '@/lib/tasks/roles';
 import { normalizeDepartment, defaultDepartmentForCategory } from '@/lib/tasks/departments';
-import { getOfficer } from '@/pages/api/tasks/_auth';
+import { getOfficer, userModel } from '@/pages/api/tasks/_auth';
 
 // POST /api/complaints/assignments/create
 // body: { complaintId, userId, officerName?, role?: 'assignee' | 'coordinator', ... }
 // ตั้งแต่รอบ officer-task-management: บันทึก dueDate (วันที่แจ้ง + SLA ของประเภทจาก task_settings),
 // stage เริ่มที่ 'received' และเปิดไทม์ไลน์ด้วยรายการ 'created'
-// กติกา (2026-09-02, lib/tasks/roles.js — บังคับที่นี่ให้ครอบทุก UI ทั้งกองงานรอรับและหน้าการร้องเรียน):
-//   รับเอง (userId = ตัวเอง) → เรื่องต้องอยู่กองเดียวกัน (canClaim) · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin เท่านั้น
+// กติกา (lib/tasks/roles.js — บังคับที่นี่ให้ครอบทุก UI ทั้งกองงานรอรับและหน้าการร้องเรียน):
+//   รับเอง (userId = ตัวเอง) → ได้ทุกเรื่องทุกกอง (2026-11-09 — เดิมจำกัดกองเดียวกัน แต่ระบบเดากองผิดบ่อยจนงานค้าง)
+//   · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin เท่านั้น
+//   · ผู้รับ (assignee) อยู่กองอื่น → ย้าย complaint.department เข้ากองผู้รับ (departmentAfterClaim) + ลงประวัติ
+//   · รับผิด → เจ้าของงาน "ขอโอนงาน" แจ้ง superadmin + หัวหน้ากอง (transfer-request.ts)
 //   เรื่องที่มีผู้รับผิดชอบอยู่แล้ว (assignment เปิดค้าง) → 409 กันกดรับพร้อมกัน
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -56,17 +59,18 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: 'เรื่องนี้มีผู้รับผิดชอบอยู่แล้ว — รีเฟรชหน้าเพื่ออัปเดตรายการ' });
     }
 
-    // กติกากอง/มอบหมาย
+    // กติกามอบหมาย — รับเองได้ทุกเรื่อง
     const taskDepartment = normalizeDepartment(complaint?.department) ?? defaultDepartmentForCategory(complaint?.category);
     const selfClaim = String(userId) === String(officer._id);
-    if (selfClaim) {
-      if (!canClaim({ isSuperAdmin, user: officer, taskDepartment })) {
-        return res.status(403).json({
-          error: `เรื่องนี้อยู่ในความรับผิดชอบของ${taskDepartment} — รับได้เฉพาะเจ้าหน้าที่กองนั้น หรือให้หัวหน้ากองมอบหมาย`,
-        });
-      }
-    } else if (!taskPermissions({ isSuperAdmin, user: officer }).canAssign) {
+    if (!selfClaim && !taskPermissions({ isSuperAdmin, user: officer }).canAssign) {
       return res.status(403).json({ error: 'มอบหมายงานให้คนอื่นได้เฉพาะหัวหน้ากอง/superadmin' });
+    }
+
+    // กองของเรื่องย้ายตามผู้รับ (เฉพาะผู้รับผิดชอบหลัก — ผู้ประสานงานไม่ย้ายกอง)
+    let movedTo = null;
+    if (complaint && assignmentRole === 'assignee') {
+      const assignee = selfClaim ? officer : await userModel().findById(userId).select('department').lean();
+      movedTo = departmentAfterClaim({ claimerDepartment: assignee?.department, taskDepartment });
     }
     const now = new Date();
     const { dueDate } = dueDateFor({
@@ -94,8 +98,25 @@ export default async function handler(req, res) {
           byUserId: new mongoose.Types.ObjectId(userId),
           byName: officerName || '',
         },
+        ...(movedTo
+          ? [{ at: now, kind: 'note', text: `ย้ายเรื่องเข้า${movedTo} (เดิม ${taskDepartment || 'ยังไม่ระบุกอง'})`, byUserId: officer._id, byName: officer.name || officerName || '' }]
+          : []),
       ],
     });
+
+    if (movedTo) {
+      await Complaint.updateOne({ _id: complaintId }, { $set: { department: movedTo } });
+      logAuditEvent({
+        actorClerkId,
+        actorName: officer.name || officerName || 'admin',
+        action: 'complaint_department_set',
+        resourceType: 'complaint',
+        resourceId: String(complaintId),
+        description: `รับงานข้ามกอง — ย้ายเรื่อง ${String(complaintId).slice(-8)}: "${taskDepartment || '-'}" → "${movedTo}"`,
+        before: { department: complaint?.department ?? '' },
+        after: { department: movedTo },
+      });
+    }
 
     // Audit log (fire-and-forget)
     {
@@ -111,7 +132,12 @@ export default async function handler(req, res) {
       });
     }
 
-    res.status(201).json({ message: 'Assignment created successfully', assignment: newAssignment });
+    // movedFrom = complaint.department เดิม (ดิบ) — ให้ปุ่ม "เลิกทำ" คืนกองเดิมผ่าน set-department ได้
+    res.status(201).json({
+      message: 'Assignment created successfully',
+      assignment: newAssignment,
+      ...(movedTo ? { movedTo, movedFrom: complaint?.department ?? '' } : {}),
+    });
   } catch (error) {
     console.error('Error creating assignment:', error);
     res.status(500).json({ error: 'Internal Server Error' });

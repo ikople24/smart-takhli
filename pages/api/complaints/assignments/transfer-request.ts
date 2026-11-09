@@ -1,5 +1,6 @@
 // pages/api/complaints/assignments/transfer-request.ts
-// POST   { assignmentId, reason } — เจ้าของงาน (ที่โอนเองไม่ได้) ขอให้หัวหน้ากองโอนงาน → แจ้งเตือนในระบบถึงหัวหน้ากอง/superadmin
+// POST   { assignmentId, reason } — เจ้าของงาน (ที่โอนเองไม่ได้ เช่น รับผิดเรื่อง) ขอโอนงาน → แจ้งเตือนในระบบถึงแอดมินกลาง
+//        = superadmin ทุกคน + หัวหน้ากองของงาน (lib/tasks/digest.js#transferRequestRecipients)
 // DELETE ?assignmentId= — ยกเลิก/ปฏิเสธคำขอ (เจ้าของ, หัวหน้ากอง, superadmin)
 // นโยบาย: lib/tasks/roles.js — admin ธรรมดาโอนกันเองไม่ได้ ต้องผ่านหัวหน้า
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -9,7 +10,7 @@ import Complaint from '@/models/Complaint';
 import Notification from '@/models/Notification';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { taskPermissions } from '@/lib/tasks/roles';
-import { digestRecipients } from '@/lib/tasks/digest';
+import { transferRequestRecipients } from '@/lib/tasks/digest';
 import { normalizeDepartment, defaultDepartmentForCategory } from '@/lib/tasks/departments';
 import { getOfficer, userModel, CURRENT_APP_ID } from '@/pages/api/tasks/_auth';
 
@@ -52,15 +53,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (perms.canTransfer) return res.status(400).json({ success: false, error: 'คุณโอนงานได้เองอยู่แล้ว — ใช้ปุ่ม "โอน / ส่งต่องาน"' });
     const reason = str(req.body?.reason);
     if (!reason) return res.status(400).json({ success: false, error: 'กรุณาระบุเหตุผลที่ขอโอน' });
-    if (assignment.transferRequest?.requestedAt) return res.status(400).json({ success: false, error: 'มีคำขอโอนค้างอยู่แล้ว รอหัวหน้ากองดำเนินการ' });
+    if (assignment.transferRequest?.requestedAt) return res.status(400).json({ success: false, error: 'มีคำขอโอนค้างอยู่แล้ว รอแอดมินกลาง/หัวหน้ากองดำเนินการ' });
 
     assignment.transferRequest = { requestedAt: now, reason, byUserId: officer._id, byName: officer.name || '' };
     assignment.timeline.push({ at: now, kind: 'transfer', text: `ขอโอนงาน — เหตุผล: ${reason}`, byUserId: officer._id, byName: officer.name || '' });
     await assignment.save();
 
-    // แจ้งหัวหน้ากองของงานนี้ (ไม่มี → หัวหน้าทุกกอง + superadmin) ทางกระดิ่งในระบบ
+    // แจ้ง superadmin + หัวหน้ากองของงานนี้ (กองไม่มีหัวหน้า → หัวหน้าทุกกอง) ทางกระดิ่งในระบบ
     const users = await userModel().find({ appId: CURRENT_APP_ID, isArchived: { $ne: true } }).select('clerkId department position role isActive isDepartmentHead').lean();
-    const recipients = digestRecipients(users, taskDepartment).filter((clerkId) => clerkId !== auth.clerkUserId);
+    const recipients = transferRequestRecipients(users, taskDepartment).filter((clerkId) => clerkId !== auth.clerkUserId);
     if (recipients.length) {
       await Notification.insertMany(
         recipients.map((clerkId) => ({
