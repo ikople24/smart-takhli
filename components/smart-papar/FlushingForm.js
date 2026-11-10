@@ -453,6 +453,7 @@ export default function FlushingForm({
                 point={form.lat == null ? null : [Number(form.lat), Number(form.lng)]}
                 onChange={placePin}
                 className="h-full w-full"
+                satellite
               />
             </div>
             <p className="text-[13px] text-pp-muted">ลากหมุด หรือแตะบนแผนที่เพื่อย้ายตำแหน่งให้ตรงหัวที่โบ</p>
