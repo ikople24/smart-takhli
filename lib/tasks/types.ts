@@ -309,6 +309,8 @@ export interface TaskDetailResponse {
   canEdit: boolean;
   canTransfer: boolean;
   canRequestTransfer: boolean;
+  /** คืนงานเข้ากองงานรอรับได้ (เจ้าของ/superadmin + ยังไม่เริ่มทำ — lib/tasks/release.js) */
+  canRelease: boolean;
   transferRequest: TransferRequestInfo | null;
   settings: TaskSettings;
   assignment: {

@@ -14,7 +14,7 @@ import { computeKpi } from '@/lib/tasks/kpi';
 import { GROUP_BY, groupTasks, filterByAlert } from '@/lib/tasks/groupBy';
 import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { summarizeText, toDate } from '@/lib/tasks/format';
-import { defaultDepartmentForCategory, normalizeDepartment } from '@/lib/tasks/departments';
+import { defaultDepartmentForComplaint, normalizeDepartment } from '@/lib/tasks/departments';
 import { taskPermissions } from '@/lib/tasks/roles';
 import { loadSatisfactionStatsForComplaints } from '@/lib/satisfaction/readStats';
 import { computeFairStats } from '@/lib/satisfaction/fairStats';
@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'complaintId fullName detail category status community images location createdAt updatedAt department',
+        select: 'complaintId fullName detail category problems status community images location createdAt updatedAt department',
       })
       .sort({ assignedAt: -1 })
       .lean()) as unknown as AssignmentLean[];
@@ -146,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         category: c?.category ?? '',
         community: c?.community ?? '',
         // กองของเรื่อง: ที่คัดแยกไว้ → เดาจากประเภท → กองของ "เจ้าของงาน" (scope กอง — ไม่ใช่กองของคนดู) → กองของผู้เรียก
-        department: c?.department || defaultDepartmentForCategory(c?.category) || deptById.get(String(a.userId)) || officerDepartment,
+        department: c?.department || defaultDepartmentForComplaint(c) || deptById.get(String(a.userId)) || officerDepartment,
         complaintStatus: c?.status ?? '',
         status: derived.isCompleted ? 'completed' : derived.isOverdue ? 'overdue' : 'pending',
         assignedAt: iso(a.assignedAt) ?? new Date(0).toISOString(),

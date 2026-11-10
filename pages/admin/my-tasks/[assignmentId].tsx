@@ -260,6 +260,28 @@ function TaskDetailContent() {
       toast(`ส่งคำขอโอนแล้ว — แจ้งแอดมินกลาง/หัวหน้ากอง ${res?.notified ?? 0} คน`);
     }, 'ส่งคำขอไม่สำเร็จ');
 
+  /* ── คืนงานเข้ากองงานรอรับ (รับผิดเรื่อง — ยังไม่เริ่มทำ) ── */
+  const releaseTask = async () => {
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: 'คืนงานเข้ากองงานรอรับ?',
+      html: '<div class="text-sm text-left">เรื่องจะกลับไปที่ "กองงานรอรับ" ให้เจ้าหน้าที่กองที่ถูกต้องกดรับ<br/>ถ้าตอนรับเรื่องถูกย้ายเข้ากองของคุณ ระบบจะคืนกองเดิมให้</div>',
+      input: 'text',
+      inputLabel: 'เหตุผล',
+      inputPlaceholder: 'เช่น รับผิดเรื่อง — เป็นงานของกองสาธารณสุขฯ',
+      inputValidator: (v) => (!String(v ?? '').trim() ? 'กรุณาระบุเหตุผล' : undefined),
+      showCancelButton: true,
+      confirmButtonText: 'คืนงาน',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#B4532A',
+    });
+    if (!isConfirmed) return;
+    await run('release', async () => {
+      await axios.post('/api/complaints/assignments/release', { assignmentId: id, reason: String(reason).trim() });
+      await Swal.fire({ icon: 'success', title: 'คืนงานแล้ว — เรื่องกลับเข้ากองงานรอรับ', timer: 1600, showConfirmButton: false });
+      router.push('/admin/my-tasks');
+    }, 'คืนงานไม่สำเร็จ');
+  };
+
   const cancelTransferRequest = (decline: boolean) =>
     run('transfer-request', async () => {
       await axios.delete('/api/complaints/assignments/transfer-request', { params: { assignmentId: id } });
@@ -372,6 +394,17 @@ function TaskDetailContent() {
                   )}
                   {!data.derived.isCompleted && !data.canTransfer && data.canRequestTransfer && !data.transferRequest && (
                     <button type="button" onClick={() => openTransfer('request')} className="mt-1 text-[12px] font-semibold text-tk-primary hover:underline">ขอโอนงาน</button>
+                  )}
+                  {!data.derived.isCompleted && data.canRelease && (
+                    <button
+                      type="button"
+                      disabled={!!busy}
+                      onClick={releaseTask}
+                      title="รับผิดเรื่อง? คืนเรื่องกลับกองงานรอรับได้เลย (เฉพาะงานที่ยังไม่เริ่มทำ)"
+                      className="mt-1 block text-[12px] font-semibold text-tk-overdue-ink hover:underline md:ml-auto disabled:opacity-60"
+                    >
+                      คืนงานเข้ากองงานรอรับ
+                    </button>
                   )}
                 </div>
               </div>

@@ -11,7 +11,7 @@ import Notification from '@/models/Notification';
 import { logAuditEvent } from '@/lib/auditLogger';
 import { taskPermissions } from '@/lib/tasks/roles';
 import { transferRequestRecipients } from '@/lib/tasks/digest';
-import { normalizeDepartment, defaultDepartmentForCategory } from '@/lib/tasks/departments';
+import { normalizeDepartment, defaultDepartmentForComplaint } from '@/lib/tasks/departments';
 import { getOfficer, userModel, CURRENT_APP_ID } from '@/pages/api/tasks/_auth';
 
 const str = (v: unknown) => String(v ?? '').trim();
@@ -29,8 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assignment = (await Assignment.findById(assignmentId)) as any;
     if (!assignment) return res.status(404).json({ success: false, error: 'ไม่พบงานนี้' });
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว' });
-    const complaint = (await Complaint.findById(assignment.complaintId).select('complaintId category department').lean()) as { complaintId?: string; category?: string; department?: string } | null;
-    const taskDepartment = normalizeDepartment(complaint?.department) ?? defaultDepartmentForCategory(complaint?.category);
+    const complaint = (await Complaint.findById(assignment.complaintId).select('complaintId category problems detail department').lean()) as { complaintId?: string; category?: string; problems?: string[]; detail?: string; department?: string } | null;
+    const taskDepartment = normalizeDepartment(complaint?.department) ?? defaultDepartmentForComplaint(complaint);
     const isOwner = String(assignment.userId) === String(officer._id);
     const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
     const code = complaint?.complaintId || assignmentId.slice(-8);
