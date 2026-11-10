@@ -44,7 +44,8 @@ service-account pair เมื่อ sheet ไม่ได้ link-share), `CRON
 - Components: `components/smart-papar/FlushingForm.js`, `FlushingList.js`, `FlushingMap.js` (leaflet — โหลดผ่าน `dynamic(..., { ssr:false })`)
 - ชั้นขอบเขตชุมชนบนแผนที่: `GET /api/smart-papar/communities` อ่าน `geojsonfeatures` (ของแอปพี่น้อง app_b — **อ่านอย่างเดียว** ผ่าน native driver) แยกจาก endpoint ของ flood-relief เพราะสิทธิ์คนละชุด
 - กติกา:
-  - ต้องมีพิกัด GPS, ชื่อจุด, ระยะเวลา (1–600 นาที), ผล (`clear`/`still_turbid`) และรูปอย่างน้อย 1 รูป · NTU ไม่บังคับ
+  - ต้องมีพิกัด, ชื่อจุด, ระยะเวลา (1–600 นาที), ผล (`clear`/`still_turbid`) และรูปอย่างน้อย 1 รูป · NTU ไม่บังคับ
+  - พิกัดได้ 2 ทาง (2026-11-10): ปุ่ม "ใช้ตำแหน่งปัจจุบัน" (GPS) หรือลาก/แตะหมุดบนแผนที่ในฟอร์ม (`ReportLocationMap` ตัวเดียวกับหน้าแจ้งน้ำ) · เลือกหัวจากทะเบียนตอนยังไม่มีพิกัด = ปักหมุดที่หัวนั้นให้ · ที่มาเก็บใน `FlushingLog.locationSource` (`gps` / `manual` / `""` = บันทึกก่อนมีช่องนี้) แสดงในรายละเอียดฝั่งแอดมิน
   - รูปช่องละ ≤ 3, URL ต้องเป็น `https://res.cloudinary.com/` · ย่อฝั่ง client (`lib/smart-papar/resizeImage.js`) ก่อนอัปโหลด
   - แก้/ลบ: เจ้าของภายใน 7 วันนับจาก **`createdAt`** (ไม่ใช่ `flushedAt` ที่เจ้าของแก้เองได้) · superadmin ได้เสมอ
 

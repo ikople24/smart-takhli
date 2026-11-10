@@ -9,6 +9,8 @@ const FlushingLogSchema = new mongoose.Schema(
       type: { type: String, enum: ["Point"], required: true },
       coordinates: { type: [Number], required: true }, // [lng, lat]
     },
+    // ที่มาของพิกัด (lib/smart-papar/flushing.js LOCATION_SOURCES) — "" = บันทึกก่อนมีช่องนี้ (2026-11-10)
+    locationSource: { type: String, enum: ["", "gps", "manual"], default: "" },
     locationName: { type: String, required: true, trim: true },
     durationMin: { type: Number, required: true },
     turbidityBeforeNtu: { type: Number, default: null },
