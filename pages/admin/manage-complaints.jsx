@@ -11,6 +11,9 @@ import ComplaintStats from "@/components/complaints/ComplaintStats";
 import OverdueComplaintsAlert from "@/components/complaints/OverdueComplaintsAlert";
 import ComplaintDetailModal from "@/components/complaints/ComplaintDetailModal";
 import ExportComplaints from "@/components/complaints/ExportComplaints";
+import MobileManageView from "@/components/complaints/manage/MobileManageView";
+import ComplaintFilterSheet from "@/components/complaints/manage/ComplaintFilterSheet";
+import ComplaintActionsSheet from "@/components/complaints/manage/ComplaintActionsSheet";
 import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
 import Swal from "sweetalert2";
 import { availableFiscalYears, currentFiscalYear, fiscalYearLabel, splitByFiscalYear } from "@/lib/complaints/fiscalYear";
@@ -29,6 +32,8 @@ import {
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
   ssr: false,
 });
+
+const MOBILE_PAGE = 10; // มือถือ: โหลดเพิ่มทีละ 10
 
 // Debounce hook for search
 function useDebounce(value, delay) {
@@ -83,6 +88,11 @@ export default function ManageComplaintsPage() {
   
   // View mode
   const [viewMode, setViewMode] = useState("table"); // table | card
+
+  // มือถือ
+  const [mobileVisible, setMobileVisible] = useState(MOBILE_PAGE);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [actionsForId, setActionsForId] = useState(null); // เก็บ _id — ข้อมูลเรื่องอ่านสดจาก complaints หลัง refetch
   
   // Debounced search
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -492,16 +502,97 @@ export default function ManageComplaintsPage() {
     return `${days} วันที่แล้ว`;
   };
 
+  useEffect(() => {
+    setMobileVisible(MOBILE_PAGE);
+  }, [debouncedSearch, statusFilter, categoryFilter, fiscalYear, mineOnly, staleOnly, sortValue]);
+
+  const statusTabs = useMemo(() => [
+    { value: "all", label: "ทั้งหมด", count: stats.total, tone: "blue" },
+    { value: "รอการมอบหมาย", label: "รอมอบหมาย", count: stats.pending, tone: "red" },
+    { value: "อยู่ระหว่างดำเนินการ", label: "กำลังดำเนินการ", count: stats.inProgress, tone: "blue" },
+    { value: "ดำเนินการเสร็จสิ้น", label: "เสร็จสิ้น", count: stats.completed, tone: "green" },
+    ...(carryOver.length > 0 ? [{ value: "carryover", label: "ค้างข้ามปี", count: carryOver.length, tone: "orange" }] : []),
+  ], [stats, carryOver.length]);
+
+  const staleCount = useMemo(() => {
+    const source = statusFilter === "carryover" ? carryOver : yearComplaints;
+    return source.filter((c) => staleInfo(c, assignedComplaintIds.has(c._id)).isStale).length;
+  }, [statusFilter, carryOver, yearComplaints, assignedComplaintIds]);
+
+  const mobileItems = useMemo(() =>
+    filteredComplaints.slice(0, mobileVisible).map((complaint) => {
+      const assignment = assignmentIndex.get(String(complaint._id));
+      const isAssigned = !!assignment;
+      return {
+        complaint,
+        state: rowState(complaint, isAssigned),
+        officer: assignment ? assignedUsers[assignment.userId] || null : null,
+        ageText: ageLabel(complaint, isAssigned),
+        isStale: staleInfo(complaint, isAssigned).isStale,
+      };
+    }),
+  [filteredComplaints, mobileVisible, assignmentIndex, assignedUsers]);
+
+  const filterValue = useMemo(
+    () => ({ fiscalYear, category: categoryFilter, sort: sortValue, mineOnly, staleOnly }),
+    [fiscalYear, categoryFilter, sortValue, mineOnly, staleOnly]
+  );
+  const activeFilterCount = countActiveFilters({ ...filterValue, defaultFiscalYear: currentFiscalYear() });
+
+  // จำนวนผลลัพธ์ของ draft ในชีตตัวกรอง (ปีงบใน draft อาจต่างจากปัจจุบัน → split ใหม่)
+  const countForDraft = useCallback((draft) => {
+    const { inYear, carryOver: draftCarry } = splitByFiscalYear(complaints, draft.fiscalYear);
+    const source = statusFilter === "carryover" ? draftCarry : inYear;
+    return filterComplaints(source, {
+      search: debouncedSearch,
+      status: statusFilter,
+      category: draft.category,
+      mineOnly: draft.mineOnly,
+      staleOnly: draft.staleOnly,
+      userId: existingUser?._id ?? null,
+      assignmentByComplaintId: assignmentIndex,
+    }).length;
+  }, [complaints, statusFilter, debouncedSearch, existingUser?._id, assignmentIndex]);
+
+  const applyFilters = (draft) => {
+    setFiscalYear(draft.fiscalYear === "all" ? "all" : Number(draft.fiscalYear));
+    setCategoryFilter(draft.category);
+    setSortValue(draft.sort);
+    setMineOnly(draft.mineOnly);
+    setStaleOnly(draft.staleOnly);
+  };
+
+  const actionsComplaint = useMemo(
+    () => (actionsForId ? complaints.find((c) => String(c._id) === String(actionsForId)) || null : null),
+    [actionsForId, complaints]
+  );
+
+  const openDetail = (complaint) => {
+    setSelectedComplaint(complaint);
+    setShowDetailModal(true);
+  };
+  const openUpdateFor = (complaint) => {
+    const assignment = assignmentIndex.get(String(complaint._id));
+    if (assignment) handleOpenUpdateForm(assignment);
+  };
+  const cardHandlers = {
+    onOpenDetail: openDetail,
+    onAssign: (c) => handleAssign(c._id),
+    onUpdate: openUpdateFor,
+    onCloseComplaint: (c) => handleCloseComplaint(c._id),
+    onMore: (c) => setActionsForId(c._id),
+  };
+
   return (
     <>
       <Head>
         <title>จัดการเรื่องร้องเรียน - Admin</title>
       </Head>
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
-        <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+      <div className="-m-6 md:m-0 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+        <div className="p-3 md:p-4 lg:p-6 max-w-[1600px] mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:gap-4 md:mb-6">
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
@@ -537,7 +628,7 @@ export default function ManageComplaintsPage() {
             
             {/* Quick actions */}
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm text-gray-600">
+              <label className="hidden md:flex items-center gap-2 text-sm text-gray-600">
                 <span className="hidden sm:inline">ปีงบประมาณ</span>
                 <select
                   value={String(fiscalYear)}
@@ -577,47 +668,51 @@ export default function ManageComplaintsPage() {
           </div>
 
           {/* Stats Cards */}
-          <ComplaintStats
-            stats={stats} 
-            isLoading={loading} 
-            onStatClick={handleStatClick}
-          />
+          <div className="hidden md:block">
+            <ComplaintStats
+              stats={stats} 
+              isLoading={loading} 
+              onStatClick={handleStatClick}
+            />
+          </div>
 
           {/* แถบเรื่องค้างข้ามปีงบ */}
           {carryOver.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setStatusFilter("carryover")}
-              className={`w-full mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 rounded-xl border text-left transition-colors
-                ${statusFilter === "carryover"
-                  ? "bg-orange-100 border-orange-300"
-                  : "bg-orange-50 border-orange-200 hover:bg-orange-100"}`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-200/70 text-orange-700 font-bold">
-                  {carryOver.length}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-orange-800">
-                    เรื่องค้างข้ามปีงบประมาณ — แจ้งก่อนปีงบ {fiscalYear} และยังไม่เสร็จ
-                  </p>
-                  <p className="text-xs text-orange-700/80">
-                    {Object.entries(carryOverByYear)
-                      .sort((a, b) => Number(b[0]) - Number(a[0]))
-                      .map(([fy, n]) => `ปีงบ ${fy}: ${n} เรื่อง`)
-                      .join(" · ")}
-                    {" "}— ไม่นับรวมในสถิติปีงบ {fiscalYear}
-                  </p>
+            <div className="hidden md:block">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("carryover")}
+                className={`w-full mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 rounded-xl border text-left transition-colors
+                  ${statusFilter === "carryover"
+                    ? "bg-orange-100 border-orange-300"
+                    : "bg-orange-50 border-orange-200 hover:bg-orange-100"}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-orange-200/70 text-orange-700 font-bold">
+                    {carryOver.length}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-orange-800">
+                      เรื่องค้างข้ามปีงบประมาณ — แจ้งก่อนปีงบ {fiscalYear} และยังไม่เสร็จ
+                    </p>
+                    <p className="text-xs text-orange-700/80">
+                      {Object.entries(carryOverByYear)
+                        .sort((a, b) => Number(b[0]) - Number(a[0]))
+                        .map(([fy, n]) => `ปีงบ ${fy}: ${n} เรื่อง`)
+                        .join(" · ")}
+                      {" "}— ไม่นับรวมในสถิติปีงบ {fiscalYear}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <span className="text-xs font-medium text-orange-700 whitespace-nowrap">
-                {statusFilter === "carryover" ? "กำลังแสดงในตาราง" : "ดูรายการ →"}
-              </span>
-            </button>
+                <span className="text-xs font-medium text-orange-700 whitespace-nowrap">
+                  {statusFilter === "carryover" ? "กำลังแสดงในตาราง" : "ดูรายการ →"}
+                </span>
+              </button>
+            </div>
           )}
 
           {/* Overdue alerts + satisfaction comments */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 items-start">
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 items-start">
             <div className="lg:col-span-2">
               <OverdueComplaintsAlert
                 complaints={complaints} 
@@ -638,8 +733,27 @@ export default function ManageComplaintsPage() {
             </div>
           </div>
 
+          <MobileManageView
+            tabs={statusTabs}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            activeFilterCount={activeFilterCount}
+            onOpenFilters={() => setFilterSheetOpen(true)}
+            staleCount={staleCount}
+            staleOnly={staleOnly}
+            onToggleStale={() => setStaleOnly((v) => !v)}
+            items={mobileItems}
+            totalCount={filteredComplaints.length}
+            hasMore={mobileVisible < filteredComplaints.length}
+            onLoadMore={() => setMobileVisible((n) => n + MOBILE_PAGE)}
+            loading={loading}
+            cardHandlers={cardHandlers}
+          />
+
           {/* Filter Section */}
-          <div className="bg-white rounded-xl border shadow-sm mb-6 overflow-hidden">
+          <div className="hidden md:block bg-white rounded-xl border shadow-sm mb-6 overflow-hidden">
             {/* Quick Status Tabs */}
             <div className="flex border-b overflow-x-auto">
               {[
@@ -738,464 +852,466 @@ export default function ManageComplaintsPage() {
             </div>
           </div>
 
-          {/* Results Summary */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-gray-500">
-              แสดง <span className="font-medium text-gray-700">{paginatedComplaints.length}</span> จาก{" "}
-              <span className="font-medium text-gray-700">{filteredComplaints.length}</span> เรื่อง
-              {searchTerm && <span className="text-blue-600"> สำหรับ "{searchTerm}"</span>}
-            </p>
-          </div>
+          <div className="hidden md:block">
+            {/* Results Summary */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500">
+                แสดง <span className="font-medium text-gray-700">{paginatedComplaints.length}</span> จาก{" "}
+                <span className="font-medium text-gray-700">{filteredComplaints.length}</span> เรื่อง
+                {searchTerm && <span className="text-blue-600"> สำหรับ "{searchTerm}"</span>}
+              </p>
+            </div>
 
-          {/* Content */}
-          {loading ? (
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <div className="divide-y">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="p-4 animate-pulse">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+            {/* Content */}
+            {loading ? (
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                <div className="divide-y">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="p-4 animate-pulse">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                          <div className="h-3 bg-gray-200 rounded w-1/2" />
+                        </div>
+                        <div className="h-8 w-20 bg-gray-200 rounded" />
                       </div>
-                      <div className="h-8 w-20 bg-gray-200 rounded" />
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : filteredComplaints.length === 0 ? (
-            <div className="bg-white rounded-xl border shadow-sm p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+            ) : filteredComplaints.length === 0 ? (
+              <div className="bg-white rounded-xl border shadow-sm p-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">ไม่พบข้อมูล</h3>
+                <p className="text-gray-500">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">ไม่พบข้อมูล</h3>
-              <p className="text-gray-500">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
-            </div>
-          ) : viewMode === "table" ? (
-            /* Table View */
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b">
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">#</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">เลขคำร้อง / สถานะ</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">หมวดหมู่</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">ภาพ</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">เจ้าหน้าที่</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">อัปเดต</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {paginatedComplaints.map((complaint, index) => {
-                      const isAssigned = assignedComplaintIds.has(complaint._id);
-                      const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
-                      const assignment = assignments.find((a) => a.complaintId === complaint._id);
-                      const categoryIcon = menu.find((m) => m.Prob_name === complaint.category);
+            ) : viewMode === "table" ? (
+              /* Table View */
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b">
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">#</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">เลขคำร้อง / สถานะ</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">หมวดหมู่</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">ภาพ</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">เจ้าหน้าที่</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">อัปเดต</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {paginatedComplaints.map((complaint, index) => {
+                        const isAssigned = assignedComplaintIds.has(complaint._id);
+                        const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
+                        const assignment = assignments.find((a) => a.complaintId === complaint._id);
+                        const categoryIcon = menu.find((m) => m.Prob_name === complaint.category);
                       
-                      return (
-                        <tr 
-                          key={complaint._id} 
-                          className="hover:bg-blue-50/30 transition-colors group"
-                        >
-                          <td className="px-4 py-3 text-center text-sm text-gray-500 font-medium">
-                            {(currentPage - 1) * itemsPerPage + index + 1}
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="font-mono text-xs font-semibold text-gray-700 whitespace-nowrap mb-1 select-all">
-                              {complaint.complaintId || "—"}
-                            </p>
-                            {getStatusBadge(complaint.status, isAssigned)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col items-center gap-1">
-                              {categoryIcon?.Prob_pic && (
-                                <img
-                                  src={categoryIcon.Prob_pic}
-                                  alt={complaint.category}
-                                  className="w-8 h-8 object-contain"
-                                />
-                              )}
-                              <span className="text-xs text-gray-500 truncate max-w-[80px]">
-                                {complaint.category}
-                              </span>
-                              {Array.isArray(complaint.problems) && complaint.problems.length > 0 && (
-                                <span className="text-[10px] text-gray-400 text-center line-clamp-2 max-w-[110px]">
-                                  {complaint.problems.join(", ")}
+                        return (
+                          <tr 
+                            key={complaint._id} 
+                            className="hover:bg-blue-50/30 transition-colors group"
+                          >
+                            <td className="px-4 py-3 text-center text-sm text-gray-500 font-medium">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="font-mono text-xs font-semibold text-gray-700 whitespace-nowrap mb-1 select-all">
+                                {complaint.complaintId || "—"}
+                              </p>
+                              {getStatusBadge(complaint.status, isAssigned)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col items-center gap-1">
+                                {categoryIcon?.Prob_pic && (
+                                  <img
+                                    src={categoryIcon.Prob_pic}
+                                    alt={complaint.category}
+                                    className="w-8 h-8 object-contain"
+                                  />
+                                )}
+                                <span className="text-xs text-gray-500 truncate max-w-[80px]">
+                                  {complaint.category}
                                 </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {Array.isArray(complaint.images) && complaint.images.length > 0 && (
-                              <img
-                                src={complaint.images[0]}
-                                alt="ภาพปัญหา"
-                                className="w-12 h-12 object-cover rounded-lg cursor-pointer 
-                                  hover:scale-110 transition-transform shadow-sm"
-                                onClick={() => window.open(complaint.images[0], '_blank')}
-                              />
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div 
-                              className="cursor-pointer group/title"
-                              onClick={() => {
-                                setSelectedComplaint(complaint);
-                                setShowDetailModal(true);
-                              }}
-                            >
-                              <p className="text-sm font-medium text-gray-800 group-hover/title:text-blue-600 
-                                transition-colors line-clamp-2 max-w-xs">
-                                {complaint.detail}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {getDaysSinceUpdate(complaint.updatedAt)}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {isAssigned && assignedUsers[assignment?.userId] ? (
-                              <div className="text-xs">
-                                <p className="font-medium text-blue-600">
-                                  {assignedUsers[assignment.userId].name}
-                                </p>
-                                {assignedUsers[assignment.userId].position && (
-                                  <p className="text-gray-400">
-                                    {assignedUsers[assignment.userId].position}
-                                  </p>
+                                {Array.isArray(complaint.problems) && complaint.problems.length > 0 && (
+                                  <span className="text-[10px] text-gray-400 text-center line-clamp-2 max-w-[110px]">
+                                    {complaint.problems.join(", ")}
+                                  </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-xs text-gray-300">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="text-xs text-gray-500">
-                              <p>{new Date(complaint.updatedAt).toLocaleDateString("th-TH")}</p>
-                              <p className="text-gray-400">
-                                {new Date(complaint.updatedAt).toLocaleTimeString("th-TH", {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1.5 items-center w-full max-w-[140px] mx-auto">
-                              {!isClosed ? (
-                                isAssigned ? (
-                                  <>
+                            </td>
+                            <td className="px-4 py-3">
+                              {Array.isArray(complaint.images) && complaint.images.length > 0 && (
+                                <img
+                                  src={complaint.images[0]}
+                                  alt="ภาพปัญหา"
+                                  className="w-12 h-12 object-cover rounded-lg cursor-pointer 
+                                    hover:scale-110 transition-transform shadow-sm"
+                                  onClick={() => window.open(complaint.images[0], '_blank')}
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div 
+                                className="cursor-pointer group/title"
+                                onClick={() => {
+                                  setSelectedComplaint(complaint);
+                                  setShowDetailModal(true);
+                                }}
+                              >
+                                <p className="text-sm font-medium text-gray-800 group-hover/title:text-blue-600 
+                                  transition-colors line-clamp-2 max-w-xs">
+                                  {complaint.detail}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {getDaysSinceUpdate(complaint.updatedAt)}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {isAssigned && assignedUsers[assignment?.userId] ? (
+                                <div className="text-xs">
+                                  <p className="font-medium text-blue-600">
+                                    {assignedUsers[assignment.userId].name}
+                                  </p>
+                                  {assignedUsers[assignment.userId].position && (
+                                    <p className="text-gray-400">
+                                      {assignedUsers[assignment.userId].position}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <div className="text-xs text-gray-500">
+                                <p>{new Date(complaint.updatedAt).toLocaleDateString("th-TH")}</p>
+                                <p className="text-gray-400">
+                                  {new Date(complaint.updatedAt).toLocaleTimeString("th-TH", {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-1.5 items-center w-full max-w-[140px] mx-auto">
+                                {!isClosed ? (
+                                  isAssigned ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="w-full px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg
+                                          hover:bg-blue-100 transition-colors"
+                                        onClick={() => handleOpenUpdateForm(assignment)}
+                                      >
+                                        อัพเดท
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="w-full px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-lg
+                                          hover:bg-emerald-100 transition-colors"
+                                        onClick={() => handleCloseComplaint(complaint._id)}
+                                      >
+                                        ปิดเรื่อง
+                                      </button>
+                                    </>
+                                  ) : (
                                     <button
                                       type="button"
-                                      className="w-full px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg
-                                        hover:bg-blue-100 transition-colors"
-                                      onClick={() => handleOpenUpdateForm(assignment)}
+                                      className="w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg
+                                        hover:bg-blue-700 transition-colors shadow-sm"
+                                      onClick={() => handleAssign(complaint._id)}
                                     >
-                                      อัพเดท
+                                      รับเรื่อง
                                     </button>
-                                    <button
-                                      type="button"
-                                      className="w-full px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-lg
-                                        hover:bg-emerald-100 transition-colors"
-                                      onClick={() => handleCloseComplaint(complaint._id)}
-                                    >
-                                      ปิดเรื่อง
-                                    </button>
-                                  </>
+                                  )
                                 ) : (
                                   <button
                                     type="button"
-                                    className="w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg
-                                      hover:bg-blue-700 transition-colors shadow-sm"
-                                    onClick={() => handleAssign(complaint._id)}
+                                    className={`w-full px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
+                                      ${isSuperAdmin 
+                                        ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
+                                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                      }`}
+                                    onClick={() => isSuperAdmin && handleDeleteComplaint(complaint)}
+                                    disabled={!isSuperAdmin}
+                                    title={!isSuperAdmin ? "เฉพาะ Super Admin เท่านั้นที่สามารถลบได้" : "ลบเรื่อง"}
                                   >
-                                    รับเรื่อง
+                                    {isSuperAdmin ? "ลบ" : "🔒 ลบ"}
                                   </button>
-                                )
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={`w-full px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
-                                    ${isSuperAdmin 
-                                      ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
-                                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                    }`}
-                                  onClick={() => isSuperAdmin && handleDeleteComplaint(complaint)}
-                                  disabled={!isSuperAdmin}
-                                  title={!isSuperAdmin ? "เฉพาะ Super Admin เท่านั้นที่สามารถลบได้" : "ลบเรื่อง"}
-                                >
-                                  {isSuperAdmin ? "ลบ" : "🔒 ลบ"}
-                                </button>
-                              )}
-                              <div className="w-full pt-2 mt-1 border-t border-gray-100 flex flex-col gap-1">
-                                <button
-                                  type="button"
-                                  className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
-                                    ${complaint.isConfidential
-                                      ? "bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-200"
-                                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                                    }`}
-                                  onClick={() => toggleConfidential(complaint)}
-                                  title="ซ่อนการ์ดจากหน้า ร้องเรียน / สถานะ (ประชาชน)"
-                                >
-                                  {complaint.isConfidential ? "🔒 เรื่องลับ (ปิด)" : "เรื่องลับ"}
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
-                                    ${complaint.pdpaSensitive
-                                      ? "bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
-                                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                                    }`}
-                                  onClick={() => togglePdpa(complaint)}
-                                  title="เบลอภาพ + เซ็นเซอร์คำสำหรับผู้ใช้ที่ไม่ใช่แอดมิน"
-                                >
-                                  {complaint.pdpaSensitive ? "PDPA (เปิด)" : "PDPA"}
-                                </button>
+                                )}
+                                <div className="w-full pt-2 mt-1 border-t border-gray-100 flex flex-col gap-1">
+                                  <button
+                                    type="button"
+                                    className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
+                                      ${complaint.isConfidential
+                                        ? "bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-200"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                      }`}
+                                    onClick={() => toggleConfidential(complaint)}
+                                    title="ซ่อนการ์ดจากหน้า ร้องเรียน / สถานะ (ประชาชน)"
+                                  >
+                                    {complaint.isConfidential ? "🔒 เรื่องลับ (ปิด)" : "เรื่องลับ"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
+                                      ${complaint.pdpaSensitive
+                                        ? "bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                      }`}
+                                    onClick={() => togglePdpa(complaint)}
+                                    title="เบลอภาพ + เซ็นเซอร์คำสำหรับผู้ใช้ที่ไม่ใช่แอดมิน"
+                                  >
+                                    {complaint.pdpaSensitive ? "PDPA (เปิด)" : "PDPA"}
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ) : (
-            /* Card View */
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {paginatedComplaints.map((complaint) => {
-                const isAssigned = assignedComplaintIds.has(complaint._id);
-                const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
-                const assignment = assignments.find((a) => a.complaintId === complaint._id);
-                const categoryIcon = menu.find((m) => m.Prob_name === complaint.category);
+            ) : (
+              /* Card View */
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {paginatedComplaints.map((complaint) => {
+                  const isAssigned = assignedComplaintIds.has(complaint._id);
+                  const isClosed = complaint.status === "ดำเนินการเสร็จสิ้น";
+                  const assignment = assignments.find((a) => a.complaintId === complaint._id);
+                  const categoryIcon = menu.find((m) => m.Prob_name === complaint.category);
                 
-                return (
-                  <div 
-                    key={complaint._id}
-                    className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    {/* Card Header with Image */}
-                    {Array.isArray(complaint.images) && complaint.images.length > 0 && (
-                      <div 
-                        className="h-40 bg-gray-100 cursor-pointer relative group"
-                        onClick={() => window.open(complaint.images[0], '_blank')}
-                      >
-                        <img
-                          src={complaint.images[0]}
-                          alt="ภาพปัญหา"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                          <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                          </svg>
+                  return (
+                    <div 
+                      key={complaint._id}
+                      className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                    >
+                      {/* Card Header with Image */}
+                      {Array.isArray(complaint.images) && complaint.images.length > 0 && (
+                        <div 
+                          className="h-40 bg-gray-100 cursor-pointer relative group"
+                          onClick={() => window.open(complaint.images[0], '_blank')}
+                        >
+                          <img
+                            src={complaint.images[0]}
+                            alt="ภาพปัญหา"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    <div className="p-4">
-                      {complaint.complaintId && (
-                        <p className="font-mono text-xs font-semibold text-gray-700 mb-2 select-all">
-                          {complaint.complaintId}
-                        </p>
                       )}
-                      {/* Status and Category */}
-                      <div className="flex items-center justify-between mb-3">
-                        {getStatusBadge(complaint.status, isAssigned)}
-                        <div className="flex items-center gap-1.5">
-                          {categoryIcon?.Prob_pic && (
-                            <img src={categoryIcon.Prob_pic} alt="" className="w-5 h-5" />
-                          )}
-                          <span className="text-xs text-gray-500">{complaint.category}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Detail */}
-                      <h3 
-                        className="font-medium text-gray-800 mb-2 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
-                        onClick={() => {
-                          setSelectedComplaint(complaint);
-                          setShowDetailModal(true);
-                        }}
-                      >
-                        {complaint.detail}
-                      </h3>
-                      
-                      {/* Meta */}
-                      <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-                        <span>{getDaysSinceUpdate(complaint.updatedAt)}</span>
-                        {isAssigned && assignedUsers[assignment?.userId] && (
-                          <span className="text-blue-500">
-                            {assignedUsers[assignment.userId].name}
-                          </span>
+                    
+                      <div className="p-4">
+                        {complaint.complaintId && (
+                          <p className="font-mono text-xs font-semibold text-gray-700 mb-2 select-all">
+                            {complaint.complaintId}
+                          </p>
                         )}
-                      </div>
+                        {/* Status and Category */}
+                        <div className="flex items-center justify-between mb-3">
+                          {getStatusBadge(complaint.status, isAssigned)}
+                          <div className="flex items-center gap-1.5">
+                            {categoryIcon?.Prob_pic && (
+                              <img src={categoryIcon.Prob_pic} alt="" className="w-5 h-5" />
+                            )}
+                            <span className="text-xs text-gray-500">{complaint.category}</span>
+                          </div>
+                        </div>
                       
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                        {!isClosed ? (
-                          isAssigned ? (
-                            <>
+                        {/* Detail */}
+                        <h3 
+                          className="font-medium text-gray-800 mb-2 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => {
+                            setSelectedComplaint(complaint);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          {complaint.detail}
+                        </h3>
+                      
+                        {/* Meta */}
+                        <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
+                          <span>{getDaysSinceUpdate(complaint.updatedAt)}</span>
+                          {isAssigned && assignedUsers[assignment?.userId] && (
+                            <span className="text-blue-500">
+                              {assignedUsers[assignment.userId].name}
+                            </span>
+                          )}
+                        </div>
+                      
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                          {!isClosed ? (
+                            isAssigned ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg
+                                    hover:bg-blue-100 transition-colors"
+                                  onClick={() => handleOpenUpdateForm(assignment)}
+                                >
+                                  อัพเดท
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-sm font-medium rounded-lg
+                                    hover:bg-emerald-100 transition-colors"
+                                  onClick={() => handleCloseComplaint(complaint._id)}
+                                >
+                                  ปิดเรื่อง
+                                </button>
+                              </>
+                            ) : (
                               <button
                                 type="button"
-                                className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg
-                                  hover:bg-blue-100 transition-colors"
-                                onClick={() => handleOpenUpdateForm(assignment)}
+                                className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg
+                                  hover:bg-blue-700 transition-colors"
+                                onClick={() => handleAssign(complaint._id)}
                               >
-                                อัพเดท
+                                รับเรื่อง
                               </button>
-                              <button
-                                type="button"
-                                className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-600 text-sm font-medium rounded-lg
-                                  hover:bg-emerald-100 transition-colors"
-                                onClick={() => handleCloseComplaint(complaint._id)}
-                              >
-                                ปิดเรื่อง
-                              </button>
-                            </>
+                            )
                           ) : (
                             <button
                               type="button"
-                              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg
-                                hover:bg-blue-700 transition-colors"
-                              onClick={() => handleAssign(complaint._id)}
+                              className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors
+                                ${isSuperAdmin 
+                                  ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
+                                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
+                              onClick={() => isSuperAdmin && handleDeleteComplaint(complaint)}
+                              disabled={!isSuperAdmin}
+                              title={!isSuperAdmin ? "เฉพาะ Super Admin เท่านั้นที่สามารถลบได้" : "ลบเรื่อง"}
                             >
-                              รับเรื่อง
+                              {isSuperAdmin ? "ลบเรื่อง" : "🔒 ลบเรื่อง"}
                             </button>
-                          )
-                        ) : (
-                          <button
-                            type="button"
-                            className={`w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors
-                              ${isSuperAdmin 
-                                ? "bg-red-50 text-red-600 hover:bg-red-100 cursor-pointer" 
-                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                              }`}
-                            onClick={() => isSuperAdmin && handleDeleteComplaint(complaint)}
-                            disabled={!isSuperAdmin}
-                            title={!isSuperAdmin ? "เฉพาะ Super Admin เท่านั้นที่สามารถลบได้" : "ลบเรื่อง"}
-                          >
-                            {isSuperAdmin ? "ลบเรื่อง" : "🔒 ลบเรื่อง"}
-                          </button>
-                        )}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
-                              ${complaint.isConfidential
-                                ? "bg-rose-100 text-rose-800 border-rose-200"
-                                : "bg-gray-50 text-gray-600 border-gray-200"
-                              }`}
-                            onClick={() => toggleConfidential(complaint)}
-                          >
-                            {complaint.isConfidential ? "ลับ ✓" : "เรื่องลับ"}
-                          </button>
-                          <button
-                            type="button"
-                            className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
-                              ${complaint.pdpaSensitive
-                                ? "bg-amber-100 text-amber-900 border-amber-200"
-                                : "bg-gray-50 text-gray-600 border-gray-200"
-                              }`}
-                            onClick={() => togglePdpa(complaint)}
-                          >
-                            {complaint.pdpaSensitive ? "PDPA ✓" : "PDPA"}
-                          </button>
+                          )}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
+                                ${complaint.isConfidential
+                                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                                  : "bg-gray-50 text-gray-600 border-gray-200"
+                                }`}
+                              onClick={() => toggleConfidential(complaint)}
+                            >
+                              {complaint.isConfidential ? "ลับ ✓" : "เรื่องลับ"}
+                            </button>
+                            <button
+                              type="button"
+                              className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
+                                ${complaint.pdpaSensitive
+                                  ? "bg-amber-100 text-amber-900 border-amber-200"
+                                  : "bg-gray-50 text-gray-600 border-gray-200"
+                                }`}
+                              onClick={() => togglePdpa(complaint)}
+                            >
+                              {complaint.pdpaSensitive ? "PDPA ✓" : "PDPA"}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1 mt-6">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              
-              <div className="flex items-center gap-1 mx-2">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let page;
-                  if (totalPages <= 5) {
-                    page = i + 1;
-                  } else if (currentPage <= 3) {
-                    page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
-                  } else {
-                    page = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors
-                        ${currentPage === page 
-                          ? "bg-blue-600 text-white" 
-                          : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                    >
-                      {page}
-                    </button>
                   );
                 })}
               </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1 mt-6">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
               
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          )}
+                <div className="flex items-center gap-1 mx-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let page;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                  
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors
+                          ${currentPage === page 
+                            ? "bg-blue-600 text-white" 
+                            : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+              
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1245,6 +1361,31 @@ export default function ManageComplaintsPage() {
           </div>
         </div>
       )}
+
+      <ComplaintFilterSheet
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        value={filterValue}
+        defaultFiscalYear={currentFiscalYear()}
+        fiscalYearOptions={fiscalYearOptions}
+        categories={uniqueCategories}
+        countFor={countForDraft}
+        onApply={applyFilters}
+      />
+
+      <ComplaintActionsSheet
+        complaint={actionsComplaint}
+        state={actionsComplaint ? rowState(actionsComplaint, assignedComplaintIds.has(actionsComplaint._id)) : "pending"}
+        isSuperAdmin={isSuperAdmin}
+        onClose={() => setActionsForId(null)}
+        onAssign={(c) => handleAssign(c._id)}
+        onUpdate={openUpdateFor}
+        onCloseComplaint={(c) => handleCloseComplaint(c._id)}
+        onOpenDetail={openDetail}
+        onToggleConfidential={toggleConfidential}
+        onTogglePdpa={togglePdpa}
+        onDelete={handleDeleteComplaint}
+      />
 
       {/* Complaint Detail Modal */}
       {showDetailModal && selectedComplaint && (
