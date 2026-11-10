@@ -927,6 +927,12 @@ export default function ManageComplaintsPage() {
                                 {complaint.complaintId || "—"}
                               </p>
                               {getStatusBadge(complaint.status, isAssigned)}
+                              {(complaint.isConfidential || complaint.pdpaSensitive) && (
+                                <div className="mt-1 flex gap-1">
+                                  {complaint.isConfidential && <span className="rounded bg-rose-100 px-1.5 text-[10px] font-semibold text-rose-800">เรื่องลับ</span>}
+                                  {complaint.pdpaSensitive && <span className="rounded bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-900">PDPA</span>}
+                                </div>
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col items-center gap-1">
@@ -1049,32 +1055,14 @@ export default function ManageComplaintsPage() {
                                     {isSuperAdmin ? "ลบ" : "🔒 ลบ"}
                                   </button>
                                 )}
-                                <div className="w-full pt-2 mt-1 border-t border-gray-100 flex flex-col gap-1">
-                                  <button
-                                    type="button"
-                                    className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
-                                      ${complaint.isConfidential
-                                        ? "bg-rose-100 text-rose-800 border-rose-200 hover:bg-rose-200"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                                      }`}
-                                    onClick={() => toggleConfidential(complaint)}
-                                    title="ซ่อนการ์ดจากหน้า ร้องเรียน / สถานะ (ประชาชน)"
-                                  >
-                                    {complaint.isConfidential ? "🔒 เรื่องลับ (ปิด)" : "เรื่องลับ"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`w-full px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors
-                                      ${complaint.pdpaSensitive
-                                        ? "bg-amber-100 text-amber-900 border-amber-200 hover:bg-amber-200"
-                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                                      }`}
-                                    onClick={() => togglePdpa(complaint)}
-                                    title="เบลอภาพ + เซ็นเซอร์คำสำหรับผู้ใช้ที่ไม่ใช่แอดมิน"
-                                  >
-                                    {complaint.pdpaSensitive ? "PDPA (เปิด)" : "PDPA"}
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setActionsForId(complaint._id)}
+                                  className="w-full px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                                  aria-label={`คำสั่งเพิ่มเติม ${complaint.complaintId || ""}`.trim()}
+                                >
+                                  ⋯ เพิ่มเติม
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1207,25 +1195,10 @@ export default function ManageComplaintsPage() {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
-                                ${complaint.isConfidential
-                                  ? "bg-rose-100 text-rose-800 border-rose-200"
-                                  : "bg-gray-50 text-gray-600 border-gray-200"
-                                }`}
-                              onClick={() => toggleConfidential(complaint)}
+                              onClick={() => setActionsForId(complaint._id)}
+                              className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                             >
-                              {complaint.isConfidential ? "ลับ ✓" : "เรื่องลับ"}
-                            </button>
-                            <button
-                              type="button"
-                              className={`flex-1 px-2 py-1.5 text-xs font-semibold rounded-lg border
-                                ${complaint.pdpaSensitive
-                                  ? "bg-amber-100 text-amber-900 border-amber-200"
-                                  : "bg-gray-50 text-gray-600 border-gray-200"
-                                }`}
-                              onClick={() => togglePdpa(complaint)}
-                            >
-                              {complaint.pdpaSensitive ? "PDPA ✓" : "PDPA"}
+                              ⋯ เพิ่มเติม
                             </button>
                           </div>
                         </div>
