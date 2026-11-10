@@ -65,7 +65,7 @@ export default function ComplaintActionsSheet({
   const open = !!complaint;
   const run = (fn) => () => {
     onClose();
-    fn(complaint);
+    fn?.(complaint);
   };
   const [statusLabel, statusCls] = STATUS_PILL[state] || STATUS_PILL.pending;
 

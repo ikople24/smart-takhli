@@ -28,7 +28,8 @@ export default function MobileManageView({
       <div className="sticky top-0 z-20 -mx-3 border-b border-gray-200 bg-white px-3 pt-2 pb-3">
         <StatusTabs tabs={tabs} value={statusFilter} onChange={onStatusChange} />
         <div className="mt-2 flex gap-2">
-          <label className="relative block flex-1">
+          <div className="relative flex-1">
+          <label className="block">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" aria-hidden />
             <input
               type="search"
@@ -36,14 +37,15 @@ export default function MobileManageView({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="เลขคำร้อง, รายละเอียด, ชุมชน"
               aria-label="ค้นหาเรื่องร้องเรียน"
-              className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [&::-webkit-search-cancel-button]:hidden"
             />
-            {searchTerm && (
-              <button type="button" onClick={() => onSearchChange("")} aria-label="ล้างคำค้น" className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-gray-400">
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            )}
           </label>
+          {searchTerm && (
+            <button type="button" onClick={() => onSearchChange("")} aria-label="ล้างคำค้น" className="absolute right-0 top-0 grid h-11 w-11 place-items-center text-gray-400">
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
           <button
             type="button"
             onClick={onOpenFilters}
@@ -79,12 +81,12 @@ export default function MobileManageView({
           </button>
         )}
 
-        <p className="px-1 text-xs text-gray-500">
+        <p role="status" className="px-1 text-xs text-gray-500">
           {loading ? "กำลังโหลด…" : `แสดง ${items.length} จาก ${totalCount} เรื่อง`}
         </p>
 
         {loading &&
-          [0, 1, 2].map((i) => <div key={i} className="h-44 animate-pulse rounded-2xl bg-gray-200/70" />)}
+          [0, 1, 2].map((i) => <div key={i} aria-hidden="true" className="h-44 animate-pulse rounded-2xl bg-gray-200/70" />)}
 
         {!loading && items.length === 0 && (
           <div className="rounded-2xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-500">

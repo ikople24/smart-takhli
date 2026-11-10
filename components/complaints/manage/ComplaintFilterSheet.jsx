@@ -1,6 +1,6 @@
 // components/complaints/manage/ComplaintFilterSheet.jsx
 // จอ 2: ตัวกรองรอง — แก้ใน draft ก่อน กด "แสดง N เรื่อง" ค่อย apply
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import BottomSheet from "./BottomSheet";
 import { SORT_OPTIONS, DEFAULT_SORT } from "@/lib/complaints/manageList";
@@ -32,14 +32,16 @@ export default function ComplaintFilterSheet({
   onApply,
 }) {
   const [draft, setDraft] = useState(value);
+  const valueRef = useRef(value);
+  valueRef.current = value;
   useEffect(() => {
-    if (open) setDraft(value);
-  }, [open, value]);
+    if (open) setDraft(valueRef.current);
+  }, [open]);
 
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const reset = () =>
     setDraft({ fiscalYear: defaultFiscalYear, category: "all", sort: DEFAULT_SORT, mineOnly: false, staleOnly: false });
-  const count = open ? countFor(draft) : 0;
+  const count = open ? (countFor(draft) ?? 0) : 0;
 
   return (
     <BottomSheet

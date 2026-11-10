@@ -12,7 +12,7 @@ const TONES = {
 
 export default function StatusTabs({ tabs, value, onChange }) {
   return (
-    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none]" role="tablist" aria-label="กรองตามสถานะ">
+    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="กรองตามสถานะ">
       {tabs.map((t) => {
         const on = t.value === value;
         const tone = TONES[t.tone] || TONES.blue;
@@ -20,11 +20,10 @@ export default function StatusTabs({ tabs, value, onChange }) {
           <button
             key={t.value}
             type="button"
-            role="tab"
-            aria-selected={on}
+            aria-pressed={on}
             onClick={() => onChange(t.value)}
             className={clsx(
-              "flex h-10 flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm font-semibold",
+              "flex h-11 flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-sm font-semibold",
               on ? clsx(tone.on, "text-white") : "border-gray-200 bg-white text-gray-700"
             )}
           >

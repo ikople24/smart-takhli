@@ -30,19 +30,19 @@ export default function ComplaintMobileCard({
   return (
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <button type="button" onClick={() => onOpenDetail(complaint)} className="block w-full px-3 pt-3 pb-2.5 text-left">
-        <div className="mb-2 flex items-center gap-2">
+        <span className="mb-2 flex items-center gap-2">
           <span className="font-mono text-xs font-semibold text-gray-700">{complaint.complaintId || "—"}</span>
           <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-semibold", pill.cls)}>{pill.label}</span>
           <span className={clsx("ml-auto text-xs font-medium", isStale ? "text-orange-700" : "text-gray-500")}>{ageText}</span>
-        </div>
-        <div className="flex gap-3">
-          <div className="min-w-0 flex-1">
-            {meta && <p className="mb-1 truncate text-xs text-gray-500">{meta}</p>}
-            <p className="line-clamp-2 text-[15px] font-medium leading-snug text-gray-900">{complaint.detail}</p>
-          </div>
+        </span>
+        <span className="flex gap-3">
+          <span className="block min-w-0 flex-1">
+            {meta && <span className="mb-1 block truncate text-xs text-gray-500">{meta}</span>}
+            <span className="block line-clamp-2 text-[15px] font-medium leading-snug text-gray-900">{complaint.detail}</span>
+          </span>
           {thumb && <img src={thumb} alt="" loading="lazy" className="h-[60px] w-[60px] flex-none rounded-[10px] object-cover" />}
-        </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        </span>
+        <span className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <span className="flex items-center gap-1 text-xs text-gray-600">
             <UserIcon className="h-3.5 w-3.5" aria-hidden />
             {officerText}
@@ -53,7 +53,7 @@ export default function ComplaintMobileCard({
           {complaint.pdpaSensitive && (
             <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">PDPA</span>
           )}
-        </div>
+        </span>
       </button>
 
       <div className="flex gap-2 border-t border-gray-100 px-3 pt-2.5 pb-3">
