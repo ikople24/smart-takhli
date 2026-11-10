@@ -14,28 +14,21 @@ import ExportComplaints from "@/components/complaints/ExportComplaints";
 import SatisfactionCommentsPanel from "@/components/SatisfactionCommentsPanel";
 import Swal from "sweetalert2";
 import { availableFiscalYears, currentFiscalYear, fiscalYearLabel, splitByFiscalYear } from "@/lib/complaints/fiscalYear";
+import {
+  buildAssignmentIndex,
+  filterComplaints,
+  sortComplaints,
+  countActiveFilters,
+  staleInfo,
+  ageLabel,
+  rowState,
+  SORT_OPTIONS,
+  DEFAULT_SORT,
+} from "@/lib/complaints/manageList";
 
 const LocationPickerModal = dynamic(() => import("@/components/LocationPickerModal"), {
   ssr: false,
 });
-
-// ค้นหา: เลขคำร้อง (พิมพ์ "700036" หรือ "tkc-700036" ก็เจอ), รายละเอียด, หมวด, ประเภทย่อย, ชุมชน, ชื่อผู้แจ้ง
-function matchesComplaintSearch(complaint, rawQuery) {
-  const q = (rawQuery || "").trim().toLowerCase();
-  if (!q) return true;
-  const id = (complaint.complaintId || "").toLowerCase();
-  if (id && id.includes(q)) return true;
-  const digits = q.replace(/\D/g, "");
-  if (digits.length >= 3 && /^(tkc)?[-\s]*\d+$/.test(q) && id.replace(/\D/g, "").includes(digits)) return true;
-  const fields = [
-    complaint.detail,
-    complaint.category,
-    complaint.community,
-    complaint.fullName,
-    ...(Array.isArray(complaint.problems) ? complaint.problems : []),
-  ];
-  return fields.some((f) => typeof f === "string" && f.toLowerCase().includes(q));
-}
 
 // Debounce hook for search
 function useDebounce(value, delay) {
@@ -82,8 +75,9 @@ export default function ManageComplaintsPage() {
   const [statusFilter, setStatusFilter] = useState("all"); // + "carryover" = เรื่องค้างข้ามปีงบ
   const [fiscalYear, setFiscalYear] = useState(() => currentFiscalYear()); // number (พ.ศ.) | "all"
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("updatedAt");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortValue, setSortValue] = useState(DEFAULT_SORT);
+  const [mineOnly, setMineOnly] = useState(false);
+  const [staleOnly, setStaleOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   
@@ -155,10 +149,8 @@ export default function ManageComplaintsPage() {
   }, [userId, getToken]);
 
   // Computed values
-  const assignedComplaintIds = useMemo(() => 
-    new Set(assignments.map(a => a.complaintId)), 
-    [assignments]
-  );
+  const assignmentIndex = useMemo(() => buildAssignmentIndex(assignments), [assignments]);
+  const assignedComplaintIds = useMemo(() => new Set(assignmentIndex.keys()), [assignmentIndex]);
 
   // ตัดตามปีงบประมาณ (วันที่แจ้ง) — เรื่องปีก่อนที่ยังไม่เสร็จแยกเป็น "ค้างข้ามปี"
   const fiscalYearOptions = useMemo(() => availableFiscalYears(complaints), [complaints]);
@@ -187,44 +179,17 @@ export default function ManageComplaintsPage() {
   // Filtered and sorted complaints
   const filteredComplaints = useMemo(() => {
     const source = statusFilter === "carryover" ? carryOver : yearComplaints;
-    return source
-      .filter((complaint) => {
-        const matchesSearch = matchesComplaintSearch(complaint, debouncedSearch);
-        
-        let matchesStatus = false;
-        if (statusFilter === "all" || statusFilter === "carryover") {
-          matchesStatus = true;
-        } else if (statusFilter === "รอการมอบหมาย") {
-          matchesStatus = !assignedComplaintIds.has(complaint._id);
-        } else {
-          matchesStatus = complaint.status === statusFilter;
-        }
-        
-        const matchesCategory = categoryFilter === "all" || complaint.category === categoryFilter;
-        
-        return matchesSearch && matchesStatus && matchesCategory;
-      })
-      .sort((a, b) => {
-        let comparison = 0;
-        switch (sortBy) {
-          case "updatedAt":
-            comparison = new Date(b.updatedAt) - new Date(a.updatedAt);
-            break;
-          case "createdAt":
-            comparison = new Date(b.createdAt) - new Date(a.createdAt);
-            break;
-          case "category":
-            comparison = (a.category || "").localeCompare(b.category || "");
-            break;
-          case "status":
-            comparison = (a.status || "").localeCompare(b.status || "");
-            break;
-          default:
-            comparison = 0;
-        }
-        return sortOrder === "desc" ? comparison : -comparison;
-      });
-  }, [yearComplaints, carryOver, debouncedSearch, statusFilter, categoryFilter, sortBy, sortOrder, assignedComplaintIds]);
+    const filtered = filterComplaints(source, {
+      search: debouncedSearch,
+      status: statusFilter,
+      category: categoryFilter,
+      mineOnly,
+      staleOnly,
+      userId: existingUser?._id ?? null,
+      assignmentByComplaintId: assignmentIndex,
+    });
+    return sortComplaints(filtered, sortValue);
+  }, [yearComplaints, carryOver, debouncedSearch, statusFilter, categoryFilter, mineOnly, staleOnly, existingUser?._id, assignmentIndex, sortValue]);
 
   // Pagination
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
@@ -236,7 +201,7 @@ export default function ManageComplaintsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, categoryFilter, fiscalYear]);
+  }, [debouncedSearch, statusFilter, categoryFilter, fiscalYear, mineOnly, staleOnly, sortValue]);
 
   // Handlers
   const handleAssign = async (complaintId) => {
@@ -758,20 +723,16 @@ export default function ManageComplaintsPage() {
 
                 {/* Sort */}
                 <select
-                  value={`${sortBy}-${sortOrder}`}
-                  onChange={(e) => {
-                    const [field, order] = e.target.value.split('-');
-                    setSortBy(field);
-                    setSortOrder(order);
-                  }}
+                  value={sortValue}
+                  onChange={(e) => setSortValue(e.target.value)}
+                  aria-label="เรียงตาม"
                   className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm 
                     focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400
                     text-gray-700 min-w-[180px]"
                 >
-                  <option value="updatedAt-desc">ล่าสุด → เก่า</option>
-                  <option value="updatedAt-asc">เก่า → ล่าสุด</option>
-                  <option value="createdAt-desc">สร้างล่าสุด</option>
-                  <option value="category-asc">หมวดหมู่ ก-ฮ</option>
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
