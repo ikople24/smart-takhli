@@ -1,10 +1,11 @@
 // แผนที่ปักหมุดบ้านในฟอร์มแจ้งน้ำ (/papar/report) — มี leaflet ข้างใน ต้อง import ผ่าน dynamic(..., { ssr: false })
 // ลากหมุด หรือแตะแผนที่เพื่อย้ายหมุด · ยังไม่มีพิกัด = แสดงกลางเมืองตาคลีและรอให้แตะ
+// satellite = เปิดภาพไฮบริด (ดาวเทียม + ชื่อถนน) พร้อมปุ่มสลับพื้นแผนที่ — ใช้ในฟอร์มโบตะกอน · หน้าแจ้งน้ำประชาชนใช้แผนที่ถนนเหมือนเดิม
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { BaseTileLayers } from "@/components/MapBaseTileLayers";
+import { BaseLayersControl, BaseTileLayers } from "@/components/MapBaseTileLayers";
 
 const TAKHLI_CENTER = [15.253914, 100.351077];
 
@@ -32,11 +33,11 @@ function TapToPlace({ onChange }) {
   return null;
 }
 
-export default function ReportLocationMap({ point, onChange, className = "" }) {
+export default function ReportLocationMap({ point, onChange, className = "", satellite = false }) {
   const icon = useMemo(() => pinIcon(), []);
   return (
     <MapContainer center={point || TAKHLI_CENTER} zoom={point ? 17 : 14} maxZoom={19} className={className} scrollWheelZoom={false}>
-      <BaseTileLayers baseLayer="street" />
+      {satellite ? <BaseLayersControl defaultLayer="ไฮบริด" /> : <BaseTileLayers baseLayer="street" />}
       <Follow point={point} />
       <TapToPlace onChange={onChange} />
       {point && (

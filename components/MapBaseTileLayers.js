@@ -8,10 +8,11 @@ const GOOGLE_SUBDOMAINS = ["mt0", "mt1", "mt2", "mt3"];
 
 // พาเนลเลือกพื้นแผนที่ 3 แบบ (ต้องเป็นลูกของ <MapContainer>)
 // ใช้ Google tiles ให้ตรงกับฟอร์มกรอกข้อมูลหน้าบ้าน — เจ้าหน้าที่จะได้เห็นภาพพื้นเดียวกันกับตอนปักหมุด
-export function BaseLayersControl({ position = "topright" }) {
+// defaultLayer = ชั้นที่เปิดไว้ตอนแรก ("แผนที่" | "ดาวเทียม" | "ไฮบริด")
+export function BaseLayersControl({ position = "topright", defaultLayer = "แผนที่" }) {
   return (
     <LayersControl position={position}>
-      <LayersControl.BaseLayer checked name="แผนที่">
+      <LayersControl.BaseLayer checked={defaultLayer === "แผนที่"} name="แผนที่">
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
@@ -19,7 +20,7 @@ export function BaseLayersControl({ position = "topright" }) {
           maxNativeZoom={19}
         />
       </LayersControl.BaseLayer>
-      <LayersControl.BaseLayer name="ดาวเทียม">
+      <LayersControl.BaseLayer checked={defaultLayer === "ดาวเทียม"} name="ดาวเทียม">
         <TileLayer
           url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
           attribution="&copy; Google Maps"
@@ -27,7 +28,7 @@ export function BaseLayersControl({ position = "topright" }) {
           maxZoom={21}
         />
       </LayersControl.BaseLayer>
-      <LayersControl.BaseLayer name="ไฮบริด">
+      <LayersControl.BaseLayer checked={defaultLayer === "ไฮบริด"} name="ไฮบริด">
         <TileLayer
           url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
           attribution="&copy; Google Maps"
