@@ -13,7 +13,10 @@ export default function BottomSheet({ open, title, onClose, headerAction, footer
     if (!open) return undefined;
     const previouslyFocused = document.activeElement;
     const onKey = (e) => {
-      if (e.key === "Escape") onCloseRef.current?.();
+      if (e.key !== "Escape") return;
+      // SweetAlert2 เปิดอยู่ (เช่น ยืนยันลบ/ปิดเรื่อง) → ให้ Esc ปิดแค่ Swal ไม่ปิดชีตข้างหลังไปด้วย
+      if (document.querySelector(".swal2-container")) return;
+      onCloseRef.current?.();
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;

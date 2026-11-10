@@ -542,10 +542,12 @@ export default function ManageComplaintsPage() {
   // จำนวนผลลัพธ์ของ draft ในชีตตัวกรอง (ปีงบใน draft อาจต่างจากปัจจุบัน → split ใหม่)
   const countForDraft = useCallback((draft) => {
     const { inYear, carryOver: draftCarry } = splitByFiscalYear(complaints, draft.fiscalYear);
-    const source = statusFilter === "carryover" ? draftCarry : inYear;
+    // ปีงบใน draft ไม่มีเรื่องค้างข้ามปี → แท็บจะถูกรีเซ็ตเป็น "all" (ตาม effect ด้านบน) จึงนับแบบนั้น
+    const effectiveStatus = statusFilter === "carryover" && draftCarry.length === 0 ? "all" : statusFilter;
+    const source = effectiveStatus === "carryover" ? draftCarry : inYear;
     return filterComplaints(source, {
       search: debouncedSearch,
-      status: statusFilter,
+      status: effectiveStatus,
       category: draft.category,
       mineOnly: draft.mineOnly,
       staleOnly: draft.staleOnly,
@@ -1110,6 +1112,12 @@ export default function ManageComplaintsPage() {
                           <p className="font-mono text-xs font-semibold text-gray-700 mb-2 select-all">
                             {complaint.complaintId}
                           </p>
+                        )}
+                        {(complaint.isConfidential || complaint.pdpaSensitive) && (
+                          <div className="mb-2 flex gap-1">
+                            {complaint.isConfidential && <span className="rounded bg-rose-100 px-1.5 text-[10px] font-semibold text-rose-800">เรื่องลับ</span>}
+                            {complaint.pdpaSensitive && <span className="rounded bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-900">PDPA</span>}
+                          </div>
                         )}
                         {/* Status and Category */}
                         <div className="flex items-center justify-between mb-3">
