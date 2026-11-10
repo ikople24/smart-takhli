@@ -183,6 +183,8 @@ export interface PoolItem extends DerivedUnclaimed {
   code: string | null;
   title: string;
   category: string;
+  /** ประเภทย่อยที่ประชาชนเลือก (เช่น "กิ่งไม้ล้ำถนน") */
+  problems: string[];
   community: string;
   /** กองที่รับผิดชอบ (ชื่อมาตรฐาน) — null = ยังไม่ระบุกอง */
   department: string | null;

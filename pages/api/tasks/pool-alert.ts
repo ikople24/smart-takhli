@@ -24,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const summary = staleSummary(items);
     const text = buildStaleLineText(items, {
       unclaimedAlertDays: settings.unclaimedAlertDays,
-      footer: `กรุณามอบหมายหรือรับงานที่หน้า "กองงานรอรับ" · แจ้งโดย ${auth.officer.name || 'เจ้าหน้าที่'}`,
+      footer: `(แจ้งโดย ${auth.officer.name || 'เจ้าหน้าที่'})`,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     });
     if (!text) return res.status(400).json({ success: false, error: 'ตอนนี้ไม่มีเรื่องค้างเกินเกณฑ์' });
 
