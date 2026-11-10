@@ -49,7 +49,7 @@ export default function BottomSheet({ open, title, onClose, headerAction, footer
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className={`min-h-0 flex-1 overflow-y-auto px-5 ${footer ? "pb-4" : "pb-[max(env(safe-area-inset-bottom),16px)]"}`}>{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 ${footer ? "pb-4" : "pb-[max(env(safe-area-inset-bottom),16px)]"}`}>{children}</div>
         {footer && (
           <div className="border-t border-gray-200 px-5 pt-3 pb-[max(env(safe-area-inset-bottom),16px)]">{footer}</div>
         )}

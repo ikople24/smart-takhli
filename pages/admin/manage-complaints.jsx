@@ -514,10 +514,19 @@ export default function ManageComplaintsPage() {
     ...(carryOver.length > 0 ? [{ value: "carryover", label: "ค้างข้ามปี", count: carryOver.length, tone: "orange" }] : []),
   ], [stats, carryOver.length]);
 
+  // นับเรื่องค้างนานภายใต้ตัวกรองอื่นทั้งหมด (ยกเว้น staleOnly) — เพื่อให้แถบแสดงตัวเลขจริง และปิดโหมดได้
   const staleCount = useMemo(() => {
     const source = statusFilter === "carryover" ? carryOver : yearComplaints;
-    return source.filter((c) => staleInfo(c, assignedComplaintIds.has(c._id)).isStale).length;
-  }, [statusFilter, carryOver, yearComplaints, assignedComplaintIds]);
+    return filterComplaints(source, {
+      search: debouncedSearch,
+      status: statusFilter,
+      category: categoryFilter,
+      mineOnly,
+      staleOnly: false,
+      userId: existingUser?._id ?? null,
+      assignmentByComplaintId: assignmentIndex,
+    }).filter((c) => staleInfo(c, assignedComplaintIds.has(c._id)).isStale).length;
+  }, [statusFilter, carryOver, yearComplaints, debouncedSearch, categoryFilter, mineOnly, existingUser?._id, assignmentIndex, assignedComplaintIds]);
 
   const mobileItems = useMemo(() =>
     filteredComplaints.slice(0, mobileVisible).map((complaint) => {
@@ -648,7 +657,7 @@ export default function ManageComplaintsPage() {
               <ExportComplaints complaints={yearComplaints} assignments={assignments} />
               
               {/* View toggle */}
-              <div className="hidden sm:flex items-center bg-white rounded-lg border p-1">
+              <div className="hidden md:flex items-center bg-white rounded-lg border p-1">
                 <button
                   onClick={() => setViewMode("table")}
                   className={`p-1.5 rounded ${viewMode === "table" ? "bg-blue-100 text-blue-600" : "text-gray-400 hover:text-gray-600"}`}
@@ -850,6 +859,25 @@ export default function ManageComplaintsPage() {
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+
+                <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={mineOnly}
+                    onChange={(e) => setMineOnly(e.target.checked)}
+                    className="h-4 w-4 accent-blue-600"
+                  />
+                  เฉพาะของฉัน
+                </label>
+                <label className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={staleOnly}
+                    onChange={(e) => setStaleOnly(e.target.checked)}
+                    className="h-4 w-4 accent-blue-600"
+                  />
+                  เฉพาะค้างนาน
+                </label>
               </div>
             </div>
           </div>
@@ -1205,6 +1233,7 @@ export default function ManageComplaintsPage() {
                               type="button"
                               onClick={() => setActionsForId(complaint._id)}
                               className="flex-1 px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                              aria-label={`คำสั่งเพิ่มเติม ${complaint.complaintId || ""}`.trim()}
                             >
                               ⋯ เพิ่มเติม
                             </button>
