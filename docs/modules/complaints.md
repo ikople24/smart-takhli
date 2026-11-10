@@ -39,6 +39,18 @@
 > dead code (`CardCompleted`, `ReporterInfoCard`, `*เก่า`) ถูกลบ
 > `TaskCard.tsx` ยังอยู่ root (cross-cutting: complaint|feedback)
 
+### หน้าจัดการเรื่อง (`/admin/manage-complaints`) — มือถือ (2026-11)
+
+- logic ล้วน: `lib/complaints/manageList.js` (ค้นหา, `rowState`, `staleInfo`/`ageLabel`, `filterComplaints`,
+  `sortComplaints`, `countActiveFilters`) — เทสต์ `lib/complaints/__tests__/manageList.test.js`
+- เกณฑ์ "ค้างนาน" (`STALE_DAYS`: กำลังดำเนินการ 3 วัน / รอมอบหมาย 7 วัน) ต้องตรงกับ
+  `OverdueComplaintsAlert.js` — แก้ต้องแก้ทั้งสองที่ · เรื่องที่เสร็จสิ้นแล้วไม่ถูกนับว่าค้างเสมอ
+  (ต่างจากสาขา "ไม่มี assignment" ของ `OverdueComplaintsAlert` ที่อาจติดธงเรื่องเสร็จสิ้น)
+- มือถือ (`md:hidden`): `components/complaints/manage/` — `MobileManageView` (การ์ด + แท็บ + โหลดเพิ่ม),
+  `ComplaintFilterSheet`, `ComplaintActionsSheet` (⋯ ใช้ร่วมกับ desktop), `BottomSheet`,
+  `StatusTabs` (ปุ่ม pill แบบ `aria-pressed` ไม่ใช่ role=tab)
+- desktop (`hidden md:block`) ยังเป็นตาราง/การ์ดเดิม ปุ่มเรื่องลับ/PDPA ย้ายเข้าเมนู ⋯
+
 ## PDPA / เรื่องลับ
 
 - ตรรกะอยู่ `lib/complaintPrivacy.js`
