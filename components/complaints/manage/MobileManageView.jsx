@@ -37,7 +37,7 @@ export default function MobileManageView({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="เลขคำร้อง, รายละเอียด, ชุมชน"
               aria-label="ค้นหาเรื่องร้องเรียน"
-              className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [&::-webkit-search-cancel-button]:hidden"
+              className="block h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-10 text-[15px] text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [&::-webkit-search-cancel-button]:hidden"
             />
           </label>
           {searchTerm && (

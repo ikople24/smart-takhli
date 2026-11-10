@@ -18,11 +18,15 @@ export default function BottomSheet({ open, title, onClose, headerAction, footer
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panelRef.current?.focus();
+    const panel = panelRef.current;
+    panel?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
-      if (previouslyFocused && typeof previouslyFocused.focus === "function" && document.contains(previouslyFocused)) {
+      // ไม่แย่ง focus จาก popup อื่น (เช่น SweetAlert2 ที่เปิดทันทีหลังปิด sheet)
+      const active = document.activeElement;
+      const focusFree = !active || active === document.body || (panel && panel.contains(active));
+      if (focusFree && previouslyFocused && typeof previouslyFocused.focus === "function" && document.contains(previouslyFocused)) {
         previouslyFocused.focus();
       }
     };

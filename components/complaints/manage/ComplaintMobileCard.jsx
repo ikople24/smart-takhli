@@ -38,7 +38,7 @@ export default function ComplaintMobileCard({
         <span className="flex gap-3">
           <span className="block min-w-0 flex-1">
             {meta && <span className="mb-1 block truncate text-xs text-gray-500">{meta}</span>}
-            <span className="block line-clamp-2 text-[15px] font-medium leading-snug text-gray-900">{complaint.detail}</span>
+            <span className="line-clamp-2 text-[15px] font-medium leading-snug text-gray-900">{complaint.detail}</span>
           </span>
           {thumb && <img src={thumb} alt="" loading="lazy" className="h-[60px] w-[60px] flex-none rounded-[10px] object-cover" />}
         </span>
