@@ -54,7 +54,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lineMarker = `stale-digest-line:${dateKey}`;
     const text = buildStaleLineText(items, {
       unclaimedAlertDays: settings.unclaimedAlertDays,
-      footer: 'กรุณามอบหมายหรือรับงานที่หน้า "กองงานรอรับ" · สรุปอัตโนมัติประจำวัน',
+      footer: '(สรุปอัตโนมัติทุกเช้า)',
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     });
     if (text && dateKey) {
       if (await AuditLog.exists({ action: 'notification_sent', resourceId: lineMarker })) {
