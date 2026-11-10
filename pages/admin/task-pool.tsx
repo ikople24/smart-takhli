@@ -211,7 +211,7 @@ function TaskPoolContent() {
         position: 'top-end',
         icon: 'success',
         title: res?.movedTo
-          ? `รับงานแล้ว — ย้ายเรื่องเข้า ${res.movedTo} · ถ้ารับผิด กด "ขอโอนงาน" ในหน้างาน`
+          ? `รับงานแล้ว — ย้ายเรื่องเข้า ${res.movedTo} · ถ้ารับผิด กด "คืนงาน" ในหน้างาน`
           : `รับงานแล้ว — อยู่ในกลุ่มงาน "${item.category || 'อื่นๆ'}" ของคุณ`,
         timer: 5000,
         timerProgressBar: true,

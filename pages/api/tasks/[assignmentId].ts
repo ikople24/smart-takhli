@@ -19,8 +19,9 @@ import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { buildTimeline, closeChecklist, stageChangePlan, blockedUpdate } from '@/lib/tasks/timeline';
 import { STAGE_LABELS, COMPLAINT_STATUS } from '@/lib/tasks/status';
 import { summarizeText, toDate } from '@/lib/tasks/format';
-import { defaultDepartmentForCategory, normalizeDepartment } from '@/lib/tasks/departments';
+import { defaultDepartmentForComplaint, normalizeDepartment } from '@/lib/tasks/departments';
 import { taskPermissions } from '@/lib/tasks/roles';
+import { releaseCheck } from '@/lib/tasks/release';
 import type { Badge, DerivedAssignment, Stage, StatusPill, TaskDetailResponse, TimelineEntry } from '@/lib/tasks/types';
 import { getOfficer, userModel } from './_auth';
 
@@ -79,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const derived = deriveAssignment({ assignment: a, complaint: c ?? {}, settings, now }) as DerivedAssignment;
       const isOwner = String(a.userId) === String(officer._id);
       const canEdit = isOwner || auth.isSuperAdmin;
-      const taskDepartment = normalizeDepartment(c?.department) ?? defaultDepartmentForCategory(c?.category ?? '');
+      const taskDepartment = normalizeDepartment(c?.department) ?? defaultDepartmentForComplaint(c);
       const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
@@ -103,6 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         canEdit,
         canTransfer: perms.canTransfer,
         canRequestTransfer: perms.canRequestTransfer,
+        canRelease: releaseCheck({ assignment: a, isOwner, isSuperAdmin: auth.isSuperAdmin }).ok,
         transferRequest: a.transferRequest?.requestedAt
           ? { requestedAt: iso(a.transferRequest.requestedAt) ?? '', reason: a.transferRequest.reason ?? '', byName: a.transferRequest.byName ?? '' }
           : null,
@@ -155,7 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           createdAt: iso(c?.createdAt),
           updatedAt: iso(c?.updatedAt),
           status: c?.status ?? '',
-          department: normalizeDepartment(c?.department) ?? defaultDepartmentForCategory(category),
+          department: normalizeDepartment(c?.department) ?? defaultDepartmentForComplaint(c),
           // ปลายทางเป็นเจ้าหน้าที่ผู้รับผิดชอบ — ต้องเห็นชื่อ/เบอร์เต็มเพื่อติดต่อ (ต่างจากหน้า /status สาธารณะที่ mask)
           reporterName: c?.fullName ?? '',
           reporterPhone: c?.phone ?? '',

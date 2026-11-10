@@ -36,6 +36,7 @@
 | `GET /api/tasks/pool-count` | จำนวนเรื่องในกองงานรอรับ (30 วัน + เก่ากว่านั้น) สำหรับ badge บน bottom nav มือถือ |
 | `GET /api/tasks/heads` · `PUT` (superadmin) | รายชื่อ user + สถานะหัวหน้ากอง · `PUT { userId, isDepartmentHead: true\|false\|null }` (null = กลับไปดูตำแหน่ง) audit `department_head_set` |
 | `POST /api/complaints/assignments/transfer-request` · `DELETE ?assignmentId=` | เจ้าของงานที่โอนเองไม่ได้ "ขอโอนงาน" (เหตุผลบังคับ) → `Assignment.transferRequest` + timeline + แจ้งกระดิ่งถึงหัวหน้ากอง (`digestRecipients`) · DELETE = เจ้าของยกเลิก / หัวหน้าปฏิเสธ |
+| `POST /api/complaints/assignments/release` | **คืนงานเข้ากองงานรอรับ** (2026-11-10) — คนที่รับผิดเรื่องคืนเองได้ ไม่ต้องรอหัวหน้า · เจ้าของ/superadmin + งานยังไม่เริ่มทำ (ขั้นรับเรื่อง ไม่มีผล/ภาพ/ประสาน/รอวัสดุ — `lib/tasks/release.js#releaseCheck`) · ลบ assignment + ตอนรับเคยย้ายกอง → คืนกองเดิม (`departmentToRestore` จาก audit) · timeline เก็บใน audit `assignment_unclaimed` · เหตุผลบังคับ |
 | `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) **+ LINE กลุ่มเจ้าหน้าที่วันละครั้ง** (เปิดอีกครั้ง 2026-11-09 หลังอัปเกรด LINE OA Starter; dedupe ด้วย audit log `resourceId: stale-digest-line:<วันที่>`; ข้อความจาก `digest.js#buildStaleLineText` ตัวเดียวกับปุ่ม pool-alert) |
 | `GET /api/tasks/[assignmentId]` | หน้าจอ 3: เรื่อง + assignment + derived + ป้าย + ไทม์ไลน์ + `solutionOptions` (AdminOption ของประเภทนั้น) + `canEdit` (เจ้าของ/superadmin) |
 | `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) |
@@ -77,7 +78,7 @@
 | `groupBy.js` | `groupTasks(items, groupBy)` + `filterByAlert` — ใช้ทั้ง server และ client |
 | `badges.js` | ข้อความ+โทนป้าย: `badgesForAssignment`, `agingPill`, `contextBadges`, `statusPillFor`, `coordinationWaitPill` |
 | `summary.js` | หน้าจอ 1: `alertCards` (การ์ดเตือน 4 ใบ), `coordinationRail` (รวมตามหน่วยงาน), `blockedRail`, `dueThisWeekRail` |
-| `departments.js` | **ทะเบียนกองมาตรฐาน + alias** (`normalizeDepartment`, `departmentShort`) และ `defaultDepartmentForCategory` (ประเภทเรื่อง → กอง ค่าเสนอแนะ) |
+| `departments.js` | **ทะเบียนกองมาตรฐาน + alias** (`normalizeDepartment`, `departmentShort`) และ `defaultDepartmentForComplaint` (ทั้งเรื่อง → กอง ค่าเสนอแนะ: งานตัดกิ่งไม้/ต้นไม้ → งานป้องกันฯ ก่อน แม้แจ้งผิดหมวด (2026-11-10) แล้วค่อยใช้ `defaultDepartmentForCategory` ตามหมวดใหญ่) |
 | `pool.js` | หน้าจอ 2: `poolAction` (claim / claim_other / choose_org — ทุกค่ารับได้), `groupPool` (คอลัมน์ตามกอง/ประเภท/ความเร่งด่วน), `staleSummary`, `dangerHint`, `possibleAgencyFor` (กฟภ.) |
 | `roles.js` | **นโยบายสิทธิ์**: `isDepartmentHead(user)` (ติ๊ก `users.isDepartmentHead` มาก่อน, fallback ตำแหน่ง `HEAD_POSITION_RE`), `headsOf`, `taskPermissions` → canAssign / canTransfer (หัวหน้าเฉพาะงานในกอง) / canRequestTransfer |
 | `digest.js` | `buildStaleDigest` (สรุปเรื่องค้างรายกอง + relatedId กันซ้ำรายวัน), `digestRecipients` (หัวหน้ากอง → ไม่มีก็หัวหน้าทุกกอง + superadmin) |
@@ -116,9 +117,9 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   + `computeFairStats` (null เมื่อไม่มีคะแนน) — ห้ามคำนวณ `$avg` เอง; อ่านพลาดไม่ทำให้หน้าล้ม
 - ปุ่ม "แจ้ง LINE" ทุกจุดต้องมี dialog ยืนยัน — 1 push เข้ากลุ่มนับโควตาเท่าจำนวนสมาชิก (โควตา 300/เดือน)
 - **นโยบายสิทธิ์ (ตกลง 2026-09-01):** admin ธรรมดา *รับงาน* จากกองเองได้ แต่ **โอน/มอบหมายได้เฉพาะหัวหน้ากอง (งานในกองตัวเอง) และ superadmin** ·
-  เจ้าของงานที่โอนเองไม่ได้ใช้ "ขอโอนงาน" (แจ้งกระดิ่งหัวหน้า) · หัวหน้าเห็น "งานของกอง" ในหน้างานของฉัน · เรื่องค้างไม่มีคนรับแจ้งหัวหน้าทุกเช้าทางกระดิ่ง (cron)
+  รับผิดเรื่องและยังไม่เริ่มทำ → "คืนงานเข้ากองงานรอรับ" เอง · งานที่เริ่มแล้วใช้ "ขอโอนงาน" (แจ้งกระดิ่งหัวหน้า) · หัวหน้าเห็น "งานของกอง" ในหน้างานของฉัน · เรื่องค้างไม่มีคนรับแจ้งหัวหน้าทุกเช้าทางกระดิ่ง (cron)
   · หัวหน้ากอง = `users.isDepartmentHead` (superadmin ติ๊กที่ `/admin/superadmin/department-heads`) หรือถ้าไม่ตั้งดูจากตำแหน่ง — ทุกจุดผ่าน `lib/tasks/roles.js`
-- "กอง" ของเรื่อง = `complaint.department` ที่คัดแยก (manual) → ถ้าไม่มีใช้ `defaultDepartmentForCategory` (category) → ไม่ได้ = ยังไม่ระบุกอง;
+- "กอง" ของเรื่อง = `complaint.department` ที่คัดแยก (manual) → ถ้าไม่มีใช้ `defaultDepartmentForComplaint` (ประเภทย่อย/ข้อความกิ่งไม้-ต้นไม้ → งานป้องกันฯ, ไม่งั้นตามหมวด) → ไม่ได้ = ยังไม่ระบุกอง;
   เจ้าหน้าที่ที่โปรไฟล์ไม่ระบุกอง / superadmin รับได้ทุกเรื่อง
 - ป้าย "เสี่ยงอันตราย" / "อาจต้องประสาน กฟภ." เป็นคำใบ้จาก keyword ในข้อความ (`pool.js`) ไม่ใช่การตัดสิน
 - **แจ้งเตือน LINE ตอนสถานะเรื่องเปลี่ยน/ปิดงานอยู่ที่เดียว `lib/complaintNotify.js`** (`notifyComplaintStatusChanged`) — ใช้ทั้ง `update-status.js` เดิม

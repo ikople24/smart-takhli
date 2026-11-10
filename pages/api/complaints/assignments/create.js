@@ -6,7 +6,7 @@ import { logAuditEvent } from '@/lib/auditLogger';
 import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { dueDateFor } from '@/lib/tasks/derived';
 import { departmentAfterClaim, taskPermissions } from '@/lib/tasks/roles';
-import { normalizeDepartment, defaultDepartmentForCategory } from '@/lib/tasks/departments';
+import { normalizeDepartment, defaultDepartmentForComplaint } from '@/lib/tasks/departments';
 import { getOfficer, userModel } from '@/pages/api/tasks/_auth';
 
 // POST /api/complaints/assignments/create
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     // วันครบกำหนด: นับจากวันที่ประชาชนแจ้ง (คำมั่นต่อประชาชน) — ไม่พบเรื่องก็ยังสร้างได้ (พฤติกรรมเดิม)
     // แล้ว derived.js จะถอยไปใช้ assignedAt + SLA ให้เอง
     const [complaint, settings] = await Promise.all([
-      Complaint.findById(complaintId).select('createdAt category department').lean(),
+      Complaint.findById(complaintId).select('createdAt category problems detail department').lean(),
       getTaskSettings(),
     ]);
 
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
     }
 
     // กติกามอบหมาย — รับเองได้ทุกเรื่อง
-    const taskDepartment = normalizeDepartment(complaint?.department) ?? defaultDepartmentForCategory(complaint?.category);
+    const taskDepartment = normalizeDepartment(complaint?.department) ?? defaultDepartmentForComplaint(complaint);
     const selfClaim = String(userId) === String(officer._id);
     if (!selfClaim && !taskPermissions({ isSuperAdmin, user: officer }).canAssign) {
       return res.status(403).json({ error: 'มอบหมายงานให้คนอื่นได้เฉพาะหัวหน้ากอง/superadmin' });

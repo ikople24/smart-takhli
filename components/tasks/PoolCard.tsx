@@ -50,7 +50,7 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
             type="button"
             disabled={busy}
             onClick={() => onClaim?.(item)}
-            title={action === 'claim_other' ? 'เรื่องนี้ระบบจัดไว้กองอื่น — รับแล้วเรื่องจะย้ายเข้ากองของคุณ · ถ้ารับผิด กด "ขอโอนงาน" ในหน้างาน' : undefined}
+            title={action === 'claim_other' ? 'เรื่องนี้ระบบจัดไว้กองอื่น — รับแล้วเรื่องจะย้ายเข้ากองของคุณ · ถ้ารับผิด กด "คืนงานเข้ากองงานรอรับ" ในหน้างาน' : undefined}
             className={clsx(btn, 'flex-1 text-white', item.isUrgent ? 'bg-tk-overdue hover:brightness-95' : 'bg-tk-primary hover:bg-tk-primary-dark')}
           >
             {item.isUrgent ? 'รับงานด่วน' : mobile ? 'รับงานนี้' : 'รับงาน'}
