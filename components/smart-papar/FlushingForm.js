@@ -2,6 +2,7 @@
 // เรียงตามลำดับงานจริง: ตำแหน่ง → รูปก่อน → ระยะเวลา/NTU → รูปหลัง → ผล → บันทึก
 // ดีไซน์: แถบความคืบหน้า 5 ขั้นด้านบน + แถบบันทึกด้านล่างบอกว่ายังขาดอะไร (โทเคน pp-* ใน globals.css)
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowDown, ArrowRight, ArrowUp, Camera, Check, Clock, MapPin, Minus, Plus, RotateCw, TriangleAlert, X } from "lucide-react";
 import { uploadImage } from "@/lib/smart-light/uploadImage";
 import { resizeImage } from "@/lib/smart-papar/resizeImage";
@@ -13,6 +14,12 @@ import {
   nearestFlushPoints,
   searchFlushPoints,
 } from "@/lib/smart-papar/flushPoints";
+
+// แผนที่ปักหมุดตัวเดียวกับหน้าแจ้งน้ำ — ลากหมุด/แตะแผนที่ได้ ใช้แทนหรือแก้ตำแหน่ง GPS
+const LocationMap = dynamic(() => import("./ReportLocationMap"), {
+  ssr: false,
+  loading: () => <div className="h-full w-full animate-pulse bg-pp-ground" />,
+});
 
 const NEAR_RADIUS_M = 150;
 const DURATION_STEP = 5;
@@ -33,6 +40,7 @@ function initialState(log) {
       lat: null,
       lng: null,
       accuracy: null,
+      locationSource: "",
       locationName: "",
       flushPointId: "",
       durationMin: "",
@@ -48,6 +56,7 @@ function initialState(log) {
     lat: log.location?.coordinates?.[1] ?? null,
     lng: log.location?.coordinates?.[0] ?? null,
     accuracy: null,
+    locationSource: log.locationSource || "",
     locationName: log.locationName || "",
     flushPointId: log.flushPointId ? String(log.flushPointId) : "",
     durationMin: String(log.durationMin ?? ""),
@@ -238,12 +247,20 @@ export default function FlushingForm({
         )
       : null;
 
+  // ยังไม่มีพิกัด → ปักหมุดที่ตำแหน่งหัวในทะเบียนให้ก่อน (แก้ต่อได้ด้วยการลากหมุด) · มีพิกัดแล้วไม่ทับ
   const pickPoint = (p) =>
-    setForm((f) =>
-      p
-        ? { ...f, flushPointId: String(p._id), locationName: flushPointLabel(p) }
-        : { ...f, flushPointId: "" }
-    );
+    setForm((f) => {
+      if (!p) return { ...f, flushPointId: "" };
+      const next = { ...f, flushPointId: String(p._id), locationName: flushPointLabel(p) };
+      const c = p.location?.coordinates;
+      if (f.lat == null && Array.isArray(c)) Object.assign(next, { lat: c[1], lng: c[0], accuracy: null, locationSource: "manual" });
+      return next;
+    });
+
+  const placePin = (lat, lng) => {
+    setForm((f) => ({ ...f, lat, lng, accuracy: null, locationSource: "manual" }));
+    setErrors((x) => ({ ...x, location: undefined }));
+  };
 
   useEffect(() => {
     if (isEdit || !initialFlushPointId || !flushPoints) return;
@@ -273,6 +290,7 @@ export default function FlushingForm({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
+          locationSource: "gps",
         }));
         setErrors((x) => ({ ...x, location: undefined }));
         setLocating(false);
@@ -329,6 +347,7 @@ export default function FlushingForm({
       flushedAt: Number.isNaN(flushedAt.getTime()) ? "" : flushedAt.toISOString(),
       lat: form.lat,
       lng: form.lng,
+      locationSource: form.locationSource,
       locationName: form.locationName,
       flushPointId: form.flushPointId || null,
       durationMin: form.durationMin,
@@ -400,37 +419,43 @@ export default function FlushingForm({
         <div className="flex-1 space-y-3.5 overflow-y-auto p-4">
           {/* 1. ตำแหน่ง */}
           <Section step={1} title="จุดที่โบตะกอน" done={steps[0].done}>
-            {form.lat == null ? (
+            <div className="flex items-center gap-3 rounded-xl bg-pp-tint py-2.5 pl-3.5 pr-2.5">
+              <MapPin size={22} className="flex-none text-pp-water" aria-hidden />
+              <span className="flex min-w-0 flex-1 flex-col">
+                {form.lat == null ? (
+                  <span className="text-sm text-pp-muted">ยังไม่มีตำแหน่ง — กดปุ่ม หรือแตะแผนที่ด้านล่าง</span>
+                ) : (
+                  <>
+                    <span className="font-tk-mono text-sm text-pp-ink">
+                      {Number(form.lat).toFixed(5)}, {Number(form.lng).toFixed(5)}
+                    </span>
+                    {form.locationSource === "manual" ? (
+                      <span className="text-[13px] text-pp-muted">ปักหมุดเอง</span>
+                    ) : (
+                      form.accuracy != null && (
+                        <span className="text-[13px] text-pp-clear-ink">GPS แม่นยำ ±{Math.round(form.accuracy)} ม.</span>
+                      )
+                    )}
+                  </>
+                )}
+              </span>
               <button
                 type="button"
                 onClick={locate}
                 disabled={locating}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-pp-water py-3.5 text-base font-semibold text-white disabled:opacity-60"
+                className="h-11 flex-none rounded-xl bg-pp-water px-3.5 text-sm font-semibold text-white disabled:opacity-60"
               >
-                <MapPin size={20} aria-hidden />
-                {locating ? "กำลังหาตำแหน่ง…" : "ใช้ตำแหน่งปัจจุบัน"}
+                {locating ? "กำลังหา…" : "ใช้ตำแหน่งปัจจุบัน"}
               </button>
-            ) : (
-              <div className="flex items-center gap-3 rounded-xl bg-pp-tint py-2.5 pl-3.5 pr-2.5">
-                <MapPin size={22} className="flex-none text-pp-water" aria-hidden />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="font-tk-mono text-sm text-pp-ink">
-                    {Number(form.lat).toFixed(5)}, {Number(form.lng).toFixed(5)}
-                  </span>
-                  {form.accuracy != null && (
-                    <span className="text-[13px] text-pp-clear-ink">แม่นยำ ±{Math.round(form.accuracy)} ม.</span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={locate}
-                  disabled={locating}
-                  className="h-11 rounded-xl border-[1.5px] border-pp-water bg-white px-3.5 text-sm font-semibold text-pp-water disabled:opacity-60"
-                >
-                  {locating ? "กำลังหา…" : "อัปเดต"}
-                </button>
-              </div>
-            )}
+            </div>
+            <div className="h-56 overflow-hidden rounded-xl border border-pp-line">
+              <LocationMap
+                point={form.lat == null ? null : [Number(form.lat), Number(form.lng)]}
+                onChange={placePin}
+                className="h-full w-full"
+              />
+            </div>
+            <p className="text-[13px] text-pp-muted">ลากหมุด หรือแตะบนแผนที่เพื่อย้ายตำแหน่งให้ตรงหัวที่โบ</p>
             <FieldError msg={errors.location} />
 
             {flushPoints && (

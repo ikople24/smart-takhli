@@ -353,6 +353,11 @@ export function FlushingDetail({ log, history = [], canModify, onClose, onEdit, 
                   <span className="block font-tk-mono text-sm">
                     {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
                   </span>
+                  {log.locationSource && (
+                    <span className="block text-[13px] text-pp-muted">
+                      {log.locationSource === "manual" ? "ปักหมุดเองบนแผนที่" : "จาก GPS มือถือ"}
+                    </span>
+                  )}
                   <a
                     className="inline-flex items-center gap-1 font-semibold text-pp-water"
                     href={`https://www.google.com/maps?q=${lat},${lng}`}
