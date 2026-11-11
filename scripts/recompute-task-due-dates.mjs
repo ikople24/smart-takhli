@@ -6,7 +6,7 @@
 // นับ จ.–ศ. ไม่รวม task_settings.holidays (lib/tasks/businessDays.js) ผ่าน lib/tasks/derived.js#dueDateFor
 // ตัวเดียวกับที่ API ใช้ · ค่าตั้งอ่านจาก task_settings (key 'default') ถ้ามี ไม่มี = DEFAULT_TASK_SETTINGS
 // ครอบทั้งผู้รับผิดชอบหลัก (assignee) และผู้ประสานงาน (coordinator) · ข้ามงานที่เรื่องปิดแล้ว/เรื่องถูกลบ
-// ช่วงพัก SLA (slaPausedAt/slaPausedMs) ไม่ต้องแตะ — derived.js บวกเพิ่มให้ตอนอ่านเอง
+// ช่วงพัก SLA (slaPausedAt/slaPausedMs/slaPausedBusinessDays) ไม่ต้องแตะ — derived.js เลื่อนเป็นวันทำการให้ตอนอ่านเอง
 //
 // วิธีรัน (ต้องมี MONGO_URI ใน .env.local):
 //   node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs          (dry-run — แค่รายงาน)

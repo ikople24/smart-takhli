@@ -48,16 +48,18 @@ export function TaskSettingsPanel() {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
 
-  const applySettings = (s: TaskSettings) => {
-    setSettings(s);
-    setHolidays(s.holidays ?? []);
-    setSlaInput(Object.fromEntries(WORK_TYPES.map((t) => [t.key, String(effectiveSla(s, t.key))])));
-  };
+  // บันทึกส่วนหนึ่งต้องไม่ล้างค่าที่ยังไม่บันทึกของอีกส่วน — รีเซ็ตเฉพาะส่วนที่บันทึก
+  const resetHolidays = (s: TaskSettings) => setHolidays(s.holidays ?? []);
+  const resetSla = (s: TaskSettings) => setSlaInput(slaInputFor(s));
 
   useEffect(() => {
     axios
       .get<{ settings: TaskSettings }>('/api/tasks/settings')
-      .then(({ data }) => applySettings(data.settings))
+      .then(({ data }) => {
+        setSettings(data.settings);
+        setHolidays(data.settings.holidays ?? []);
+        setSlaInput(slaInputFor(data.settings));
+      })
       .catch((err) => Swal.fire({ icon: 'error', title: 'โหลดการตั้งค่าไม่สำเร็จ', text: errorText(err) }));
   }, []);
 
@@ -95,8 +97,15 @@ export function TaskSettingsPanel() {
     setBusy('holidays');
     try {
       const { data } = await axios.put<{ settings: TaskSettings }>('/api/tasks/settings', { holidays });
-      applySettings(data.settings);
-      Swal.fire({ icon: 'success', title: 'บันทึกวันหยุดแล้ว', timer: 1500, showConfirmButton: false });
+      setSettings(data.settings);
+      resetHolidays(data.settings);
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกวันหยุดแล้ว',
+        html:
+          '<div class="text-sm">มีผลกับงานที่รับใหม่ทันที — งานที่รับไปแล้วยังใช้วันครบกำหนดเดิมที่บันทึกไว้ ' +
+          'จนกว่าผู้ดูแลระบบจะรัน <code>scripts/recompute-task-due-dates.mjs --yes</code> (แจ้งทีมพัฒนาให้รันให้)</div>',
+      });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: errorText(err) });
     } finally {
@@ -110,7 +119,9 @@ export function TaskSettingsPanel() {
 
   const saveSla = async () => {
     if (!settings || slaInvalid) return;
-    // งานทั่วไป → defaultSlaDays (ให้ slaByCategory ยังมีผล) · ชนิดอื่น → slaByWorkType เฉพาะที่ต่างจากทะเบียน
+    // งานทั่วไป → defaultSlaDays เสมอ และ "ตัดแถว general ใน slaByWorkType ทิ้ง" (ค่าที่ใช้จริงย้ายมาอยู่ defaultSlaDays —
+    // แถว general เดิมจะทับ slaByCategory ทุกประเภท การย้ายจึงทำให้ slaByCategory กลับมามีผล ดูหมายเหตุใต้ตาราง)
+    // ชนิดอื่น → slaByWorkType เฉพาะที่ต่างจากทะเบียน
     const defaultSlaDays = Number(slaInput.general);
     const slaByWorkType = WORK_TYPES.filter((t) => t.key !== 'general' && Number(slaInput[t.key]) !== t.slaDays).map((t) => ({
       workType: t.key,
@@ -119,7 +130,8 @@ export function TaskSettingsPanel() {
     setBusy('sla');
     try {
       const { data } = await axios.put<{ settings: TaskSettings }>('/api/tasks/settings', { defaultSlaDays, slaByWorkType });
-      applySettings(data.settings);
+      setSettings(data.settings);
+      resetSla(data.settings);
       Swal.fire({ icon: 'success', title: 'บันทึกกำหนดปิดแล้ว', text: 'มีผลกับงานที่รับใหม่ — งานเปิดเดิมต้องรันสคริปต์ recompute', timer: 2500, showConfirmButton: false });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: errorText(err) });
@@ -243,6 +255,11 @@ export function TaskSettingsPanel() {
             </tbody>
           </table>
         </div>
+        {settings.slaByWorkType.some((r) => r.workType === 'general') && (
+          <p className="mt-2 text-[11.5px] text-tk-due-ink">
+            ตอนนี้งานทั่วไปมีค่าตั้งทับทุกประเภทเรื่อง — กดบันทึกแล้วค่านี้จะย้ายไปเป็นค่าตั้งต้นของงานทั่วไป และค่าแยกตามประเภทเรื่อง (ถ้ามี) จะกลับมามีผล
+          </p>
+        )}
         {settings.slaByCategory.length > 0 && (
           <p className="mt-2 text-[11.5px] text-tk-ink-5">
             งานทั่วไปบางประเภทเรื่องมีค่าตั้งแยก: {settings.slaByCategory.map((r) => `${r.category} ${r.slaDays} วันทำการ`).join(' · ')}
@@ -261,6 +278,10 @@ export function TaskSettingsPanel() {
       </Section>
     </div>
   );
+}
+
+function slaInputFor(s: TaskSettings): Record<string, string> {
+  return Object.fromEntries(WORK_TYPES.map((t) => [t.key, String(effectiveSla(s, t.key))]));
 }
 
 function isPositiveInt(v: string | undefined) {

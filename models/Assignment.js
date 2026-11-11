@@ -66,6 +66,9 @@ const AssignmentSchema = new mongoose.Schema(
     slaPausedAt: { type: Date, default: null },
     /** รวมเวลา (ms) ของช่วงพักที่จบไปแล้ว — ใช้เลื่อนวันครบกำหนด */
     slaPausedMs: { type: Number, default: 0 },
+    /** รวม "วันทำการ" ของช่วงพักที่จบแล้ว — ตัวที่ใช้เลื่อนเส้นตายจริง (lib/tasks/businessDays.js#pauseBusinessDays)
+     *  default null (ไม่ใช่ 0) เพื่อแยกข้อมูลเก่า: null + slaPausedMs > 0 → ใช้ floor(slaPausedMs/วัน) แทน */
+    slaPausedBusinessDays: { type: Number, default: null },
     solution: {
       type: [String],
       default: [],

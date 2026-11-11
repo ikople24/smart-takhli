@@ -50,6 +50,7 @@ interface AssignmentLean {
   dueDate?: Date | null;
   slaPausedAt?: Date | null;
   slaPausedMs?: number;
+  slaPausedBusinessDays?: number | null;
   coordination?: {
     agencyName?: string;
     coordinatorOrgId?: mongoose.Types.ObjectId | null;

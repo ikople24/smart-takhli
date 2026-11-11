@@ -289,7 +289,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (action === 'blocked') {
       const on = body.on === true || body.on === 'true';
+      const blockSettings = await getTaskSettings();
       const update = blockedUpdate(assignment.toObject(), {
+        holidays: blockSettings.holidays,
         on,
         itemName: body.itemName,
         purchaseRefNo: body.purchaseRefNo,
@@ -300,6 +302,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assignment.blocked = update.set.blocked;
       assignment.slaPausedAt = update.set.slaPausedAt;
       assignment.slaPausedMs = update.set.slaPausedMs;
+      assignment.slaPausedBusinessDays = update.set.slaPausedBusinessDays;
       assignment.timeline.push({ ...update.timelineEntry, byUserId: officer._id, byName });
       await assignment.save();
       return res.status(200).json({ success: true, blocked: assignment.blocked, slaPausedAt: iso(assignment.slaPausedAt) });
