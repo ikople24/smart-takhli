@@ -49,6 +49,7 @@ const ADMIN_META = {
   '/admin/superadmin/audit-log':      { title: 'Audit Log' },
   '/admin/superadmin/department-heads': { title: 'ตั้งค่าหัวหน้ากอง', subtitle: 'ใครมอบหมาย/โอนงานในกองได้ (โมดูลงานเจ้าหน้าที่)' },
   '/admin/superadmin/flood-relief':   { title: 'ศูนย์ช่วยเหลือน้ำท่วม', subtitle: 'เปิด/ปิดศูนย์ฯ · เบอร์ · ประกาศบนหน้าแรก' },
+  '/admin/superadmin/task-settings':  { title: 'วันหยุดและกำหนดปิดงาน', subtitle: 'กำหนดปิดเรื่องนับวันทำการ จ.–ศ. ไม่รวมวันหยุดราชการ (โมดูลงานเจ้าหน้าที่)' },
   '/admin/superadmin/setup':          { title: 'ตั้งค่า Superadmin', noSidebar: true },
 };
 

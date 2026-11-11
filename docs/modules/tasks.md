@@ -44,7 +44,7 @@
 | `POST /api/tasks/pool-alert` | สรุปเรื่องค้างเกินเกณฑ์เข้า LINE กลุ่ม (⚠️ โควตา — UI ยืนยันก่อน) |
 | `PATCH /api/tasks/set-department` | คัดแยกกอง `{ complaintId, department }` (ชื่อมาตรฐานเท่านั้น, '' = ล้าง) → audit `complaint_department_set` — README เขียนเป็น `/api/complaints/:id/organization` แต่วางใต้ `complaints/[id]/` ไม่ได้ เพราะชนกับ `[id_card].js` (Next.js ห้าม slug ต่างชื่อใน path เดียวกัน → dev server ล้มทั้งตัว) |
 | `DELETE /api/complaints/assignments/[id]` | "เลิกทำ" การรับงาน — เจ้าของ/superadmin, ภายใน 15 นาที, ยังไม่มีความคืบหน้า → audit `assignment_unclaimed` |
-| `GET /api/tasks/settings` · `PUT` (superadmin) | SLA/เกณฑ์เตือน — PUT รับบางฟิลด์ได้ (merge) ลง audit `task_settings_updated` |
+| `GET /api/tasks/settings` · `PUT` (superadmin) | SLA/เกณฑ์เตือน/วันหยุด (`holidays`) — PUT รับบางฟิลด์ได้ (merge) ลง audit `task_settings_updated` · หน้าแก้ไข `/admin/superadmin/task-settings` |
 | `pages/api/tasks/_auth.ts` | `getOfficer(req)` (Clerk → users ใน Mongo) · `requireSuperAdmin(req)` |
 | `POST /api/complaints/assignments/create` | (path เดิมใต้ complaints — ใช้ทั้งกองงานรอรับและหน้าการร้องเรียน) **บังคับล็อกอิน + กติกาฝั่ง server (2026-09-02)**: รับเอง → ได้ทุกเรื่องทุกกอง (2026-11-09 — เลิก `canClaim` เพราะระบบเดากองจากหมวดใหญ่ผิดบ่อยจนงานค้าง) · ผู้รับหลักอยู่กองอื่น → ย้าย `complaint.department` เข้ากองผู้รับ (`roles.js#departmentAfterClaim`) + timeline note + audit `complaint_department_set` + คืน `movedFrom` ให้ปุ่มเลิกทำ · รับผิด → "ขอโอนงาน" แจ้ง superadmin + หัวหน้ากอง (`digest.js#transferRequestRecipients`) · มอบหมายให้คนอื่น → หัวหน้ากอง/superadmin · เรื่องที่มี assignment เปิดค้าง → 409 กันรับซ้ำ · ตั้ง `dueDate`/`stage`/timeline `created` |
 | `POST /api/complaints/assignments/transfer` | `{ assignmentId, toUserId, reason }` โอนงาน — เจ้าของงาน/superadmin, เหตุผลบังคับ, ปลายทางต้องเป็น user ของแอปนี้ที่ยังไม่ archive → เปลี่ยน `userId` + timeline `transfer` + audit `complaint_reassigned` |
@@ -89,6 +89,8 @@
 | `timeline.js` | หน้าจอ 3: `buildTimeline` (รับเรื่อง → มอบหมาย → รายการ timeline → ปิดเรื่อง → รายการรออยู่; เรียงเชิงตรรกะก่อนเวลา เพราะข้อมูลเก่า completedAt เป็นวันที่ล้วน), `closeChecklist`, `stageChangePlan`, `blockedUpdate` |
 | `workTypeChange.js` | เปลี่ยนชนิดงาน: `workTypeChange` (ตรวจ key, ชนิดเดิม = ไม่ผ่าน, วันครบกำหนดใหม่ผ่าน `dueDateFor`, `suggestedDepartment`), `workTypeOptionsFor` (SLA ต่อตัวเลือกรวมค่าตั้ง), `workTypeSourceOf` (manual/auto) |
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
+| `businessDays.js` | วันทำการ (จ.–ศ. ไม่รวมวันหยุด, เวลาไทย, ไม่ขึ้นกับ TZ เครื่อง): `isBusinessDay`, `addBusinessDays` (เส้นตาย = สิ้นวันไทย), `businessDaysBetween`, `businessDaysToDue`, `toHolidaySet` |
+| `holidays.js` | `FIXED_THAI_HOLIDAYS` + `fixedHolidaysForBeYear(พ.ศ.)` (เฉพาะวันที่ตายตัว) · `normalizeHolidays` · `mergeHolidays` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
 | `types.ts` | TypeScript types ของผลลัพธ์ทั้งหมด |
 
@@ -107,18 +109,32 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 มือถือ (ข้อ 8): `MobileTaskNav` (bottom nav 5 ช่อง + FAB, แสดง < md) · `QuickTaskSheet` (bottom sheet งานด่วน 5 เรื่อง → หน้าจอ 3) · `PoolCard variant="mobile"` (ปุ่ม "รับงานนี้" + แผนที่ + ระยะทาง) · `AlertCards` มีการ์ด "ต้องจัดการวันนี้" 2×2 · `OfficerHeaderCard` ย่อ
 
 สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง) — ใช้ที่หน้า **`/admin/superadmin/department-heads`** (การบริหารระบบ · `SUPERADMIN_ONLY_PAGES`)
+· `TaskSettingsPanel` (วันหยุดราชการ + กำหนดปิดตามชนิดงาน) — ใช้ที่หน้า **`/admin/superadmin/task-settings`**
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
 
-- **นับ "วัน" ตามปฏิทินไทย** (`calendarDaysBetween`) — เส้นตาย = สิ้นวันไทยของวันครบกำหนด (ครบ 10:00 ตอนนี้ 12:00 ยัง "ครบกำหนดวันนี้")
+- **กำหนดปิดเรื่องนับ "วันทำการ"** (ตัดสินโดยเจ้าของระบบ 11/11/69 · `lib/tasks/businessDays.js`, `SLA_COUNT_MODE = "business"` ตายตัว ไม่มีให้ตั้ง)
+  = จันทร์–ศุกร์ ไม่รวมวันหยุดราชการใน `task_settings.holidays` ตามเวลาไทย · **วันแจ้งไม่นับ** · แจ้งเสาร์/อาทิตย์/วันหยุด → วันทำการถัดไปคือวันที่ 1
+  (แจ้งศุกร์ SLA 3 → จ. อ. พ. → ครบสิ้นวันพุธ) · `dueDate` ที่คำนวณใหม่ = 23:59:59.999 ไทยของวันครบกำหนด (`addBusinessDays`)
+  · `daysToDue` / `overdueDays` / `isDueSoon` (`warnBeforeDays` = วันทำการ) / `isUrgent` นับวันทำการ (`businessDaysToDue`) — เลยวันครบกำหนดแล้วติดลบ **อย่างน้อย 1**
+    (ครบศุกร์ ตอนนี้เสาร์ = เกิน 1 วันทำการ) · `completedLate` = วันไทยที่เสร็จ > วันครบกำหนด · ป้าย/การ์ดเขียน "N วันทำการ" · การ์ด "ครบกำหนดสัปดาห์นี้" = ≤ 5 วันทำการ
+  · เส้นตาย = สิ้นวันไทย — ค่าเก่าที่บันทึกเป็นเวลากลางวันก็ตัดสินด้วยวันไทย (ครบ 10:00 ตอนนี้ 12:00 ยัง "ครบกำหนดวันนี้")
+  · ช่วงพัก SLA ยังบวกเป็น ms ตรง ๆ (เรียบง่าย — เส้นตายที่เลื่อนแล้วตกวันหยุดได้)
+  · **เกณฑ์ "กดรับเรื่องภายใน 24 ชม." ยังเป็นนาฬิกาจริง** (ไม่ข้ามเสาร์อาทิตย์/วันหยุด — ตั้งใจให้รับเร็ว) · วันอื่นที่แสดง (ค้าง N วัน, รอตอบกลับ N วัน, ไม่อัปเดต N วัน) ยังเป็นวันตามปฏิทินไทย (`calendarDaysBetween`)
   ส่วน `daysAssigned`/`resolutionDays` ยัง floor(ms) ตามความหมายเดิม
+- **วันหยุดราชการ** ตั้งที่ **`/admin/superadmin/task-settings`** (superadmin · `SUPERADMIN_ONLY_PAGES` · เมนู "วันหยุด/กำหนดปิดงาน" + ปุ่มในหน้าการบริหารระบบ)
+  → `PUT /api/tasks/settings { holidays: [{ date: 'YYYY-MM-DD', name }] }` (แทนทั้งรายการ, normalize ตรวจวันที่/ตัดซ้ำ/เรียง — `lib/tasks/holidays.js#normalizeHolidays`)
+  · ปุ่ม "เติมวันหยุดที่วันที่ตายตัวของปี พ.ศ. …" เติม 14 วันใน `FIXED_THAI_HOLIDAYS` (1 ม.ค. · 6 เม.ย. · 13–15 เม.ย. · 4 พ.ค. · 3 มิ.ย. · 28 ก.ค. · 12 ส.ค. · 13 ต.ค. · 23 ต.ค. · 5 ธ.ค. · 10 ธ.ค. · 31 ธ.ค.) ไม่ทับชื่อที่ตั้งเอง
+  · **วันหยุดทางจันทรคติ (มาฆบูชา วิสาขบูชา อาสาฬหบูชา เข้าพรรษา) วันหยุดชดเชย และวันหยุดพิเศษตาม ครม. ต้องเพิ่มเองทุกปี**
+  · หน้าเดียวกันแก้ "กำหนดปิดตามชนิดงาน" ได้ (งานทั่วไป → `defaultSlaDays` · ชนิดอื่น → `slaByWorkType` เฉพาะที่ต่างจากทะเบียน) พร้อมตัวอย่างวันครบกำหนดถ้าแจ้งวันนี้
+  · เพิ่ม/ลบวันหยุดไม่เลื่อน `Assignment.dueDate` ที่บันทึกแล้ว — ต้องรันสคริปต์ recompute (ด้านล่าง)
 - **SLA นับจากวันที่ประชาชนแจ้ง** (`complaint.createdAt`) ไม่ใช่วันรับงาน — เรื่องที่ค้างในกองรอรับนานจึงมาถึงพร้อมเวลาที่เหลือน้อย (ตั้งใจ)
 - **มติประชุม 10/11/69 — SLA ตามชนิดงาน + รับเรื่องภายใน 24 ชม.** ทะเบียนชนิดงานอยู่ `lib/tasks/workTypes.js` (ตรวจจาก `complaint.workType` ที่เลือกเอง → ประเภทย่อย → ข้อความ → หมวด)
   · ตัดสิน SLA ที่เดียว `lib/tasks/settings.js#resolveSla` (เรียกผ่าน `derived.js#dueDateFor` — ส่ง complaint ที่มี `problems detail workType category` เสมอ)
   · ลำดับ: `slaByWorkType` → (เฉพาะงานทั่วไป) `slaByCategory` → `defaultSlaDays` · ชนิดงานอื่นใช้ค่าทะเบียน · ทิศ import: settings → workTypes เท่านั้น
 
-  | ชนิดงาน (`workType`) | SLA |
+  | ชนิดงาน (`workType`) | SLA (วันทำการ) |
   |---|---|
   | ปะถนน (`road_patch`) · ดูดโคลน/ลอกท่อ (`drain_sludge`) | 30 วัน |
   | ฝาท่อเหล็ก/ปูน (`manhole_steel`/`manhole_concrete`) · กิ่งไม้/ต้นไม้ (`tree`) · ตัดหญ้า (`grass`) · เหตุรำคาญ (`nuisance`) | 15 วัน |
@@ -131,13 +147,13 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
     (ป้าย KpiStrip เขียน "รับเรื่องภายใน 24 ชม." ตามค่า default) · **เวลารับนับจากวันที่ประชาชนแจ้งเสมอ** — เรื่องที่ถูก "คืนงาน" แล้วมีคนรับใหม่
     ก็นับจากวันแจ้งเดิม ไม่ใช่จากตอนคืน (ตั้งใจ: เป็นคำมั่นต่อประชาชน) · การโอนงานไม่เปลี่ยน `assignedAt`
   · `Assignment.dueDate` ถูกบันทึกตอนกดรับ → เปลี่ยนกติกาแล้วงานเปิดเดิมไม่เปลี่ยนเอง ต้องรัน
-    `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run — บอกค่าตั้งที่ใช้, จำนวนสั้นลง/เลื่อนออก, จำนวนที่จะเกินกำหนดทันที)
+    `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run — บอกค่าตั้งที่ใช้ (รวมจำนวนวันหยุด), จำนวนสั้นลง/เลื่อนออก, จำนวนที่จะเกินกำหนดทันที)
     แล้วค่อยใส่ `--yes` เพื่อเขียนจริง · `--only-extend` = เฉพาะรายการที่วันครบกำหนดเลื่อนออก (ยังต้องมี `--yes` ถึงจะเขียน)
 - **เปลี่ยนชนิดงาน (`work_type`)** — ประชาชนเลือกหมวดผิดบ่อย และชนิดงานตามมติประชุม (ฝาท่อเหล็ก/ปูน, ตัดหญ้า, ดูดโคลน) ไม่มีในฟอร์มสาธารณะ
   คนหน้างานจึงเลือกชนิดจริงที่หน้า `/admin/my-tasks/[assignmentId]` (แถว "ชนิดงาน" + ปุ่ม "เปลี่ยนชนิดงาน"; ยังไม่ตั้ง = "(ระบบเดา)")
   · สิทธิ์: เจ้าของงาน / หัวหน้ากองของเรื่อง (`taskPermissions().canTransfer`) / superadmin · งานปิดแล้วเปลี่ยนไม่ได้ · ชนิดเดิม = 400 "ชนิดงานเดิม"
-  · ผล: `complaint.workType` + `Assignment.dueDate` = วันแจ้ง + SLA ของชนิดใหม่ (ค่าฐานไม่รวมช่วงพัก — พักยังบวกตอนอ่าน) ทั้งงานนี้และงานเปิดอื่นของเรื่องเดียวกัน
-    + timeline note `เปลี่ยนชนิดงานเป็น "…" (กำหนดปิด N วันนับจากวันแจ้ง)` + audit `complaint_work_type_set`
+  · ผล: `complaint.workType` + `Assignment.dueDate` = วันแจ้ง + SLA (วันทำการ) ของชนิดใหม่ (ค่าฐานไม่รวมช่วงพัก — พักยังบวกตอนอ่าน) ทั้งงานนี้และงานเปิดอื่นของเรื่องเดียวกัน
+    + timeline note `เปลี่ยนชนิดงานเป็น "…" (กำหนดปิด N วันทำการนับจากวันแจ้ง)` + audit `complaint_work_type_set`
   · **ไม่ย้ายกองให้** — ถ้ากองปกติของชนิดนั้นไม่ใช่กองของเรื่อง คืน `suggestedDepartment` แล้ว UI แนะนำให้กด "ขอโอนงาน"/"โอนงาน" เอง
   · ป้ายชนิดงาน (ยกเว้นงานทั่วไป) แสดงบน `PoolCard` และ `TaskRow` จาก `workTypeLabel` ที่ derive ให้แล้ว
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนด้วย `slaPausedMs` + ช่วงที่ยังพัก

@@ -31,6 +31,7 @@ export type { CoordinationSetPayload } from './CoordinationSetModal';
 export { CloseTaskModal } from './CloseTaskModal';
 export type { ClosePayload } from './CloseTaskModal';
 export { HeadsPanel } from './HeadsPanel';
+export { TaskSettingsPanel } from './TaskSettingsPanel';
 export { MobileTaskNav } from './MobileTaskNav';
 export type { MobileNavKey } from './MobileTaskNav';
 export { QuickTaskSheet } from './QuickTaskSheet';

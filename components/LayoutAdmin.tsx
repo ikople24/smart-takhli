@@ -57,6 +57,8 @@ const navigationItems = [
   { label: 'การบริหารระบบ',   href: '/admin/superadmin',                        icon: '⚙️', group: 'ตั้งค่า' },
   // เปิด/ปิดศูนย์ช่วยเหลือน้ำท่วม — path ใต้ /admin/superadmin จึงโชว์เฉพาะ superadmin (ตัวกรองด้านล่าง)
   { label: 'ศูนย์ช่วยเหลือน้ำท่วม', href: '/admin/superadmin/flood-relief',       icon: '🌊', group: 'ตั้งค่า' },
+  // วันหยุดราชการ + กำหนดปิดเรื่อง (วันทำการ) ของงานเจ้าหน้าที่ — superadmin เท่านั้น (ตัวกรองด้านล่าง)
+  { label: 'วันหยุด/กำหนดปิดงาน', href: '/admin/superadmin/task-settings',      icon: '📆', group: 'ตั้งค่า' },
 ];
 
 const GROUP_ORDER = ['ภาพรวม', 'จัดการ', 'รายงาน', 'ตั้งค่า'];

@@ -233,6 +233,7 @@ export const ALL_PAGES: PagePermission[] = [
 // ✓ line-settings.jsx → /admin/superadmin/line-settings
 // ✓ department-heads.tsx → /admin/superadmin/department-heads (ตั้งค่าหัวหน้ากอง — โมดูลงานเจ้าหน้าที่)
 // ✓ flood-relief.tsx  → /admin/superadmin/flood-relief (เปิด/ปิดศูนย์ช่วยเหลือน้ำท่วม)
+// ✓ task-settings.tsx → /admin/superadmin/task-settings (วันหยุดราชการ + กำหนดปิดเรื่องตามชนิดงาน — โมดูลงานเจ้าหน้าที่)
 export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin',
   '/admin/superadmin/setup',
@@ -240,6 +241,7 @@ export const SUPERADMIN_ONLY_PAGES = [
   '/admin/superadmin/line-settings',
   '/admin/superadmin/department-heads',
   '/admin/superadmin/flood-relief',
+  '/admin/superadmin/task-settings',
 ];
 
 // สิทธิ์เริ่มต้นตาม role — ใช้เมื่อ user ยังไม่มี allowedPages ใน Mongo (= ยังไม่ถูกตั้งค่า)
