@@ -1,7 +1,7 @@
 // components/tasks/GrassScheduleCard.tsx
 // การ์ด "ตารางคิวตัดหญ้า" ในหน้ารายละเอียดงาน — แสดงเฉพาะงานชนิด 'grass' (lib/tasks/grassSchedule.js)
 // ไฟล์กลางไฟล์เดียว อัปโหลดโดย superadmin ที่ /admin/superadmin/task-settings · ประชาชนเห็นลิงก์เดียวกันที่หน้า /status
-// ปุ่ม "แจ้งผู้แจ้งว่าอยู่ในคิว" = บันทึกความคืบหน้า (PATCH action 'progress') ด้วยข้อความ GRASS_QUEUE_NOTE
+// ปุ่ม "บันทึกว่าอยู่ในคิวตัดหญ้า" = บันทึกความคืบหน้า (PATCH action 'progress') ด้วยข้อความ GRASS_QUEUE_NOTE
 import React from 'react';
 import { CalendarDaysIcon } from '@heroicons/react/24/outline';
 import type { GrassSchedule } from '@/lib/tasks/types';
@@ -41,7 +41,7 @@ export function GrassScheduleCard({ schedule, onNotifyQueued, submitting }: Gras
               onClick={onNotifyQueued}
               className="mt-2.5 w-full rounded-[11px] bg-tk-primary-tint px-3 py-2 text-[12.5px] font-semibold text-tk-primary transition hover:bg-tk-primary-tint-2 disabled:opacity-60"
             >
-              {submitting ? 'กำลังบันทึก…' : 'แจ้งผู้แจ้งว่าอยู่ในคิว'}
+              {submitting ? 'กำลังบันทึก…' : 'บันทึกว่าอยู่ในคิวตัดหญ้า'}
             </button>
           )}
           <p className="mt-1.5 text-[11px] text-tk-ink-6">ผู้แจ้งเห็นลิงก์ตารางนี้ที่หน้าติดตามสถานะจนกว่าจะปิดเรื่อง</p>

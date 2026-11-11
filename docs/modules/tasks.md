@@ -190,7 +190,7 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   · อัปโหลด/ลบที่ `/admin/superadmin/task-settings` ส่วน "ตารางคิวตัดหญ้า" (บันทึกแยกจากวันหยุด/กำหนดปิด) → `PUT /api/tasks/settings { grassSchedule: { url, fileName } }` (url '' = ลบ)
     · อัปโหลดตรงเข้า Cloudinary ด้วย unsigned preset เดิม: **รูป → `image/upload` (ไม่ย่อ — ต้องอ่านตัวหนังสือออก)** · **PDF → `raw/upload`** (บัญชี Cloudinary ที่ไม่เปิด "Allow delivery of PDF and ZIP files" เปิด PDF แบบ image ไม่ได้ — raw เปิดได้) · ไม่เกิน 10 MB
     · ⚠️ ถ้า preset จำกัดชนิดไฟล์/resource type ไว้ อัปโหลด PDF จะได้ error จาก Cloudinary — แก้ที่ตั้งค่า preset · ลบตารางไม่ลบไฟล์บน Cloudinary (cloud แชร์กับแอปพี่น้อง ห้าม sweep)
-  · `GET /api/tasks/[assignmentId]` คืน `grassSchedule` (มีไฟล์ + งานชนิด `grass`) หรือ `null` → การ์ด `GrassScheduleCard` ในคอลัมน์ขวา (เฉพาะงาน `grass`): ลิงก์เปิดแท็บใหม่ + ปุ่ม "แจ้งผู้แจ้งว่าอยู่ในคิว"
+  · `GET /api/tasks/[assignmentId]` คืน `grassSchedule` (มีไฟล์ + งานชนิด `grass`) หรือ `null` → การ์ด `GrassScheduleCard` ในคอลัมน์ขวา (เฉพาะงาน `grass`): ลิงก์เปิดแท็บใหม่ + ปุ่ม "บันทึกว่าอยู่ในคิวตัดหญ้า"
     = PATCH `progress` ตัวเดิม note `GRASS_QUEUE_NOTE` ("อยู่ในคิวตัดหญ้าตามตาราง — ดูตารางคิวได้ที่หน้าติดตามสถานะ") — ลงไทม์ไลน์เท่านั้น **ไม่ส่ง LINE** (กติกาความคืบหน้าธรรมดา) · ยังไม่มีไฟล์ = ข้อความให้ superadmin อัปโหลด
   · หน้า `/status` (โมดูลร้องเรียน): `GET /api/complaints` เติม **ฟิลด์ derived เดียว `grassScheduleUrl`** ให้เรื่อง `grass` ที่ยังไม่ปิด (คำนวณจากเอกสารหลัง sanitize · อ่าน settings เฉพาะเมื่อมีเรื่องเข้าเงื่อนไข · ไม่ขยาย projection)
     → ลิงก์ "ดูตารางคิวตัดหญ้า" บน `ComplaintCard` (span + `window.open` เพราะการ์ดเป็น `<a>`) และการ์ดในหน้า `/status/[id]` · ไม่ส่ง timeline/บันทึกภายในออกไป
