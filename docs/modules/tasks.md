@@ -91,6 +91,7 @@
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
 | `businessDays.js` | วันทำการ (จ.–ศ. ไม่รวมวันหยุด, เวลาไทย, ไม่ขึ้นกับ TZ เครื่อง): `isBusinessDay`, `addBusinessDays` (เส้นตาย = สิ้นวันไทย), `businessDaysBetween`, `businessDaysToDue`, `toHolidaySet` |
 | `holidays.js` | `FIXED_THAI_HOLIDAYS` + `fixedHolidaysForBeYear(พ.ศ.)` (เฉพาะวันที่ตายตัว) · `normalizeHolidays` · `mergeHolidays` |
+| `grassSchedule.js` | ตารางคิวตัดหญ้า: `normalizeGrassSchedule` (https เท่านั้น) · `grassSchedulePatch` (ประทับ `updatedAt` ฝั่ง server) · `grassScheduleFor(complaint, settings)` · `GRASS_QUEUE_NOTE` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
 | `types.ts` | TypeScript types ของผลลัพธ์ทั้งหมด |
 
@@ -104,12 +105,12 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 
 หน้าจอ 2 (ข้อ 6): `AssignTaskModal` (เจ้าหน้าที่ในกองก่อน เรียงงานน้อย→มาก จาก `workload`) · `DepartmentPickerModal`
 
-หน้าจอ 3 (ข้อ 7): `TaskTimeline` · `BlockedCard` · `CoordinationSetModal` · `CloseTaskModal` (ใช้ `ImageUploads` เดิม + `closeChecklist`)
+หน้าจอ 3 (ข้อ 7): `TaskTimeline` · `BlockedCard` · `GrassScheduleCard` (เฉพาะงาน `grass`) · `CoordinationSetModal` · `CloseTaskModal` (ใช้ `ImageUploads` เดิม + `closeChecklist`)
 
 มือถือ (ข้อ 8): `MobileTaskNav` (bottom nav 5 ช่อง + FAB, แสดง < md) · `QuickTaskSheet` (bottom sheet งานด่วน 5 เรื่อง → หน้าจอ 3) · `PoolCard variant="mobile"` (ปุ่ม "รับงานนี้" + แผนที่ + ระยะทาง) · `AlertCards` มีการ์ด "ต้องจัดการวันนี้" 2×2 · `OfficerHeaderCard` ย่อ
 
 สิทธิ์ (เฟส 5): `TransferTaskModal` มี `mode: transfer | request` · `HeadsPanel` (superadmin ติ๊กหัวหน้ากอง) — ใช้ที่หน้า **`/admin/superadmin/department-heads`** (การบริหารระบบ · `SUPERADMIN_ONLY_PAGES`)
-· `TaskSettingsPanel` (วันหยุดราชการ + กำหนดปิดตามชนิดงาน) — ใช้ที่หน้า **`/admin/superadmin/task-settings`**
+· `TaskSettingsPanel` (วันหยุดราชการ + กำหนดปิดตามชนิดงาน + ตารางคิวตัดหญ้า) — ใช้ที่หน้า **`/admin/superadmin/task-settings`**
 — ทั้งหมดรับข้อมูลที่ API derive แล้ว **ไม่คำนวณเอง**
 
 ## กติกาที่ต้องรู้
@@ -184,6 +185,15 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
     · `kpi.blocked` = พักทั้งหมด · `kpi.siteIssue` = ในนั้นที่เป็นปัญหาหน้างาน · มือถือซ่อนปุ่มเร็ว "รอวัสดุ / งบ" ระหว่างพักแบบนี้
   · GET รายละเอียดคืน `siteIssueReasons`, `canReportSiteIssue` (canEdit + ยังไม่ปิด + ยังไม่พัก), `canResume`, `assignment.blocked.kind/siteIssueCode/images`
     · UI: การ์ด `SiteIssueCard` (ฟอร์ม inline เหตุผล/รายละเอียด/ภาพ) · พักอยู่ → แถบ "พักงาน — พบปัญหาหน้างาน: …" + ภาพ + ปุ่ม "ดำเนินการต่อ" บน header card และซ่อนการ์ดรอวัสดุ
+- **ตารางคิวตัดหญ้า (มติประชุม — เรื่องตัดหญ้า)** เจ้าของตัดสินใจ: **ไฟล์กลางไฟล์เดียว** (รูปหรือ PDF) อัปโหลดครั้งเดียว แนบให้งานชนิด `grass` และประชาชนเห็นที่ `/status`
+  · เก็บที่ `task_settings.grassSchedule { url, fileName, updatedAt }` — logic `lib/tasks/grassSchedule.js` (`normalizeGrassSchedule` รับ **https เท่านั้น** ไม่งั้นค่าว่างทั้งชุด · `grassSchedulePatch` ประทับ `updatedAt` ฝั่ง server · `grassScheduleFor(complaint, settings)` = url เฉพาะชนิด `grass` ที่ยังไม่ปิด)
+  · อัปโหลด/ลบที่ `/admin/superadmin/task-settings` ส่วน "ตารางคิวตัดหญ้า" (บันทึกแยกจากวันหยุด/กำหนดปิด) → `PUT /api/tasks/settings { grassSchedule: { url, fileName } }` (url '' = ลบ)
+    · อัปโหลดตรงเข้า Cloudinary ด้วย unsigned preset เดิม: **รูป → `image/upload` (ไม่ย่อ — ต้องอ่านตัวหนังสือออก)** · **PDF → `raw/upload`** (บัญชี Cloudinary ที่ไม่เปิด "Allow delivery of PDF and ZIP files" เปิด PDF แบบ image ไม่ได้ — raw เปิดได้) · ไม่เกิน 10 MB
+    · ⚠️ ถ้า preset จำกัดชนิดไฟล์/resource type ไว้ อัปโหลด PDF จะได้ error จาก Cloudinary — แก้ที่ตั้งค่า preset · ลบตารางไม่ลบไฟล์บน Cloudinary (cloud แชร์กับแอปพี่น้อง ห้าม sweep)
+  · `GET /api/tasks/[assignmentId]` คืน `grassSchedule` (มีไฟล์ + งานชนิด `grass`) หรือ `null` → การ์ด `GrassScheduleCard` ในคอลัมน์ขวา (เฉพาะงาน `grass`): ลิงก์เปิดแท็บใหม่ + ปุ่ม "แจ้งผู้แจ้งว่าอยู่ในคิว"
+    = PATCH `progress` ตัวเดิม note `GRASS_QUEUE_NOTE` ("อยู่ในคิวตัดหญ้าตามตาราง — ดูตารางคิวได้ที่หน้าติดตามสถานะ") — ลงไทม์ไลน์เท่านั้น **ไม่ส่ง LINE** (กติกาความคืบหน้าธรรมดา) · ยังไม่มีไฟล์ = ข้อความให้ superadmin อัปโหลด
+  · หน้า `/status` (โมดูลร้องเรียน): `GET /api/complaints` เติม **ฟิลด์ derived เดียว `grassScheduleUrl`** ให้เรื่อง `grass` ที่ยังไม่ปิด (คำนวณจากเอกสารหลัง sanitize · อ่าน settings เฉพาะเมื่อมีเรื่องเข้าเงื่อนไข · ไม่ขยาย projection)
+    → ลิงก์ "ดูตารางคิวตัดหญ้า" บน `ComplaintCard` (span + `window.open` เพราะการ์ดเป็น `<a>`) และการ์ดในหน้า `/status/[id]` · ไม่ส่ง timeline/บันทึกภายในออกไป
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนเป็นวันทำการด้วย `slaPausedBusinessDays` + ช่วงที่ยังพัก (ดูกติกาวันทำการด้านบน)
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg

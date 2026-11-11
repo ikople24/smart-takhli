@@ -42,6 +42,16 @@ export interface TaskSettings {
   slaByWorkType: Array<{ workType: string; slaDays: number }>;
   /** วันหยุดราชการ (ไม่นับเป็นวันทำการของกำหนดปิดเรื่อง) — เรียงตามวันที่ ไม่ซ้ำ */
   holidays: TaskHoliday[];
+  /** ตารางคิวตัดหญ้า (ไฟล์กลาง) — url '' = ยังไม่มี (lib/tasks/grassSchedule.js) */
+  grassSchedule: GrassSchedule;
+}
+
+export interface GrassSchedule {
+  /** https url (Cloudinary รูป/PDF) หรือ '' */
+  url: string;
+  fileName: string;
+  /** ISO — เวลาอัปโหลดล่าสุด (ประทับฝั่ง server) */
+  updatedAt: string | null;
 }
 
 export interface TaskHoliday {
@@ -401,6 +411,8 @@ export interface TaskDetailResponse {
   workTypeSource: 'manual' | 'auto';
   /** ตัวเลือกชนิดงาน + SLA ที่ใช้กับเรื่องนี้จริง (รวมค่าตั้ง) — lib/tasks/workTypeChange.js#workTypeOptionsFor */
   workTypeOptions: WorkTypeOption[];
+  /** ตารางคิวตัดหญ้า — เฉพาะงานชนิด 'grass' ที่มีไฟล์อัปโหลดไว้ (null = ไม่ใช่งานตัดหญ้า หรือยังไม่มีตาราง) */
+  grassSchedule: GrassSchedule | null;
   /** เหตุผลมาตรฐานของ "แจ้งปัญหาหน้างาน" (lib/tasks/siteIssue.js#SITE_ISSUE_REASONS) */
   siteIssueReasons: SiteIssueReason[];
   /** แจ้งปัญหาหน้างานได้ (เจ้าของ/superadmin · งานยังไม่ปิด · ยังไม่ได้พักงาน) */

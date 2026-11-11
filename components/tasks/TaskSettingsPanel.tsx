@@ -1,13 +1,13 @@
 // components/tasks/TaskSettingsPanel.tsx
-// หน้าตั้งค่างานเจ้าหน้าที่ (superadmin) — วันหยุดราชการ + กำหนดปิดเรื่องตามชนิดงาน (วันทำการ)
+// หน้าตั้งค่างานเจ้าหน้าที่ (superadmin) — วันหยุดราชการ + กำหนดปิดเรื่องตามชนิดงาน (วันทำการ) + ตารางคิวตัดหญ้า
 // ใช้ที่หน้า /admin/superadmin/task-settings → GET/PUT /api/tasks/settings (PUT = superadmin เท่านั้น ฝั่ง server)
 // กำหนดปิดนับวันทำการ จ.–ศ. ไม่รวมวันหยุดในรายการนี้ (lib/tasks/businessDays.js) · เกณฑ์รับเรื่อง 24 ชม. ไม่สนวันหยุด
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
 import Swal from 'sweetalert2';
-import { CalendarDaysIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
-import type { TaskHoliday, TaskSettings } from '@/lib/tasks/types';
+import { CalendarDaysIcon, ClockIcon, DocumentArrowUpIcon, TrashIcon } from '@heroicons/react/24/outline';
+import type { GrassSchedule, TaskHoliday, TaskSettings } from '@/lib/tasks/types';
 import { WORK_TYPES } from '@/lib/tasks/workTypes';
 import { DEFAULT_TASK_SETTINGS } from '@/lib/tasks/settings';
 import { fixedHolidaysForBeYear, mergeHolidays, normalizeHolidays } from '@/lib/tasks/holidays';
@@ -21,6 +21,27 @@ const THAI_WEEKDAYS = ['อาทิตย์', 'จันทร์', 'อัง
 const weekdayOf = (dateKey: string) => THAI_WEEKDAYS[new Date(`${dateKey}T00:00:00Z`).getUTCDay()];
 const isWeekend = (dateKey: string) => [0, 6].includes(new Date(`${dateKey}T00:00:00Z`).getUTCDay());
 const beYearOf = (dateKey: string) => Number(dateKey.slice(0, 4)) + 543;
+const MAX_SCHEDULE_BYTES = 10 * 1024 * 1024; // เพดานไฟล์ของ Cloudinary แผนฟรี
+
+/**
+ * อัปโหลดไฟล์ตารางคิวตัดหญ้าเข้า Cloudinary (unsigned preset ตัวเดียวกับทั้งระบบ)
+ * — รูป → image/upload (ไม่ย่อ: ตารางต้องอ่านตัวหนังสือออก ต่างจาก utils/uploadToCloudinary ที่ย่อเหลือ 1024px)
+ * — PDF → raw/upload (เปิดดูในเบราว์เซอร์ได้ตรง ๆ · PDF แบบ image ถูกบล็อกการเปิดถ้าบัญชีไม่เปิด "Allow delivery of PDF")
+ */
+async function uploadScheduleFile(file: File): Promise<string> {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '');
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/${isPdf ? 'raw' : 'image'}/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || typeof data?.secure_url !== 'string') throw new Error(data?.error?.message || 'อัปโหลดไฟล์ไม่สำเร็จ');
+  return data.secure_url;
+}
+
 const errorText = (err: unknown) => (axios.isAxiosError(err) ? (err.response?.data?.error as string | undefined) : undefined);
 
 function Section({ icon, title, caption, children }: { icon: React.ReactNode; title: string; caption?: React.ReactNode; children: React.ReactNode }) {
@@ -42,7 +63,7 @@ export function TaskSettingsPanel() {
   const [settings, setSettings] = useState<TaskSettings | null>(null);
   const [holidays, setHolidays] = useState<TaskHoliday[]>([]);
   const [slaInput, setSlaInput] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState<'holidays' | 'sla' | null>(null);
+  const [busy, setBusy] = useState<'holidays' | 'sla' | 'grass' | null>(null);
   const todayKey = bangkokDateKey(new Date()) ?? '2026-01-01';
   const [year, setYear] = useState<number>(beYearOf(todayKey));
   const [newDate, setNewDate] = useState('');
@@ -135,6 +156,60 @@ export function TaskSettingsPanel() {
       Swal.fire({ icon: 'success', title: 'บันทึกกำหนดปิดแล้ว', text: 'มีผลกับงานที่รับใหม่ — งานเปิดเดิมต้องรันสคริปต์ recompute', timer: 2500, showConfirmButton: false });
     } catch (err) {
       Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: errorText(err) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /* ── ตารางคิวตัดหญ้า — บันทึกทันทีหลังอัปโหลด/ลบ (ส่งเฉพาะ grassSchedule ไม่แตะส่วนอื่นที่ยังไม่บันทึก) ── */
+  const putGrassSchedule = async (next: Pick<GrassSchedule, 'url' | 'fileName'>) => {
+    const { data } = await axios.put<{ settings: TaskSettings }>('/api/tasks/settings', { grassSchedule: next });
+    // อัปเดตเฉพาะ grassSchedule ใน state — วันหยุด/SLA ที่ยังไม่บันทึกยังอยู่ (dirty เทียบกับ settings ส่วนของตัวเอง)
+    setSettings((s) => (s ? { ...s, grassSchedule: data.settings.grassSchedule } : data.settings));
+  };
+
+  const uploadGrassSchedule = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const okType = file.type.startsWith('image/') || file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (!okType) {
+      Swal.fire({ icon: 'warning', title: 'รองรับเฉพาะรูปภาพหรือ PDF' });
+      return;
+    }
+    if (file.size > MAX_SCHEDULE_BYTES) {
+      Swal.fire({ icon: 'warning', title: 'ไฟล์ใหญ่เกิน 10 MB', text: 'ลดขนาดไฟล์ก่อนอัปโหลด' });
+      return;
+    }
+    setBusy('grass');
+    try {
+      const url = await uploadScheduleFile(file);
+      await putGrassSchedule({ url, fileName: file.name });
+      Swal.fire({ icon: 'success', title: 'อัปโหลดตารางคิวแล้ว', text: 'เรื่องตัดหญ้าที่ยังไม่ปิดแสดงตารางนี้ทันที', timer: 2200, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'อัปโหลดไม่สำเร็จ', text: errorText(err) ?? (err instanceof Error ? err.message : undefined) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeGrassSchedule = async () => {
+    const { isConfirmed } = await Swal.fire({
+      icon: 'warning',
+      title: 'ลบตารางคิวตัดหญ้า?',
+      text: 'เจ้าหน้าที่และประชาชนจะไม่เห็นตารางนี้อีก (ไฟล์บน Cloudinary ไม่ถูกลบ)',
+      showCancelButton: true,
+      confirmButtonText: 'ลบ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#DC2626',
+    });
+    if (!isConfirmed) return;
+    setBusy('grass');
+    try {
+      await putGrassSchedule({ url: '', fileName: '' });
+      Swal.fire({ icon: 'success', title: 'ลบตารางคิวแล้ว', timer: 1800, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire({ icon: 'error', title: 'ลบไม่สำเร็จ', text: errorText(err) });
     } finally {
       setBusy(null);
     }
@@ -274,6 +349,45 @@ export function TaskSettingsPanel() {
           <button type="button" disabled={!slaDirty || slaInvalid || busy !== null} onClick={saveSla} className={clsx(BTN, 'bg-tk-primary text-white hover:bg-tk-primary-dark')}>
             {busy === 'sla' ? 'กำลังบันทึก…' : 'บันทึกกำหนดปิด'}
           </button>
+        </div>
+      </Section>
+
+      <Section
+        icon={<DocumentArrowUpIcon className="h-4 w-4" strokeWidth={2} />}
+        title="ตารางคิวตัดหญ้า"
+        caption="ใช้แนบให้เรื่องตัดหญ้า และแสดงให้ประชาชนเห็นในหน้าติดตามสถานะ (เฉพาะเรื่องที่ยังไม่ปิด)"
+      >
+        {settings.grassSchedule?.url ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-tk-bg px-3 py-2">
+            <a
+              href={settings.grassSchedule.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-w-0 flex-1 truncate text-[13px] font-semibold text-tk-primary hover:underline"
+            >
+              {settings.grassSchedule.fileName || 'เปิดไฟล์ตารางคิว'} ↗
+            </a>
+            {settings.grassSchedule.updatedAt && (
+              <span className="text-[11.5px] text-tk-ink-5">อัปเดต {formatThaiDate(settings.grassSchedule.updatedAt)}</span>
+            )}
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={removeGrassSchedule}
+              className={clsx(BTN, 'bg-tk-overdue-soft text-tk-overdue-ink hover:opacity-90')}
+            >
+              ลบตาราง
+            </button>
+          </div>
+        ) : (
+          <p className="py-2 text-[12.5px] text-tk-ink-5">ยังไม่มีตารางคิว — เจ้าหน้าที่จะเห็นข้อความให้ติดต่อ superadmin</p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+          <span className="text-[11.5px] text-tk-ink-6">รูปภาพหรือ PDF ไม่เกิน 10 MB · อัปโหลดแล้วบันทึกทันที แทนที่ไฟล์เดิม</span>
+          <label className={clsx(BTN, 'cursor-pointer bg-tk-primary text-white hover:bg-tk-primary-dark', busy !== null && 'pointer-events-none opacity-50')}>
+            {busy === 'grass' ? 'กำลังอัปโหลด…' : settings.grassSchedule?.url ? 'อัปโหลดไฟล์ใหม่' : 'อัปโหลดตารางคิว'}
+            <input type="file" accept="image/*,application/pdf,.pdf" className="hidden" disabled={busy !== null} onChange={uploadGrassSchedule} />
+          </label>
         </div>
       </Section>
     </div>

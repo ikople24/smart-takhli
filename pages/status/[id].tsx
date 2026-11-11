@@ -39,6 +39,8 @@ type Complaint = {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** url ตารางคิวตัดหญ้า — API ใส่ให้เฉพาะเรื่องตัดหญ้าที่ยังไม่ปิด (lib/tasks/grassSchedule.js) */
+  grassScheduleUrl?: string;
 };
 
 type Officer = {
@@ -314,6 +316,24 @@ export default function StatusDetail() {
               )}
 
               <Timeline rows={statusTimeline(complaint, assignment)} />
+
+              {complaint.grassScheduleUrl && (
+                <a
+                  href={complaint.grassScheduleUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#EAF7EE] text-[#1B935A]">
+                    <CalendarDays size={19} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13.5px] font-bold">ดูตารางคิวตัดหญ้า</span>
+                    <span className="block text-[11.5px] text-[#9590A8]">กำหนดการตัดหญ้าของเทศบาล — เรื่องของท่านดำเนินการตามคิวนี้</span>
+                  </span>
+                  <span className="shrink-0 text-[13px] font-semibold text-[#1B935A]">เปิด ↗</span>
+                </a>
+              )}
 
               {(complaint.problems?.length ?? 0) > 0 && (
                 <div className="rounded-[18px] bg-white p-4 shadow-[0_4px_14px_rgba(60,40,100,0.05)]">

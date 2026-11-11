@@ -31,6 +31,17 @@ const HolidaySchema = new mongoose.Schema(
   { _id: false }
 );
 
+const GrassScheduleSchema = new mongoose.Schema(
+  {
+    /** https url ของไฟล์ตารางคิวตัดหญ้า (Cloudinary รูป/PDF) — '' = ยังไม่มี (lib/tasks/grassSchedule.js) */
+    url: { type: String, default: '' },
+    fileName: { type: String, default: '' },
+    /** ประทับฝั่ง server ตอนอัปโหลด/ลบ */
+    updatedAt: { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const TaskSettingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: 'default', unique: true },
@@ -44,6 +55,7 @@ const TaskSettingsSchema = new mongoose.Schema(
     slaByCategory: { type: [SlaByCategorySchema], default: [] },
     slaByWorkType: { type: [SlaByWorkTypeSchema], default: [] },
     holidays: { type: [HolidaySchema], default: [] },
+    grassSchedule: { type: GrassScheduleSchema, default: () => ({}) },
     updatedBy: { type: String, default: '' },
   },
   { timestamps: true, collection: 'task_settings' }

@@ -20,6 +20,7 @@ import ImageUploads from '@/components/ImageUploads';
 import type { OfficerTask, Stage, TaskDetailResponse, WorkTypeChangeResponse } from '@/lib/tasks/types';
 import { formatThaiDate, relativeDaysLabel } from '@/lib/tasks/format';
 import { STAGE_LABELS } from '@/lib/tasks/status';
+import { GRASS_QUEUE_NOTE } from '@/lib/tasks/grassSchedule';
 import {
   AlertBadge,
   StatusStepper,
@@ -32,6 +33,7 @@ import {
   TransferTaskModal,
   SolutionChips,
   SiteIssueCard,
+  GrassScheduleCard,
 } from '@/components/tasks';
 import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload, SiteIssuePayload } from '@/components/tasks';
 
@@ -146,6 +148,13 @@ function TaskDetailContent() {
       setImages([]);
       setUploaderKey((k) => k + 1);
       toast('บันทึกความคืบหน้าแล้ว');
+    }, 'บันทึกไม่สำเร็จ');
+
+  /* ── ตารางคิวตัดหญ้า (งานชนิด 'grass') — บันทึกความคืบหน้าข้อความมาตรฐาน ประชาชนเห็นลิงก์ตารางที่ /status ── */
+  const notifyGrassQueued = () =>
+    run('grass-queue', async () => {
+      await axios.patch(`/api/tasks/${id}`, { action: 'progress', note: GRASS_QUEUE_NOTE });
+      toast('บันทึกแล้ว — ผู้แจ้งดูตารางคิวได้ที่หน้าติดตามสถานะ');
     }, 'บันทึกไม่สำเร็จ');
 
   /* ── stepper ── */
@@ -680,6 +689,13 @@ function TaskDetailContent() {
                 </div>
               )}
               {data.canReportSiteIssue && <SiteIssueCard reasons={data.siteIssueReasons} submitting={busy === 'site-issue'} onSubmit={reportSiteIssue} />}
+              {data.workType === 'grass' && (
+                <GrassScheduleCard
+                  schedule={data.grassSchedule}
+                  submitting={busy === 'grass-queue'}
+                  onNotifyQueued={editable ? notifyGrassQueued : undefined}
+                />
+              )}
 
               {editable && (
                 <>

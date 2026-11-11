@@ -3,12 +3,14 @@
 // PUT  — แก้การตั้งค่า (superadmin เท่านั้น) body รับบางฟิลด์ได้ ฟิลด์ที่ไม่ส่งคงเดิม
 //        { defaultSlaDays, warnBeforeDays, unclaimedWarnHours, unclaimedAlertHours, followUpEveryDays,
 //          slaByCategory: [{ category, slaDays }], slaByWorkType: [{ workType, slaDays }],
-//          holidays: [{ date: 'YYYY-MM-DD', name }] }   ← ส่งมา = แทนทั้งรายการ (normalize: ตรวจวันที่ ตัดซ้ำ เรียง)
+//          holidays: [{ date: 'YYYY-MM-DD', name }],   ← ส่งมา = แทนทั้งรายการ (normalize: ตรวจวันที่ ตัดซ้ำ เรียง)
+//          grassSchedule: { url, fileName } }          ← ตารางคิวตัดหญ้า (url https เท่านั้น · '' = ลบ · updatedAt ประทับที่นี่)
 //        หน้าแก้ไข: /admin/superadmin/task-settings · SLA นับวันทำการ (lib/tasks/businessDays.js)
 //        (unclaimedWarnDays/unclaimedAlertDays ยังรับได้แต่เลิกใช้ตัดสินแล้ว)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTaskSettings, saveTaskSettings } from '@/lib/tasks/loadSettings';
 import { logAuditEvent } from '@/lib/auditLogger';
+import { grassSchedulePatch } from '@/lib/tasks/grassSchedule';
 import { getOfficer, requireSuperAdmin } from './_auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,7 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     const auth = await requireSuperAdmin(req);
     if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.message });
-    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const body = req.body && typeof req.body === 'object' ? { ...req.body } : {};
+    // updatedAt ของตารางคิวตัดหญ้าประทับฝั่ง server เสมอ (ไม่เชื่อค่าจาก client)
+    if ('grassSchedule' in body) body.grassSchedule = grassSchedulePatch(body.grassSchedule);
     try {
       const before = await getTaskSettings();
       const settings = await saveTaskSettings(body, auth.clerkUserId);

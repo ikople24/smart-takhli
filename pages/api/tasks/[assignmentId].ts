@@ -128,6 +128,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         workTypeLabel: derived.workTypeLabel,
         workTypeSource: workTypeSourceOf(c) as 'manual' | 'auto',
         workTypeOptions: workTypeOptionsFor(c ?? {}, settings),
+        // ตารางคิวตัดหญ้า (ไฟล์กลาง) — เฉพาะงานชนิด 'grass' · url ว่าง = ยังไม่อัปโหลด → null
+        grassSchedule: derived.workType === 'grass' && settings.grassSchedule?.url ? settings.grassSchedule : null,
         canRelease: releaseCheck({ assignment: a, isOwner, isSuperAdmin: auth.isSuperAdmin }).ok,
         transferRequest: a.transferRequest?.requestedAt
           ? { requestedAt: iso(a.transferRequest.requestedAt) ?? '', reason: a.transferRequest.reason ?? '', byName: a.transferRequest.byName ?? '' }
