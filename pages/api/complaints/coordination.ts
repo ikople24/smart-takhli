@@ -67,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       detail?: string;
       category?: string;
       community?: string;
+      toObject?: () => Record<string, unknown>;
     } | null;
 
     if (action === 'set') {
@@ -126,7 +127,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // notify_line
     const settings = await getTaskSettings();
-    const derived = deriveAssignment({ assignment: assignment.toObject(), complaint: complaint ?? {}, settings, now });
+    // populate โดยไม่ lean = Mongoose doc — แปลงเป็น object ธรรมดาก่อน ไม่งั้น spread แล้ว problems/detail หาย (ชนิดงานกลายเป็น general)
+    const derived = deriveAssignment({ assignment: assignment.toObject(), complaint: complaint?.toObject?.() ?? complaint ?? {}, settings, now });
     const code = complaint?.complaintId || String(complaint?._id ?? '').slice(-8);
     const title = summarizeText(complaint?.detail, 80) || complaint?.category || '(ไม่ระบุรายละเอียด)';
     const lines = [
