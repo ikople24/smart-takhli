@@ -171,9 +171,9 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
     โผล่เฉพาะเมื่อมีงานเปิดที่ชนิดงานบังคับ · หน้ารายละเอียดมีแถบเตือน + แนบภาพผ่านฟอร์ม "บันทึกการดำเนินงานวันนี้" (PATCH `progress` รับ `images` https สูงสุด 10)
 - **พบปัญหาหน้างาน (มติประชุม 2026-11)** รับงาน → ลงพื้นที่ → พบว่าเทศบาลทำไม่ได้ (เช่น แจ้งกิ่งมะม่วงพาดเสาไฟ แต่ต้นอยู่ในบ้านผู้แจ้ง) → ต้องแจ้งในระบบ
   · เจ้าของตัดสินใจ (owner): **แจ้งหัวหน้า + พัก SLA** แล้วหัวหน้า/superadmin ตัดสินใจต่อ
-  · `PATCH /api/tasks/[assignmentId]` action `site_issue` { reasonCode, note?, images? } — เจ้าของงาน/superadmin · งานปิดแล้วหรือพักอยู่แล้ว (ทั้งสองแบบ) = 400
+  · `PATCH /api/tasks/[assignmentId]` action `site_issue` { reasonCode, note?, images? } — เจ้าของงาน/superadmin · งานปิดแล้ว (`completedAt` หรือ status เรื่องปิดจากหน้า manage-complaints) หรือพักอยู่แล้ว (ทั้งสองแบบ) = 400 · `blocked` { on: true } ก็ปฏิเสธเรื่องที่ status ปิดแล้วเช่นกัน
   · เหตุผลมาตรฐาน `lib/tasks/siteIssue.js#SITE_ISSUE_REASONS` (private_property · not_our_duty · wrong_location · need_owner_consent · other — **ห้ามเปลี่ยน code เดิม**)
-    · `validateSiteIssue`: note ตัด 500 ตัวอักษร (บังคับเมื่อ `other`) · ภาพ https ≤ 5
+    · `validateSiteIssue`: note ตัด 500 ตัวอักษร (บังคับเมื่อ `other`) · ภาพเฉพาะ `https://res.cloudinary.com/` (โดเมน next/image) ≤ 5
   · บันทึก `blocked{ isBlocked: true, kind: 'site_issue', siteIssueCode, reason: "label — note", since }` ด้วย `timeline.js#siteIssueUpdate` — บัญชีพัก SLA ชุดเดียวกับรอวัสดุ
     + timeline `blocked` "พบปัญหาหน้างาน: …" พร้อมภาพ + กระดิ่ง (`priority: high`, `relatedId: site-issue:<id>`) ถึงหัวหน้ากองของเรื่อง + superadmin
     (`digest.js#transferRequestRecipients` ชุดเดียวกับคำขอโอน ไม่รวมคนกด) + audit `assignment_site_issue`

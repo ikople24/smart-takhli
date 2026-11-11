@@ -323,6 +323,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const on = body.on === true || body.on === 'true';
       // กันพักซ้อนทับปัญหาหน้างาน (จะกลายเป็น "รอวัสดุ" แล้วหัวหน้าไม่เห็นการ์ดปัญหาหน้างาน)
       if (on && isSiteIssueBlock) return res.status(400).json({ success: false, error: 'งานนี้พักเพราะพบปัญหาหน้างานอยู่ — กด "ดำเนินการต่อ" ก่อน' });
+      // เรื่องอาจถูกปิดจากหน้า manage-complaints (status) โดย assignment ไม่มี completedAt — ห้ามพักงานที่ปิดแล้ว
+      if (on && isClosedStatus(complaint?.status)) return res.status(400).json({ success: false, error: 'เรื่องนี้ปิดแล้ว' });
       const blockSettings = await getTaskSettings();
       const update = blockedUpdate(assignment.toObject(), {
         holidays: blockSettings.holidays,
@@ -343,6 +345,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (action === 'site_issue') {
+      if (isClosedStatus(complaint?.status)) return res.status(400).json({ success: false, error: 'เรื่องนี้ปิดแล้ว' });
       if (assignment.blocked?.isBlocked) return res.status(400).json({ success: false, error: 'งานนี้พักงานอยู่แล้ว — ดำเนินการต่อก่อนแจ้งปัญหาหน้างาน' });
       const check = validateSiteIssue({ reasonCode: body.reasonCode, note: body.note, images: body.images });
       if (!check.ok) return res.status(400).json({ success: false, error: check.reason });
