@@ -1,5 +1,5 @@
 // pages/api/tasks/my-kpi.ts
-// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked|needs_update&scope=mine|department
+// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked|site_issue|needs_update&scope=mine|department
 // scope=department (หัวหน้ากอง/superadmin เท่านั้น) = งานของทุกคนในกองเดียวกัน — ใช้โอนงาน/ดูภาระงานทั้งกอง
 // งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน (เปิด + เสร็จ) พร้อม derived fields (lib/tasks/derived.js), KPI strip
 // (lib/tasks/kpi.js) และถ้าส่ง groupBy มาจะจัดกลุ่มให้ด้วย (lib/tasks/groupBy.js) — client จะ regroup เองก็ได้
@@ -61,6 +61,8 @@ interface AssignmentLean {
   };
   blocked?: {
     isBlocked?: boolean;
+    kind?: string;
+    siteIssueCode?: string;
     reason?: string;
     itemName?: string;
     purchaseRefNo?: string;
@@ -77,7 +79,7 @@ const iso = (v: unknown): string | null => {
   return d ? d.toISOString() : null;
 };
 
-const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked', 'needs_update'];
+const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked', 'site_issue', 'needs_update'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -173,6 +175,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         blocked: derived.isBlocked && a.blocked
           ? {
               isBlocked: true,
+              kind: a.blocked.kind === 'site_issue' ? 'site_issue' : 'materials',
+              siteIssueCode: a.blocked.siteIssueCode ?? '',
               reason: a.blocked.reason ?? '',
               itemName: a.blocked.itemName ?? '',
               purchaseRefNo: a.blocked.purchaseRefNo ?? '',

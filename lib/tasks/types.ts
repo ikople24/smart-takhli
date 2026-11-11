@@ -3,8 +3,9 @@
 // logic จริงอยู่ในไฟล์ .js ข้าง ๆ (derived / kpi / groupBy / badges) — ไฟล์นี้บรรยายรูปทรงผลลัพธ์เท่านั้น
 
 export type Severity = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'normal' | 'done';
-/** needs_update = ถึงรอบแนบภาพความคืบหน้า (derived.progressDue) — ไม่กระทบ severity */
-export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'needs_update';
+/** needs_update = ถึงรอบแนบภาพความคืบหน้า (derived.progressDue) — ไม่กระทบ severity
+ *  site_issue = พักเพราะพบปัญหาหน้างาน (derived.isSiteIssue) — แทน 'blocked' ของเรื่องนั้น (severity ยังเป็น 'blocked') */
+export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'site_issue' | 'needs_update';
 export type GroupBy = 'category' | 'organization' | 'priority';
 export type Stage = 'received' | 'site_visit' | 'coordinating' | 'awaiting_review' | 'closed';
 export type AssignmentRole = 'assignee' | 'coordinator';
@@ -72,6 +73,10 @@ export interface DerivedAssignment {
   followUpDue: boolean;
   isBlocked: boolean;
   blockedDays: number | null;
+  /** พักเพราะพบปัญหาหน้างาน (blocked.kind === 'site_issue') — lib/tasks/siteIssue.js */
+  isSiteIssue: boolean;
+  /** label ของเหตุผล (SITE_ISSUE_REASONS) — null เมื่อไม่ใช่ปัญหาหน้างาน */
+  siteIssueLabel: string | null;
   lastActivityAt: string | null;
   daysSinceUpdate: number | null;
   /** รอบแนบภาพความคืบหน้า (วันทำการ) ของชนิดงาน — null = ชนิดงานนี้ไม่บังคับ */
@@ -124,6 +129,12 @@ export interface CoordinationInfo {
 
 export interface BlockedInfo {
   isBlocked: boolean;
+  /** materials = รอวัสดุ / งบประมาณ · site_issue = พบปัญหาหน้างาน */
+  kind: 'materials' | 'site_issue';
+  /** code ใน SITE_ISSUE_REASONS (ว่างเมื่อ kind materials) */
+  siteIssueCode: string;
+  /** ภาพหน้างานที่แนบตอนแจ้งปัญหา (จากรายการ timeline 'blocked' ล่าสุด — มีเฉพาะ GET รายละเอียด) */
+  images?: string[];
   reason: string;
   itemName: string;
   purchaseRefNo: string;
@@ -160,6 +171,11 @@ export interface OfficerTask extends DerivedAssignment {
   assignee?: { id: string; name: string } | null;
   /** คำขอโอนงานที่ยังค้าง (รอหัวหน้า) */
   transferRequest?: TransferRequestInfo | null;
+}
+
+export interface SiteIssueReason {
+  code: string;
+  label: string;
 }
 
 export interface TransferRequestInfo {
@@ -380,6 +396,12 @@ export interface TaskDetailResponse {
   workTypeSource: 'manual' | 'auto';
   /** ตัวเลือกชนิดงาน + SLA ที่ใช้กับเรื่องนี้จริง (รวมค่าตั้ง) — lib/tasks/workTypeChange.js#workTypeOptionsFor */
   workTypeOptions: WorkTypeOption[];
+  /** เหตุผลมาตรฐานของ "แจ้งปัญหาหน้างาน" (lib/tasks/siteIssue.js#SITE_ISSUE_REASONS) */
+  siteIssueReasons: SiteIssueReason[];
+  /** แจ้งปัญหาหน้างานได้ (เจ้าของ/superadmin · งานยังไม่ปิด · ยังไม่ได้พักงาน) */
+  canReportSiteIssue: boolean;
+  /** เลิกพักงานได้ — เจ้าของ/superadmin เสมอ · หัวหน้ากองของเรื่องเฉพาะพักเพราะปัญหาหน้างาน */
+  canResume: boolean;
   /** คืนงานเข้ากองงานรอรับได้ (เจ้าของ/superadmin + ยังไม่เริ่มทำ — lib/tasks/release.js) */
   canRelease: boolean;
   transferRequest: TransferRequestInfo | null;

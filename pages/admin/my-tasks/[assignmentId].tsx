@@ -2,7 +2,7 @@
 // หน้าจอ 3 "รายละเอียดงาน + อัปเดตความคืบหน้า" (README) — จุดเดียวที่เจ้าหน้าที่อ่านเรื่อง ดูไทม์ไลน์ บันทึกความคืบหน้า
 // และจัดการการประสานงานภายนอก (แทน ComplaintDetailModal + UpdateAssignmentModal ที่แยกกัน)
 // full-page ไม่มี sidebar (ADMIN_META: noSidebar + fullBleed) — header bar ← กลับ + breadcrumb อยู่ในหน้า
-// ข้อมูลจาก GET /api/tasks/[assignmentId] · การกระทำ: PATCH เดียวกัน (progress/close/blocked), POST coordination, POST transfer
+// ข้อมูลจาก GET /api/tasks/[assignmentId] · การกระทำ: PATCH เดียวกัน (progress/close/blocked/site_issue), POST coordination, POST transfer
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -31,8 +31,9 @@ import {
   CloseTaskModal,
   TransferTaskModal,
   SolutionChips,
+  SiteIssueCard,
 } from '@/components/tasks';
-import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload } from '@/components/tasks';
+import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload, SiteIssuePayload } from '@/components/tasks';
 
 const SmallMap = dynamic(() => import('@/components/SmallMap'), { ssr: false, loading: () => <div className="skeleton h-28 rounded-[11px]" /> });
 
@@ -190,6 +191,30 @@ function TaskDetailContent() {
       await axios.patch(`/api/tasks/${id}`, { action: 'blocked', ...payload });
       toast(payload.on ? 'พักงานแล้ว — หยุดนับ SLA' : 'กลับมาดำเนินการต่อแล้ว');
     }, 'บันทึกไม่สำเร็จ');
+
+  /* ── พบปัญหาหน้างาน (lib/tasks/siteIssue.js) — พัก SLA + แจ้งหัวหน้า · หัวหน้า/เจ้าของ/superadmin กดดำเนินการต่อ ── */
+  const reportSiteIssue = (payload: SiteIssuePayload) =>
+    run('site-issue', async () => {
+      const { data: res } = await axios.patch(`/api/tasks/${id}`, { action: 'site_issue', ...payload });
+      toast(`แจ้งปัญหาหน้างานแล้ว — พัก SLA · แจ้งหัวหน้า/ผู้ดูแลระบบ ${res?.notified ?? 0} คน`);
+    }, 'แจ้งปัญหาหน้างานไม่สำเร็จ');
+
+  const resumeSiteIssue = async () => {
+    const { isConfirmed } = await Swal.fire({
+      icon: 'question',
+      title: 'ดำเนินการต่อ?',
+      text: 'เลิกพักงาน — ระบบกลับมานับ SLA ต่อ (วันที่พักไม่นับ)',
+      showCancelButton: true,
+      confirmButtonText: 'ดำเนินการต่อ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+    });
+    if (!isConfirmed) return;
+    await run('blocked', async () => {
+      await axios.patch(`/api/tasks/${id}`, { action: 'blocked', on: false });
+      toast('กลับมาดำเนินการต่อแล้ว');
+    }, 'บันทึกไม่สำเร็จ');
+  };
 
   /* ── ชนิดงาน (กำหนด SLA) — เจ้าของ / หัวหน้ากอง / superadmin ── */
   const changeWorkType = async () => {
@@ -464,6 +489,35 @@ function TaskDetailContent() {
                 </div>
               )}
 
+              {/* พักงานเพราะพบปัญหาหน้างาน — ทุกคนที่เปิดหน้านี้เห็น · ปุ่มดำเนินการต่อเฉพาะ canResume (เจ้าของ/หัวหน้ากอง/superadmin) */}
+              {d.isSiteIssue && a.blocked && (
+                <div className="mt-4 rounded-[12px] border border-tk-blocked bg-tk-blocked-soft px-4 py-3 text-[12.5px]" role="alert">
+                  <div className="flex items-start gap-2.5">
+                    <ExclamationTriangleIcon className="mt-px h-[18px] w-[18px] shrink-0 text-tk-blocked-ink" strokeWidth={1.8} />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-tk-blocked-ink">พักงาน — พบปัญหาหน้างาน: {a.blocked.reason || d.siteIssueLabel}</div>
+                      <div className="text-tk-ink-4">
+                        {a.blocked.since ? `แจ้งเมื่อ ${formatThaiDate(a.blocked.since)} · ` : ''}พัก SLA {d.blockedDays ?? 0} วัน · รอหัวหน้ากองพิจารณา: ดำเนินการต่อ หรือให้เจ้าของงาน/ผู้ดูแลระบบปิดเรื่อง
+                      </div>
+                    </div>
+                  </div>
+                  {(a.blocked.images?.length ?? 0) > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {a.blocked.images!.map((src) => (
+                        <a key={src} href={src} target="_blank" rel="noreferrer" className="relative block h-[64px] w-[64px] overflow-hidden rounded-[10px] border border-tk-blocked-line">
+                          <Image src={src} alt="ภาพหน้างาน" fill sizes="64px" className="object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {data.canResume && (
+                    <button type="button" disabled={!!busy} onClick={resumeSiteIssue} className="mt-2.5 rounded-[9px] bg-tk-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-tk-primary-dark disabled:opacity-60">
+                      {busy === 'blocked' ? 'กำลังบันทึก…' : 'ดำเนินการต่อ'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* รอบแนบภาพความคืบหน้าตามชนิดงาน (งานปะถนน) — ค่าทั้งหมดจาก derived ของ API */}
               {d.progressEveryDays && !d.isCompleted && (
                 <div
@@ -616,9 +670,13 @@ function TaskDetailContent() {
                 </button>
               )}
 
-              <div id="blocked-card">
-                <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
-              </div>
+              {/* พักเพราะปัญหาหน้างาน → ซ่อนการ์ดรอวัสดุ (แถบ + ปุ่มดำเนินการต่ออยู่ที่ header card) */}
+              {!d.isSiteIssue && (
+                <div id="blocked-card">
+                  <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
+                </div>
+              )}
+              {data.canReportSiteIssue && <SiteIssueCard reasons={data.siteIssueReasons} submitting={busy === 'site-issue'} onSubmit={reportSiteIssue} />}
 
               {editable && (
                 <>

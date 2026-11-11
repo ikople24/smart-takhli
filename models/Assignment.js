@@ -95,9 +95,13 @@ const AssignmentSchema = new mongoose.Schema(
       nextFollowUpAt: { type: Date, default: null },
       followUps: { type: [FollowUpSchema], default: [] },
     },
-    /** รอวัสดุ / งบประมาณ — เปิดแล้วต้องตั้ง slaPausedAt คู่กัน */
+    /** พักงาน (พัก SLA) — เปิดแล้วต้องตั้ง slaPausedAt คู่กัน
+     *  kind: materials = รอวัสดุ / งบประมาณ · site_issue = พบปัญหาหน้างาน (lib/tasks/siteIssue.js — แจ้งหัวหน้า รอพิจารณา) */
     blocked: {
       isBlocked: { type: Boolean, default: false },
+      kind: { type: String, enum: ['materials', 'site_issue'], default: 'materials' },
+      /** code ใน SITE_ISSUE_REASONS (เฉพาะ kind: 'site_issue') */
+      siteIssueCode: { type: String, default: '' },
       reason: { type: String, default: '' },
       itemName: { type: String, default: '' },
       purchaseRefNo: { type: String, default: '' },

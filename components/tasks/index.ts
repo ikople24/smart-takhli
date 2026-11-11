@@ -26,6 +26,8 @@ export { TaskTimeline } from './TaskTimeline';
 export { SolutionChips } from './SolutionChips';
 export { BlockedCard } from './BlockedCard';
 export type { BlockedPayload } from './BlockedCard';
+export { SiteIssueCard } from './SiteIssueCard';
+export type { SiteIssuePayload } from './SiteIssueCard';
 export { CoordinationSetModal } from './CoordinationSetModal';
 export type { CoordinationSetPayload } from './CoordinationSetModal';
 export { CloseTaskModal } from './CloseTaskModal';

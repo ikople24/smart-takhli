@@ -56,7 +56,7 @@
 
 - `models/Assignment.js` (ยังอยู่ root — ของโมดูลร้องเรียน) **ขยาย**: `role`, `stage`, `dueDate`, `slaPausedAt`,
   `slaPausedMs`, `coordination{agencyName, coordinatorOrgId, documentNo, sentAt, nextFollowUpAt, followUps[]}`,
-  `blocked{isBlocked, reason, itemName, purchaseRefNo, expectedAt, since}`, `timeline[]`, `timestamps`
+  `blocked{isBlocked, kind ('materials'|'site_issue'), siteIssueCode, reason, itemName, purchaseRefNo, expectedAt, since}`, `timeline[]`, `timestamps`
   — เอกสารเก่าไม่มีฟิลด์เหล่านี้ อ่านผ่าน `derived.js` ได้เลย ไม่ต้อง migrate
 - `models/tasks/TaskSettings.js` — singleton `key: 'default'` collection `task_settings`
   (`defaultSlaDays 3 · warnBeforeDays 2 · unclaimedWarnHours 12 · unclaimedAlertHours 24 · followUpEveryDays 7 · slaByCategory[] · slaByWorkType[]`;
@@ -168,6 +168,20 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   · ไม่บังคับ/ปิดแล้ว/พัก SLA → `progressDue` false · **ไม่เปลี่ยน severity** · note ที่ไม่มีภาพไม่นับ
   · ป้าย `needs_update` (tone due) "ต้องอัปเดตภาพความคืบหน้า (ทุก N วันทำการ)" · การ์ดเตือนใบที่ 5 "ต้องอัปเดตความคืบหน้า" (`?alert=needs_update`)
     โผล่เฉพาะเมื่อมีงานเปิดที่ชนิดงานบังคับ · หน้ารายละเอียดมีแถบเตือน + แนบภาพผ่านฟอร์ม "บันทึกการดำเนินงานวันนี้" (PATCH `progress` รับ `images` https สูงสุด 10)
+- **พบปัญหาหน้างาน (มติประชุม 2026-11)** รับงาน → ลงพื้นที่ → พบว่าเทศบาลทำไม่ได้ (เช่น แจ้งกิ่งมะม่วงพาดเสาไฟ แต่ต้นอยู่ในบ้านผู้แจ้ง) → ต้องแจ้งในระบบ
+  · เจ้าของตัดสินใจ (owner): **แจ้งหัวหน้า + พัก SLA** แล้วหัวหน้า/superadmin ตัดสินใจต่อ
+  · `PATCH /api/tasks/[assignmentId]` action `site_issue` { reasonCode, note?, images? } — เจ้าของงาน/superadmin · งานปิดแล้วหรือพักอยู่แล้ว (ทั้งสองแบบ) = 400
+  · เหตุผลมาตรฐาน `lib/tasks/siteIssue.js#SITE_ISSUE_REASONS` (private_property · not_our_duty · wrong_location · need_owner_consent · other — **ห้ามเปลี่ยน code เดิม**)
+    · `validateSiteIssue`: note ตัด 500 ตัวอักษร (บังคับเมื่อ `other`) · ภาพ https ≤ 5
+  · บันทึก `blocked{ isBlocked: true, kind: 'site_issue', siteIssueCode, reason: "label — note", since }` ด้วย `timeline.js#siteIssueUpdate` — บัญชีพัก SLA ชุดเดียวกับรอวัสดุ
+    + timeline `blocked` "พบปัญหาหน้างาน: …" พร้อมภาพ + กระดิ่ง (`priority: high`, `relatedId: site-issue:<id>`) ถึงหัวหน้ากองของเรื่อง + superadmin
+    (`digest.js#transferRequestRecipients` ชุดเดียวกับคำขอโอน ไม่รวมคนกด) + audit `assignment_site_issue`
+  · **ดำเนินการต่อ** = `blocked` { on: false } ตัวเดิม — เจ้าของ/superadmin + **หัวหน้ากองของเรื่อง (`canTransfer`) เฉพาะ kind site_issue** · ระหว่างพักแบบนี้ `blocked` { on: true } = 400 (กันกลายเป็นรอวัสดุ)
+    · **ปิดเรื่อง**ยังเป็น `close` ของเจ้าของงาน/superadmin เท่านั้น — หัวหน้าที่ไม่ใช่เจ้าของ "ดำเนินการต่อ" ได้ หรือให้เจ้าของงาน/superadmin ปิด
+  · `derived.js`: `isSiteIssue` · `siteIssueLabel` · `alertKinds` ใช้ `site_issue` **แทน** `blocked` (severity ยังเป็น `blocked`) · ป้าย "ปัญหาหน้างาน: <label>" · status pill "พบปัญหาหน้างาน"
+    · การ์ดเตือน "พบปัญหาหน้างาน" (`?alert=site_issue`) โผล่ต่อจาก "รอวัสดุ" เฉพาะเมื่อมี ≥ 1 เรื่อง · การ์ดรอวัสดุ + `blockedRail` ไม่นับเรื่องเหล่านี้
+  · GET รายละเอียดคืน `siteIssueReasons`, `canReportSiteIssue` (canEdit + ยังไม่ปิด + ยังไม่พัก), `canResume`, `assignment.blocked.kind/siteIssueCode/images`
+    · UI: การ์ด `SiteIssueCard` (ฟอร์ม inline เหตุผล/รายละเอียด/ภาพ) · พักอยู่ → แถบ "พักงาน — พบปัญหาหน้างาน: …" + ภาพ + ปุ่ม "ดำเนินการต่อ" บน header card และซ่อนการ์ดรอวัสดุ
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนเป็นวันทำการด้วย `slaPausedBusinessDays` + ช่วงที่ยังพัก (ดูกติกาวันทำการด้านบน)
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg
