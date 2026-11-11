@@ -121,10 +121,15 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   | ฝาท่อเหล็ก/ปูน (`manhole_steel`/`manhole_concrete`) · กิ่งไม้/ต้นไม้ (`tree`) · ตัดหญ้า (`grass`) · เหตุรำคาญ (`nuisance`) | 15 วัน |
   | งานทั่วไป (`general` — ขยะ ไฟฟ้า ประปา ฯลฯ) | 3 วัน (`defaultSlaDays`) |
 
-  · เรื่องรอรับนับเป็นชั่วโมง (`deriveUnclaimed#hoursUnclaimed`): amber ≥ 12 ชม., `isStale` เมื่อ **> 24 ชม.** (24 ชม. พอดียังไม่ค้าง) — cron/ปุ่มแจ้ง LINE ใช้เกณฑ์เดียวกัน
-  · KPI `claimedWithin24hRate` = % งาน (ผู้รับผิดชอบหลัก ไม่นับผู้ประสาน) ที่ `claimHours` (แจ้ง → กดรับ, ชม.เต็ม) ≤ 24 — แสดงใน KpiStrip "รับเรื่องภายใน 24 ชม."
+  · เรื่องรอรับ: amber ≥ `unclaimedWarnHours` (12), `isStale` เมื่อ **เกิน `unclaimedAlertHours` (24 ชม.)** — ตัดสินด้วย ms ไม่ปัดเศษ
+    (24 ชม. พอดียังทัน · 24 ชม. 30 นาทีค้าง) · `hoursUnclaimed`/`claimHours` เป็นชม.เต็มไว้แสดงผลเท่านั้น · cron/ปุ่มแจ้ง LINE ใช้เกณฑ์เดียวกัน
+    · ป้ายอายุบนการ์ด (`badges.js#agingPill`): ต่ำกว่าเกณฑ์ "รอ N ชม." / "ใหม่" (< 1 ชม.) · ถึงเกณฑ์ "ค้าง N วัน" (วันตามปฏิทิน อย่างน้อย 1)
+  · KPI `claimedWithin24hRate` = % งาน (ผู้รับผิดชอบหลัก ไม่นับผู้ประสาน) ที่ `claimMs` (แจ้ง → กดรับ) ≤ `unclaimedAlertHours` — เกณฑ์ตามค่าตั้งนี้
+    (ป้าย KpiStrip เขียน "รับเรื่องภายใน 24 ชม." ตามค่า default) · **เวลารับนับจากวันที่ประชาชนแจ้งเสมอ** — เรื่องที่ถูก "คืนงาน" แล้วมีคนรับใหม่
+    ก็นับจากวันแจ้งเดิม ไม่ใช่จากตอนคืน (ตั้งใจ: เป็นคำมั่นต่อประชาชน) · การโอนงานไม่เปลี่ยน `assignedAt`
   · `Assignment.dueDate` ถูกบันทึกตอนกดรับ → เปลี่ยนกติกาแล้วงานเปิดเดิมไม่เปลี่ยนเอง ต้องรัน
-    `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run) แล้วค่อยใส่ `--yes` เพื่อเขียนจริง
+    `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run — บอกค่าตั้งที่ใช้, จำนวนสั้นลง/เลื่อนออก, จำนวนที่จะเกินกำหนดทันที)
+    แล้วค่อยใส่ `--yes` เพื่อเขียนจริง · `--only-extend` = เฉพาะรายการที่วันครบกำหนดเลื่อนออก (ยังต้องมี `--yes` ถึงจะเขียน)
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนด้วย `slaPausedMs` + ช่วงที่ยังพัก
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg

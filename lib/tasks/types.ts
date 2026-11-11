@@ -65,7 +65,9 @@ export interface DerivedAssignment {
   daysAssigned: number | null;
   resolutionDays: number | null;
   completedLate: boolean | null;
-  /** ชม.เต็มจากประชาชนแจ้ง → กดรับ (null = ไม่รู้เวลาแจ้ง) */
+  /** ms จากประชาชนแจ้ง → กดรับ (null = ไม่รู้เวลาแจ้ง) — ใช้ตัดสิน KPI รับภายใน 24 ชม. */
+  claimMs: number | null;
+  /** ชม.เต็มของ claimMs — แสดงผลเท่านั้น */
   claimHours: number | null;
   stage: Stage;
   role: AssignmentRole;
@@ -76,7 +78,7 @@ export interface DerivedAssignment {
 /** ผลของ deriveUnclaimed (lib/tasks/derived.js) */
 export interface DerivedUnclaimed {
   daysUnclaimed: number | null;
-  /** ชม.เต็มตั้งแต่ประชาชนแจ้ง (≥ 0) */
+  /** ชม.เต็มตั้งแต่ประชาชนแจ้ง (≥ 0) — แสดงผลเท่านั้น (isStale ตัดสินด้วย ms) */
   hoursUnclaimed: number | null;
   /** รอรับเกิน unclaimedAlertHours */
   isStale: boolean;
