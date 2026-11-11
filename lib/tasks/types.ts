@@ -44,6 +44,8 @@ export interface TaskSettings {
   holidays: TaskHoliday[];
   /** ตารางคิวตัดหญ้า (ไฟล์กลาง) — url '' = ยังไม่มี (lib/tasks/grassSchedule.js) */
   grassSchedule: GrassSchedule;
+  /** วันเริ่มใช้กติกา KPI รับเรื่อง 24 ชม. ('YYYY-MM-DD' เวลาไทย, '' = นับทั้งหมด) */
+  claimKpiFrom: string;
 }
 
 export interface GrassSchedule {

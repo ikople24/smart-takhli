@@ -56,6 +56,8 @@ const TaskSettingsSchema = new mongoose.Schema(
     slaByWorkType: { type: [SlaByWorkTypeSchema], default: [] },
     holidays: { type: [HolidaySchema], default: [] },
     grassSchedule: { type: GrassScheduleSchema, default: () => ({}) },
+    /** วันเริ่มใช้กติกา KPI รับเรื่อง 24 ชม. ('YYYY-MM-DD' เวลาไทย, '' = นับทั้งหมด) — lib/tasks/settings.js */
+    claimKpiFrom: { type: String, default: '2026-11-16' },
     updatedBy: { type: String, default: '' },
   },
   { timestamps: true, collection: 'task_settings' }
