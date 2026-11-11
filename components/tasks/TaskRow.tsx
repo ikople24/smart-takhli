@@ -29,6 +29,7 @@ export interface TaskRowProps {
 
 function MetaLine({ task }: { task: OfficerTask }) {
   const parts: React.ReactNode[] = [];
+  if (task.workType !== 'general' && task.workTypeLabel) parts.push(<span key="workType">{task.workTypeLabel}</span>);
   if (task.community) parts.push(<span key="community">{task.community}</span>);
   const assigned = formatThaiShortDate(task.assignedAt);
   if (assigned) parts.push(<span key="assigned">รับเมื่อ {assigned}</span>);

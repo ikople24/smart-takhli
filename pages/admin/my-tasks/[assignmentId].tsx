@@ -17,7 +17,7 @@ import { uploadToCloudinary } from '@/utils/uploadToCloudinary';
 import { stageTransition } from '@/lib/tasks/status';
 import PermissionGuard from '@/components/PermissionGuard';
 import ImageUploads from '@/components/ImageUploads';
-import type { OfficerTask, Stage, TaskDetailResponse } from '@/lib/tasks/types';
+import type { OfficerTask, Stage, TaskDetailResponse, WorkTypeChangeResponse } from '@/lib/tasks/types';
 import { formatThaiDate, relativeDaysLabel } from '@/lib/tasks/format';
 import { STAGE_LABELS } from '@/lib/tasks/status';
 import {
@@ -190,6 +190,43 @@ function TaskDetailContent() {
       await axios.patch(`/api/tasks/${id}`, { action: 'blocked', ...payload });
       toast(payload.on ? 'พักงานแล้ว — หยุดนับ SLA' : 'กลับมาดำเนินการต่อแล้ว');
     }, 'บันทึกไม่สำเร็จ');
+
+  /* ── ชนิดงาน (กำหนด SLA) — เจ้าของ / หัวหน้ากอง / superadmin ── */
+  const changeWorkType = async () => {
+    if (!data) return;
+    const inputOptions = Object.fromEntries(data.workTypeOptions.map((o) => [o.key, `${o.label} · ${o.slaDays} วัน`]));
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'เปลี่ยนชนิดงาน',
+      html: '<div class="text-sm">เลือกชนิดงานจริงจากหน้างาน — ระบบคิดวันครบกำหนดใหม่นับจากวันที่ประชาชนแจ้ง</div>',
+      input: 'select',
+      inputOptions,
+      inputValue: data.workType,
+      inputValidator: (v) => (String(v ?? '') === data.workType ? 'เป็นชนิดงานเดิม — เลือกชนิดอื่น' : null),
+      showCancelButton: true,
+      confirmButtonText: 'บันทึก',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+    });
+    if (!isConfirmed || !value) return;
+    // เก็บผลไว้นอก run() — แสดงคำแนะนำหลังโหลดข้อมูลใหม่เสร็จ (ไม่ย้ายกอง/ไม่เรียก API โอนงานให้เอง)
+    const result: { suggested: string | null } = { suggested: null };
+    await run('work-type', async () => {
+      const { data: res } = await axios.patch<WorkTypeChangeResponse>(`/api/tasks/${id}`, { action: 'work_type', workType: String(value) });
+      result.suggested = res.suggestedDepartment;
+      toast(`เปลี่ยนเป็น "${res.workTypeLabel}" แล้ว — กำหนดปิด ${res.slaDays} วันนับจากวันแจ้ง`);
+    }, 'เปลี่ยนชนิดงานไม่สำเร็จ');
+    const suggested = result.suggested;
+    if (suggested) {
+      const button = data.canTransfer ? 'โอนงาน' : 'ขอโอนงาน';
+      await Swal.fire({
+        icon: 'info',
+        title: 'ชนิดงานนี้ปกติเป็นของกองอื่น',
+        text: `ชนิดงานนี้ปกติเป็นของ ${suggested} — ถ้าไม่ใช่งานของกองคุณ กด "${button}"`,
+        confirmButtonText: 'รับทราบ',
+        confirmButtonColor: '#7C3AED',
+      });
+    }
+  };
 
   /* ── ประสานงาน ── */
   const setCoordination = (payload: CoordinationSetPayload) =>
@@ -447,6 +484,20 @@ function TaskDetailContent() {
                 </Meta>
                 <Meta label="กองที่รับผิดชอบ">{c.department || 'ยังไม่ระบุกอง'}</Meta>
                 <Meta label="อัปเดตล่าสุด">{relativeDaysLabel(d.daysSinceUpdate)}</Meta>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[12px] bg-tk-bg px-4 py-2.5 text-[12.5px]">
+                <span className="min-w-0 flex-1">
+                  <span className="text-tk-ink-6">ชนิดงาน: </span>
+                  <span className="font-semibold text-tk-ink">{data.workTypeLabel || '—'}</span>
+                  <span className="text-tk-ink-4"> · กำหนดปิด {d.slaDays} วันนับจากวันแจ้ง</span>
+                  {data.workTypeSource === 'auto' && <span className="ml-1 text-[11.5px] text-tk-ink-6">(ระบบเดา)</span>}
+                </span>
+                {data.canSetWorkType && !d.isCompleted && (
+                  <button type="button" disabled={!!busy} onClick={changeWorkType} className="text-[12px] font-semibold text-tk-primary hover:underline disabled:opacity-60">
+                    เปลี่ยนชนิดงาน
+                  </button>
+                )}
               </div>
 
               <div className="mt-4">

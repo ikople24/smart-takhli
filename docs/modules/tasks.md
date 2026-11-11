@@ -39,7 +39,7 @@
 | `POST /api/complaints/assignments/release` | **คืนงานเข้ากองงานรอรับ** (2026-11-10) — คนที่รับผิดเรื่องคืนเองได้ ไม่ต้องรอหัวหน้า · เจ้าของ/superadmin + งานยังไม่เริ่มทำ (ขั้นรับเรื่อง ไม่มีผล/ภาพ/ประสาน/รอวัสดุ — `lib/tasks/release.js#releaseCheck`) · ลบ assignment + ตอนรับเคยย้ายกอง → คืนกองเดิม (`departmentToRestore` จาก audit) · timeline เก็บใน audit `assignment_unclaimed` · เหตุผลบังคับ |
 | `POST\|GET /api/cron/tasks/stale-digest` (`CRON_SECRET`) | ทุกเช้า (แนะนำ `30 1 * * *` UTC = 08:30 ไทย): เรื่องค้างเกินเกณฑ์ → แจ้งกระดิ่งหัวหน้ากอง 1 รายการ/กอง/วัน (dedupe `relatedId`) **+ LINE กลุ่มเจ้าหน้าที่วันละครั้ง** (เปิดอีกครั้ง 2026-11-09 หลังอัปเกรด LINE OA Starter; dedupe ด้วย audit log `resourceId: stale-digest-line:<วันที่>`; ข้อความจาก `digest.js#buildStaleLineText` ตัวเดียวกับปุ่ม pool-alert) |
 | `GET /api/tasks/[assignmentId]` | หน้าจอ 3: เรื่อง + assignment + derived + ป้าย + ไทม์ไลน์ + `solutionOptions` (AdminOption ของประเภทนั้น) + `canEdit` (เจ้าของ/superadmin) |
-| `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) |
+| `PATCH /api/tasks/[assignmentId]` | `action: progress` { note?, images?, stage?, reason? } (เลื่อนขั้นทีละขั้น, ถอยต้องมี reason, status เรื่องตาม `statusForStage` + แจ้ง LINE ผู้แจ้ง) · `close` { note, images≥1, solution? } (completedAt + status DONE + audit + LINE ผู้แจ้ง/กลุ่มผ่าน `lib/complaintNotify.js`) · `blocked` { on, itemName, purchaseRefNo, expectedAt } (`blockedUpdate` พัก/เลิกพัก SLA) · `work_type` { workType } เปลี่ยนชนิดงาน (ดู § เปลี่ยนชนิดงาน) |
 | `GET /api/tasks/pool?groupBy=&q=&community=&days=&onlyStale=1` | เรื่องที่ยังไม่มี Assignment และยังไม่ปิด (`lib/tasks/loadPool.js`) + derived/ป้าย + `action` ต่อเจ้าหน้าที่ + คอลัมน์ (`groupPool`) + `stale` + `workload` (งานเปิดต่อคน) + `departments` — สิทธิ์ผ่าน `requirePage('/admin/task-pool')` · ไม่คืนชื่อ/เบอร์ผู้แจ้ง |
 | `POST /api/tasks/pool-alert` | สรุปเรื่องค้างเกินเกณฑ์เข้า LINE กลุ่ม (⚠️ โควตา — UI ยืนยันก่อน) |
 | `PATCH /api/tasks/set-department` | คัดแยกกอง `{ complaintId, department }` (ชื่อมาตรฐานเท่านั้น, '' = ล้าง) → audit `complaint_department_set` — README เขียนเป็น `/api/complaints/:id/organization` แต่วางใต้ `complaints/[id]/` ไม่ได้ เพราะชนกับ `[id_card].js` (Next.js ห้าม slug ต่างชื่อใน path เดียวกัน → dev server ล้มทั้งตัว) |
@@ -62,6 +62,8 @@
   (`defaultSlaDays 3 · warnBeforeDays 2 · unclaimedWarnHours 12 · unclaimedAlertHours 24 · followUpEveryDays 7 · slaByCategory[] · slaByWorkType[]`;
   `unclaimedWarnDays`/`unclaimedAlertDays` ยังอยู่ในเอกสารเพื่อความเข้ากันได้ แต่เลิกใช้ตัดสินแล้ว)
   ไม่มีเอกสาร = ใช้ default ทำงานได้เลย
+- `Complaint.workType` (String key ใน `lib/tasks/workTypes.js`, '' = ให้ระบบเดา) — เติมใน **ทั้ง** `models/Complaint.js` และ `models/SubmittedReport.js`
+  · ตั้งได้ทางเดียวคือ `PATCH /api/tasks/[assignmentId]` action `work_type` — `submit-report.js` ตัดฟิลด์นี้ทิ้งจาก body สาธารณะ
 - `Complaint.department` (String ชื่อกองมาตรฐาน, '' = ยังไม่ระบุ) — เติมใน **ทั้ง** `models/Complaint.js` และ `models/SubmittedReport.js`
   (สองไฟล์ลงทะเบียน model `SubmittedReport` เดียวกัน ไฟล์ไหนโหลดก่อนชนะ) · **ไม่ใช้ `organizationId` ตาม README** เพราะ collection
   `organizations` มีแค่ตัวเทศบาล ไม่ใช่รายชื่อกอง — กองจริงอยู่ใน `users.department` (ข้อความอิสระ) → normalize ผ่าน `lib/tasks/departments.js`
@@ -85,6 +87,7 @@
 | `digest.js` | `buildStaleDigest` (สรุปเรื่องค้างรายกอง + relatedId กันซ้ำรายวัน), `digestRecipients` (หัวหน้ากอง → ไม่มีก็หัวหน้าทุกกอง + superadmin) |
 | `mobile.js` | มือถือ: `haversineKm` / `formatDistanceLabel` / `withDistance` ("ใกล้ฉัน" — พิกัดผู้ใช้อยู่ฝั่ง client ไม่ส่งขึ้น server), `topUrgent` (FAB อัปเดตงานด่วน), `poolChipCounts` |
 | `timeline.js` | หน้าจอ 3: `buildTimeline` (รับเรื่อง → มอบหมาย → รายการ timeline → ปิดเรื่อง → รายการรออยู่; เรียงเชิงตรรกะก่อนเวลา เพราะข้อมูลเก่า completedAt เป็นวันที่ล้วน), `closeChecklist`, `stageChangePlan`, `blockedUpdate` |
+| `workTypeChange.js` | เปลี่ยนชนิดงาน: `workTypeChange` (ตรวจ key, ชนิดเดิม = ไม่ผ่าน, วันครบกำหนดใหม่ผ่าน `dueDateFor`, `suggestedDepartment`), `workTypeOptionsFor` (SLA ต่อตัวเลือกรวมค่าตั้ง), `workTypeSourceOf` (manual/auto) |
 | `loadPool.js` | I/O: `loadPoolItems({ settings, days })` (ไม่มี Assignment + ยังไม่ปิด, ร้องซ้ำ = เบอร์+ประเภท+ชุมชนเดียวกันใน 180 วัน — เบอร์ไม่ออกจากฟังก์ชัน), `loadWorkload()` |
 | `loadSettings.js` | I/O: `getTaskSettings` (พลาด → default) / `saveTaskSettings` (merge) |
 | `types.ts` | TypeScript types ของผลลัพธ์ทั้งหมด |
@@ -130,6 +133,13 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   · `Assignment.dueDate` ถูกบันทึกตอนกดรับ → เปลี่ยนกติกาแล้วงานเปิดเดิมไม่เปลี่ยนเอง ต้องรัน
     `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run — บอกค่าตั้งที่ใช้, จำนวนสั้นลง/เลื่อนออก, จำนวนที่จะเกินกำหนดทันที)
     แล้วค่อยใส่ `--yes` เพื่อเขียนจริง · `--only-extend` = เฉพาะรายการที่วันครบกำหนดเลื่อนออก (ยังต้องมี `--yes` ถึงจะเขียน)
+- **เปลี่ยนชนิดงาน (`work_type`)** — ประชาชนเลือกหมวดผิดบ่อย และชนิดงานตามมติประชุม (ฝาท่อเหล็ก/ปูน, ตัดหญ้า, ดูดโคลน) ไม่มีในฟอร์มสาธารณะ
+  คนหน้างานจึงเลือกชนิดจริงที่หน้า `/admin/my-tasks/[assignmentId]` (แถว "ชนิดงาน" + ปุ่ม "เปลี่ยนชนิดงาน"; ยังไม่ตั้ง = "(ระบบเดา)")
+  · สิทธิ์: เจ้าของงาน / หัวหน้ากองของเรื่อง (`taskPermissions().canTransfer`) / superadmin · งานปิดแล้วเปลี่ยนไม่ได้ · ชนิดเดิม = 400 "ชนิดงานเดิม"
+  · ผล: `complaint.workType` + `Assignment.dueDate` = วันแจ้ง + SLA ของชนิดใหม่ (ค่าฐานไม่รวมช่วงพัก — พักยังบวกตอนอ่าน) ทั้งงานนี้และงานเปิดอื่นของเรื่องเดียวกัน
+    + timeline note `เปลี่ยนชนิดงานเป็น "…" (กำหนดปิด N วันนับจากวันแจ้ง)` + audit `complaint_work_type_set`
+  · **ไม่ย้ายกองให้** — ถ้ากองปกติของชนิดนั้นไม่ใช่กองของเรื่อง คืน `suggestedDepartment` แล้ว UI แนะนำให้กด "ขอโอนงาน"/"โอนงาน" เอง
+  · ป้ายชนิดงาน (ยกเว้นงานทั่วไป) แสดงบน `PoolCard` และ `TaskRow` จาก `workTypeLabel` ที่ derive ให้แล้ว
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนด้วย `slaPausedMs` + ช่วงที่ยังพัก
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg

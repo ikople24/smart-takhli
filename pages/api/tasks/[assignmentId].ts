@@ -1,10 +1,12 @@
 // pages/api/tasks/[assignmentId].ts
 // หน้าจอ 3 "รายละเอียดงาน + อัปเดตความคืบหน้า" (README)
 //   GET   — เรื่อง + assignment + derived + ไทม์ไลน์ + ตัวเลือกวิธีแก้ไข (AdminOption ของประเภทนั้น)
-//   PATCH — { action: 'progress' | 'close' | 'blocked', ... } เฉพาะเจ้าของงาน / superadmin
+//   PATCH — { action: 'progress' | 'close' | 'blocked' | 'work_type', ... } เฉพาะเจ้าของงาน / superadmin (work_type: + หัวหน้ากองของเรื่อง)
 //     progress: { note?, images?, stage?, reason? } บันทึกความคืบหน้า และ/หรือ เลื่อนขั้น (ถอยขั้นต้องมี reason)
 //     close:    { note, images?, confirmNoImages?, solution? } ปิดเรื่อง → assignment.completedAt + status เรื่อง + แจ้ง LINE (lib/complaintNotify.js)
 //     blocked:  { on, itemName?, purchaseRefNo?, expectedAt?, reason? } พัก/เลิกพัก SLA (lib/tasks/timeline.js#blockedUpdate)
+//     work_type: { workType } ตั้งชนิดงานของเรื่อง → complaint.workType + คิดวันครบกำหนดใหม่ (lib/tasks/workTypeChange.js)
+//                ไม่ย้ายกองให้ — คืน suggestedDepartment ให้ UI แนะนำ "ขอโอนงาน" เอง
 // การประสานงาน (set/follow_up/notify_line) ใช้ POST /api/complaints/coordination · โอนงานใช้ assignments/transfer
 import type { NextApiRequest, NextApiResponse } from 'next';
 import mongoose from 'mongoose';
@@ -17,11 +19,12 @@ import { getTaskSettings } from '@/lib/tasks/loadSettings';
 import { deriveAssignment } from '@/lib/tasks/derived';
 import { badgesForAssignment, statusPillFor } from '@/lib/tasks/badges';
 import { buildTimeline, closeChecklist, stageChangePlan, blockedUpdate } from '@/lib/tasks/timeline';
-import { STAGE_LABELS, COMPLAINT_STATUS } from '@/lib/tasks/status';
+import { STAGE_LABELS, COMPLAINT_STATUS, isClosedStatus } from '@/lib/tasks/status';
 import { summarizeText, toDate } from '@/lib/tasks/format';
 import { defaultDepartmentForComplaint, normalizeDepartment } from '@/lib/tasks/departments';
 import { taskPermissions } from '@/lib/tasks/roles';
 import { releaseCheck } from '@/lib/tasks/release';
+import { workTypeChange, workTypeOptionsFor, workTypeSourceOf } from '@/lib/tasks/workTypeChange';
 import type { Badge, DerivedAssignment, Stage, StatusPill, TaskDetailResponse, TimelineEntry } from '@/lib/tasks/types';
 import { getOfficer, userModel } from './_auth';
 
@@ -83,6 +86,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const canEdit = isOwner || auth.isSuperAdmin;
       const taskDepartment = normalizeDepartment(c?.department) ?? defaultDepartmentForComplaint(c);
       const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
+      // ตรงกับเงื่อนไขฝั่ง PATCH work_type: เจ้าของ / superadmin / หัวหน้ากองของเรื่อง (canTransfer)
+      const canSetWorkType = !derived.isCompleted && (canEdit || perms.canTransfer);
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
       // ตัวเลือกของประเภทนี้ + ค่าที่เรื่องนี้เคยเลือกไว้ (เหมือน UpdateAssignmentModal เดิม — ประเภทเรื่องอาจถูกแก้ทีหลัง)
@@ -105,6 +110,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         canEdit,
         canTransfer: perms.canTransfer,
         canRequestTransfer: perms.canRequestTransfer,
+        canSetWorkType,
+        workType: derived.workType,
+        workTypeLabel: derived.workTypeLabel,
+        workTypeSource: workTypeSourceOf(c) as 'manual' | 'auto',
+        workTypeOptions: workTypeOptionsFor(c ?? {}, settings),
         canRelease: releaseCheck({ assignment: a, isOwner, isSuperAdmin: auth.isSuperAdmin }).ok,
         transferRequest: a.transferRequest?.requestedAt
           ? { requestedAt: iso(a.transferRequest.requestedAt) ?? '', reason: a.transferRequest.reason ?? '', byName: a.transferRequest.byName ?? '' }
@@ -184,12 +194,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assignment = (await Assignment.findById(assignmentId)) as any;
     if (!assignment) return res.status(404).json({ success: false, error: 'ไม่พบงานนี้' });
     const isOwner = String(assignment.userId) === String(officer._id);
-    if (!isOwner && !auth.isSuperAdmin) return res.status(403).json({ success: false, error: 'แก้ไขได้เฉพาะงานของตัวเอง' });
+    const body = req.body ?? {};
+    const action = str(body.action);
+    // work_type เปิดให้หัวหน้ากองของเรื่องด้วย (ตรวจหลังโหลดเรื่อง) — action อื่นเฉพาะเจ้าของ/superadmin
+    if (action !== 'work_type' && !isOwner && !auth.isSuperAdmin) return res.status(403).json({ success: false, error: 'แก้ไขได้เฉพาะงานของตัวเอง' });
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว' });
 
     const complaint = (await Complaint.findById(assignment.complaintId).select(COMPLAINT_FIELDS).lean()) as ComplaintLean | null;
-    const body = req.body ?? {};
-    const action = str(body.action);
     const byName = officer.name || '';
     const audit = (params: Parameters<typeof logAuditEvent>[0]) => logAuditEvent(params);
 
@@ -292,6 +303,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assignment.timeline.push({ ...update.timelineEntry, byUserId: officer._id, byName });
       await assignment.save();
       return res.status(200).json({ success: true, blocked: assignment.blocked, slaPausedAt: iso(assignment.slaPausedAt) });
+    }
+
+    if (action === 'work_type') {
+      if (!complaint) return res.status(404).json({ success: false, error: 'ไม่พบเรื่องร้องเรียนของงานนี้' });
+      const taskDepartment = normalizeDepartment(complaint.department) ?? defaultDepartmentForComplaint(complaint);
+      const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
+      if (!isOwner && !auth.isSuperAdmin && !perms.canTransfer) {
+        return res.status(403).json({ success: false, error: 'เปลี่ยนชนิดงานได้เฉพาะเจ้าของงาน หัวหน้ากอง หรือผู้ดูแลระบบ' });
+      }
+      if (isClosedStatus(complaint.status)) return res.status(400).json({ success: false, error: 'เรื่องนี้ปิดแล้ว' });
+      const settings = await getTaskSettings();
+      const change = workTypeChange({
+        complaint,
+        currentDepartment: taskDepartment,
+        newKey: str(body.workType),
+        settings,
+        assignedAt: assignment.assignedAt,
+      });
+      if (!change.ok) return res.status(400).json({ success: false, error: change.reason });
+
+      const before = { workType: complaint.workType ?? '', dueDate: iso(assignment.dueDate) };
+      await Complaint.updateOne({ _id: complaint._id }, { $set: { workType: change.workType } });
+      assignment.dueDate = change.newDueDate;
+      assignment.timeline.push({
+        at: now,
+        kind: 'note',
+        text: `เปลี่ยนชนิดงานเป็น "${change.label}" (กำหนดปิด ${change.slaDays} วันนับจากวันแจ้ง)`,
+        images: [],
+        byUserId: officer._id,
+        byName,
+      });
+      await assignment.save();
+      // งานเปิดอื่นของเรื่องเดียวกัน (เช่น ผู้ประสาน) ใช้วันครบกำหนดชุดเดียวกัน — create.js บันทึกจากสูตรเดียวกัน
+      await Assignment.updateMany(
+        { complaintId: assignment.complaintId, _id: { $ne: assignment._id }, completedAt: { $exists: false } },
+        { $set: { dueDate: change.newDueDate } }
+      );
+      audit({
+        actorClerkId: auth.clerkUserId,
+        actorName: byName || 'admin',
+        action: 'complaint_work_type_set',
+        resourceType: 'complaint',
+        resourceId: String(complaint._id),
+        description: `เปลี่ยนชนิดงานเป็น "${change.label}" (SLA ${change.slaDays} วัน) จากหน้างานเจ้าหน้าที่`,
+        before,
+        after: { workType: change.workType, dueDate: iso(change.newDueDate) },
+      });
+      // วันครบกำหนดที่แสดง = ค่าที่บันทึก + ช่วงพัก SLA (ตรงกับ GET)
+      const derived = deriveAssignment({ assignment: assignment.toObject(), complaint: { ...complaint, workType: change.workType }, settings, now });
+      return res.status(200).json({
+        success: true,
+        workType: change.workType,
+        workTypeLabel: change.label,
+        slaDays: change.slaDays,
+        dueDate: derived.dueDate,
+        suggestedDepartment: change.suggestedDepartment,
+      });
     }
 
     return res.status(400).json({ success: false, error: 'action ไม่ถูกต้อง' });

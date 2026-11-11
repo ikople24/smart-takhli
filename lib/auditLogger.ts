@@ -32,6 +32,7 @@ type AuditAction =
   | 'assignment_follow_up'
   | 'assignment_unclaimed'
   | 'complaint_department_set'
+  | 'complaint_work_type_set'
   | 'assignment_transfer_requested'
   | 'department_head_set'
   // Flood relief

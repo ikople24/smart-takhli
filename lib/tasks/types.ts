@@ -328,12 +328,38 @@ export interface SolutionOption {
   iconUrl?: string;
 }
 
+export interface WorkTypeOption {
+  key: string;
+  label: string;
+  slaDays: number;
+}
+
+/** ผลของ PATCH /api/tasks/[assignmentId] action work_type */
+export interface WorkTypeChangeResponse {
+  success: true;
+  workType: string;
+  workTypeLabel: string;
+  slaDays: number;
+  dueDate: string | null;
+  /** กองปกติของชนิดงานนี้ เมื่อไม่ใช่กองปัจจุบันของเรื่อง (แนะนำเท่านั้น ไม่ได้ย้ายให้) */
+  suggestedDepartment: string | null;
+}
+
 export interface TaskDetailResponse {
   success: true;
   now: string;
   canEdit: boolean;
   canTransfer: boolean;
   canRequestTransfer: boolean;
+  /** เปลี่ยนชนิดงานได้ (เจ้าของ / หัวหน้ากองของเรื่อง / superadmin และงานยังไม่ปิด) */
+  canSetWorkType: boolean;
+  /** ชนิดงานของเรื่อง (key ใน lib/tasks/workTypes.js) — ตัวเดียวกับ derived.workType */
+  workType: string;
+  workTypeLabel: string;
+  /** manual = เจ้าหน้าที่เลือก · auto = ระบบเดา */
+  workTypeSource: 'manual' | 'auto';
+  /** ตัวเลือกชนิดงาน + SLA ที่ใช้กับเรื่องนี้จริง (รวมค่าตั้ง) — lib/tasks/workTypeChange.js#workTypeOptionsFor */
+  workTypeOptions: WorkTypeOption[];
   /** คืนงานเข้ากองงานรอรับได้ (เจ้าของ/superadmin + ยังไม่เริ่มทำ — lib/tasks/release.js) */
   canRelease: boolean;
   transferRequest: TransferRequestInfo | null;

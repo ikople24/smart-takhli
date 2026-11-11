@@ -104,6 +104,7 @@ export function PoolCard({ item, action, canAssign = false, busy = false, onClai
 
       <p className="mt-[5px] text-[11.5px] text-tk-ink-5">
         {[item.category, item.community].filter(Boolean).join(' · ') || '—'}
+        {item.workType !== 'general' && item.workTypeLabel && <span className="ml-1.5 text-tk-ink-6">· {item.workTypeLabel}</span>}
         {item.distanceLabel && <span className="ml-1.5 font-semibold text-tk-blue">· {item.distanceLabel}</span>}
       </p>
       {action === 'claim_other' && item.department && (
