@@ -76,7 +76,7 @@ export default async function handler(
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'fullName detail category location createdAt status',
+        select: 'fullName detail category problems workType location createdAt status',
       })
       .lean();
 

@@ -5,7 +5,7 @@
 // · รายละเอียดย่อ · ขั้นตอน 4 ไอคอนพร้อมป้าย (รับเรื่อง→มอบหมาย→ดำเนินการ→เสร็จสิ้น)
 import Image from "next/image";
 import Link from "next/link";
-import { FileText, UserCheck, Clock, CheckCircle2, MapPin, Calendar } from "lucide-react";
+import { FileText, UserCheck, Clock, CheckCircle2, MapPin, Calendar, CalendarDays } from "lucide-react";
 import { statusProgress } from "@/lib/citizen/status/progress";
 import { formatThaiDate } from "@/components/activities/ActivityFeedCard";
 import PhotoSlider from "./PhotoSlider";
@@ -21,6 +21,8 @@ export type ComplaintListItem = {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** url ตารางคิวตัดหญ้า — API ใส่ให้เฉพาะเรื่องตัดหญ้าที่ยังไม่ปิด (lib/tasks/grassSchedule.js) */
+  grassScheduleUrl?: string;
 };
 
 export type AssignmentLite = {
@@ -159,6 +161,28 @@ export default function ComplaintCard({
           <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[#4A4458]">{complaint.detail}</p>
         )}
         <StepRow step={progress.step} />
+        {complaint.grassScheduleUrl && (
+          /* การ์ดทั้งใบเป็นลิงก์อยู่แล้ว (ห้าม <a> ซ้อน <a>) — ใช้ span + window.open แทน */
+          <span
+            role="link"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(complaint.grassScheduleUrl, "_blank", "noopener,noreferrer");
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(complaint.grassScheduleUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="mt-2.5 flex items-center justify-center gap-1.5 rounded-[12px] bg-[#EAF7EE] px-3 py-2 text-[12.5px] font-semibold text-[#1B935A]"
+          >
+            <CalendarDays size={14} />
+            ดูตารางคิวตัดหญ้า
+          </span>
+        )}
       </div>
     </Link>
   );

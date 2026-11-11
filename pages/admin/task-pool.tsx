@@ -275,7 +275,7 @@ function TaskPoolContent() {
     const { isConfirmed } = await Swal.fire({
       icon: 'question',
       title: 'แจ้งเตือนหัวหน้ากองทาง LINE?',
-      html: `ส่งสรุปเรื่องค้างเกิน ${data.settings.unclaimedAlertDays} วัน (${data.stale.count} เรื่อง) เข้ากลุ่มเจ้าหน้าที่<br/><span class="text-sm opacity-70">ข้อความนี้นับโควตา LINE ตามจำนวนสมาชิกในกลุ่ม</span>`,
+      html: `ส่งสรุปเรื่องค้างเกิน ${data.settings.unclaimedAlertHours} ชม. (${data.stale.count} เรื่อง) เข้ากลุ่มเจ้าหน้าที่<br/><span class="text-sm opacity-70">ข้อความนี้นับโควตา LINE ตามจำนวนสมาชิกในกลุ่ม</span>`,
       showCancelButton: true,
       confirmButtonText: 'ส่งเลย',
       cancelButtonText: 'ยกเลิก',
@@ -339,7 +339,7 @@ function TaskPoolContent() {
             {/* มือถือ: ข้อความกินความกว้างที่เหลือของแถวแรก ปุ่มไปแถวถัดไป — ห้ามใช้ flex-1 min-w-0 คู่กับปุ่มที่ไม่หด ไม่งั้นข้อความถูกบีบเป็นคำละบรรทัด */}
             <div className="min-w-0 flex-1 basis-[calc(100%-48px)] md:basis-auto">
               <div className="text-[14.5px] font-bold text-tk-overdue-ink">
-                {stale.count > 0 ? `${stale.count} เรื่องค้างไม่มีคนรับเกิน ${data!.settings.unclaimedAlertDays} วัน` : `มีเรื่องค้างเก่ากว่าช่วงที่แสดง ${stale.olderOutsideWindow} เรื่อง`}
+                {stale.count > 0 ? `${stale.count} เรื่องค้างไม่มีคนรับเกิน ${data!.settings.unclaimedAlertHours} ชม.` : `มีเรื่องค้างเก่ากว่าช่วงที่แสดง ${stale.olderOutsideWindow} เรื่อง`}
               </div>
               <div className="text-[12.5px] text-tk-overdue-ink-2">
                 {stale.count > 0 && stale.maxDays !== null && (

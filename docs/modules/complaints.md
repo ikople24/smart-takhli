@@ -8,6 +8,9 @@
 - Public: `/complaint` (ยื่นเรื่อง), `/complaint/[id_card]`, `/status` (ติดตามสถานะ)
 - Admin: `/admin/manage-complaints`, `/admin/my-tasks`, `/admin/dashboard`, `/admin/analytics`
 
+> `/status` แสดงลิงก์ "ดูตารางคิวตัดหญ้า" ให้เรื่องตัดหญ้าที่ยังไม่ปิด — `GET /api/complaints` เติมฟิลด์ derived
+> `grassScheduleUrl` (ไฟล์กลางจาก `task_settings.grassSchedule`) · รายละเอียดใน [tasks.md](tasks.md) หัวข้อ "ตารางคิวตัดหญ้า"
+
 ## API
 
 - `pages/api/complaints/*`, `pages/api/problems.js` (⚠️ อยู่ root ของ api/)

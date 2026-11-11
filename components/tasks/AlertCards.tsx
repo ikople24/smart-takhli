@@ -1,5 +1,6 @@
 // components/tasks/AlertCards.tsx
 // แถวการ์ดเตือน 4 ใบ (README ② Alert row) — คลิกเพื่อกรองรายการกลุ่มงาน (?alert=)
+// ใบที่ 5 "ต้องอัปเดตความคืบหน้า" มาเฉพาะเมื่อมีงานที่ชนิดงานบังคับแนบภาพ (lib/tasks/summary.js#alertCards)
 import React from 'react';
 import clsx from 'clsx';
 import type { AlertCard, AlertKind, BadgeTone } from '@/lib/tasks/types';
@@ -29,10 +30,12 @@ export function AlertCards({ cards, active, onSelect, className }: AlertCardsPro
     <section className={clsx('rounded-[18px] bg-tk-surface px-3.5 py-3 shadow-tk-lg md:hidden', className)} aria-label="ต้องจัดการวันนี้">
       <h2 className="mb-2.5 text-[14px] font-bold text-tk-ink">ต้องจัดการวันนี้</h2>
       <div className="grid grid-cols-2 gap-[9px]" role="group">
-        {cards.map((card) => {
+        {cards.map((card, i) => {
           const on = active === card.key;
+          // จำนวนการ์ดคี่ → ใบสุดท้ายเต็มแถว
+          const fullRow = cards.length % 2 === 1 && i === cards.length - 1;
           return (
-            <button key={card.key} type="button" aria-pressed={on} onClick={() => onSelect(on ? null : card.key)} className={clsx('touch-feedback flex min-h-12 items-center justify-between rounded-[13px] px-3 py-[11px] text-left', ACCENT[card.tone].tile, on && 'ring-2 ring-offset-1 ring-current')}>
+            <button key={card.key} type="button" aria-pressed={on} onClick={() => onSelect(on ? null : card.key)} className={clsx('touch-feedback flex min-h-12 items-center justify-between rounded-[13px] px-3 py-[11px] text-left', ACCENT[card.tone].tile, fullRow && 'col-span-2', on && 'ring-2 ring-offset-1 ring-current')}>
               <span className="text-[11px] font-semibold leading-tight">{card.label}</span>
               <span className="text-[22px] font-bold leading-none">{card.count}</span>
             </button>
@@ -41,8 +44,8 @@ export function AlertCards({ cards, active, onSelect, className }: AlertCardsPro
       </div>
     </section>
 
-    {/* เดสก์ท็อป: 4 การ์ดแถวเดียว */}
-    <div className={clsx('hidden gap-3.5 md:grid md:grid-cols-2 xl:grid-cols-4', className)} role="group" aria-label="ป้ายเตือน">
+    {/* เดสก์ท็อป: 4 (หรือ 5) การ์ดแถวเดียว */}
+    <div className={clsx('hidden gap-3.5 md:grid md:grid-cols-2', cards.length > 5 ? 'xl:grid-cols-6' : cards.length > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4', className)} role="group" aria-label="ป้ายเตือน">
       {cards.map((card) => {
         const accent = ACCENT[card.tone];
         const isActive = active === card.key;

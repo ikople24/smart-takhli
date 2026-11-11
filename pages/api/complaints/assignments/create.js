@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     // วันครบกำหนด: นับจากวันที่ประชาชนแจ้ง (คำมั่นต่อประชาชน) — ไม่พบเรื่องก็ยังสร้างได้ (พฤติกรรมเดิม)
     // แล้ว derived.js จะถอยไปใช้ assignedAt + SLA ให้เอง
     const [complaint, settings] = await Promise.all([
-      Complaint.findById(complaintId).select('createdAt category problems detail department').lean(),
+      Complaint.findById(complaintId).select('createdAt category problems detail workType department').lean(),
       getTaskSettings(),
     ]);
 
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
       complaintCreatedAt: complaint?.createdAt,
       assignedAt: now,
       category: complaint?.category,
+      complaint: complaint ?? undefined,
       settings,
     });
 

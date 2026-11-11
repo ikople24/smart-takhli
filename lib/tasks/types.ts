@@ -3,7 +3,9 @@
 // logic จริงอยู่ในไฟล์ .js ข้าง ๆ (derived / kpi / groupBy / badges) — ไฟล์นี้บรรยายรูปทรงผลลัพธ์เท่านั้น
 
 export type Severity = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'normal' | 'done';
-export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked';
+/** needs_update = ถึงรอบแนบภาพความคืบหน้า (derived.progressDue) — ไม่กระทบ severity
+ *  site_issue = พักเพราะพบปัญหาหน้างาน (derived.isSiteIssue) — แทน 'blocked' ของเรื่องนั้น (severity ยังเป็น 'blocked') */
+export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'site_issue' | 'needs_update';
 export type GroupBy = 'category' | 'organization' | 'priority';
 export type Stage = 'received' | 'site_visit' | 'coordinating' | 'awaiting_review' | 'closed';
 export type AssignmentRole = 'assignee' | 'coordinator';
@@ -25,21 +27,54 @@ export interface StatusPill {
 export interface TaskSettings {
   defaultSlaDays: number;
   warnBeforeDays: number;
+  /** เลิกใช้ตัดสินแล้ว — คงไว้เพื่อความเข้ากันได้ */
   unclaimedWarnDays: number;
+  /** เลิกใช้ตัดสินแล้ว — คงไว้เพื่อความเข้ากันได้ */
   unclaimedAlertDays: number;
+  /** ป้าย amber เมื่อรอรับ ≥ N ชม. */
+  unclaimedWarnHours: number;
+  /** "รอเกิน N ชม." เมื่อรอรับ > N ชม. (มติประชุม 10/11/69 = 24) */
+  unclaimedAlertHours: number;
   followUpEveryDays: number;
+  /** ใช้กับ "งานทั่วไป" เท่านั้น */
   slaByCategory: Array<{ category: string; slaDays: number }>;
+  /** ทับ SLA ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
+  slaByWorkType: Array<{ workType: string; slaDays: number }>;
+  /** วันหยุดราชการ (ไม่นับเป็นวันทำการของกำหนดปิดเรื่อง) — เรียงตามวันที่ ไม่ซ้ำ */
+  holidays: TaskHoliday[];
+  /** ตารางคิวตัดหญ้า (ไฟล์กลาง) — url '' = ยังไม่มี (lib/tasks/grassSchedule.js) */
+  grassSchedule: GrassSchedule;
+}
+
+export interface GrassSchedule {
+  /** https url (Cloudinary รูป/PDF) หรือ '' */
+  url: string;
+  fileName: string;
+  /** ISO — เวลาอัปโหลดล่าสุด (ประทับฝั่ง server) */
+  updatedAt: string | null;
+}
+
+export interface TaskHoliday {
+  /** 'YYYY-MM-DD' (วันที่ไทย) */
+  date: string;
+  name: string;
 }
 
 /** ผลของ deriveAssignment (lib/tasks/derived.js) */
 export interface DerivedAssignment {
+  /** กำหนดปิด (วันทำการ จ.–ศ. ไม่รวมวันหยุด) นับจากวันแจ้ง */
   slaDays: number;
+  /** key ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
+  workType: string;
+  workTypeLabel: string;
   dueDate: string | null;
   dueBasis: 'stored' | 'complaint' | 'assignment' | null;
+  /** วันทำการที่เหลือถึงกำหนด (0 = วันนี้ · ติดลบ = เลยแล้ว อย่างน้อย -1) */
   daysToDue: number | null;
   isCompleted: boolean;
   isPaused: boolean;
   isOverdue: boolean;
+  /** เกินกำหนดกี่วันทำการ (≥ 1 เมื่อ isOverdue) */
   overdueDays: number;
   isDueSoon: boolean;
   needsCoordination: boolean;
@@ -48,11 +83,27 @@ export interface DerivedAssignment {
   followUpDue: boolean;
   isBlocked: boolean;
   blockedDays: number | null;
+  /** พักเพราะพบปัญหาหน้างาน (blocked.kind === 'site_issue') — lib/tasks/siteIssue.js */
+  isSiteIssue: boolean;
+  /** label ของเหตุผล (SITE_ISSUE_REASONS) — null เมื่อไม่ใช่ปัญหาหน้างาน */
+  siteIssueLabel: string | null;
   lastActivityAt: string | null;
   daysSinceUpdate: number | null;
+  /** รอบแนบภาพความคืบหน้า (วันทำการ) ของชนิดงาน — null = ชนิดงานนี้ไม่บังคับ */
+  progressEveryDays: number | null;
+  /** เวลาที่แนบภาพความคืบหน้าล่าสุด (ไม่เคย = วันรับงาน) — null เมื่อไม่บังคับ / งานปิดแล้ว */
+  lastProgressAt: string | null;
+  /** วันทำการตั้งแต่ lastProgressAt */
+  daysSinceProgress: number | null;
+  /** ถึงรอบต้องแนบภาพแล้ว (false เมื่อไม่บังคับ / ปิดแล้ว / พัก SLA) */
+  progressDue: boolean;
   daysAssigned: number | null;
   resolutionDays: number | null;
   completedLate: boolean | null;
+  /** ms จากประชาชนแจ้ง → กดรับ (null = ไม่รู้เวลาแจ้ง) — ใช้ตัดสิน KPI รับภายใน 24 ชม. */
+  claimMs: number | null;
+  /** ชม.เต็มของ claimMs — แสดงผลเท่านั้น */
+  claimHours: number | null;
   stage: Stage;
   role: AssignmentRole;
   severity: Severity;
@@ -62,9 +113,14 @@ export interface DerivedAssignment {
 /** ผลของ deriveUnclaimed (lib/tasks/derived.js) */
 export interface DerivedUnclaimed {
   daysUnclaimed: number | null;
+  /** ชม.เต็มตั้งแต่ประชาชนแจ้ง (≥ 0) — แสดงผลเท่านั้น (isStale ตัดสินด้วย ms) */
+  hoursUnclaimed: number | null;
+  /** รอรับเกิน unclaimedAlertHours */
   isStale: boolean;
   agingTone: 'overdue' | 'due' | 'neutral';
   slaDays: number;
+  workType: string;
+  workTypeLabel: string;
   dueDate: string | null;
   daysToDue: number | null;
   isUrgent: boolean;
@@ -83,6 +139,12 @@ export interface CoordinationInfo {
 
 export interface BlockedInfo {
   isBlocked: boolean;
+  /** materials = รอวัสดุ / งบประมาณ · site_issue = พบปัญหาหน้างาน */
+  kind: 'materials' | 'site_issue';
+  /** code ใน SITE_ISSUE_REASONS (ว่างเมื่อ kind materials) */
+  siteIssueCode: string;
+  /** ภาพหน้างานที่แนบตอนแจ้งปัญหา (จากรายการ timeline 'blocked' ล่าสุด — มีเฉพาะ GET รายละเอียด) */
+  images?: string[];
   reason: string;
   itemName: string;
   purchaseRefNo: string;
@@ -121,6 +183,11 @@ export interface OfficerTask extends DerivedAssignment {
   transferRequest?: TransferRequestInfo | null;
 }
 
+export interface SiteIssueReason {
+  code: string;
+  label: string;
+}
+
 export interface TransferRequestInfo {
   requestedAt: string;
   reason: string;
@@ -141,6 +208,8 @@ export interface TaskGroup<T = OfficerTask> {
   sub: string;
   count: number;
   counts: Record<Severity, number>;
+  /** เรื่องที่พักเพราะพบปัญหาหน้างาน (นับรวมใน counts.blocked ด้วย) */
+  siteIssues: number;
   topSeverity: Severity;
   items: T[];
 }
@@ -153,11 +222,18 @@ export interface MyKpi {
   overdue: number;
   dueSoon: number;
   coordinating: number;
+  /** งานที่พักอยู่ทั้งหมด (รอวัสดุ + พบปัญหาหน้างาน) */
   blocked: number;
+  /** ในจำนวน blocked — พักเพราะพบปัญหาหน้างาน */
+  siteIssue: number;
   completedThisMonth: number;
   completionRate: number;
   onTimeRate: number | null;
   avgResolutionDays: number | null;
+  /** % เรื่องที่กดรับภายใน 24 ชม. นับจากประชาชนแจ้ง — null เมื่อไม่มีข้อมูล */
+  claimedWithin24hRate: number | null;
+  /** ตัวหารของ claimedWithin24hRate */
+  claimedCount: number;
   /** คะแนนเฉลี่ยแบบ 1 ผู้แจ้ง = 1 เสียง ของเรื่องที่เจ้าหน้าที่ถือ — null เมื่อยังไม่มีคะแนน */
   satisfaction: number | null;
   satisfactionCount?: number;
@@ -303,12 +379,46 @@ export interface SolutionOption {
   iconUrl?: string;
 }
 
+export interface WorkTypeOption {
+  key: string;
+  label: string;
+  slaDays: number;
+}
+
+/** ผลของ PATCH /api/tasks/[assignmentId] action work_type */
+export interface WorkTypeChangeResponse {
+  success: true;
+  workType: string;
+  workTypeLabel: string;
+  slaDays: number;
+  dueDate: string | null;
+  /** กองปกติของชนิดงานนี้ เมื่อไม่ใช่กองปัจจุบันของเรื่อง (แนะนำเท่านั้น ไม่ได้ย้ายให้) */
+  suggestedDepartment: string | null;
+}
+
 export interface TaskDetailResponse {
   success: true;
   now: string;
   canEdit: boolean;
   canTransfer: boolean;
   canRequestTransfer: boolean;
+  /** เปลี่ยนชนิดงานได้ (เจ้าของ / หัวหน้ากองของเรื่อง / superadmin และงานยังไม่ปิด) */
+  canSetWorkType: boolean;
+  /** ชนิดงานของเรื่อง (key ใน lib/tasks/workTypes.js) — ตัวเดียวกับ derived.workType */
+  workType: string;
+  workTypeLabel: string;
+  /** manual = เจ้าหน้าที่เลือก · auto = ระบบเดา */
+  workTypeSource: 'manual' | 'auto';
+  /** ตัวเลือกชนิดงาน + SLA ที่ใช้กับเรื่องนี้จริง (รวมค่าตั้ง) — lib/tasks/workTypeChange.js#workTypeOptionsFor */
+  workTypeOptions: WorkTypeOption[];
+  /** ตารางคิวตัดหญ้า — เฉพาะงานชนิด 'grass' ที่มีไฟล์อัปโหลดไว้ (null = ไม่ใช่งานตัดหญ้า หรือยังไม่มีตาราง) */
+  grassSchedule: GrassSchedule | null;
+  /** เหตุผลมาตรฐานของ "แจ้งปัญหาหน้างาน" (lib/tasks/siteIssue.js#SITE_ISSUE_REASONS) */
+  siteIssueReasons: SiteIssueReason[];
+  /** แจ้งปัญหาหน้างานได้ (เจ้าของ/superadmin · งานยังไม่ปิด · ยังไม่ได้พักงาน) */
+  canReportSiteIssue: boolean;
+  /** เลิกพักงานได้ — เจ้าของ/superadmin เสมอ · หัวหน้ากองของเรื่องเฉพาะพักเพราะปัญหาหน้างาน */
+  canResume: boolean;
   /** คืนงานเข้ากองงานรอรับได้ (เจ้าของ/superadmin + ยังไม่เริ่มทำ — lib/tasks/release.js) */
   canRelease: boolean;
   transferRequest: TransferRequestInfo | null;

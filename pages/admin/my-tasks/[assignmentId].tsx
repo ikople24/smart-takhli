@@ -2,7 +2,7 @@
 // หน้าจอ 3 "รายละเอียดงาน + อัปเดตความคืบหน้า" (README) — จุดเดียวที่เจ้าหน้าที่อ่านเรื่อง ดูไทม์ไลน์ บันทึกความคืบหน้า
 // และจัดการการประสานงานภายนอก (แทน ComplaintDetailModal + UpdateAssignmentModal ที่แยกกัน)
 // full-page ไม่มี sidebar (ADMIN_META: noSidebar + fullBleed) — header bar ← กลับ + breadcrumb อยู่ในหน้า
-// ข้อมูลจาก GET /api/tasks/[assignmentId] · การกระทำ: PATCH เดียวกัน (progress/close/blocked), POST coordination, POST transfer
+// ข้อมูลจาก GET /api/tasks/[assignmentId] · การกระทำ: PATCH เดียวกัน (progress/close/blocked/site_issue), POST coordination, POST transfer
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -17,9 +17,10 @@ import { uploadToCloudinary } from '@/utils/uploadToCloudinary';
 import { stageTransition } from '@/lib/tasks/status';
 import PermissionGuard from '@/components/PermissionGuard';
 import ImageUploads from '@/components/ImageUploads';
-import type { OfficerTask, Stage, TaskDetailResponse } from '@/lib/tasks/types';
+import type { OfficerTask, Stage, TaskDetailResponse, WorkTypeChangeResponse } from '@/lib/tasks/types';
 import { formatThaiDate, relativeDaysLabel } from '@/lib/tasks/format';
 import { STAGE_LABELS } from '@/lib/tasks/status';
+import { GRASS_QUEUE_NOTE } from '@/lib/tasks/grassSchedule';
 import {
   AlertBadge,
   StatusStepper,
@@ -31,8 +32,10 @@ import {
   CloseTaskModal,
   TransferTaskModal,
   SolutionChips,
+  SiteIssueCard,
+  GrassScheduleCard,
 } from '@/components/tasks';
-import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload } from '@/components/tasks';
+import type { OfficerOption, TransferPayload, TransferRequestPayload, FollowUpPayload, CoordinationSetPayload, BlockedPayload, ClosePayload, SiteIssuePayload } from '@/components/tasks';
 
 const SmallMap = dynamic(() => import('@/components/SmallMap'), { ssr: false, loading: () => <div className="skeleton h-28 rounded-[11px]" /> });
 
@@ -147,6 +150,13 @@ function TaskDetailContent() {
       toast('บันทึกความคืบหน้าแล้ว');
     }, 'บันทึกไม่สำเร็จ');
 
+  /* ── ตารางคิวตัดหญ้า (งานชนิด 'grass') — บันทึกความคืบหน้าข้อความมาตรฐาน ประชาชนเห็นลิงก์ตารางที่ /status ── */
+  const notifyGrassQueued = () =>
+    run('grass-queue', async () => {
+      await axios.patch(`/api/tasks/${id}`, { action: 'progress', note: GRASS_QUEUE_NOTE });
+      toast('บันทึกแล้ว — ผู้แจ้งดูตารางคิวได้ที่หน้าติดตามสถานะ');
+    }, 'บันทึกไม่สำเร็จ');
+
   /* ── stepper ── */
   const changeStage = async (next: Stage, info: { direction: 'forward' | 'backward'; needsReason: boolean }) => {
     if (next === 'closed') {
@@ -190,6 +200,67 @@ function TaskDetailContent() {
       await axios.patch(`/api/tasks/${id}`, { action: 'blocked', ...payload });
       toast(payload.on ? 'พักงานแล้ว — หยุดนับ SLA' : 'กลับมาดำเนินการต่อแล้ว');
     }, 'บันทึกไม่สำเร็จ');
+
+  /* ── พบปัญหาหน้างาน (lib/tasks/siteIssue.js) — พัก SLA + แจ้งหัวหน้า · หัวหน้า/เจ้าของ/superadmin กดดำเนินการต่อ ── */
+  const reportSiteIssue = (payload: SiteIssuePayload) =>
+    run('site-issue', async () => {
+      const { data: res } = await axios.patch(`/api/tasks/${id}`, { action: 'site_issue', ...payload });
+      toast(`แจ้งปัญหาหน้างานแล้ว — พัก SLA · แจ้งหัวหน้า/ผู้ดูแลระบบ ${res?.notified ?? 0} คน`);
+    }, 'แจ้งปัญหาหน้างานไม่สำเร็จ');
+
+  const resumeSiteIssue = async () => {
+    const { isConfirmed } = await Swal.fire({
+      icon: 'question',
+      title: 'ดำเนินการต่อ?',
+      text: 'เลิกพักงาน — ระบบกลับมานับ SLA ต่อ (วันที่พักไม่นับ)',
+      showCancelButton: true,
+      confirmButtonText: 'ดำเนินการต่อ',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+    });
+    if (!isConfirmed) return;
+    await run('blocked', async () => {
+      await axios.patch(`/api/tasks/${id}`, { action: 'blocked', on: false });
+      toast('กลับมาดำเนินการต่อแล้ว');
+    }, 'บันทึกไม่สำเร็จ');
+  };
+
+  /* ── ชนิดงาน (กำหนด SLA) — เจ้าของ / หัวหน้ากอง / superadmin ── */
+  const changeWorkType = async () => {
+    if (!data) return;
+    const inputOptions = Object.fromEntries(data.workTypeOptions.map((o) => [o.key, `${o.label} · ${o.slaDays} วันทำการ`]));
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'เปลี่ยนชนิดงาน',
+      html: '<div class="text-sm">เลือกชนิดงานจริงจากหน้างาน — ระบบคิดวันครบกำหนดใหม่เป็นวันทำการ (จ.–ศ. ไม่รวมวันหยุดราชการ) นับจากวันที่ประชาชนแจ้ง</div>',
+      input: 'select',
+      inputOptions,
+      inputValue: data.workType,
+      inputValidator: (v) => (String(v ?? '') === data.workType ? 'เป็นชนิดงานเดิม — เลือกชนิดอื่น' : null),
+      showCancelButton: true,
+      confirmButtonText: 'บันทึก',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#7C3AED',
+    });
+    if (!isConfirmed || !value) return;
+    // เก็บผลไว้นอก run() — แสดงคำแนะนำหลังโหลดข้อมูลใหม่เสร็จ (ไม่ย้ายกอง/ไม่เรียก API โอนงานให้เอง)
+    const result: { suggested: string | null } = { suggested: null };
+    await run('work-type', async () => {
+      const { data: res } = await axios.patch<WorkTypeChangeResponse>(`/api/tasks/${id}`, { action: 'work_type', workType: String(value) });
+      result.suggested = res.suggestedDepartment;
+      toast(`เปลี่ยนเป็น "${res.workTypeLabel}" แล้ว — กำหนดปิด ${res.slaDays} วันทำการนับจากวันแจ้ง`);
+    }, 'เปลี่ยนชนิดงานไม่สำเร็จ');
+    const suggested = result.suggested;
+    if (suggested) {
+      const button = data.canTransfer ? 'โอนงาน' : 'ขอโอนงาน';
+      await Swal.fire({
+        icon: 'info',
+        title: 'ชนิดงานนี้ปกติเป็นของกองอื่น',
+        text: `ชนิดงานนี้ปกติเป็นของ ${suggested} — ถ้าไม่ใช่งานของกองคุณ กด "${button}"`,
+        confirmButtonText: 'รับทราบ',
+        confirmButtonColor: '#7C3AED',
+      });
+    }
+  };
 
   /* ── ประสานงาน ── */
   const setCoordination = (payload: CoordinationSetPayload) =>
@@ -427,6 +498,63 @@ function TaskDetailContent() {
                 </div>
               )}
 
+              {/* พักงานเพราะพบปัญหาหน้างาน — ทุกคนที่เปิดหน้านี้เห็น · ปุ่มดำเนินการต่อเฉพาะ canResume (เจ้าของ/หัวหน้ากอง/superadmin) */}
+              {d.isSiteIssue && a.blocked && (
+                <div className="mt-4 rounded-[12px] border border-tk-blocked bg-tk-blocked-soft px-4 py-3 text-[12.5px]" role="alert">
+                  <div className="flex items-start gap-2.5">
+                    <ExclamationTriangleIcon className="mt-px h-[18px] w-[18px] shrink-0 text-tk-blocked-ink" strokeWidth={1.8} />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-tk-blocked-ink">พักงาน — พบปัญหาหน้างาน: {a.blocked.reason || d.siteIssueLabel}</div>
+                      <div className="text-tk-ink-4">
+                        {a.blocked.since ? `แจ้งเมื่อ ${formatThaiDate(a.blocked.since)} · ` : ''}พัก SLA {d.blockedDays ?? 0} วัน · รอหัวหน้ากองพิจารณา: ดำเนินการต่อ หรือให้เจ้าของงาน/ผู้ดูแลระบบปิดเรื่อง
+                      </div>
+                    </div>
+                  </div>
+                  {(a.blocked.images?.length ?? 0) > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {a.blocked.images!.map((src) => (
+                        <a key={src} href={src} target="_blank" rel="noreferrer" className="relative block h-[64px] w-[64px] overflow-hidden rounded-[10px] border border-tk-blocked-line">
+                          <Image src={src} alt="ภาพหน้างาน" fill sizes="64px" className="object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {data.canResume && (
+                    <button type="button" disabled={!!busy} onClick={resumeSiteIssue} className="mt-2.5 rounded-[9px] bg-tk-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-tk-primary-dark disabled:opacity-60">
+                      {busy === 'blocked' ? 'กำลังบันทึก…' : 'ดำเนินการต่อ'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* รอบแนบภาพความคืบหน้าตามชนิดงาน (งานปะถนน) — ค่าทั้งหมดจาก derived ของ API */}
+              {d.progressEveryDays && !d.isCompleted && (
+                <div
+                  className={clsx(
+                    'mt-4 flex items-start gap-2.5 rounded-[12px] border px-4 py-3 text-[12.5px]',
+                    d.progressDue ? 'border-tk-due bg-tk-due-soft' : 'border-tk-line bg-tk-line-light'
+                  )}
+                  role={d.progressDue ? 'alert' : undefined}
+                >
+                  <ExclamationTriangleIcon className={clsx('mt-px h-[18px] w-[18px] shrink-0', d.progressDue ? 'text-tk-due-ink' : 'text-tk-ink-5')} strokeWidth={1.8} />
+                  <div className="min-w-0">
+                    <div className={clsx('font-bold', d.progressDue ? 'text-tk-due-ink' : 'text-tk-ink-3')}>
+                      งานนี้ต้องแนบภาพความคืบหน้าทุก {d.progressEveryDays} วันทำการ
+                      {d.lastProgressAt ? ` — อัปเดตล่าสุด ${formatThaiDate(d.lastProgressAt)}` : ''}
+                    </div>
+                    <div className="text-tk-ink-4">
+                      {d.isPaused
+                        ? 'พักนับ SLA อยู่ — ยังไม่ต้องแนบภาพ'
+                        : d.progressDue
+                          ? `ไม่มีภาพใหม่มา ${d.daysSinceProgress ?? 0} วันทำการ — แนบภาพหน้างาน (เช่น ภาพประเมินจุด) ในช่อง "บันทึกการดำเนินงานวันนี้"`
+                          : d.daysSinceProgress
+                            ? `ผ่านมา ${d.daysSinceProgress} จาก ${d.progressEveryDays} วันทำการของรอบนี้`
+                            : 'ยังอยู่ในรอบนี้ — ครบรอบแล้วจะมีป้ายเตือน'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-5 grid grid-cols-2 gap-4 border-t border-tk-line-light pt-[18px] md:grid-cols-4">
                 <Meta label="ผู้แจ้ง">{c.reporterName || '—'}</Meta>
                 <Meta label="โทรศัพท์" className="font-tk-mono font-medium">
@@ -442,11 +570,25 @@ function TaskDetailContent() {
                 <Meta label="วันที่แจ้ง">{formatThaiDate(c.createdAt) || '—'}</Meta>
                 <Meta label="ครบกำหนด" className={clsx(d.isOverdue && 'text-tk-overdue-ink')}>
                   {formatThaiDate(a.dueDate) || '—'}
-                  {d.isOverdue && ` (เกิน ${d.overdueDays} วัน)`}
+                  {d.isOverdue && ` (เกิน ${d.overdueDays} วันทำการ)`}
                   {d.isPaused && ' · พัก SLA'}
                 </Meta>
                 <Meta label="กองที่รับผิดชอบ">{c.department || 'ยังไม่ระบุกอง'}</Meta>
                 <Meta label="อัปเดตล่าสุด">{relativeDaysLabel(d.daysSinceUpdate)}</Meta>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[12px] bg-tk-bg px-4 py-2.5 text-[12.5px]">
+                <span className="min-w-0 flex-1">
+                  <span className="text-tk-ink-6">ชนิดงาน: </span>
+                  <span className="font-semibold text-tk-ink">{data.workTypeLabel || '—'}</span>
+                  <span className="text-tk-ink-4"> · กำหนดปิด {d.slaDays} วันทำการนับจากวันแจ้ง</span>
+                  {data.workTypeSource === 'auto' && <span className="ml-1 text-[11.5px] text-tk-ink-6">(ระบบเดา)</span>}
+                </span>
+                {data.canSetWorkType && !d.isCompleted && (
+                  <button type="button" disabled={!!busy} onClick={changeWorkType} className="text-[12px] font-semibold text-tk-primary hover:underline disabled:opacity-60">
+                    เปลี่ยนชนิดงาน
+                  </button>
+                )}
               </div>
 
               <div className="mt-4">
@@ -527,7 +669,10 @@ function TaskDetailContent() {
                   <div className="grid grid-cols-2 gap-2">
                     <button type="button" disabled={!!busy} onClick={() => quickStage('site_visit')} className="touch-feedback min-h-12 rounded-[13px] bg-tk-line-light py-3.5 text-[13.5px] font-semibold text-tk-ink-3 disabled:opacity-60">ลงพื้นที่แล้ว</button>
                     <button type="button" disabled={!!busy} onClick={() => (a.coordination ? quickStage('coordinating') : setCoordSetOpen(true))} className="touch-feedback min-h-12 rounded-[13px] bg-tk-coord-soft py-3.5 text-[13.5px] font-semibold text-tk-coord-ink disabled:opacity-60">รอหน่วยงานอื่น</button>
-                    <button type="button" disabled={!!busy} onClick={() => document.getElementById('blocked-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="touch-feedback min-h-12 rounded-[13px] bg-tk-blocked-soft py-3.5 text-[13.5px] font-semibold text-tk-blocked-ink disabled:opacity-60">รอวัสดุ / งบ</button>
+                    {/* พักเพราะปัญหาหน้างาน → การ์ดรอวัสดุซ่อนอยู่ ปุ่มนี้ไม่มีที่ไป — ซ่อน (แถบ + ปุ่มดำเนินการต่ออยู่ที่ header card) */}
+                    {!d.isSiteIssue && (
+                      <button type="button" disabled={!!busy} onClick={() => document.getElementById('blocked-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="touch-feedback min-h-12 rounded-[13px] bg-tk-blocked-soft py-3.5 text-[13.5px] font-semibold text-tk-blocked-ink disabled:opacity-60">รอวัสดุ / งบ</button>
+                    )}
                     <button type="button" disabled={!!busy} onClick={() => setCloseOpen(true)} className="touch-feedback min-h-12 rounded-[13px] bg-tk-done-soft py-3.5 text-[13.5px] font-semibold text-tk-done-ink disabled:opacity-60">เสร็จแล้ว</button>
                   </div>
                 </div>
@@ -551,9 +696,20 @@ function TaskDetailContent() {
                 </button>
               )}
 
-              <div id="blocked-card">
-                <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
-              </div>
+              {/* พักเพราะปัญหาหน้างาน → ซ่อนการ์ดรอวัสดุ (แถบ + ปุ่มดำเนินการต่ออยู่ที่ header card) */}
+              {!d.isSiteIssue && (
+                <div id="blocked-card">
+                  <BlockedCard blocked={a.blocked} followUpEveryDays={data.settings.followUpEveryDays} disabled={!editable} submitting={busy === 'blocked'} onToggle={toggleBlocked} />
+                </div>
+              )}
+              {data.canReportSiteIssue && <SiteIssueCard reasons={data.siteIssueReasons} submitting={busy === 'site-issue'} onSubmit={reportSiteIssue} />}
+              {data.workType === 'grass' && (
+                <GrassScheduleCard
+                  schedule={data.grassSchedule}
+                  submitting={busy === 'grass-queue'}
+                  onNotifyQueued={editable ? notifyGrassQueued : undefined}
+                />
+              )}
 
               {editable && (
                 <>

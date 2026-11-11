@@ -1,5 +1,5 @@
 // components/tasks/KpiStrip.tsx
-// แถบ KPI 5 ช่องในการ์ดเดียว (README ③ KPI strip)
+// แถบ KPI 6 ช่องในการ์ดเดียว (README ③ KPI strip) — "รับเรื่องภายใน 24 ชม." ตามมติประชุม 10/11/69
 import React from 'react';
 import clsx from 'clsx';
 import type { MyKpi } from '@/lib/tasks/types';
@@ -18,6 +18,15 @@ export function KpiStrip({ kpi, className }: { kpi: MyKpi; className?: string })
     { label: 'กำลังดำเนินการ', value: String(kpi.inProgress), unit: 'เรื่อง' },
     { label: 'เสร็จเดือนนี้', value: String(kpi.completedThisMonth), valueClass: 'text-tk-done' },
     { label: 'เสร็จตามกำหนด', value: kpi.onTimeRate === null ? dash : String(kpi.onTimeRate), unit: kpi.onTimeRate === null ? undefined : '%' },
+    {
+      label: 'รับเรื่องภายใน 24 ชม.',
+      value: kpi.claimedWithin24hRate == null ? dash : String(kpi.claimedWithin24hRate),
+      unit: kpi.claimedWithin24hRate == null ? undefined : '%',
+      title:
+        kpi.claimedWithin24hRate == null
+          ? 'ยังไม่มีข้อมูลเวลาแจ้งเรื่อง'
+          : `นับจากเวลาที่ประชาชนแจ้งถึงเวลากดรับ · ${kpi.claimedCount ?? 0} เรื่อง (ไม่นับงานผู้ประสาน)`,
+    },
     { label: 'เฉลี่ยต่อเรื่อง', value: kpi.avgResolutionDays === null ? dash : String(kpi.avgResolutionDays), unit: kpi.avgResolutionDays === null ? undefined : 'วัน' },
     {
       label: 'ความพึงพอใจ',

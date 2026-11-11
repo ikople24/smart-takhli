@@ -1,6 +1,6 @@
 // pages/admin/my-tasks.tsx
 // หน้าจอ 1 "งานของฉัน" — โฉมใหม่ตาม docs/design_handoff_officer_task_management/README.md (แทน KPI cards + flat list เดิม)
-// ① header card เจ้าหน้าที่ · ② การ์ดเตือน 4 ใบ (คลิกกรอง ?alert=) · ③ KPI strip · ④ กลุ่มงานของฉัน (?groupBy=) + right rail
+// ① header card เจ้าหน้าที่ · ② การ์ดเตือน 4 ใบ (+ "ต้องอัปเดตความคืบหน้า" เมื่อมีงานบังคับแนบภาพ — คลิกกรอง ?alert=) · ③ KPI strip · ④ กลุ่มงานของฉัน (?groupBy=) + right rail
 // ข้อมูลทั้งหมดมาจาก GET /api/tasks/my-kpi (derived แล้ว) — หน้านี้ regroup/สรุปฝั่ง client ด้วย lib/tasks/{groupBy,summary}.js
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -35,7 +35,7 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   organization: 'ตามกอง',
   priority: 'ตามความเร่งด่วน',
 };
-const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked'];
+const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked', 'site_issue', 'needs_update'];
 
 const toast = (title: string, icon: 'success' | 'error' | 'info' = 'success') =>
   Swal.fire({ toast: true, position: 'top-end', timer: 2600, timerProgressBar: true, showConfirmButton: false, icon, title });
@@ -309,7 +309,7 @@ export default function MyTasksPage() {
                     onClick={() => setQuery({ alert: null })}
                     className="inline-flex items-center gap-1 rounded-full bg-tk-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-tk-primary-dark whitespace-nowrap hover:bg-tk-primary-line-2"
                   >
-                    กรอง: {SEVERITY_LABELS[alert]}
+                    กรอง: {cards.find((c) => c.key === alert)?.label ?? (alert === 'needs_update' ? 'ต้องอัปเดตความคืบหน้า' : alert === 'site_issue' ? 'พบปัญหาหน้างาน' : SEVERITY_LABELS[alert])}
                     <XMarkIcon className="h-3.5 w-3.5" strokeWidth={2.5} />
                   </button>
                 )}

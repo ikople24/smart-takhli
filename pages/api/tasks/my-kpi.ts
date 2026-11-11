@@ -1,5 +1,5 @@
 // pages/api/tasks/my-kpi.ts
-// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked&scope=mine|department
+// GET /api/tasks/my-kpi?groupBy=category|organization|priority&alert=overdue|due_soon|coordinating|blocked|site_issue|needs_update&scope=mine|department
 // scope=department (หัวหน้ากอง/superadmin เท่านั้น) = งานของทุกคนในกองเดียวกัน — ใช้โอนงาน/ดูภาระงานทั้งกอง
 // งานทั้งหมดของเจ้าหน้าที่ที่ล็อกอิน (เปิด + เสร็จ) พร้อม derived fields (lib/tasks/derived.js), KPI strip
 // (lib/tasks/kpi.js) และถ้าส่ง groupBy มาจะจัดกลุ่มให้ด้วย (lib/tasks/groupBy.js) — client จะ regroup เองก็ได้
@@ -27,6 +27,8 @@ interface ComplaintLean {
   fullName?: string;
   detail?: string;
   category?: string;
+  problems?: string[];
+  workType?: string;
   status?: string;
   community?: string;
   images?: string[];
@@ -48,6 +50,7 @@ interface AssignmentLean {
   dueDate?: Date | null;
   slaPausedAt?: Date | null;
   slaPausedMs?: number;
+  slaPausedBusinessDays?: number | null;
   coordination?: {
     agencyName?: string;
     coordinatorOrgId?: mongoose.Types.ObjectId | null;
@@ -58,6 +61,8 @@ interface AssignmentLean {
   };
   blocked?: {
     isBlocked?: boolean;
+    kind?: string;
+    siteIssueCode?: string;
     reason?: string;
     itemName?: string;
     purchaseRefNo?: string;
@@ -74,7 +79,7 @@ const iso = (v: unknown): string | null => {
   return d ? d.toISOString() : null;
 };
 
-const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked'];
+const ALERT_KINDS: AlertKind[] = ['overdue', 'due_soon', 'coordinating', 'blocked', 'site_issue', 'needs_update'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -112,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'complaintId fullName detail category problems status community images location createdAt updatedAt department',
+        select: 'complaintId fullName detail category problems workType status community images location createdAt updatedAt department',
       })
       .sort({ assignedAt: -1 })
       .lean()) as unknown as AssignmentLean[];
@@ -170,6 +175,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         blocked: derived.isBlocked && a.blocked
           ? {
               isBlocked: true,
+              kind: a.blocked.kind === 'site_issue' ? 'site_issue' : 'materials',
+              siteIssueCode: a.blocked.siteIssueCode ?? '',
               reason: a.blocked.reason ?? '',
               itemName: a.blocked.itemName ?? '',
               purchaseRefNo: a.blocked.purchaseRefNo ?? '',
@@ -185,7 +192,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    const kpi = computeKpi(assignments, { now }) as MyKpi;
+    const kpi = computeKpi(assignments, { now, settings }) as MyKpi;
 
     // ความพึงพอใจของเจ้าหน้าที่คนนี้ — คะแนนของเรื่องที่เขาถือ นับ "1 ผู้แจ้ง = 1 เสียง" (lib/satisfaction/fairStats.js)
     // อ่านพลาดไม่ทำให้ทั้งหน้าล้ม — ช่องนี้แสดง "–" แทน

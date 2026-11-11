@@ -5,6 +5,25 @@ import {
   isComplaintStaffFromRequest,
   sanitizeComplaintDocForResponse,
 } from '@/lib/complaintPrivacy';
+import { getTaskSettings } from '@/lib/tasks/loadSettings';
+import { grassScheduleFor } from '@/lib/tasks/grassSchedule';
+import { detectWorkType } from '@/lib/tasks/workTypes';
+import { isClosedStatus } from '@/lib/tasks/status';
+
+/**
+ * เติม grassScheduleUrl (ฟิลด์ derived ฟิลด์เดียว — url ตารางคิวตัดหญ้า) ให้เรื่องตัดหญ้าที่ยังไม่ปิด
+ * ใช้บนหน้า /status (lib/tasks/grassSchedule.js) · ไม่ขยาย projection · อ่าน task_settings เฉพาะเมื่อมีเรื่องเข้าเงื่อนไข
+ * คำนวณจากเอกสารที่ sanitize แล้ว (ข้อความที่ถูกเซ็นเซอร์ PDPA ไม่ถูกใช้เดา)
+ */
+async function attachGrassSchedule(complaints) {
+  const candidates = complaints.filter((c) => !isClosedStatus(c.status) && detectWorkType(c) === 'grass');
+  if (candidates.length === 0) return;
+  const settings = await getTaskSettings();
+  for (const c of candidates) {
+    const url = grassScheduleFor(c, settings);
+    if (url) c.grassScheduleUrl = url;
+  }
+}
 
 // คำนวณช่วงปีงบประมาณ (1 ต.ค. - 30 ก.ย.)
 function getFiscalYearRange(fiscalYear) {
@@ -98,6 +117,7 @@ export default async function handler(req, res) {
       const complaints = (complaintsRaw || [])
         .map((c) => sanitizeComplaintDocForResponse(c, treatAsStaff))
         .filter(Boolean);
+      await attachGrassSchedule(complaints);
       
       // ถ้าต้องการข้อมูล pagination
       if (req.query.withCount === 'true') {

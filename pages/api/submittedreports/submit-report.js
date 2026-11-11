@@ -35,6 +35,8 @@ export default async function handler(req, res) {
     // ข้อมูลยินยอมที่เพี้ยนต้องไม่ทำให้เรื่องร้องเรียนทั้งเรื่องบันทึกไม่สำเร็จ
     // (client มี guard แล้ว แต่ endpoint นี้เป็นทางเขียนสาธารณะ ต้องกันฝั่งเซิร์ฟเวอร์ด้วย)
     const { consent: rawConsent, ...rest } = req.body || {};
+    // ชนิดงานเป็นของเจ้าหน้าที่เท่านั้น (กำหนด SLA — PATCH /api/tasks/[assignmentId] action work_type) ห้ามประชาชนตั้งมาเอง
+    delete rest.workType;
 
     // consentForPayload คุมแค่ "รูปร่าง" ของข้อมูล ส่วน consent log (validateConsentLog) คุมอีก 2 ชั้น คือ
     // เลขฉบับต้องเป็นฉบับที่เซิร์ฟเวอร์รู้จัก และเวลาต้องไม่ห่างจากเวลาเซิร์ฟเวอร์เกิน ACCEPTED_AT_MAX_SKEW_MS

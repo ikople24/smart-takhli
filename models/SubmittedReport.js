@@ -42,6 +42,9 @@ const SubmittedReportSchema = new mongoose.Schema({
   },
   /** กองที่รับผิดชอบ (ชื่อมาตรฐานจาก lib/tasks/departments.js) — ต้องตรงกับ models/Complaint.js (schema ซ้ำสองไฟล์) */
   department: { type: String, default: '' },
+  /** ชนิดงาน (key ใน lib/tasks/workTypes.js) — เจ้าหน้าที่ตั้งผ่าน PATCH /api/tasks/[assignmentId] action work_type
+   *  '' = ให้ระบบเดา (lib/tasks/workTypes.js#detectWorkType) — ต้องตรงกับ models/Complaint.js */
+  workType: { type: String, default: '' },
   isConfidential: { type: Boolean, default: false },
   pdpaSensitive: { type: Boolean, default: false },
   pdpaDetailRedactions: {

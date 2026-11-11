@@ -45,7 +45,9 @@ const AuditLogSchema = new mongoose.Schema({
       'assignment_follow_up',
       'assignment_unclaimed',
       'complaint_department_set',
+      'complaint_work_type_set',
       'assignment_transfer_requested',
+      'assignment_site_issue',
       'department_head_set',
       'complaint_deleted',
       // Flood relief
