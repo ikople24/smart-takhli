@@ -45,7 +45,7 @@ export function AlertCards({ cards, active, onSelect, className }: AlertCardsPro
     </section>
 
     {/* เดสก์ท็อป: 4 (หรือ 5) การ์ดแถวเดียว */}
-    <div className={clsx('hidden gap-3.5 md:grid md:grid-cols-2', cards.length > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4', className)} role="group" aria-label="ป้ายเตือน">
+    <div className={clsx('hidden gap-3.5 md:grid md:grid-cols-2', cards.length > 5 ? 'xl:grid-cols-6' : cards.length > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4', className)} role="group" aria-label="ป้ายเตือน">
       {cards.map((card) => {
         const accent = ACCENT[card.tone];
         const isActive = active === card.key;
