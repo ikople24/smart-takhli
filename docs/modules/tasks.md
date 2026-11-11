@@ -162,6 +162,12 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
     + timeline note `เปลี่ยนชนิดงานเป็น "…" (กำหนดปิด N วันทำการนับจากวันแจ้ง)` + audit `complaint_work_type_set`
   · **ไม่ย้ายกองให้** — ถ้ากองปกติของชนิดนั้นไม่ใช่กองของเรื่อง คืน `suggestedDepartment` แล้ว UI แนะนำให้กด "ขอโอนงาน"/"โอนงาน" เอง
   · ป้ายชนิดงาน (ยกเว้นงานทั่วไป) แสดงบน `PoolCard` และ `TaskRow` จาก `workTypeLabel` ที่ derive ให้แล้ว
+- **รอบแนบภาพความคืบหน้า (มติประชุม — งานปะถนน)** ชนิดงานที่มี `progressEveryDays` ในทะเบียน (`road_patch` = 7) ต้องแนบภาพหน้างานเป็นรอบ
+  · `derived.js` คืน `progressEveryDays` · `lastProgressAt` (รายการ timeline `note`/`stage` ล่าสุดที่มี `images` — ไม่เคยแนบ = `assignedAt`)
+    · `daysSinceProgress` (**วันทำการ** ผ่าน `businessDaysBetween` ข้ามวันหยุด) · `progressDue` (≥ รอบ) → `alertKinds` เพิ่ม `needs_update`
+  · ไม่บังคับ/ปิดแล้ว/พัก SLA → `progressDue` false · **ไม่เปลี่ยน severity** · note ที่ไม่มีภาพไม่นับ
+  · ป้าย `needs_update` (tone due) "ต้องอัปเดตภาพความคืบหน้า (ทุก N วันทำการ)" · การ์ดเตือนใบที่ 5 "ต้องอัปเดตความคืบหน้า" (`?alert=needs_update`)
+    โผล่เฉพาะเมื่อมีงานเปิดที่ชนิดงานบังคับ · หน้ารายละเอียดมีแถบเตือน + แนบภาพผ่านฟอร์ม "บันทึกการดำเนินงานวันนี้" (PATCH `progress` รับ `images` https สูงสุด 10)
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนเป็นวันทำการด้วย `slaPausedBusinessDays` + ช่วงที่ยังพัก (ดูกติกาวันทำการด้านบน)
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg

@@ -3,7 +3,8 @@
 // logic จริงอยู่ในไฟล์ .js ข้าง ๆ (derived / kpi / groupBy / badges) — ไฟล์นี้บรรยายรูปทรงผลลัพธ์เท่านั้น
 
 export type Severity = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'normal' | 'done';
-export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked';
+/** needs_update = ถึงรอบแนบภาพความคืบหน้า (derived.progressDue) — ไม่กระทบ severity */
+export type AlertKind = 'overdue' | 'due_soon' | 'coordinating' | 'blocked' | 'needs_update';
 export type GroupBy = 'category' | 'organization' | 'priority';
 export type Stage = 'received' | 'site_visit' | 'coordinating' | 'awaiting_review' | 'closed';
 export type AssignmentRole = 'assignee' | 'coordinator';
@@ -73,6 +74,14 @@ export interface DerivedAssignment {
   blockedDays: number | null;
   lastActivityAt: string | null;
   daysSinceUpdate: number | null;
+  /** รอบแนบภาพความคืบหน้า (วันทำการ) ของชนิดงาน — null = ชนิดงานนี้ไม่บังคับ */
+  progressEveryDays: number | null;
+  /** เวลาที่แนบภาพความคืบหน้าล่าสุด (ไม่เคย = วันรับงาน) — null เมื่อไม่บังคับ / งานปิดแล้ว */
+  lastProgressAt: string | null;
+  /** วันทำการตั้งแต่ lastProgressAt */
+  daysSinceProgress: number | null;
+  /** ถึงรอบต้องแนบภาพแล้ว (false เมื่อไม่บังคับ / ปิดแล้ว / พัก SLA) */
+  progressDue: boolean;
   daysAssigned: number | null;
   resolutionDays: number | null;
   completedLate: boolean | null;

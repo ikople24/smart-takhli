@@ -33,6 +33,7 @@ const iso = (v: unknown): string | null => {
   return d ? d.toISOString() : null;
 };
 const str = (v: unknown) => String(v ?? '').trim();
+const MAX_PROGRESS_IMAGES = 10;
 const httpsList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((u): u is string => typeof u === 'string' && u.startsWith('https://')) : []);
 
 interface ComplaintLean {
@@ -227,7 +228,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (action === 'progress') {
       const note = str(body.note);
-      const images = httpsList(body.images);
+      // ภาพความคืบหน้า (Cloudinary https) → timeline kind 'note' — derived.js#lastProgressAt นับรอบแนบภาพจากรายการนี้
+      const images = httpsList(body.images).slice(0, MAX_PROGRESS_IMAGES);
       const stage = str(body.stage) as Stage | '';
       const reason = str(body.reason);
       // วิธีการแก้ไข (chip AdminOption) — ส่งมาเฉพาะตอนเปลี่ยน แทนที่ค่าเดิมทั้งชุด (พฤติกรรมเดียวกับ modal เดิม)

@@ -464,6 +464,34 @@ function TaskDetailContent() {
                 </div>
               )}
 
+              {/* รอบแนบภาพความคืบหน้าตามชนิดงาน (งานปะถนน) — ค่าทั้งหมดจาก derived ของ API */}
+              {d.progressEveryDays && !d.isCompleted && (
+                <div
+                  className={clsx(
+                    'mt-4 flex items-start gap-2.5 rounded-[12px] border px-4 py-3 text-[12.5px]',
+                    d.progressDue ? 'border-tk-due bg-tk-due-soft' : 'border-tk-line bg-tk-line-light'
+                  )}
+                  role={d.progressDue ? 'alert' : undefined}
+                >
+                  <ExclamationTriangleIcon className={clsx('mt-px h-[18px] w-[18px] shrink-0', d.progressDue ? 'text-tk-due-ink' : 'text-tk-ink-5')} strokeWidth={1.8} />
+                  <div className="min-w-0">
+                    <div className={clsx('font-bold', d.progressDue ? 'text-tk-due-ink' : 'text-tk-ink-3')}>
+                      งานนี้ต้องแนบภาพความคืบหน้าทุก {d.progressEveryDays} วันทำการ
+                      {d.lastProgressAt ? ` — อัปเดตล่าสุด ${formatThaiDate(d.lastProgressAt)}` : ''}
+                    </div>
+                    <div className="text-tk-ink-4">
+                      {d.isPaused
+                        ? 'พักนับ SLA อยู่ — ยังไม่ต้องแนบภาพ'
+                        : d.progressDue
+                          ? `ไม่มีภาพใหม่มา ${d.daysSinceProgress ?? 0} วันทำการ — แนบภาพหน้างาน (เช่น ภาพประเมินจุด) ในช่อง "บันทึกการดำเนินงานวันนี้"`
+                          : d.daysSinceProgress
+                            ? `ผ่านมา ${d.daysSinceProgress} จาก ${d.progressEveryDays} วันทำการของรอบนี้`
+                            : 'ยังอยู่ในรอบนี้ — ครบรอบแล้วจะมีป้ายเตือน'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-5 grid grid-cols-2 gap-4 border-t border-tk-line-light pt-[18px] md:grid-cols-4">
                 <Meta label="ผู้แจ้ง">{c.reporterName || '—'}</Meta>
                 <Meta label="โทรศัพท์" className="font-tk-mono font-medium">
