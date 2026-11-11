@@ -646,7 +646,10 @@ function TaskDetailContent() {
                   <div className="grid grid-cols-2 gap-2">
                     <button type="button" disabled={!!busy} onClick={() => quickStage('site_visit')} className="touch-feedback min-h-12 rounded-[13px] bg-tk-line-light py-3.5 text-[13.5px] font-semibold text-tk-ink-3 disabled:opacity-60">ลงพื้นที่แล้ว</button>
                     <button type="button" disabled={!!busy} onClick={() => (a.coordination ? quickStage('coordinating') : setCoordSetOpen(true))} className="touch-feedback min-h-12 rounded-[13px] bg-tk-coord-soft py-3.5 text-[13.5px] font-semibold text-tk-coord-ink disabled:opacity-60">รอหน่วยงานอื่น</button>
-                    <button type="button" disabled={!!busy} onClick={() => document.getElementById('blocked-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="touch-feedback min-h-12 rounded-[13px] bg-tk-blocked-soft py-3.5 text-[13.5px] font-semibold text-tk-blocked-ink disabled:opacity-60">รอวัสดุ / งบ</button>
+                    {/* พักเพราะปัญหาหน้างาน → การ์ดรอวัสดุซ่อนอยู่ ปุ่มนี้ไม่มีที่ไป — ซ่อน (แถบ + ปุ่มดำเนินการต่ออยู่ที่ header card) */}
+                    {!d.isSiteIssue && (
+                      <button type="button" disabled={!!busy} onClick={() => document.getElementById('blocked-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="touch-feedback min-h-12 rounded-[13px] bg-tk-blocked-soft py-3.5 text-[13.5px] font-semibold text-tk-blocked-ink disabled:opacity-60">รอวัสดุ / งบ</button>
+                    )}
                     <button type="button" disabled={!!busy} onClick={() => setCloseOpen(true)} className="touch-feedback min-h-12 rounded-[13px] bg-tk-done-soft py-3.5 text-[13.5px] font-semibold text-tk-done-ink disabled:opacity-60">เสร็จแล้ว</button>
                   </div>
                 </div>

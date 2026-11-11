@@ -48,20 +48,22 @@ export function tileForGroup(group: Pick<TaskGroup, 'key' | 'label'>): Tile {
 }
 
 /** ป้ายสรุปของกลุ่ม — เฉพาะที่มี (README: "สรุปเฉพาะที่มี") */
-function GroupBadges({ counts, mobile = false }: { counts: TaskGroup['counts']; mobile?: boolean }) {
-  const items: Array<{ severity: Severity; label: string }> = [
-    { severity: 'overdue', label: 'เกินกำหนด' },
-    { severity: 'due_soon', label: 'ใกล้ครบกำหนด' },
-    { severity: 'coordinating', label: 'ประสาน' },
-    { severity: 'blocked', label: 'รอวัสดุ' },
+// severity 'blocked' รวมพบปัญหาหน้างานด้วย (ไม่มี severity แยก) — แยกป้ายด้วย group.siteIssues จาก groupBy.js
+function GroupBadges({ counts, siteIssues = 0, mobile = false }: { counts: TaskGroup['counts']; siteIssues?: number; mobile?: boolean }) {
+  const items: Array<{ key: string; severity: Severity; label: string; count: number }> = [
+    { key: 'overdue', severity: 'overdue', label: 'เกินกำหนด', count: counts.overdue ?? 0 },
+    { key: 'due_soon', severity: 'due_soon', label: 'ใกล้ครบกำหนด', count: counts.due_soon ?? 0 },
+    { key: 'coordinating', severity: 'coordinating', label: 'ประสาน', count: counts.coordinating ?? 0 },
+    { key: 'blocked', severity: 'blocked', label: 'รอวัสดุ', count: Math.max(0, (counts.blocked ?? 0) - siteIssues) },
+    { key: 'site_issue', severity: 'blocked', label: 'ปัญหาหน้างาน', count: siteIssues },
   ];
-  const visible = items.filter((i) => (counts[i.severity] ?? 0) > 0);
+  const visible = items.filter((i) => i.count > 0);
   if (!visible.length) return null;
   return (
     <div className={clsx('flex-wrap items-center gap-1.5', mobile ? 'mt-1 flex sm:hidden' : 'ml-[14px] hidden sm:flex')}>
       {visible.map((i) => (
-        <AlertBadge key={i.severity} tone={SEVERITY_TONE[i.severity]} size={mobile ? 'xs' : 'sm'}>
-          {i.label} {counts[i.severity]}
+        <AlertBadge key={i.key} tone={SEVERITY_TONE[i.severity]} size={mobile ? 'xs' : 'sm'}>
+          {i.label} {i.count}
         </AlertBadge>
       ))}
     </div>
@@ -179,7 +181,8 @@ export function WorkGroupAccordion({
         const all = showAll[group.key] === true;
         const visibleItems = all ? group.items : group.items.slice(0, previewCount);
         const hidden = group.items.length - visibleItems.length;
-        const blockedCount = group.counts.blocked ?? 0;
+        const siteIssueCount = group.siteIssues ?? 0;
+        const blockedCount = Math.max(0, (group.counts.blocked ?? 0) - siteIssueCount);
 
         return (
           <section
@@ -208,9 +211,9 @@ export function WorkGroupAccordion({
               <span className="min-w-0">
                 <span className="block truncate text-[14.5px] font-bold text-tk-ink">{group.label}</span>
                 {group.sub && <span className="block truncate text-[11.5px] text-tk-ink-5">{group.sub}</span>}
-                <GroupBadges counts={group.counts} mobile />
+                <GroupBadges counts={group.counts} siteIssues={group.siteIssues} mobile />
               </span>
-              <GroupBadges counts={group.counts} />
+              <GroupBadges counts={group.counts} siteIssues={group.siteIssues} />
               <span className="ml-auto flex shrink-0 items-center gap-3">
                 <span className="hidden sm:block"><MiniProgress counts={group.counts} total={group.count} /></span>
                 <span className="text-[17px] font-bold text-tk-ink sm:text-[12.5px]">{group.count}</span>
@@ -235,6 +238,7 @@ export function WorkGroupAccordion({
                     >
                       ดูอีก {hidden} เรื่องในกลุ่มนี้
                       {blockedCount > 0 && ` · มี ${blockedCount} เรื่องรอวัสดุ (พัก SLA)`}
+                      {siteIssueCount > 0 && ` · มี ${siteIssueCount} เรื่องพบปัญหาหน้างาน (พัก SLA)`}
                     </button>
                   )}
                   {all && group.items.length > previewCount && (

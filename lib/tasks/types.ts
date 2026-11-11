@@ -198,6 +198,8 @@ export interface TaskGroup<T = OfficerTask> {
   sub: string;
   count: number;
   counts: Record<Severity, number>;
+  /** เรื่องที่พักเพราะพบปัญหาหน้างาน (นับรวมใน counts.blocked ด้วย) */
+  siteIssues: number;
   topSeverity: Severity;
   items: T[];
 }
@@ -210,7 +212,10 @@ export interface MyKpi {
   overdue: number;
   dueSoon: number;
   coordinating: number;
+  /** งานที่พักอยู่ทั้งหมด (รอวัสดุ + พบปัญหาหน้างาน) */
   blocked: number;
+  /** ในจำนวน blocked — พักเพราะพบปัญหาหน้างาน */
+  siteIssue: number;
   completedThisMonth: number;
   completionRate: number;
   onTimeRate: number | null;

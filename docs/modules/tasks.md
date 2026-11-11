@@ -180,6 +180,8 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
     · **ปิดเรื่อง**ยังเป็น `close` ของเจ้าของงาน/superadmin เท่านั้น — หัวหน้าที่ไม่ใช่เจ้าของ "ดำเนินการต่อ" ได้ หรือให้เจ้าของงาน/superadmin ปิด
   · `derived.js`: `isSiteIssue` · `siteIssueLabel` · `alertKinds` ใช้ `site_issue` **แทน** `blocked` (severity ยังเป็น `blocked`) · ป้าย "ปัญหาหน้างาน: <label>" · status pill "พบปัญหาหน้างาน"
     · การ์ดเตือน "พบปัญหาหน้างาน" (`?alert=site_issue`) โผล่ต่อจาก "รอวัสดุ" เฉพาะเมื่อมี ≥ 1 เรื่อง · การ์ดรอวัสดุ + `blockedRail` ไม่นับเรื่องเหล่านี้
+    · กลุ่มงาน: `groupTasks` คืน `siteIssues` ต่อกลุ่ม (รวมอยู่ใน `counts.blocked`) → accordion แยกป้าย "รอวัสดุ"/"ปัญหาหน้างาน" · โหมดความเร่งด่วน กลุ่ม blocked ตั้งชื่อตามของจริง ("พบปัญหาหน้างาน" / "รอวัสดุ / พบปัญหาหน้างาน")
+    · `kpi.blocked` = พักทั้งหมด · `kpi.siteIssue` = ในนั้นที่เป็นปัญหาหน้างาน · มือถือซ่อนปุ่มเร็ว "รอวัสดุ / งบ" ระหว่างพักแบบนี้
   · GET รายละเอียดคืน `siteIssueReasons`, `canReportSiteIssue` (canEdit + ยังไม่ปิด + ยังไม่พัก), `canResume`, `assignment.blocked.kind/siteIssueCode/images`
     · UI: การ์ด `SiteIssueCard` (ฟอร์ม inline เหตุผล/รายละเอียด/ภาพ) · พักอยู่ → แถบ "พักงาน — พบปัญหาหน้างาน: …" + ภาพ + ปุ่ม "ดำเนินการต่อ" บน header card และซ่อนการ์ดรอวัสดุ
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนเป็นวันทำการด้วย `slaPausedBusinessDays` + ช่วงที่ยังพัก (ดูกติกาวันทำการด้านบน)
