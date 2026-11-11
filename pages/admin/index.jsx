@@ -28,6 +28,22 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdminTab = activeTab === "admin";
   const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  const resetForm = () => {
+    setLabel("");
+    setIconUrl("");
+    setCategory("");
+    setIsEditing(false);
+    setEditingId(null);
+  };
+
+  const switchTab = (tab) => {
+    if (tab === activeTab) return;
+    resetForm();
+    setFilterCategory("ทั้งหมด");
+    setActiveTab(tab);
+  };
 
   // Zod schema สำหรับ validation
   const adminOptionSchema = z.object({
@@ -51,11 +67,14 @@ export default function AdminPage() {
     fetchAdminOptions();
   }, []);
 
+  // รายการแจ้งปัญหาใช้ iconUrl/category ส่วนรายการเจ้าหน้าที่ใช้ icon_url/menu_category
   const handleEdit = (item) => {
-    setLabel(item.label);
-    setIconUrl(item.icon_url);
-    setCategory(item.menu_category);
+    setLabel(item.label || "");
+    setIconUrl((isAdminTab ? item.icon_url : item.iconUrl) || "");
+    setCategory((isAdminTab ? item.menu_category : item.category) || "");
+    setEditingId(item._id);
     setIsEditing(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (id) => {
@@ -149,8 +168,10 @@ export default function AdminPage() {
     const endpoint = isAdminTab ? "/api/admin-options" : "/api/problem-options";
 
     try {
-      const res = await fetch(`${BASE_URL}${endpoint}`, {
-        method: "POST",
+      // แก้ไข = PUT ทับรายการเดิม (ไม่งั้นจะได้รายการซ้ำ) · เพิ่มใหม่ = POST
+      const url = editingId ? `${BASE_URL}${endpoint}/${editingId}` : `${BASE_URL}${endpoint}`;
+      const res = await fetch(url, {
+        method: editingId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           "x-app-id": process.env.NEXT_PUBLIC_APP_ID,
@@ -162,11 +183,8 @@ export default function AdminPage() {
         throw new Error("Failed to submit");
       }
 
-      alert("✅ บันทึกข้อมูลสำเร็จ");
-      setIsEditing(false);
-      setLabel("");
-      setIconUrl("");
-      setCategory("");
+      alert(editingId ? "✅ แก้ไขข้อมูลสำเร็จ" : "✅ บันทึกข้อมูลสำเร็จ");
+      resetForm();
 
       if (isAdminTab) {
         const options = await fetch("/api/admin-options").then((r) => r.json());
@@ -210,13 +228,13 @@ export default function AdminPage() {
     <div className="p-4">
       <div className="flex flex-col lg:flex-row justify-center mb-6">
         <button
-          onClick={() => setActiveTab("problem")}
+          onClick={() => switchTab("problem")}
           className={`px-4 py-2 rounded-t-lg lg:rounded-l-lg lg:rounded-r-none border ${activeTab === "problem" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
         >
           รายการแจ้งปัญหา
         </button>
         <button
-          onClick={() => setActiveTab("admin")}
+          onClick={() => switchTab("admin")}
           className={`px-4 py-2 rounded-b-lg lg:rounded-r-lg lg:rounded-l-none border ${activeTab === "admin" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
         >
           รายการเจ้าหน้าที่
@@ -227,7 +245,7 @@ export default function AdminPage() {
         <>
           <div className={`card bg-base-100 shadow mb-6 ${isEditing ? 'border-2 border-orange-400' : ''}`}>
             <div className="card-body">
-              <h1 className="text-xl font-bold mb-4">Admin Upload Page</h1>
+              <h1 className="text-xl font-bold mb-4">{isEditing ? `แก้ไขรายการ: ${label}` : "Admin Upload Page"}</h1>
               <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium">Label</label>
@@ -292,20 +310,16 @@ export default function AdminPage() {
               <button
                 type="button"
                 className="btn btn-outline btn-warning"
-                onClick={() => {
-                  setLabel("");
-                  setIconUrl("");
-                  setCategory("");
-                  setIsEditing(false);
-                }}
+                onClick={resetForm}
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 className="btn btn-accent ml-2"
+                disabled={isSubmitting}
               >
-                บันทึกข้อมูล
+                {isSubmitting ? "กำลังบันทึก..." : isEditing ? "บันทึกการแก้ไข" : "บันทึกข้อมูล"}
               </button>
             </div>
               </form>
@@ -416,7 +430,7 @@ export default function AdminPage() {
         <>
           <div className={`card bg-base-100 shadow mb-6 ${isEditing ? 'border-2 border-orange-400' : ''}`}>
             <div className="card-body">
-              <h1 className="text-xl font-bold mb-4">Admin Upload Page (เจ้าหน้าที่)</h1>
+              <h1 className="text-xl font-bold mb-4">{isEditing ? `แก้ไขรายการ: ${label}` : "Admin Upload Page (เจ้าหน้าที่)"}</h1>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium">Label</label>
@@ -481,12 +495,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     className="btn btn-outline btn-warning"
-                    onClick={() => {
-                      setLabel("");
-                      setIconUrl("");
-                      setCategory("");
-                      setIsEditing(false);
-                    }}
+                    onClick={resetForm}
                   >
                     ยกเลิก
                   </button>
