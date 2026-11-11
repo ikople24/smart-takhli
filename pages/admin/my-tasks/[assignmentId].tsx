@@ -12,7 +12,7 @@ import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import clsx from 'clsx';
 import Swal from 'sweetalert2';
-import { ArrowLeftIcon, ArrowPathIcon, CameraIcon, ChevronLeftIcon, ExclamationTriangleIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowPathIcon, CameraIcon, ChevronLeftIcon, ExclamationTriangleIcon, MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { uploadToCloudinary } from '@/utils/uploadToCloudinary';
 import { stageTransition } from '@/lib/tasks/status';
 import PermissionGuard from '@/components/PermissionGuard';
@@ -479,10 +479,24 @@ function TaskDetailContent() {
                 )}
               </section>
               <section className={clsx(CARD, 'px-[18px] py-4')}>
-                <h2 className="text-[13.5px] font-bold">
-                  ตำแหน่งที่แจ้ง{' '}
-                  {c.location && <span className="font-tk-mono text-[11px] font-medium text-tk-ink-5">{c.location.lat.toFixed(4)}, {c.location.lng.toFixed(4)}</span>}
-                </h2>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-[13.5px] font-bold">
+                    ตำแหน่งที่แจ้ง{' '}
+                    {c.location && <span className="font-tk-mono text-[11px] font-medium text-tk-ink-5">{c.location.lat.toFixed(4)}, {c.location.lng.toFixed(4)}</span>}
+                  </h2>
+                  {c.location && (
+                    // เปิดเส้นทางใน Google Maps (มือถือเปิดแอปให้เอง)
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${c.location.lat},${c.location.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-tk-primary-line px-3 py-1 text-[12.5px] font-semibold text-tk-primary hover:bg-tk-primary-tint"
+                    >
+                      <MapPinIcon className="h-4 w-4" />
+                      นำทาง
+                    </a>
+                  )}
+                </div>
                 <div className="mt-3 overflow-hidden rounded-[11px]">
                   <SmallMap location={c.location} height="112px" />
                 </div>
