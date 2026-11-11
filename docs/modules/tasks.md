@@ -163,7 +163,7 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
   · **ไม่ย้ายกองให้** — ถ้ากองปกติของชนิดนั้นไม่ใช่กองของเรื่อง คืน `suggestedDepartment` แล้ว UI แนะนำให้กด "ขอโอนงาน"/"โอนงาน" เอง
   · ป้ายชนิดงาน (ยกเว้นงานทั่วไป) แสดงบน `PoolCard` และ `TaskRow` จาก `workTypeLabel` ที่ derive ให้แล้ว
 - **รอบแนบภาพความคืบหน้า (มติประชุม — งานปะถนน)** ชนิดงานที่มี `progressEveryDays` ในทะเบียน (`road_patch` = 7) ต้องแนบภาพหน้างานเป็นรอบ
-  · `derived.js` คืน `progressEveryDays` · `lastProgressAt` (รายการ timeline `note`/`stage` ล่าสุดที่มี `images` — ไม่เคยแนบ = `assignedAt`)
+  · `derived.js` คืน `progressEveryDays` · `lastProgressAt` (ล่าสุดของ: timeline `note`/`stage` ที่มี `images` · `unblocked` (เลิกพัก SLA = เริ่มรอบใหม่) · `assignedAt`)
     · `daysSinceProgress` (**วันทำการ** ผ่าน `businessDaysBetween` ข้ามวันหยุด) · `progressDue` (≥ รอบ) → `alertKinds` เพิ่ม `needs_update`
   · ไม่บังคับ/ปิดแล้ว/พัก SLA → `progressDue` false · **ไม่เปลี่ยน severity** · note ที่ไม่มีภาพไม่นับ
   · ป้าย `needs_update` (tone due) "ต้องอัปเดตภาพความคืบหน้า (ทุก N วันทำการ)" · การ์ดเตือนใบที่ 5 "ต้องอัปเดตความคืบหน้า" (`?alert=needs_update`)
