@@ -21,7 +21,7 @@
   การ์ดเรื่อง (ชื่อ/เบอร์ผู้แจ้งเต็ม — เจ้าหน้าที่ต้องติดต่อ ต่างจาก /status ที่ mask) · ภาพ + แผนที่ (`SmallMap` dynamic) · ไทม์ไลน์ (`buildTimeline`) ·
   แผงอัปเดต: `StatusStepper` (ถอยขั้นถาม Swal เหตุผล, ขั้น "ปิดเรื่อง" เปิด modal ปิดเรื่อง) · `CoordinationBlock` (+ `CoordinationSetModal` / `FollowUpModal` / โทรแล้ว / แจ้ง LINE) ·
   `BlockedCard` (พัก/เลิกพัก SLA) · บันทึก + `ImageUploads` · ปุ่มปิดเรื่อง (`CloseTaskModal` สรุปบังคับ · ภาพ optional — ไม่มีภาพต้องติ๊กยืนยัน `confirmNoImages` เช่น เรื่องสอบถามข้อมูล + วิธีแก้ไขจาก AdminOption) · โอนงาน · เรื่องปิดแล้ว/ไม่ใช่งานของตัวเอง = อ่านอย่างเดียว
-- `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (ค้างเกิน `unclaimedAlertDays`
+- `/admin/task-pool` — **หน้าจอ 2 กองงานรอรับ** (`pages/admin/task-pool.tsx`, ครอบ `PermissionGuard`): alert bar แดง (รอรับเกิน `unclaimedAlertHours` = 24 ชม.
   + ปุ่ม "ดูเฉพาะที่ค้าง" / "แจ้งเตือนหัวหน้ากอง" ทาง LINE) · tabs `?groupBy=organization|category|priority` · ค้นหา / ชุมชน / ช่วงเวลา
   (`?days=all|30|90|365` **default ทั้งหมด — เจ้าของยืนยันหน้านี้ต้องเห็นทุกเรื่อง**) · kanban ต่อคอลัมน์ (กองของตัวเอง + **กองที่มีงานกำลังดำเนินการมีคอลัมน์เสมอ** พร้อมบรรทัด "กำลังดำเนินการ N เรื่อง" ลิงก์ไปงานของกอง — เรื่องที่มีคนรับแล้วไม่อยู่หน้านี้,
   "ยังไม่ระบุกอง" dashed ท้ายสุด) · การ์ด: รับงาน — **ทุกคนรับได้ทุกเรื่อง** (2026-11-09; การ์ดกองอื่นมีบรรทัด "รับแล้วย้ายเข้ากองของคุณ") (optimistic + toast "เลิกทำ" 5 วิ — เลิกทำคืนกองเดิมให้ด้วย) / มอบหมาย (หัวหน้ากอง) / เลือกกอง (เรื่องที่ยังไม่ระบุกอง)
@@ -59,7 +59,8 @@
   `blocked{isBlocked, reason, itemName, purchaseRefNo, expectedAt, since}`, `timeline[]`, `timestamps`
   — เอกสารเก่าไม่มีฟิลด์เหล่านี้ อ่านผ่าน `derived.js` ได้เลย ไม่ต้อง migrate
 - `models/tasks/TaskSettings.js` — singleton `key: 'default'` collection `task_settings`
-  (`defaultSlaDays 7 · warnBeforeDays 2 · unclaimedWarnDays 3 · unclaimedAlertDays 4 · followUpEveryDays 7 · slaByCategory[]`)
+  (`defaultSlaDays 3 · warnBeforeDays 2 · unclaimedWarnHours 12 · unclaimedAlertHours 24 · followUpEveryDays 7 · slaByCategory[] · slaByWorkType[]`;
+  `unclaimedWarnDays`/`unclaimedAlertDays` ยังอยู่ในเอกสารเพื่อความเข้ากันได้ แต่เลิกใช้ตัดสินแล้ว)
   ไม่มีเอกสาร = ใช้ default ทำงานได้เลย
 - `Complaint.department` (String ชื่อกองมาตรฐาน, '' = ยังไม่ระบุ) — เติมใน **ทั้ง** `models/Complaint.js` และ `models/SubmittedReport.js`
   (สองไฟล์ลงทะเบียน model `SubmittedReport` เดียวกัน ไฟล์ไหนโหลดก่อนชนะ) · **ไม่ใช้ `organizationId` ตาม README** เพราะ collection
@@ -110,6 +111,20 @@ shared (ข้อ 4): `AlertBadge` (tone → `tk-*`) · `TaskRow` · `WorkGroupA
 - **นับ "วัน" ตามปฏิทินไทย** (`calendarDaysBetween`) — เส้นตาย = สิ้นวันไทยของวันครบกำหนด (ครบ 10:00 ตอนนี้ 12:00 ยัง "ครบกำหนดวันนี้")
   ส่วน `daysAssigned`/`resolutionDays` ยัง floor(ms) ตามความหมายเดิม
 - **SLA นับจากวันที่ประชาชนแจ้ง** (`complaint.createdAt`) ไม่ใช่วันรับงาน — เรื่องที่ค้างในกองรอรับนานจึงมาถึงพร้อมเวลาที่เหลือน้อย (ตั้งใจ)
+- **มติประชุม 10/11/69 — SLA ตามชนิดงาน + รับเรื่องภายใน 24 ชม.** ทะเบียนชนิดงานอยู่ `lib/tasks/workTypes.js` (ตรวจจาก `complaint.workType` ที่เลือกเอง → ประเภทย่อย → ข้อความ → หมวด)
+  · ตัดสิน SLA ที่เดียว `lib/tasks/settings.js#resolveSla` (เรียกผ่าน `derived.js#dueDateFor` — ส่ง complaint ที่มี `problems detail workType category` เสมอ)
+  · ลำดับ: `slaByWorkType` → (เฉพาะงานทั่วไป) `slaByCategory` → `defaultSlaDays` · ชนิดงานอื่นใช้ค่าทะเบียน · ทิศ import: settings → workTypes เท่านั้น
+
+  | ชนิดงาน (`workType`) | SLA |
+  |---|---|
+  | ปะถนน (`road_patch`) · ดูดโคลน/ลอกท่อ (`drain_sludge`) | 30 วัน |
+  | ฝาท่อเหล็ก/ปูน (`manhole_steel`/`manhole_concrete`) · กิ่งไม้/ต้นไม้ (`tree`) · ตัดหญ้า (`grass`) · เหตุรำคาญ (`nuisance`) | 15 วัน |
+  | งานทั่วไป (`general` — ขยะ ไฟฟ้า ประปา ฯลฯ) | 3 วัน (`defaultSlaDays`) |
+
+  · เรื่องรอรับนับเป็นชั่วโมง (`deriveUnclaimed#hoursUnclaimed`): amber ≥ 12 ชม., `isStale` เมื่อ **> 24 ชม.** (24 ชม. พอดียังไม่ค้าง) — cron/ปุ่มแจ้ง LINE ใช้เกณฑ์เดียวกัน
+  · KPI `claimedWithin24hRate` = % งาน (ผู้รับผิดชอบหลัก ไม่นับผู้ประสาน) ที่ `claimHours` (แจ้ง → กดรับ, ชม.เต็ม) ≤ 24 — แสดงใน KpiStrip "รับเรื่องภายใน 24 ชม."
+  · `Assignment.dueDate` ถูกบันทึกตอนกดรับ → เปลี่ยนกติกาแล้วงานเปิดเดิมไม่เปลี่ยนเอง ต้องรัน
+    `node --env-file=.env.local --import tsx scripts/recompute-task-due-dates.mjs` (dry-run) แล้วค่อยใส่ `--yes` เพื่อเขียนจริง
 - พัก SLA (`slaPausedAt`) → ไม่นับเกินกำหนด; วันครบกำหนดเลื่อนด้วย `slaPausedMs` + ช่วงที่ยังพัก
 - severity: `overdue > due_soon > coordinating > blocked > normal > done`; เรื่องเดียวมีได้หลาย `alertKinds`
 - เรื่องที่ปิดด้วย status จากหน้า manage-complaints โดย assignment ไม่มี `completedAt` → ถือว่าเสร็จ แต่ไม่เข้าตัวหาร on-time/avg
