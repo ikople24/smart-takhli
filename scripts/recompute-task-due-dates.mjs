@@ -2,7 +2,8 @@
 // ทำไมต้องมี: dueDate ถูกบันทึกตอนกดรับ (pages/api/complaints/assignments/create.js) — เปลี่ยนกติกา SLA แล้ว
 // งานเก่าที่เปิดค้างจะยังใช้วันครบกำหนดแบบเดิม (7 วัน) จนกว่าจะรันสคริปต์นี้
 //
-// กติกา: dueDate ใหม่ = วันที่ประชาชนแจ้ง + SLA (ไม่มีวันแจ้ง → วันที่รับงาน + SLA) ผ่าน lib/tasks/derived.js#dueDateFor
+// กติกา: dueDate ใหม่ = สิ้นวันไทยของวันทำการที่ SLA หลังวันที่ประชาชนแจ้ง (ไม่มีวันแจ้ง → วันที่รับงาน)
+// นับ จ.–ศ. ไม่รวม task_settings.holidays (lib/tasks/businessDays.js) ผ่าน lib/tasks/derived.js#dueDateFor
 // ตัวเดียวกับที่ API ใช้ · ค่าตั้งอ่านจาก task_settings (key 'default') ถ้ามี ไม่มี = DEFAULT_TASK_SETTINGS
 // ครอบทั้งผู้รับผิดชอบหลัก (assignee) และผู้ประสานงาน (coordinator) · ข้ามงานที่เรื่องปิดแล้ว/เรื่องถูกลบ
 // ช่วงพัก SLA (slaPausedAt/slaPausedMs) ไม่ต้องแตะ — derived.js บวกเพิ่มให้ตอนอ่านเอง
@@ -34,7 +35,8 @@ async function main() {
   console.log(`ค่าตั้ง: ${settingsDoc ? "จาก task_settings (key 'default')" : "ค่าเริ่มต้น DEFAULT_TASK_SETTINGS (ไม่มีเอกสาร task_settings)"}`);
   console.log(
     `  defaultSlaDays (งานทั่วไป) = ${settings.defaultSlaDays} วัน · unclaimedAlertHours = ${settings.unclaimedAlertHours} ชม.` +
-      ` · slaByWorkType ${settings.slaByWorkType.length} แถว · slaByCategory ${settings.slaByCategory.length} แถว`
+      ` · slaByWorkType ${settings.slaByWorkType.length} แถว · slaByCategory ${settings.slaByCategory.length} แถว` +
+      ` · วันหยุด ${settings.holidays.length} วัน (นับวันทำการ จ.–ศ.)`
   );
   if (onlyExtend) console.log("  โหมด --only-extend: เฉพาะรายการที่วันครบกำหนดเลื่อนออก");
 

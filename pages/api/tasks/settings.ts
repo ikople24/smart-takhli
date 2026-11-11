@@ -2,7 +2,9 @@
 // GET  — การตั้งค่า SLA/เกณฑ์เตือน (เจ้าหน้าที่ทุกคนอ่านได้ — UI ใช้ทำ caption "ครบกำหนดภายใน N วัน")
 // PUT  — แก้การตั้งค่า (superadmin เท่านั้น) body รับบางฟิลด์ได้ ฟิลด์ที่ไม่ส่งคงเดิม
 //        { defaultSlaDays, warnBeforeDays, unclaimedWarnHours, unclaimedAlertHours, followUpEveryDays,
-//          slaByCategory: [{ category, slaDays }], slaByWorkType: [{ workType, slaDays }] }
+//          slaByCategory: [{ category, slaDays }], slaByWorkType: [{ workType, slaDays }],
+//          holidays: [{ date: 'YYYY-MM-DD', name }] }   ← ส่งมา = แทนทั้งรายการ (normalize: ตรวจวันที่ ตัดซ้ำ เรียง)
+//        หน้าแก้ไข: /admin/superadmin/task-settings · SLA นับวันทำการ (lib/tasks/businessDays.js)
 //        (unclaimedWarnDays/unclaimedAlertDays ยังรับได้แต่เลิกใช้ตัดสินแล้ว)
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getTaskSettings, saveTaskSettings } from '@/lib/tasks/loadSettings';

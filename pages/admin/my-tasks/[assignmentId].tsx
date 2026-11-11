@@ -194,10 +194,10 @@ function TaskDetailContent() {
   /* ── ชนิดงาน (กำหนด SLA) — เจ้าของ / หัวหน้ากอง / superadmin ── */
   const changeWorkType = async () => {
     if (!data) return;
-    const inputOptions = Object.fromEntries(data.workTypeOptions.map((o) => [o.key, `${o.label} · ${o.slaDays} วัน`]));
+    const inputOptions = Object.fromEntries(data.workTypeOptions.map((o) => [o.key, `${o.label} · ${o.slaDays} วันทำการ`]));
     const { value, isConfirmed } = await Swal.fire({
       title: 'เปลี่ยนชนิดงาน',
-      html: '<div class="text-sm">เลือกชนิดงานจริงจากหน้างาน — ระบบคิดวันครบกำหนดใหม่นับจากวันที่ประชาชนแจ้ง</div>',
+      html: '<div class="text-sm">เลือกชนิดงานจริงจากหน้างาน — ระบบคิดวันครบกำหนดใหม่เป็นวันทำการ (จ.–ศ. ไม่รวมวันหยุดราชการ) นับจากวันที่ประชาชนแจ้ง</div>',
       input: 'select',
       inputOptions,
       inputValue: data.workType,
@@ -213,7 +213,7 @@ function TaskDetailContent() {
     await run('work-type', async () => {
       const { data: res } = await axios.patch<WorkTypeChangeResponse>(`/api/tasks/${id}`, { action: 'work_type', workType: String(value) });
       result.suggested = res.suggestedDepartment;
-      toast(`เปลี่ยนเป็น "${res.workTypeLabel}" แล้ว — กำหนดปิด ${res.slaDays} วันนับจากวันแจ้ง`);
+      toast(`เปลี่ยนเป็น "${res.workTypeLabel}" แล้ว — กำหนดปิด ${res.slaDays} วันทำการนับจากวันแจ้ง`);
     }, 'เปลี่ยนชนิดงานไม่สำเร็จ');
     const suggested = result.suggested;
     if (suggested) {
@@ -479,7 +479,7 @@ function TaskDetailContent() {
                 <Meta label="วันที่แจ้ง">{formatThaiDate(c.createdAt) || '—'}</Meta>
                 <Meta label="ครบกำหนด" className={clsx(d.isOverdue && 'text-tk-overdue-ink')}>
                   {formatThaiDate(a.dueDate) || '—'}
-                  {d.isOverdue && ` (เกิน ${d.overdueDays} วัน)`}
+                  {d.isOverdue && ` (เกิน ${d.overdueDays} วันทำการ)`}
                   {d.isPaused && ' · พัก SLA'}
                 </Meta>
                 <Meta label="กองที่รับผิดชอบ">{c.department || 'ยังไม่ระบุกอง'}</Meta>
@@ -490,7 +490,7 @@ function TaskDetailContent() {
                 <span className="min-w-0 flex-1">
                   <span className="text-tk-ink-6">ชนิดงาน: </span>
                   <span className="font-semibold text-tk-ink">{data.workTypeLabel || '—'}</span>
-                  <span className="text-tk-ink-4"> · กำหนดปิด {d.slaDays} วันนับจากวันแจ้ง</span>
+                  <span className="text-tk-ink-4"> · กำหนดปิด {d.slaDays} วันทำการนับจากวันแจ้ง</span>
                   {data.workTypeSource === 'auto' && <span className="ml-1 text-[11.5px] text-tk-ink-6">(ระบบเดา)</span>}
                 </span>
                 {data.canSetWorkType && !d.isCompleted && (

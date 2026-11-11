@@ -182,7 +182,7 @@ export function DueThisWeekCard({ items }: { items: DueThisWeekItem[] }) {
   return (
     <RailCard dot="bg-tk-due" title="ครบกำหนดสัปดาห์นี้" count={items.length} countClass="bg-tk-due-soft text-tk-due-ink">
       {items.length === 0 ? (
-        <Empty>ไม่มีงานครบกำหนดใน 7 วันนี้</Empty>
+        <Empty>ไม่มีงานครบกำหนดใน 5 วันทำการข้างหน้า</Empty>
       ) : (
         // README: การ์ดนี้ต้องมี inner scroll
         <ul className="flex max-h-[280px] flex-col gap-2.5 overflow-y-auto pr-1 scrollbar-thin">
@@ -193,11 +193,12 @@ export function DueThisWeekCard({ items }: { items: DueThisWeekItem[] }) {
                 <div className="min-w-0">
                   <div className="truncate text-[12.5px] font-semibold text-tk-ink">{item.title}</div>
                   <div className="mt-0.5 truncate text-[11px] text-tk-ink-6">
+                    {/* daysToDue = วันทำการ (lib/tasks/derived.js) */}
                     {item.daysToDue < 0
-                      ? `เลยกำหนด ${-item.daysToDue} วัน`
+                      ? `เลยกำหนด ${-item.daysToDue} วันทำการ`
                       : item.daysToDue === 0
                         ? 'ครบกำหนดวันนี้'
-                        : `อีก ${item.daysToDue} วัน`}
+                        : `อีก ${item.daysToDue} วันทำการ`}
                     {item.caption && ` · ${item.caption}`}
                   </div>
                 </div>

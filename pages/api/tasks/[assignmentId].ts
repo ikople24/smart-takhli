@@ -329,7 +329,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assignment.timeline.push({
         at: now,
         kind: 'note',
-        text: `เปลี่ยนชนิดงานเป็น "${change.label}" (กำหนดปิด ${change.slaDays} วันนับจากวันแจ้ง)`,
+        text: `เปลี่ยนชนิดงานเป็น "${change.label}" (กำหนดปิด ${change.slaDays} วันทำการนับจากวันแจ้ง)`,
         images: [],
         byUserId: officer._id,
         byName,
@@ -347,7 +347,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         action: 'complaint_work_type_set',
         resourceType: 'complaint',
         resourceId: String(complaint._id),
-        description: `เปลี่ยนชนิดงานเป็น "${change.label}" (SLA ${change.slaDays} วัน) จากหน้างานเจ้าหน้าที่`,
+        description: `เปลี่ยนชนิดงานเป็น "${change.label}" (SLA ${change.slaDays} วันทำการ) จากหน้างานเจ้าหน้าที่`,
         before,
         after: { workType: change.workType, dueDate: iso(change.newDueDate) },
       });

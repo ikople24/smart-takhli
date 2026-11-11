@@ -22,6 +22,15 @@ const SlaByWorkTypeSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const HolidaySchema = new mongoose.Schema(
+  {
+    /** 'YYYY-MM-DD' วันที่ไทย — ไม่นับเป็นวันทำการของกำหนดปิดเรื่อง (lib/tasks/businessDays.js) */
+    date: { type: String, required: true },
+    name: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const TaskSettingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: 'default', unique: true },
@@ -34,6 +43,7 @@ const TaskSettingsSchema = new mongoose.Schema(
     followUpEveryDays: { type: Number, default: 7 },
     slaByCategory: { type: [SlaByCategorySchema], default: [] },
     slaByWorkType: { type: [SlaByWorkTypeSchema], default: [] },
+    holidays: { type: [HolidaySchema], default: [] },
     updatedBy: { type: String, default: '' },
   },
   { timestamps: true, collection: 'task_settings' }

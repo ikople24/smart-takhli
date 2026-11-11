@@ -38,20 +38,31 @@ export interface TaskSettings {
   slaByCategory: Array<{ category: string; slaDays: number }>;
   /** ทับ SLA ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
   slaByWorkType: Array<{ workType: string; slaDays: number }>;
+  /** วันหยุดราชการ (ไม่นับเป็นวันทำการของกำหนดปิดเรื่อง) — เรียงตามวันที่ ไม่ซ้ำ */
+  holidays: TaskHoliday[];
+}
+
+export interface TaskHoliday {
+  /** 'YYYY-MM-DD' (วันที่ไทย) */
+  date: string;
+  name: string;
 }
 
 /** ผลของ deriveAssignment (lib/tasks/derived.js) */
 export interface DerivedAssignment {
+  /** กำหนดปิด (วันทำการ จ.–ศ. ไม่รวมวันหยุด) นับจากวันแจ้ง */
   slaDays: number;
   /** key ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
   workType: string;
   workTypeLabel: string;
   dueDate: string | null;
   dueBasis: 'stored' | 'complaint' | 'assignment' | null;
+  /** วันทำการที่เหลือถึงกำหนด (0 = วันนี้ · ติดลบ = เลยแล้ว อย่างน้อย -1) */
   daysToDue: number | null;
   isCompleted: boolean;
   isPaused: boolean;
   isOverdue: boolean;
+  /** เกินกำหนดกี่วันทำการ (≥ 1 เมื่อ isOverdue) */
   overdueDays: number;
   isDueSoon: boolean;
   needsCoordination: boolean;
