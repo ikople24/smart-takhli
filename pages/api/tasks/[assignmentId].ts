@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const taskDepartment = normalizeDepartment(c?.department) ?? defaultDepartmentForComplaint(c);
       const perms = taskPermissions({ isSuperAdmin: auth.isSuperAdmin, user: officer, taskDepartment, isOwner });
       // ตรงกับเงื่อนไขฝั่ง PATCH work_type: เจ้าของ / superadmin / หัวหน้ากองของเรื่อง (canTransfer)
-      const canSetWorkType = !derived.isCompleted && (canEdit || perms.canTransfer);
+      const canSetWorkType = !derived.isCompleted && !isClosedStatus(c?.status) && (canEdit || perms.canTransfer);
       const timeline = buildTimeline({ complaint: c ?? {}, assignment: a, derived, officerName: assignee?.name }) as TimelineEntry[];
       const category = c?.category ?? '';
       // ตัวเลือกของประเภทนี้ + ค่าที่เรื่องนี้เคยเลือกไว้ (เหมือน UpdateAssignmentModal เดิม — ประเภทเรื่องอาจถูกแก้ทีหลัง)
@@ -324,7 +324,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!change.ok) return res.status(400).json({ success: false, error: change.reason });
 
       const before = { workType: complaint.workType ?? '', dueDate: iso(assignment.dueDate) };
-      await Complaint.updateOne({ _id: complaint._id }, { $set: { workType: change.workType } });
+      // เขียน assignment ก่อน complaint.workType ทีหลังสุด — ถ้า save พลาด เรื่องยังเป็นชนิดเดิม กดซ้ำได้ (ไม่ติด "ชนิดงานเดิม")
       assignment.dueDate = change.newDueDate;
       assignment.timeline.push({
         at: now,
@@ -337,9 +337,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await assignment.save();
       // งานเปิดอื่นของเรื่องเดียวกัน (เช่น ผู้ประสาน) ใช้วันครบกำหนดชุดเดียวกัน — create.js บันทึกจากสูตรเดียวกัน
       await Assignment.updateMany(
-        { complaintId: assignment.complaintId, _id: { $ne: assignment._id }, completedAt: { $exists: false } },
+        { complaintId: assignment.complaintId, _id: { $ne: assignment._id }, completedAt: null },
         { $set: { dueDate: change.newDueDate } }
       );
+      await Complaint.updateOne({ _id: complaint._id }, { $set: { workType: change.workType } });
       audit({
         actorClerkId: auth.clerkUserId,
         actorName: byName || 'admin',
