@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const settings = await getTaskSettings();
     const { items } = await loadPoolItems({ settings, now, days: null });
     const dateKey = bangkokDateKey(now) ?? '';
-    const digest = buildStaleDigest(items, { unclaimedAlertDays: settings.unclaimedAlertDays, dateKey });
+    const digest = buildStaleDigest(items, { unclaimedAlertHours: settings.unclaimedAlertHours, dateKey });
     if (!digest.length) return res.status(200).json({ success: true, created: 0, groups: 0, message: 'ไม่มีเรื่องค้างเกินเกณฑ์' });
 
     const users = await userModel().find({ appId: CURRENT_APP_ID, isArchived: { $ne: true } }).select('clerkId department position role isActive isDepartmentHead').lean();
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let line: 'sent' | 'already_sent' | 'failed' | 'skipped' = 'skipped';
     const lineMarker = `stale-digest-line:${dateKey}`;
     const text = buildStaleLineText(items, {
-      unclaimedAlertDays: settings.unclaimedAlertDays,
+      unclaimedAlertHours: settings.unclaimedAlertHours,
       footer: '(สรุปอัตโนมัติทุกเช้า)',
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     });

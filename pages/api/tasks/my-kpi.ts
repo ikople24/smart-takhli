@@ -27,6 +27,8 @@ interface ComplaintLean {
   fullName?: string;
   detail?: string;
   category?: string;
+  problems?: string[];
+  workType?: string;
   status?: string;
   community?: string;
   images?: string[];
@@ -112,7 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .populate({
         path: 'complaintId',
         model: 'SubmittedReport',
-        select: 'complaintId fullName detail category problems status community images location createdAt updatedAt department',
+        select: 'complaintId fullName detail category problems workType status community images location createdAt updatedAt department',
       })
       .sort({ assignedAt: -1 })
       .lean()) as unknown as AssignmentLean[];
@@ -185,7 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    const kpi = computeKpi(assignments, { now }) as MyKpi;
+    const kpi = computeKpi(assignments, { now, settings }) as MyKpi;
 
     // ความพึงพอใจของเจ้าหน้าที่คนนี้ — คะแนนของเรื่องที่เขาถือ นับ "1 ผู้แจ้ง = 1 เสียง" (lib/satisfaction/fairStats.js)
     // อ่านพลาดไม่ทำให้ทั้งหน้าล้ม — ช่องนี้แสดง "–" แทน

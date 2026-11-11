@@ -25,15 +25,27 @@ export interface StatusPill {
 export interface TaskSettings {
   defaultSlaDays: number;
   warnBeforeDays: number;
+  /** เลิกใช้ตัดสินแล้ว — คงไว้เพื่อความเข้ากันได้ */
   unclaimedWarnDays: number;
+  /** เลิกใช้ตัดสินแล้ว — คงไว้เพื่อความเข้ากันได้ */
   unclaimedAlertDays: number;
+  /** ป้าย amber เมื่อรอรับ ≥ N ชม. */
+  unclaimedWarnHours: number;
+  /** "รอเกิน N ชม." เมื่อรอรับ > N ชม. (มติประชุม 10/11/69 = 24) */
+  unclaimedAlertHours: number;
   followUpEveryDays: number;
+  /** ใช้กับ "งานทั่วไป" เท่านั้น */
   slaByCategory: Array<{ category: string; slaDays: number }>;
+  /** ทับ SLA ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
+  slaByWorkType: Array<{ workType: string; slaDays: number }>;
 }
 
 /** ผลของ deriveAssignment (lib/tasks/derived.js) */
 export interface DerivedAssignment {
   slaDays: number;
+  /** key ในทะเบียนชนิดงาน (lib/tasks/workTypes.js) */
+  workType: string;
+  workTypeLabel: string;
   dueDate: string | null;
   dueBasis: 'stored' | 'complaint' | 'assignment' | null;
   daysToDue: number | null;
@@ -53,6 +65,8 @@ export interface DerivedAssignment {
   daysAssigned: number | null;
   resolutionDays: number | null;
   completedLate: boolean | null;
+  /** ชม.เต็มจากประชาชนแจ้ง → กดรับ (null = ไม่รู้เวลาแจ้ง) */
+  claimHours: number | null;
   stage: Stage;
   role: AssignmentRole;
   severity: Severity;
@@ -62,9 +76,14 @@ export interface DerivedAssignment {
 /** ผลของ deriveUnclaimed (lib/tasks/derived.js) */
 export interface DerivedUnclaimed {
   daysUnclaimed: number | null;
+  /** ชม.เต็มตั้งแต่ประชาชนแจ้ง (≥ 0) */
+  hoursUnclaimed: number | null;
+  /** รอรับเกิน unclaimedAlertHours */
   isStale: boolean;
   agingTone: 'overdue' | 'due' | 'neutral';
   slaDays: number;
+  workType: string;
+  workTypeLabel: string;
   dueDate: string | null;
   daysToDue: number | null;
   isUrgent: boolean;
@@ -158,6 +177,10 @@ export interface MyKpi {
   completionRate: number;
   onTimeRate: number | null;
   avgResolutionDays: number | null;
+  /** % เรื่องที่กดรับภายใน 24 ชม. นับจากประชาชนแจ้ง — null เมื่อไม่มีข้อมูล */
+  claimedWithin24hRate: number | null;
+  /** ตัวหารของ claimedWithin24hRate */
+  claimedCount: number;
   /** คะแนนเฉลี่ยแบบ 1 ผู้แจ้ง = 1 เสียง ของเรื่องที่เจ้าหน้าที่ถือ — null เมื่อยังไม่มีคะแนน */
   satisfaction: number | null;
   satisfactionCount?: number;

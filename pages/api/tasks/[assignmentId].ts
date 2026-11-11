@@ -41,6 +41,7 @@ interface ComplaintLean {
   category?: string;
   community?: string;
   problems?: string[];
+  workType?: string;
   images?: string[];
   location?: { lat?: number; lng?: number };
   createdAt?: Date;
@@ -53,7 +54,7 @@ interface ComplaintLean {
 }
 
 const COMPLAINT_FIELDS =
-  'complaintId fullName phone detail category community problems images location createdAt updatedAt status department isConfidential pdpaSensitive lineUserId';
+  'complaintId fullName phone detail category community problems workType images location createdAt updatedAt status department isConfidential pdpaSensitive lineUserId';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const auth = await getOfficer(req);

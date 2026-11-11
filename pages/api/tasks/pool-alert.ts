@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { items } = await loadPoolItems({ settings, days });
     const summary = staleSummary(items);
     const text = buildStaleLineText(items, {
-      unclaimedAlertDays: settings.unclaimedAlertDays,
+      unclaimedAlertHours: settings.unclaimedAlertHours,
       footer: `(แจ้งโดย ${auth.officer.name || 'เจ้าหน้าที่'})`,
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     });

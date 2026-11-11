@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assignment = await Assignment.findById(assignmentId).populate({
       path: 'complaintId',
       model: 'SubmittedReport',
-      select: 'complaintId detail category community createdAt status',
+      select: 'complaintId detail category problems workType community createdAt status',
     });
     if (!assignment) return res.status(404).json({ success: false, error: 'ไม่พบงานนี้' });
     if (assignment.completedAt) return res.status(400).json({ success: false, error: 'งานนี้ปิดแล้ว' });
