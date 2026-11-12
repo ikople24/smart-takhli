@@ -13,7 +13,7 @@
 | `/admin/elderly-school` | หน้าหลักแบบแท็บ `?tab=` (ดูด้านล่าง) — ปีเลือกด้วย `?yearBE=` | เมนู "จัดการ" (รายการเดียวใน Sidebar หลัก) |
 | `/admin/elderly-cards` | **redirect** → `/admin/elderly-school?tab=cards` (คง path ให้ลิงก์เดิม) | hideFromMenu |
 | `/admin/elderly-schedule` | **redirect** → `/admin/elderly-school?tab=schedule` | hideFromMenu |
-| `/elderly/checkin` | **public** (หน้าเต็มจอ ไม่ครอบ layout เดิม) — บัตรใบเดิมใช้ข้ามปีได้: ถ้าหลักสูตรปีที่ใหม่กว่าปีบนบัตรเริ่มแล้ว server บันทึกเป็นปีใหม่ (`resolveCheckinYear`) — ยืนยันเลขบัตร 4 ตัวท้ายด้วยแป้นตัวเลขใหญ่ → วันเรียน: กรอกค่าวัด → "สุขภาพของฉัน" 3 แท็บ (สุขภาพ · ประวัติ · ตารางเรียน) | ไม่ต้องล็อกอิน |
+| `/elderly/checkin` | **public** (หน้าเต็มจอ ไม่ครอบ layout เดิม) — แท็บประวัติมี "ทุกปี · ให้แพทย์ดู" (action `history` หลังยืนยันเลขบัตร) — บัตรใบเดิมใช้ข้ามปีได้: ถ้าหลักสูตรปีที่ใหม่กว่าปีบนบัตรเริ่มแล้ว server บันทึกเป็นปีใหม่ (`resolveCheckinYear`) — ยืนยันเลขบัตร 4 ตัวท้ายด้วยแป้นตัวเลขใหญ่ → วันเรียน: กรอกค่าวัด → "สุขภาพของฉัน" 3 แท็บ (สุขภาพ · ประวัติ · ตารางเรียน) | ไม่ต้องล็อกอิน |
 
 ⚠️ **ห้ามเปลี่ยน path `/elderly/checkin`** — QR ที่พิมพ์แจกแล้วฝัง URL นี้
 
@@ -43,7 +43,7 @@
 `cards` (รายชื่อทำบัตร), `checkin` (verify/บันทึก/สรุป — public; action `summary` ส่ง `schedule` ที่รวมค่าเริ่มต้นแล้ว + `lastAssessmentDate`),
 `schedule` (GET/PUT วันเรียน — PUT รับ `defaults` ด้วย ถ้าไม่ส่งจะไม่ล้างค่าเริ่มต้นเดิม), `dashboard` (aggregation สรุปสุขภาพ — 2026-10 เพิ่ม `totals.registered`,
 `attendance[16]`, `mentalHealthOthers`, และต่อคน `visitId`/`source`/`hasData`/`attendedCount`/`bpReadings`),
-`import` (นำเข้าชีต CSV แบบ upsert — ตอบ `problems[]` + `problemSummary`: แถวที่ข้าม/คำเตือนรายช่อง/เลขบัตรซ้ำ จาก `lib/elderly-school/importProblems.js`), `assessments` (2Q/9Q),
+`history` (GET `?personId=` ประวัติทุกปีสำหรับ "สรุปสำหรับแพทย์" — ลงบันทึกผู้เปิดใน `elderly_access_logs` ทุกครั้ง, logic `lib/elderly-school/history.js`), `import` (นำเข้าชีต CSV แบบ upsert — ตอบ `problems[]` + `problemSummary`: แถวที่ข้าม/คำเตือนรายช่อง/เลขบัตรซ้ำ จาก `lib/elderly-school/importProblems.js`), `assessments` (2Q/9Q),
 `people`, `visits`, `sheet-dashboard` (สรุปจาก Google Sheet CSV โดยตรง)
 
 - ✅ **Auth (2026-06-19):** endpoint admin ทั้ง 8 (`cards`, `dashboard`, `import`,

@@ -6,6 +6,7 @@ import { ObjectId } from "mongodb";
 import ElderlyMentalHealthAssessment from "@/models/elderly-school/ElderlyMentalHealthAssessment";
 import { computeBMI, bmiCategoryThai, bpCategory } from "@/lib/health/metrics";
 import { effectiveSessions, resolveCheckinYear, scheduleContact } from "@/lib/elderly-school/schedule";
+import { buildHealthHistory } from "@/lib/elderly-school/history";
 
 function getBangkokISODate() {
   // YYYY-MM-DD in Asia/Bangkok
@@ -201,6 +202,20 @@ export default async function handler(req, res) {
         schedule: effectiveSessions(schedule),
         contact: scheduleContact(schedule),
         lastAssessmentDate: lastAssessment?.assessmentDate || null,
+      });
+    }
+
+    // ประวัติทุกปี (หน้ามือถือ แท็บประวัติ → "ทุกปี") — ไว้เปิดให้แพทย์ดูกรณีฉุกเฉิน, ผ่านการยืนยันเลขบัตร 4 ตัวท้ายแล้วด้านบน
+    if (action === "history") {
+      const allVisits = await ElderlyVisit.find({ personId: new ObjectId(personId) }).lean();
+      const years = [...new Set(allVisits.map((v) => v.yearBE))];
+      const schedules = years.length
+        ? await ElderlySchoolSchedule.find({ yearBE: { $in: years } }, { yearBE: 1, "sessions.visitNo": 1, "sessions.dateISO": 1 }).lean()
+        : [];
+      return res.status(200).json({
+        success: true,
+        person: { fullName: person.fullName, ageYears: person.ageYears ?? null, heightCm: person.heightCm ?? null },
+        history: buildHealthHistory({ person, visits: allVisits, schedules }),
       });
     }
 
