@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import { usePermissions } from "@/components/PermissionGuard";
-import { currentYearBE } from "@/lib/elderly-school/followUp";
+import { currentFiscalYearBE } from "@/lib/elderly-school/followUp";
 import { inputCls, labelCls } from "./elderlyTheme";
 import OverviewTab from "./tabs/OverviewTab";
 import VisitsTab from "./tabs/VisitsTab";
@@ -33,7 +33,8 @@ function firstQuery(v) {
 export default function ElderlySchoolModule() {
   const router = useRouter();
   const { isSuperAdmin } = usePermissions();
-  const thisYear = useMemo(() => currentYearBE(), []);
+  // เข้ามาครั้งแรก (ไม่มี ?yearBE=) → ปีงบล่าสุด = ปีหลักสูตรปัจจุบัน
+  const thisYear = useMemo(() => currentFiscalYearBE(), []);
 
   const visibleTabs = TABS.filter((t) => t.divider || !t.superadminOnly || isSuperAdmin);
   const tabKey = firstQuery(router.query.tab);
