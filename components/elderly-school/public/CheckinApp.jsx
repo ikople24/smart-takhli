@@ -412,7 +412,7 @@ function HistoryTab({ data, loadHistory }) {
       <div role="tablist" aria-label="ช่วงข้อมูล" className="grid grid-cols-2 gap-1 p-1 rounded-[14px] bg-[#E7E5DD]">
         {[
           ["year", `ปี ${data.yearBE}`],
-          ["all", "ทุกปี · ให้แพทย์ดู"],
+          ["all", "ทุกปี"],
         ].map(([k, label]) => (
           <button
             key={k}
