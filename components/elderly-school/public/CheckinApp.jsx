@@ -1,7 +1,7 @@
 // หน้าเช็คอินผู้สูงอายุ (สาธารณะ /elderly/checkin — ห้ามเปลี่ยน path เพราะ QR พิมพ์แจกแล้ว)
 // ขั้นตอน: ยืนยันเลขบัตร 4 ตัวท้าย → (วันเรียน) กรอกค่าที่วัดได้ → สุขภาพของฉัน (สุขภาพ · ประวัติ · ตารางเรียน)
 // ออกแบบสำหรับผู้สูงอายุ: ตัวอักษรใหญ่ ปุ่มสูง ≥56px ภาษาเรียบง่าย
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { formatThaiDate } from "@/lib/elderly-school/followUp";
 import { personalSummary, personalTrend, visitHasData } from "@/lib/elderly-school/personal";
 import { formatTimeRange } from "@/lib/elderly-school/schedule";
@@ -400,12 +400,119 @@ function HealthTab({ data, banner, successVisitNo }) {
 }
 
 const TREND_TABS = [
-  ["bp", "ความดัน", "ความดันตัวบน", "มม.ปรอท"],
+  ["bp", "ความดัน", "ความดัน (ตัวบน / ตัวล่าง)", "มม.ปรอท"],
   ["weight", "น้ำหนัก", "น้ำหนัก", "กก."],
   ["waist", "รอบเอว", "รอบเอว", "ซม."],
 ];
 
-function HistoryTab({ data }) {
+function HistoryTab({ data, loadHistory }) {
+  const [scope, setScope] = useState("year"); // year | all
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div role="tablist" aria-label="ช่วงข้อมูล" className="grid grid-cols-2 gap-1 p-1 rounded-[14px] bg-[#E7E5DD]">
+        {[
+          ["year", `ปี ${data.yearBE}`],
+          ["all", "ทุกปี"],
+        ].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={scope === k}
+            onClick={() => setScope(k)}
+            className={"min-h-12 rounded-xl text-[17px] font-semibold " + (scope === k ? "bg-white text-[#0E5A55] shadow-sm" : "text-[#3C4541]")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {scope === "year" ? <YearHistory data={data} /> : <AllYearsHistory loadHistory={loadHistory} />}
+    </div>
+  );
+}
+
+const TONE_CELL = { ok: "#E3F0EE", care: "#FBF0D9", see: "#F8E1DD", none: "transparent" };
+
+/** ตารางย้อนหลังทุกปี — ตัวใหญ่ อ่านง่าย ไว้ยื่นมือถือให้แพทย์ดูกรณีฉุกเฉิน */
+function AllYearsHistory({ loadHistory }) {
+  const [state, setState] = useState({ loading: true, error: "", data: null });
+  useEffect(() => {
+    let alive = true;
+    loadHistory()
+      .then((json) => alive && setState({ loading: false, error: "", data: json }))
+      .catch((e) => alive && setState({ loading: false, error: e?.message || "โหลดประวัติไม่สำเร็จ", data: null }));
+    return () => {
+      alive = false;
+    };
+  }, [loadHistory]);
+
+  if (state.loading) return <span className="py-8 text-center text-lg text-[#5B635F]">กำลังโหลดประวัติ...</span>;
+  if (state.error) return <Banner tone="see">{state.error}</Banner>;
+  const { person, history } = state.data;
+  if (!history?.totalVisits) return <Banner tone="none">ยังไม่มีผลวัดย้อนหลัง</Banner>;
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="p-4 bg-white border border-[#E4E2DA] rounded-[18px] flex flex-col gap-1">
+        <span className="text-[13px] font-semibold text-[#0E5A55]">ประวัติผลวัดย้อนหลัง</span>
+        <span className="text-xl font-bold leading-snug">{person?.fullName}</span>
+        <span className="text-[15px] text-[#3C4541]">
+          {[person?.ageYears ? `อายุ ${person.ageYears} ปี` : null, person?.heightCm ? `ส่วนสูง ${person.heightCm} ซม.` : null]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+        <span className="text-[15px] text-[#3C4541]">
+          ปี {history.firstYear}
+          {history.lastYear !== history.firstYear ? `–${history.lastYear}` : ""} · วัดทั้งหมด {history.totalVisits} ครั้ง
+        </span>
+        <span className="mt-1 text-[13px] text-[#5B635F] leading-relaxed">
+          ข้อมูลคัดกรองจากโรงเรียนผู้สูงอายุ เทศบาลเมืองตาคลี ไม่ใช่เวชระเบียน — ความดันใช้ค่ารอบที่ 1 (ไม่มีใช้รอบที่ 2)
+        </span>
+      </div>
+
+      {history.years.map((y) => (
+        <section key={y.yearBE} className="bg-white border border-[#E4E2DA] rounded-[18px] overflow-hidden" aria-label={`ปี ${y.yearBE}`}>
+          <div className="px-4 py-3 bg-[#FBFAF7] border-b border-[#E4E2DA] text-[17px] font-bold">
+            ปี {y.yearBE} <span className="text-[15px] font-medium text-[#5B635F]">· {y.rows.length} ครั้ง</span>
+          </div>
+          <table className="w-full border-collapse text-[15px]">
+            <thead>
+              <tr className="text-left text-[13px] text-[#5B635F]">
+                <th className="py-2 pl-4 pr-1 font-semibold">ครั้ง / วันที่</th>
+                <th className="py-2 px-1 font-semibold">ความดัน</th>
+                <th className="py-2 px-1 font-semibold">ชีพจร</th>
+                <th className="py-2 pl-1 pr-4 font-semibold">นน./เอว</th>
+              </tr>
+            </thead>
+            <tbody>
+              {y.rows.map((r) => (
+                <tr key={r.visitNo} className="border-t border-[#EFEDE6] align-top">
+                  <td className="py-2.5 pl-4 pr-1">
+                    <span className="block font-semibold">ครั้งที่ {r.visitNo}</span>
+                    <span className="block text-[13px] text-[#5B635F]">{r.dateISO ? formatThaiDate(r.dateISO) : "—"}</span>
+                  </td>
+                  <td className="py-2.5 px-1">
+                    <span className="inline-block px-1.5 rounded-md text-[17px] font-bold whitespace-nowrap" style={{ background: TONE_CELL[r.bpTone] }}>
+                      {r.bp || "—"}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-1 text-[17px] font-semibold">{r.pulseBpm ?? "—"}</td>
+                  <td className="py-2.5 pl-1 pr-4 whitespace-nowrap">
+                    <span className="block">{r.weightKg != null ? `${r.weightKg} กก.` : "—"}</span>
+                    <span className="block text-[13px] text-[#5B635F]">{r.waistCm != null ? `เอว ${r.waistCm}` : ""}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ))}
+      <span className="px-1 text-[13px] text-[#5B635F]">สีพื้นความดัน: เขียว = ปกติ · เหลือง = สูงเล็กน้อย · แดง = สูง/ต่ำกว่าปกติ</span>
+    </div>
+  );
+}
+
+function YearHistory({ data }) {
   const [key, setKey] = useState("bp");
   const trend = useMemo(() => personalTrend(data.visits, key), [data, key]);
   const meta = TREND_TABS.find((t) => t[0] === key);
@@ -449,14 +556,19 @@ function HistoryTab({ data }) {
               {trend.map((t) => (
                 <div key={t.visitNo} className="min-w-0 flex flex-col items-center">
                   <div className="h-[150px] w-full flex flex-col items-center justify-end gap-1 border-b border-[#D6D3C8]">
-                    <span className={"font-semibold text-[#3C4541] whitespace-nowrap " + (trend.length > 12 ? "text-[10px]" : "text-xs")}>{t.value}</span>
+                    <span className={"flex flex-col items-center leading-tight whitespace-nowrap text-[#3C4541] " + (trend.length > 12 ? "text-[10px]" : "text-xs")}>
+                      <span className="font-semibold">{t.value}</span>
+                      {t.dia != null && <span className="text-[#5B635F]">{t.dia}</span>}
+                    </span>
                     <div className="w-full rounded-t-md" style={{ height: `${24 + ((t.value - min) / span) * 96}px`, background: toneBar[t.tone] }} />
                   </div>
                   <span className="pt-1 text-xs text-center text-[#5B635F]">{t.visitNo}</span>
                 </div>
               ))}
             </div>
-            <span className="text-sm text-[#5B635F]">ตัวเลขใต้แท่ง = ครั้งที่</span>
+            <span className="text-sm text-[#5B635F]">
+              {key === "bp" ? "ตัวเลขบนแท่ง = ตัวบน / ตัวล่าง (ความสูงแท่งตามตัวบน) · ใต้แท่ง = ครั้งที่" : "ตัวเลขใต้แท่ง = ครั้งที่"}
+            </span>
           </>
         )}
       </div>
@@ -592,7 +704,7 @@ const MY_TABS = [
   ["schedule", "ตารางเรียน", ICONS.cal],
 ];
 
-function MyHealth({ data, banner, successVisitNo, onLogout }) {
+function MyHealth({ data, banner, successVisitNo, onLogout, loadHistory }) {
   const [tab, setTab] = useState("health");
   const name = data.person?.fullName || "";
   return (
@@ -614,7 +726,7 @@ function MyHealth({ data, banner, successVisitNo, onLogout }) {
       </div>
       <div className="flex-1 px-5 pb-6">
         {tab === "health" && <HealthTab data={data} banner={banner} successVisitNo={successVisitNo} />}
-        {tab === "history" && <HistoryTab data={data} />}
+        {tab === "history" && <HistoryTab data={data} loadHistory={loadHistory} />}
         {tab === "schedule" && <ScheduleTabView data={data} />}
       </div>
       <nav aria-label="เมนูหลัก" className="sticky bottom-0 grid grid-cols-3 bg-white border-t border-[#E4E2DA] px-2 pt-2 pb-[max(14px,env(safe-area-inset-bottom))]">
@@ -688,6 +800,12 @@ export default function CheckinApp({ personId, yearBE, nameHint }) {
     }
   };
 
+  // ประวัติทุกปี (ใช้เลขบัตร 4 ตัวท้ายที่ยืนยันแล้ว)
+  const loadHistory = useCallback(
+    () => callCheckin({ action: "history", personId, yearBE, citizenIdLast4: last4 }),
+    [personId, yearBE, last4]
+  );
+
   const logout = () => {
     setStep("verify");
     setLast4("");
@@ -724,7 +842,7 @@ export default function CheckinApp({ personId, yearBE, nameHint }) {
             }}
           />
         ) : summary ? (
-          <MyHealth data={summary} banner={banner} successVisitNo={successVisitNo} onLogout={logout} />
+          <MyHealth data={summary} banner={banner} successVisitNo={successVisitNo} onLogout={logout} loadHistory={loadHistory} />
         ) : null}
         {error && (
           <div className="p-5">

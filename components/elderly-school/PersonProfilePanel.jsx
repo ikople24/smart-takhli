@@ -2,8 +2,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { bmiChip, bpChip, formatThaiDate, mhChip, needsCloseFollowUp } from "@/lib/elderly-school/followUp";
 import { fetchJson, postJson } from "./useElderlyData";
+import { bpTone, visitBp } from "@/lib/elderly-school/personal";
 import VisitEditModal from "./VisitEditModal";
 import QrCheckinModal from "./QrCheckinModal";
+import DoctorSummaryModal from "./DoctorSummaryModal";
 import {
   Chip,
   Notice,
@@ -38,6 +40,8 @@ function MetricTile({ label, value, sub, tone }) {
   );
 }
 
+const BAR_COLOR = { ok: "#4E9C8F", care: "#E3C37E", see: "#C98F86", none: "#9FBFBA" };
+
 export default function PersonProfilePanel({ personId, metrics, follow, yearBE, statuses, onChanged, go }) {
   const [person, setPerson] = useState(null);
   const [visits, setVisits] = useState([]);
@@ -49,6 +53,7 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
   const [saving, setSaving] = useState(false);
   const [visitModal, setVisitModal] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [doctorOpen, setDoctorOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,9 +95,9 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
 
   const trend = Array.from({ length: 16 }, (_, i) => {
     const v = visitByNo.get(i + 1);
-    const sys = v?.bp1Sys ?? v?.bp2Sys ?? null;
-    return { no: i + 1, sys };
-  }).filter((t) => t.sys !== null);
+    const bp = visitBp(v); // รอบ 1 ก่อน ไม่ครบใช้รอบ 2 (เหมือนหน้ามือถือ)
+    return bp ? { no: i + 1, sys: bp.sys, dia: bp.dia, tone: bpTone(bp) } : null;
+  }).filter(Boolean);
 
   const savePerson = async () => {
     const num = (s) => (String(s).trim() === "" ? null : Number(s));
@@ -171,6 +176,9 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
         <button type="button" className="text-sm font-semibold text-[#0E5A55] underline" onClick={() => setQrOpen(true)}>
           QR เช็คอิน
         </button>
+        <button type="button" className="text-sm font-semibold text-[#8E1F18] underline" onClick={() => setDoctorOpen(true)}>
+          สรุปสำหรับแพทย์ (ทุกปี)
+        </button>
       </div>
 
       {editing && (
@@ -224,20 +232,28 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
       {trend.length > 0 && (
         <div className="flex flex-col gap-2.5">
           <div className="flex justify-between items-baseline gap-2">
-            <h3 className="m-0 text-base font-bold">แนวโน้มความดันตัวบน</h3>
-            <span className="text-xs text-[#5B635F]">เส้นประ = 140</span>
+            <h3 className="m-0 text-base font-bold">แนวโน้มความดัน (ตัวบน / ตัวล่าง)</h3>
+            <span className="text-xs text-[#5B635F]">เส้นประ = ตัวบน 140 · ใต้แท่ง = ครั้งที่</span>
           </div>
-          <div className="relative h-[120px] flex gap-2 items-end border-b border-[#D6D3C8]">
-            <div className="absolute inset-x-0 border-t-2 border-dashed border-[#C9867F]" style={{ bottom: `${((140 - 80) / 120) * 100}px` }} aria-hidden="true" />
-            {trend.map((t) => {
-              const h = Math.max(4, Math.min(100, ((t.sys - 80) / 120) * 100));
-              return (
-                <div key={t.no} className="flex-1 max-w-8 flex flex-col items-center justify-end h-full gap-1" title={`ครั้งที่ ${t.no}: ${t.sys}`}>
-                  <span className="text-[11px] text-[#3C4541]">{t.sys}</span>
-                  <div className="w-full rounded-t" style={{ height: `${h}px`, background: t.sys >= 140 ? "#C98F86" : t.sys >= 120 ? "#E3C37E" : "#4E9C8F" }} />
-                </div>
-              );
-            })}
+          <div className="relative">
+            <div className="absolute inset-x-0 border-t-2 border-dashed border-[#C9867F] z-0" style={{ top: `${120 - ((140 - 80) / 120) * 100}px` }} aria-hidden="true" />
+            <div className="relative grid gap-1.5" style={{ gridTemplateColumns: `repeat(${trend.length}, minmax(0, 1fr))`, maxWidth: `${trend.length * 44}px` }}>
+              {trend.map((t) => {
+                const h = Math.max(4, Math.min(100, ((t.sys - 80) / 120) * 100));
+                return (
+                  <div key={t.no} className="min-w-0 flex flex-col items-center" title={`ครั้งที่ ${t.no}: ${t.sys}/${t.dia}`}>
+                    <div className="h-[120px] w-full flex flex-col items-center justify-end gap-0.5 border-b border-[#D6D3C8]">
+                      <span className="flex flex-col items-center leading-tight text-[11px] whitespace-nowrap">
+                        <span className="font-semibold text-[#3C4541]">{t.sys}</span>
+                        <span className="text-[#5B635F]">{t.dia}</span>
+                      </span>
+                      <div className="w-full rounded-t" style={{ height: `${h}px`, background: BAR_COLOR[t.tone] || BAR_COLOR.none }} />
+                    </div>
+                    <span className="pt-0.5 text-[11px] text-[#5B635F]">{t.no}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -296,6 +312,7 @@ export default function PersonProfilePanel({ personId, metrics, follow, yearBE, 
         visit={visitModal?.visit}
         dateISO={dateByNo.get(visitModal?.no)?.dateISO}
       />
+      <DoctorSummaryModal open={doctorOpen} onClose={() => setDoctorOpen(false)} personId={personId} />
       <QrCheckinModal open={qrOpen} onClose={() => setQrOpen(false)} person={{ personId, fullName: person?.fullName }} yearBE={yearBE} />
     </section>
   );
