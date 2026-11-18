@@ -1,8 +1,9 @@
 // แท็บ "บัตร QR" — สร้างและพิมพ์บัตรสมาชิก (แบบเดียวกับ /admin/elderly-cards)
-// QR ฝังลิงก์ /admin/recycle/deposit?code=PS-xxxx → เจ้าหน้าที่สแกนแล้วเปิดหน้ากรอกน้ำหนักทันที
+// QR ฝังลิงก์ /recycle/m/<publicToken> → เจ้าหน้าที่ (ล็อกอิน) สแกนแล้วเปิดหน้ากรอกน้ำหนัก
+// สมาชิกสแกนเองเห็นยอดคงเหลือ/ประวัติของตัวเอง
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { COMMUNITIES } from "@/lib/takhliCommunities";
-import { makeDepositUrl, recycleFetch } from "@/lib/recycle/client";
+import { makeMemberCardUrl, recycleFetch } from "@/lib/recycle/client";
 
 export default function MemberCardsPanel() {
   const [community, setCommunity] = useState("");
@@ -41,7 +42,9 @@ export default function MemberCardsPanel() {
     try {
       const QRCode = (await import("qrcode")).default;
       const entries = await Promise.all(
-        members.map(async (m) => [m.code, await QRCode.toDataURL(makeDepositUrl(origin, m.code), { margin: 1, width: 220 })])
+        members
+          .filter((m) => m.publicToken)
+          .map(async (m) => [m.code, await QRCode.toDataURL(makeMemberCardUrl(origin, m.publicToken), { margin: 1, width: 220 })])
       );
       setQrMap(Object.fromEntries(entries));
     } catch (e) {
@@ -56,7 +59,7 @@ export default function MemberCardsPanel() {
       <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 print:hidden">
         <div>
           <p className="text-base font-semibold text-gray-900">พิมพ์บัตรสมาชิก QR</p>
-          <p className="text-xs text-gray-500 mt-1">QR เปิดหน้าบันทึกการฝาก — ใช้ได้เฉพาะเจ้าหน้าที่ที่ล็อกอินแล้ว</p>
+          <p className="text-xs text-gray-500 mt-1">เจ้าหน้าที่ (ล็อกอิน) สแกน → กรอกน้ำหนัก • สมาชิกสแกนเอง → ดูยอดคงเหลือและประวัติ</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="card-community">

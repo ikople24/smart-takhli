@@ -1,6 +1,6 @@
-// หน้าบันทึกการฝากขยะรีไซเคิล — เปิดจากการสแกน QR บนบัตรสมาชิก
+// หน้าบันทึกการฝากขยะรีไซเคิล
 // URL: /admin/recycle/deposit?code=PS-0001  (หรือ ?memberId=<ObjectId>)
-// ⚠️ path + query `code` ถูกพิมพ์ลง QR แล้ว ห้ามเปลี่ยน
+// เข้าจาก QR บนบัตร: /recycle/m/<token> จะพาเจ้าหน้าที่ที่ล็อกอินมาที่หน้านี้
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";

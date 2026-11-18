@@ -67,7 +67,7 @@ export default function DepositTodayPanel() {
     <div className="space-y-4">
       <div className="rounded-3xl bg-emerald-50/70 ring-1 ring-emerald-200/70 p-5">
         <p className="text-base font-semibold text-emerald-900">สแกน QR บนบัตรสมาชิกด้วยกล้องมือถือ</p>
-        <p className="text-sm text-emerald-800 mt-1">ระบบจะเปิดหน้ากรอกน้ำหนักของสมาชิกคนนั้นทันที (ต้องล็อกอินไว้ในเครื่องนี้)</p>
+        <p className="text-sm text-emerald-800 mt-1">ระบบจะเปิดหน้ากรอกน้ำหนักของสมาชิกคนนั้นทันที (ต้องล็อกอินไว้ใน browser เดียวกับที่กล้องเปิดลิงก์)</p>
       </div>
 
       <form onSubmit={search} className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5 space-y-3">

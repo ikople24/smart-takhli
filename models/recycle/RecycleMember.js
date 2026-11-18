@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 // สมาชิกโครงการพระสังข์หอบทอง (ผู้นำขยะรีไซเคิลมาฝาก)
 const RecycleMemberSchema = new mongoose.Schema(
   {
-    code: { type: String, required: true, unique: true, index: true }, // PS-0001 — พิมพ์ลงบัตร QR
+    code: { type: String, required: true, unique: true, index: true }, // PS-0001 — แสดงบนบัตร (เรียงเลข)
+    // รหัสสุ่มใน QR บนบัตร → /recycle/m/<publicToken> (lib/recycle/publicToken.js)
+    publicToken: { type: String, unique: true, sparse: true, index: true },
     fullName: { type: String, required: true, trim: true, index: true },
     phone: { type: String, default: "" },
     community: { type: String, default: "", index: true }, // ชุมชน (lib/takhliCommunities.js)

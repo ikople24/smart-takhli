@@ -1,10 +1,11 @@
-// GET  /api/recycle/members?q=&community=&code=&active=all|true|false&limit=
+// GET  /api/recycle/members?q=&community=&code=&token=&active=all|true|false&limit=
 // POST /api/recycle/members  { fullName, phone, community, groupName, address, note }
 import dbConnect from "@/lib/dbConnect";
 import RecycleMember from "@/models/recycle/RecycleMember";
 import { withRecycleAuth } from "../_auth";
 import { normalizeMemberInput } from "@/lib/recycle/validate";
 import { nextMemberCode, normalizeMemberCode } from "@/lib/recycle/memberCode";
+import { ensurePublicTokens, generatePublicToken, isPublicToken } from "@/lib/recycle/publicToken";
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -16,10 +17,18 @@ export default async function handler(req, res) {
   await dbConnect();
 
   if (req.method === "GET") {
-    const { q = "", community = "", code = "", active = "true" } = req.query;
+    const { q = "", community = "", code = "", token = "", active = "true" } = req.query;
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 1000);
 
-    // ค้นด้วยรหัสตรง ๆ (ใช้ตอนสแกน QR)
+    // ค้นด้วย token ใน QR (หน้า /recycle/m ใช้เช็คว่าเป็นเจ้าหน้าที่แล้วพาไปหน้ากรอกน้ำหนัก)
+    if (token) {
+      if (!isPublicToken(token)) return res.status(404).json({ success: false, message: "ไม่พบสมาชิก" });
+      const member = await RecycleMember.findOne({ publicToken: token }).lean();
+      if (!member) return res.status(404).json({ success: false, message: "ไม่พบสมาชิก" });
+      return res.json({ success: true, member });
+    }
+
+    // ค้นด้วยรหัสตรง ๆ
     if (code) {
       const member = await RecycleMember.findOne({ code: normalizeMemberCode(code) }).lean();
       if (!member) return res.status(404).json({ success: false, message: "ไม่พบสมาชิกรหัสนี้" });
@@ -38,6 +47,7 @@ export default async function handler(req, res) {
     }
 
     const members = await RecycleMember.find(filter).sort({ code: 1 }).limit(limit).lean();
+    await ensurePublicTokens(RecycleMember, members); // สมาชิกเก่าที่ยังไม่มี token (ใช้พิมพ์บัตร)
     return res.json({ success: true, members });
   }
 
@@ -58,6 +68,7 @@ export default async function handler(req, res) {
     const member = await RecycleMember.create({
       ...data,
       code,
+      publicToken: generatePublicToken(),
       createdBy: { clerkId: auth.userId, name: auth.name },
     });
     return res.status(201).json({ success: true, member });
