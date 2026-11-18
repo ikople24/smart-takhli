@@ -35,6 +35,19 @@ const ADMIN_META = {
       { label: 'วิเคราะห์สถิติ' },
     ],
   },
+  '/admin/recycle':                   { title: 'พระสังข์หอบทอง', subtitle: 'รับฝากขยะรีไซเคิล' },
+  '/admin/recycle/deposit': {
+    title: 'บันทึกการฝาก',
+    breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle' }, { label: 'บันทึกการฝาก' }],
+  },
+  '/admin/recycle/members/new': {
+    title: 'เพิ่มสมาชิก',
+    breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle?tab=members' }, { label: 'เพิ่มสมาชิก' }],
+  },
+  '/admin/recycle/members/[id]': {
+    title: 'ข้อมูลสมาชิก',
+    breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle?tab=members' }, { label: 'ข้อมูลสมาชิก' }],
+  },
   '/admin/smart-papar/water-quality':   { title: 'คุณภาพน้ำ (ประปา)' },
   '/admin/smart-light':               { title: 'เสาไฟสาธารณะ (กองช่าง)', fullBleed: true },
   '/admin/smart-waste':               { title: 'ระบบบริหารจัดการขยะ' },
