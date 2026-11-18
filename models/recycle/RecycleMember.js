@@ -13,7 +13,9 @@ const RecycleMemberSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true, index: true },
 
     // ยอดสะสม (อัปเดตทุกครั้งที่บันทึก/ยกเลิกการฝาก)
-    totalKg: { type: Number, default: 0 },
+    // ยอดคงเหลือที่แลกได้ = totalKg - redeemedKg  (ดู lib/recycle/balance.js)
+    totalKg: { type: Number, default: 0 }, // น้ำหนักที่ฝากทั้งหมด (ตลอดอายุสมาชิก)
+    redeemedKg: { type: Number, default: 0 }, // น้ำหนักที่ตัดยอดไปแลกของแล้ว
     depositCount: { type: Number, default: 0 },
     lastDepositAt: { type: Date, default: null },
 

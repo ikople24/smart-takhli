@@ -40,6 +40,10 @@ const ADMIN_META = {
     title: 'บันทึกการฝาก',
     breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle' }, { label: 'บันทึกการฝาก' }],
   },
+  '/admin/recycle/redeem': {
+    title: 'แลกของ (ตัดยอด)',
+    breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle?tab=rewards' }, { label: 'แลกของ' }],
+  },
   '/admin/recycle/members/new': {
     title: 'เพิ่มสมาชิก',
     breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle?tab=members' }, { label: 'เพิ่มสมาชิก' }],

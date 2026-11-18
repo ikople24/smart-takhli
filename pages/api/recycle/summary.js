@@ -1,8 +1,9 @@
 // GET /api/recycle/summary?from=YYYY-MM-DD&to=YYYY-MM-DD
-// สรุปน้ำหนักตามประเภท / ตามชุมชน / รายวัน (ไม่รวมรายการที่ยกเลิก)
+// สรุปน้ำหนักตามประเภท / ตามชุมชน / รายวัน + การแลกของ (ไม่รวมรายการที่ยกเลิก)
 import dbConnect from "@/lib/dbConnect";
 import RecycleDeposit from "@/models/recycle/RecycleDeposit";
 import RecycleMember from "@/models/recycle/RecycleMember";
+import RecycleRedemption from "@/models/recycle/RecycleRedemption";
 import { withRecycleAuth } from "./_auth";
 import { getBangkokYMD, isYMD } from "@/lib/recycle/dates";
 import { roundKg } from "@/lib/recycle/validate";
@@ -60,6 +61,21 @@ export default async function handler(req, res) {
 
   const memberTotal = await RecycleMember.countDocuments({ isActive: true });
 
+  // การตัดยอดแลกของในช่วงเดียวกัน
+  const redeemMatch = { voided: false, redeemDate: { $gte: from, $lte: to } };
+  const [redeemOverall] = await RecycleRedemption.aggregate([
+    { $match: redeemMatch },
+    { $group: { _id: null, kg: { $sum: "$totalKg" }, count: { $sum: 1 } } },
+  ]);
+  const byReward = (
+    await RecycleRedemption.aggregate([
+      { $match: redeemMatch },
+      { $unwind: "$items" },
+      { $group: { _id: "$items.name", qty: { $sum: "$items.qty" }, kg: { $sum: "$items.subtotalKg" }, unit: { $first: "$items.unit" } } },
+      { $sort: { kg: -1 } },
+    ])
+  ).map((r) => ({ name: r._id, qty: r.qty, unit: r.unit, kg: roundKg(r.kg) }));
+
   return res.json({
     success: true,
     from,
@@ -71,5 +87,8 @@ export default async function handler(req, res) {
     byType,
     byCommunity,
     byDay,
+    redeemedKg: roundKg(redeemOverall?.kg || 0),
+    redemptionCount: redeemOverall?.count || 0,
+    byReward,
   });
 }

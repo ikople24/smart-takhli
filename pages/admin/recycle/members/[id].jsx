@@ -7,6 +7,7 @@ import MemberForm from "@/components/recycle/MemberForm";
 import { fmtKg, recycleFetch } from "@/lib/recycle/client";
 import { formatThaiDate } from "@/lib/recycle/dates";
 import { getWasteTypeLabel } from "@/lib/recycle/wasteTypes";
+import { getBalanceKg } from "@/lib/recycle/balance";
 
 function EditMemberInner() {
   const router = useRouter();
@@ -82,16 +83,29 @@ function EditMemberInner() {
 
         {member && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="rounded-2xl bg-white ring-1 ring-gray-200/60 p-4">
-                <p className="text-xs text-gray-500">สะสมทั้งหมด</p>
-                <p className="text-xl font-bold text-emerald-700">{fmtKg(member.totalKg)} กก.</p>
+                <p className="text-xs text-gray-500">ฝากทั้งหมด</p>
+                <p className="text-lg font-bold">{fmtKg(member.totalKg)} กก.</p>
+                <p className="text-xs text-gray-500">{member.depositCount} ครั้ง</p>
               </div>
               <div className="rounded-2xl bg-white ring-1 ring-gray-200/60 p-4">
-                <p className="text-xs text-gray-500">ฝากมาแล้ว</p>
-                <p className="text-xl font-bold">{member.depositCount} ครั้ง</p>
+                <p className="text-xs text-gray-500">แลกไปแล้ว</p>
+                <p className="text-lg font-bold">{fmtKg(member.redeemedKg)} กก.</p>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-4">
+                <p className="text-xs text-emerald-800">คงเหลือ</p>
+                <p className="text-lg font-bold text-emerald-700">{fmtKg(getBalanceKg(member))} กก.</p>
               </div>
             </div>
+            {member.isActive && (
+              <Link
+                href={`/admin/recycle/redeem?code=${encodeURIComponent(member.code)}`}
+                className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-amber-50 text-amber-900 font-semibold flex items-center justify-center hover:bg-amber-100"
+              >
+                แลกของ (ตัดยอด)
+              </Link>
+            )}
 
             <div className="rounded-3xl bg-white/90 ring-1 ring-gray-200/60 shadow-sm p-5">
               <MemberForm key={member._id + member.updatedAt} initial={member} onSubmit={submit} saving={saving} showActiveToggle submitLabel="บันทึกการแก้ไข" />

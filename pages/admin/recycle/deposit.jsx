@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import PermissionGuard from "@/components/PermissionGuard";
 import { getActiveTypesByGroup, getWasteTypeLabel } from "@/lib/recycle/wasteTypes";
 import { normalizeDepositItems, parseKg, roundKg } from "@/lib/recycle/validate";
+import { getBalanceKg } from "@/lib/recycle/balance";
 import { formatThaiDate, formatThaiTime, getBangkokYMD } from "@/lib/recycle/dates";
 import { fmtKg, recycleFetch } from "@/lib/recycle/client";
 
@@ -163,10 +164,19 @@ function DepositPageInner() {
               {!member.isActive && <p className="text-sm font-semibold text-red-700 mt-1">สมาชิกนี้ถูกปิดการใช้งาน</p>}
             </div>
             <div className="text-right shrink-0">
-              <p className="text-xs text-gray-500">สะสม</p>
-              <p className="text-lg font-bold text-emerald-700">{fmtKg(member.totalKg)} กก.</p>
+              <p className="text-xs text-gray-500">คงเหลือแลกได้</p>
+              <p className="text-lg font-bold text-emerald-700">{fmtKg(getBalanceKg(member))} กก.</p>
             </div>
           </div>
+        )}
+
+        {member && member.isActive && step === "form" && (
+          <Link
+            href={`/admin/recycle/redeem?code=${encodeURIComponent(member.code)}`}
+            className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-amber-50 text-amber-900 font-semibold flex items-center justify-center hover:bg-amber-100"
+          >
+            สมาชิกต้องการแลกของ (ตัดยอด) →
+          </Link>
         )}
 
         {member && step === "form" && (
@@ -258,8 +268,8 @@ function DepositPageInner() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl bg-white ring-1 ring-gray-200/60 p-4">
-                <p className="text-xs text-gray-500">สะสมทั้งหมด</p>
-                <p className="text-xl font-bold">{fmtKg(member.totalKg)} กก.</p>
+                <p className="text-xs text-gray-500">คงเหลือแลกได้</p>
+                <p className="text-xl font-bold text-emerald-700">{fmtKg(getBalanceKg(member))} กก.</p>
               </div>
               <div className="rounded-2xl bg-white ring-1 ring-gray-200/60 p-4">
                 <p className="text-xs text-gray-500">ฝากมาแล้ว</p>
@@ -273,6 +283,12 @@ function DepositPageInner() {
             >
               สแกนคนถัดไป
             </button>
+            <Link
+              href={`/admin/recycle/redeem?code=${encodeURIComponent(member.code)}`}
+              className="h-12 w-full rounded-2xl border-2 border-amber-300 bg-amber-50 text-amber-900 font-semibold flex items-center justify-center hover:bg-amber-100"
+            >
+              แลกของ (ตัดยอด)
+            </Link>
             <button
               type="button"
               onClick={editSaved}

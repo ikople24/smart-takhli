@@ -1,15 +1,17 @@
 // โครงการพระสังข์หอบทอง — รับฝากขยะรีไซเคิล (บันทึกน้ำหนักเป็น กก. ตามประเภท)
-// แท็บ: รับฝาก | สมาชิก | บัตร QR | สรุป   (เลือกแท็บผ่าน ?tab=)
+// แท็บ: รับฝาก | สมาชิก | แลกของ | บัตร QR | สรุป   (เลือกแท็บผ่าน ?tab=)
 import { useRouter } from "next/router";
 import PermissionGuard from "@/components/PermissionGuard";
 import DepositTodayPanel from "@/components/recycle/DepositTodayPanel";
 import MembersPanel from "@/components/recycle/MembersPanel";
 import MemberCardsPanel from "@/components/recycle/MemberCardsPanel";
 import SummaryPanel from "@/components/recycle/SummaryPanel";
+import RewardsPanel from "@/components/recycle/RewardsPanel";
 
 const TABS = [
   { id: "deposit", label: "รับฝาก" },
   { id: "members", label: "สมาชิก" },
+  { id: "rewards", label: "แลกของ" },
   { id: "cards", label: "บัตร QR" },
   { id: "summary", label: "สรุป" },
 ];
@@ -31,7 +33,7 @@ export default function RecyclePage() {
             <p className="text-xs text-gray-500 mt-1">รับฝากขยะรีไซเคิล — บันทึกน้ำหนัก (กก.) ตามประเภท ผ่านบัตร QR สมาชิก</p>
           </div>
 
-          <div role="tablist" aria-label="เมนูพระสังข์หอบทอง" className="grid grid-cols-4 gap-1 rounded-2xl bg-white p-1 ring-1 ring-gray-200/70 shadow-sm print:hidden">
+          <div role="tablist" aria-label="เมนูพระสังข์หอบทอง" className="grid grid-cols-5 gap-1 rounded-2xl bg-white p-1 ring-1 ring-gray-200/70 shadow-sm print:hidden">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -40,7 +42,7 @@ export default function RecyclePage() {
                 aria-selected={tab === t.id}
                 onClick={() => selectTab(t.id)}
                 className={[
-                  "h-12 rounded-xl text-sm sm:text-base font-semibold transition-colors",
+                  "h-12 rounded-xl text-[13px] sm:text-base font-semibold transition-colors",
                   tab === t.id ? "bg-emerald-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-50",
                 ].join(" ")}
               >
@@ -51,6 +53,7 @@ export default function RecyclePage() {
 
           {tab === "deposit" && <DepositTodayPanel />}
           {tab === "members" && <MembersPanel />}
+          {tab === "rewards" && <RewardsPanel />}
           {tab === "cards" && <MemberCardsPanel />}
           {tab === "summary" && <SummaryPanel />}
         </div>

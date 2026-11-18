@@ -61,12 +61,14 @@ export default function SummaryPanel() {
 
       {data && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
               { label: "น้ำหนักรวม", value: `${fmtKg(data.totalKg)} กก.` },
               { label: "จำนวนครั้งที่ฝาก", value: `${data.depositCount} ครั้ง` },
               { label: "สมาชิกที่มาฝาก", value: `${data.activeMemberCount} คน` },
               { label: "สมาชิกทั้งหมด", value: `${data.memberTotal} คน` },
+              { label: "ตัดยอดแลกของ", value: `${fmtKg(data.redeemedKg)} กก.` },
+              { label: "จำนวนครั้งที่แลก", value: `${data.redemptionCount} ครั้ง` },
             ].map((c) => (
               <div key={c.label} className="rounded-2xl bg-white ring-1 ring-gray-200/60 p-4">
                 <p className="text-xs text-gray-500">{c.label}</p>
@@ -92,6 +94,23 @@ export default function SummaryPanel() {
                   <div className="mt-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                     <div className="h-full rounded-full bg-emerald-600" style={{ width: `${(t.kg / maxTypeKg) * 100}%` }} />
                   </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
+            <p className="text-base font-semibold text-gray-900 mb-2">ของรางวัลที่แลกออกไป</p>
+            {data.byReward.length === 0 && <p className="text-sm text-gray-500">ยังไม่มีการแลกในช่วงนี้</p>}
+            <ul className="divide-y divide-gray-100">
+              {data.byReward.map((r) => (
+                <li key={r.name} className="py-2 flex justify-between text-sm">
+                  <span>
+                    {r.name} × {r.qty} {r.unit}
+                  </span>
+                  <span>
+                    <strong>{fmtKg(r.kg)}</strong> กก.
+                  </span>
                 </li>
               ))}
             </ul>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { COMMUNITIES } from "@/lib/takhliCommunities";
 import { fmtKg, recycleFetch } from "@/lib/recycle/client";
+import { getBalanceKg } from "@/lib/recycle/balance";
 
 export default function MembersPanel() {
   const [q, setQ] = useState("");
@@ -90,7 +91,8 @@ export default function MembersPanel() {
                 <th>รหัส</th>
                 <th>ชื่อ-สกุล</th>
                 <th className="hidden sm:table-cell">ชุมชน</th>
-                <th className="text-right">สะสม (กก.)</th>
+                <th className="text-right">คงเหลือ (กก.)</th>
+                <th className="text-right hidden md:table-cell">ฝากรวม (กก.)</th>
                 <th className="text-right hidden sm:table-cell">ครั้ง</th>
                 <th></th>
               </tr>
@@ -106,7 +108,8 @@ export default function MembersPanel() {
                     {m.phone && <div className="text-xs text-gray-500">{m.phone}</div>}
                   </td>
                   <td className="hidden sm:table-cell">{m.community || "-"}</td>
-                  <td className="text-right font-semibold">{fmtKg(m.totalKg)}</td>
+                  <td className="text-right font-semibold text-emerald-700">{fmtKg(getBalanceKg(m))}</td>
+                  <td className="text-right hidden md:table-cell">{fmtKg(m.totalKg)}</td>
                   <td className="text-right hidden sm:table-cell">{m.depositCount}</td>
                   <td className="text-right">
                     {m.isActive && (
@@ -122,7 +125,7 @@ export default function MembersPanel() {
               ))}
               {!loading && members.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-gray-500 py-8">
+                  <td colSpan={7} className="text-center text-gray-500 py-8">
                     ยังไม่มีสมาชิก — กด “เพิ่มสมาชิก”
                   </td>
                 </tr>
