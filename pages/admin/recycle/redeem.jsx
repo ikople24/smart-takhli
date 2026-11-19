@@ -318,7 +318,7 @@ function RedeemPageInner() {
         )}
 
         {member && (step === "pick" || step === "confirm") && (
-          <div className="sticky bottom-14 md:bottom-0 z-30 -mx-4 lg:mx-0 bg-white border-t lg:border border-[#E4E0D4] rounded-t-[28px] lg:rounded-[28px] px-4 pt-3.5 pb-5 flex flex-col gap-2.5">
+          <div className="sticky bottom-0 z-30 -mx-4 lg:mx-0 bg-white border-t lg:border border-[#E4E0D4] rounded-t-[28px] lg:rounded-[28px] px-4 pt-3.5 pb-5 flex flex-col gap-2.5">
             {step === "pick" ? (
               <>
                 <p className="text-sm text-[#51605A] text-center">
