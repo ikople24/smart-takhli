@@ -4,6 +4,8 @@
 //
 // การกรอก: แตะการ์ดประเภทขยะ → กดแป้นตัวเลขใหญ่บนจอ (หรือคีย์บอร์ดจริงบนคอม)
 // "ประเภทถัดไป" เลื่อนไปการ์ดถัดไป, Enter บนคีย์บอร์ด = ถัดไป
+// มือถือ: แป้นเป็นแผ่นเลื่อนขึ้นจากล่างเฉพาะตอนแตะการ์ด (ปิดด้วย "เสร็จ") + แถบบันทึกติดล่างจอ
+// จอใหญ่ (lg): แป้นอยู่คอลัมน์ขวาตลอด
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -27,6 +29,7 @@ function WeightTile({ type, value, active, onPick }) {
   const solid = filled && !active;
   return (
     <button
+      id={`tile-${type.id}`}
       type="button"
       onClick={onPick}
       aria-pressed={active}
@@ -112,6 +115,7 @@ function DepositPageInner() {
   const [step, setStep] = useState("form"); // form | done
   const [weights, setWeights] = useState(emptyWeights);
   const [activeId, setActiveId] = useState(TYPES[0]?.id);
+  const [padOpen, setPadOpen] = useState(false); // แป้นตัวเลขบนมือถือ
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -168,9 +172,20 @@ function DepositPageInner() {
     (key) => setWeights((w) => ({ ...w, [activeId]: applyKey(w[activeId], key) })),
     [activeId]
   );
+  // เลื่อนการ์ดที่กำลังกรอกให้อยู่เหนือแผ่นแป้นตัวเลข
+  const focusTile = (id) => {
+    requestAnimationFrame(() => document.getElementById(`tile-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
+  };
+  const pickType = (id) => {
+    setActiveId(id);
+    setPadOpen(true);
+    focusTile(id);
+  };
   const nextType = useCallback(() => {
     const i = TYPES.findIndex((t) => t.id === activeId);
-    setActiveId(TYPES[(i + 1) % TYPES.length].id);
+    const id = TYPES[(i + 1) % TYPES.length].id;
+    setActiveId(id);
+    requestAnimationFrame(() => document.getElementById(`tile-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
   }, [activeId]);
 
   // คีย์บอร์ดจริง (เจ้าหน้าที่ใช้คอม): ตัวเลข . Backspace Enter
@@ -328,7 +343,7 @@ function DepositPageInner() {
   // ---------- หน้ากรอกน้ำหนัก ----------
   return (
     <main className={`${RECYCLE_ROOT} min-h-screen`}>
-      <div className="max-w-xl lg:max-w-5xl mx-auto px-4 pt-4 pb-6">
+      <div className={`max-w-xl lg:max-w-5xl mx-auto px-4 pt-4 lg:pb-6 ${padOpen ? "pb-[420px]" : "pb-28"}`}>
         <header id="recycle-deposit-top" className="flex items-center gap-3 pb-3">
           <Link
             href="/admin/recycle?tab=deposit"
@@ -396,7 +411,7 @@ function DepositPageInner() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
                 {TYPES.map((t) => (
-                  <WeightTile key={t.id} type={t} value={weights[t.id]} active={t.id === activeId} onPick={() => setActiveId(t.id)} />
+                  <WeightTile key={t.id} type={t} value={weights[t.id]} active={t.id === activeId} onPick={() => pickType(t.id)} />
                 ))}
                 <div className="rounded-[22px] bg-[#17251C] text-white p-3.5 flex flex-col justify-between min-h-[140px]">
                   <span className="text-[13px] text-[#C9D3CC]">รวมครั้งนี้</span>
@@ -426,58 +441,94 @@ function DepositPageInner() {
               </div>
             </div>
 
-            {/* แป้นตัวเลข: มือถือติดล่างจอ (เหนือ BottomNav), จอใหญ่อยู่ด้านขวา */}
-            <section className="sticky bottom-14 md:bottom-0 lg:top-4 lg:bottom-auto z-30 mt-4 lg:mt-0 -mx-4 lg:mx-0 bg-white rounded-t-[28px] lg:rounded-[28px] border-t lg:border border-[#E4E0D4] px-4 pt-3.5 pb-4 flex flex-col gap-2 shadow-[0_-6px_20px_rgba(23,37,28,.06)]">
-              <div className="flex items-center gap-3 bg-[#F5F3EC] rounded-[18px] px-3.5 py-2">
-                <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ color: activeTheme.fg, background: activeTheme.bg }}>
-                  <Icon d={TYPE_ICON[activeType.id] || FALLBACK_ICON} size={20} />
-                </span>
-                <span className="flex-1 text-[15px] font-semibold truncate">{activeType.label}</span>
-                <span className={`${DISPLAY} text-[32px] font-semibold min-w-[72px] text-right`} aria-live="polite">
-                  {weights[activeId] || "0"}
-                </span>
-                <span className="text-sm text-[#51605A]">กก.</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {KEYS.map((k) => (
+            {/* แป้นตัวเลข: มือถือ = แผ่นติดล่างจอ เปิดเมื่อแตะการ์ด, จอใหญ่ = คอลัมน์ขวาตลอด */}
+            <section
+              aria-label="แป้นตัวเลขกรอกน้ำหนัก"
+              className={`${padOpen ? "flex" : "hidden"} lg:flex fixed lg:sticky inset-x-0 bottom-0 lg:bottom-auto lg:top-4 z-40 lg:z-auto bg-white rounded-t-[28px] lg:rounded-[28px] border-t lg:border border-[#E4E0D4] px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex-col gap-2 shadow-[0_-10px_30px_rgba(23,37,28,.14)] lg:shadow-none`}
+            >
+              <div className="mx-auto w-full max-w-xl lg:max-w-none flex flex-col gap-2">
+                <div className="flex items-center gap-3 bg-[#F5F3EC] rounded-[18px] px-3.5 py-2">
+                  <span className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ color: activeTheme.fg, background: activeTheme.bg }}>
+                    <Icon d={TYPE_ICON[activeType.id] || FALLBACK_ICON} size={20} />
+                  </span>
+                  <span className="flex-1 text-[15px] font-semibold truncate">{activeType.label}</span>
+                  <span className={`${DISPLAY} text-[32px] font-semibold min-w-[72px] text-right`} aria-live="polite">
+                    {weights[activeId] || "0"}
+                  </span>
+                  <span className="text-sm text-[#51605A]">กก.</span>
                   <button
-                    key={k}
                     type="button"
-                    onClick={() => pressKey(k)}
-                    aria-label={k === "del" ? "ลบตัวเลข" : k === "." ? "จุดทศนิยม" : `เลข ${k}`}
-                    className={`${DISPLAY} h-[52px] rounded-2xl text-[26px] font-medium active:scale-95 transition-transform ${
-                      k === "del" ? "bg-[#F1EEE4]" : "bg-[#F5F3EC]"
-                    }`}
+                    onClick={() => setPadOpen(false)}
+                    className="lg:hidden h-10 px-3.5 rounded-xl bg-[#146C43] text-white text-sm font-bold shrink-0"
                   >
-                    {k === "del" ? "⌫" : k}
+                    เสร็จ
                   </button>
-                ))}
-              </div>
+                </div>
 
-              <div className="grid grid-cols-[1fr_2fr] gap-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {KEYS.map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => pressKey(k)}
+                      aria-label={k === "del" ? "ลบตัวเลข" : k === "." ? "จุดทศนิยม" : `เลข ${k}`}
+                      className={`${DISPLAY} h-[52px] rounded-2xl text-[26px] font-medium active:scale-95 transition-transform ${
+                        k === "del" ? "bg-[#F1EEE4]" : "bg-[#F5F3EC]"
+                      }`}
+                    >
+                      {k === "del" ? "⌫" : k}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-[1fr_2fr] gap-2">
+                  <button
+                    type="button"
+                    onClick={() => pressKey("clear")}
+                    className="h-12 rounded-2xl border border-[#E4E0D4] bg-white text-[15px] font-semibold"
+                  >
+                    ล้างช่องนี้
+                  </button>
+                  <button type="button" onClick={nextType} className="h-12 rounded-2xl bg-[#E2F0E7] text-[#0B4A2D] text-base font-bold">
+                    ประเภทถัดไป →
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => pressKey("clear")}
-                  className="h-12 rounded-2xl border border-[#E4E0D4] bg-white text-[15px] font-semibold"
+                  onClick={submit}
+                  disabled={saving || summary.count === 0 || !member.isActive}
+                  className={`${DISPLAY} hidden lg:flex mt-0.5 h-14 rounded-[20px] bg-[#146C43] text-white text-lg font-semibold items-center justify-center gap-2 disabled:opacity-40 active:scale-[.98]`}
                 >
-                  ล้างช่องนี้
-                </button>
-                <button type="button" onClick={nextType} className="h-12 rounded-2xl bg-[#E2F0E7] text-[#0B4A2D] text-base font-bold">
-                  ประเภทถัดไป →
+                  <Icon d={ICON.check} size={22} strokeWidth={2.2} />
+                  {saving ? "กำลังบันทึก..." : `${saved ? "บันทึกการแก้ไข" : "บันทึกการฝาก"} · ${fmtKg(summary.total)} กก.`}
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={submit}
-                disabled={saving || summary.count === 0 || !member.isActive}
-                className={`${DISPLAY} mt-0.5 h-14 rounded-[20px] bg-[#146C43] text-white text-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[.98]`}
-              >
-                <Icon d={ICON.check} size={22} strokeWidth={2.2} />
-                {saving ? "กำลังบันทึก..." : `${saved ? "บันทึกการแก้ไข" : "บันทึกการฝาก"} · ${fmtKg(summary.total)} กก.`}
-              </button>
             </section>
+
+            {/* มือถือ: แถบบันทึกติดล่างจอ (ซ่อนตอนแป้นเปิด) */}
+            {!padOpen && (
+              <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-white/95 backdrop-blur border-t border-[#E4E0D4] px-4 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))]">
+                <div className="mx-auto max-w-xl flex items-center gap-3">
+                  <div className="shrink-0">
+                    <p className="text-[11px] text-[#51605A]">รวมครั้งนี้</p>
+                    <p className={`${DISPLAY} text-2xl font-semibold leading-none`}>
+                      {fmtKg(summary.total)}
+                      <span className="text-xs font-medium"> กก.</span>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={submit}
+                    disabled={saving || summary.count === 0 || !member.isActive}
+                    className={`${DISPLAY} flex-1 h-14 rounded-[20px] bg-[#146C43] text-white text-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[.98]`}
+                  >
+                    <Icon d={ICON.check} size={22} strokeWidth={2.2} />
+                    {saving ? "กำลังบันทึก..." : saved ? "บันทึกการแก้ไข" : "บันทึกการฝาก"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
