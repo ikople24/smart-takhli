@@ -14,6 +14,7 @@ import { formatThaiDate, formatThaiTime } from "@/lib/recycle/dates";
 import { getWasteTypeLabel } from "@/lib/recycle/wasteTypes";
 import { getRewardProgress } from "@/lib/recycle/balance";
 import RecycleLoading from "@/components/recycle/RecycleLoading";
+import { waitForMascot } from "@/lib/recycle/mascot";
 import { DISPLAY, GROUP_THEME, ICON, Icon, RECYCLE_ROOT } from "@/lib/recycle/theme";
 
 export default function RecycleMemberCardPage() {
@@ -29,10 +30,15 @@ export default function RecycleMemberCardPage() {
   const [tab, setTab] = useState("all");
   const [minDelayDone, setMinDelayDone] = useState(false);
 
-  // ให้ Loading การ์ตูนโชว์อย่างน้อยครู่หนึ่ง ไม่กระพริบหายเร็วเกิน
+  // ให้ Loading การ์ตูนโชว์อย่างน้อยครู่หนึ่ง ไม่กระพริบหายเร็วเกิน และรอภาพการ์ตูนโหลดเสร็จก่อน
   useEffect(() => {
-    const t = setTimeout(() => setMinDelayDone(true), 1200);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    Promise.all([new Promise((r) => setTimeout(r, 1200)), waitForMascot()]).then(() => {
+      if (!cancelled) setMinDelayDone(true);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 1) ถ้าเป็นเจ้าหน้าที่ → ไปหน้ากรอกน้ำหนัก

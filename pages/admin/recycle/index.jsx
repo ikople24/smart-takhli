@@ -10,6 +10,7 @@ import MemberCardsPanel from "@/components/recycle/MemberCardsPanel";
 import SummaryPanel from "@/components/recycle/SummaryPanel";
 import RewardsPanel from "@/components/recycle/RewardsPanel";
 import RecycleLoading from "@/components/recycle/RecycleLoading";
+import { waitForMascot } from "@/lib/recycle/mascot";
 import { DISPLAY, ICON, Icon, RECYCLE_ROOT } from "@/lib/recycle/theme";
 
 const TABS = [
@@ -36,8 +37,14 @@ export default function RecyclePage() {
     }
     if (seen) return;
     setIntro(true);
-    const t = setTimeout(() => setIntro(false), 1600);
-    return () => clearTimeout(t);
+    // ปิด Loading เมื่อครบ 1.6 วิ และภาพการ์ตูนโหลดเสร็จแล้ว (ไม่งั้นเน็ตช้าจะเห็นแต่วงกลมเปล่า)
+    let cancelled = false;
+    Promise.all([new Promise((r) => setTimeout(r, 1600)), waitForMascot()]).then(() => {
+      if (!cancelled) setIntro(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const selectTab = (id) => {

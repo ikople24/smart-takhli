@@ -35,7 +35,7 @@ const ADMIN_META = {
       { label: 'วิเคราะห์สถิติ' },
     ],
   },
-  '/admin/recycle':                   { title: 'พระสังข์หอบทอง', subtitle: 'รับฝากขยะรีไซเคิล' },
+  // /admin/recycle: หน้ามีหัวการ์ด "พระสังข์หอบทอง" ของตัวเองแล้ว — ไม่ใส่ title ที่นี่ ไม่งั้นชื่อซ้ำสองที่ (เจ้าของแจ้ง 2026-11-19)
   '/admin/recycle/deposit': {
     title: 'บันทึกการฝาก',
     breadcrumbs: [{ label: 'พระสังข์หอบทอง', href: '/admin/recycle' }, { label: 'บันทึกการฝาก' }],

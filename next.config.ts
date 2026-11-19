@@ -13,6 +13,16 @@ const nextConfig: NextConfig = {
       { source: "/preview/activities", destination: "/activities", permanent: true },
     ];
   },
+  // ภาพประกอบโมดูลพระสังข์หอบทอง (การ์ตูน Loading ~110KB) — ค่าเดิม max-age=0 ทำให้ต้องเช็คกับ
+  // เซิร์ฟเวอร์ทุกครั้งที่เปิด Loading → แคชไว้ 7 วัน (เปลี่ยนภาพให้ตั้งชื่อไฟล์ใหม่ ดู lib/recycle/mascot.js)
+  async headers() {
+    return [
+      {
+        source: "/recycle/:file([\\w.-]+\\.webp)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
+      },
+    ];
+  },
   images: {
     domains: [
       "res.cloudinary.com",

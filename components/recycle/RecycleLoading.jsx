@@ -3,6 +3,7 @@
 // fullscreen = เต็มจอตอนเข้าระบบ, ไม่ใส่ = กล่องในหน้า (ระหว่างรอข้อมูล)
 import { useEffect, useState } from "react";
 import { DISPLAY, ICON, Icon, recycleBodyFont } from "@/lib/recycle/theme";
+import { MASCOT_SRC, preloadMascot } from "@/lib/recycle/mascot";
 
 const TIPS = [
   "ล้างขวดพลาสติกแล้วบีบให้แบน ช่วยให้ชั่งและเก็บง่ายขึ้น",
@@ -21,6 +22,9 @@ function Sparkle({ className, size }) {
 
 export default function RecycleLoading({ fullscreen = false, message = "กำลังขนขยะไปแลกทอง" }) {
   const [tip, setTip] = useState(0);
+  useEffect(() => {
+    preloadMascot();
+  }, []);
   useEffect(() => {
     const t = setInterval(() => setTip((i) => (i + 1) % TIPS.length), 2800);
     return () => clearInterval(t);
@@ -80,7 +84,7 @@ export default function RecycleLoading({ fullscreen = false, message = "กำ�
         .ps-mascot {
           width: 176px;
           height: 206px;
-          background: url(/recycle/phrasang-loading-strip.webp) no-repeat 0 0 / 880px 206px;
+          background: url(${MASCOT_SRC}) no-repeat 0 0 / 880px 206px;
           animation: ps-walk 1.5s steps(5) infinite, ps-bob 0.75s ease-in-out infinite;
         }
         .ps-shadow {
