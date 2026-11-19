@@ -12,6 +12,10 @@ import { useAuth } from "@clerk/nextjs";
 import { fmtKg } from "@/lib/recycle/client";
 import { formatThaiDate, formatThaiTime } from "@/lib/recycle/dates";
 import { getWasteTypeLabel } from "@/lib/recycle/wasteTypes";
+import { getRewardProgress } from "@/lib/recycle/balance";
+import { RECYCLE_POINT } from "@/lib/recycle/config";
+import RecycleLoading from "@/components/recycle/RecycleLoading";
+import { DISPLAY, GROUP_THEME, ICON, Icon, RECYCLE_ROOT } from "@/lib/recycle/theme";
 
 export default function RecycleMemberCardPage() {
   const router = useRouter();
@@ -23,7 +27,14 @@ export default function RecycleMemberCardPage() {
   const [isStaff, setIsStaff] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("deposits");
+  const [tab, setTab] = useState("all");
+  const [minDelayDone, setMinDelayDone] = useState(false);
+
+  // ให้ Loading การ์ตูนโชว์อย่างน้อยครู่หนึ่ง ไม่กระพริบหายเร็วเกิน
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayDone(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
 
   // 1) ถ้าเป็นเจ้าหน้าที่ → ไปหน้ากรอกน้ำหนัก
   useEffect(() => {
@@ -68,28 +79,30 @@ export default function RecycleMemberCardPage() {
   }, [staffChecked, token]);
 
   const m = data?.member;
+  const showLoading = !error && (!m || !minDelayDone);
+  const progress = m ? getRewardProgress(m.balanceKg, data.rewards) : null;
+  const groupTotal = (data?.byGroup || []).reduce((s, g) => s + g.kg, 0);
+  const history = data
+    ? [
+        ...data.deposits.map((d) => ({ ...d, kind: "in", detail: d.items.map((it) => `${getWasteTypeLabel(it.type)} ${fmtKg(it.kg)}`).join(" · ") })),
+        ...data.redemptions.map((r) => ({ ...r, kind: "out", detail: r.items.map((it) => `${it.name} ×${it.qty}`).join(", ") })),
+      ].sort((a, b) => new Date(b.at) - new Date(a.at))
+    : [];
+  const rows = tab === "out" ? history.filter((h) => h.kind === "out") : history;
 
   return (
     <>
       <Head>
-        <title>บัตรสมาชิกพระสังข์หอบทอง</title>
+        <title>บัตรสะสมของฉัน — พระสังข์หอบทอง</title>
         <meta name="robots" content="noindex" />
       </Head>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-white px-4 py-5 pb-24">
-        <div className="max-w-xl mx-auto space-y-4">
-          <div className="rounded-3xl bg-white/90 ring-1 ring-gray-200/60 shadow-sm p-5">
-            <h1 className="text-lg font-bold text-gray-900">โครงการพระสังข์หอบทอง</h1>
-            <p className="text-sm text-gray-500">ธนาคารขยะรีไซเคิล • เทศบาลเมืองตาคลี</p>
-          </div>
-
-          {(!staffChecked || isStaff) && !error && (
-            <div className="rounded-3xl bg-white/80 ring-1 ring-gray-200/60 p-6 text-center text-gray-500">
-              {isStaff ? "กำลังเปิดหน้าบันทึกการฝาก..." : "กำลังโหลด..."}
-            </div>
-          )}
+      {showLoading && <RecycleLoading fullscreen message={isStaff ? "กำลังเปิดหน้าบันทึกการฝาก" : "กำลังเปิดบัตรสะสมของคุณ"} />}
+      <main className={`${RECYCLE_ROOT} min-h-screen px-4 pt-5 pb-24`}>
+        <div className="max-w-md mx-auto flex flex-col gap-3.5">
+          <p className="text-[13px] text-[#51605A] text-center">โครงการพระสังข์หอบทอง · เทศบาลเมืองตาคลี</p>
 
           {error && (
-            <div className="rounded-3xl bg-amber-50/80 ring-1 ring-amber-200 p-5" role="alert">
+            <div className="rounded-3xl bg-amber-50 ring-1 ring-amber-200 p-5" role="alert">
               <p className="font-semibold text-amber-900">ไม่พบข้อมูล</p>
               <p className="text-sm text-amber-800 mt-1">{error} — กรุณาติดต่อเจ้าหน้าที่จุดรับ</p>
             </div>
@@ -97,36 +110,84 @@ export default function RecycleMemberCardPage() {
 
           {m && (
             <>
-              <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
-                <p className="text-xl font-bold text-gray-900">{m.fullName}</p>
-                <p className="text-sm text-gray-500 font-mono">{m.code}</p>
-                {!m.isActive && <p className="text-sm text-red-700 font-semibold mt-1">บัตรนี้ถูกปิดการใช้งาน</p>}
-                <div className="mt-4 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 p-4 text-center">
-                  <p className="text-sm text-emerald-800">น้ำหนักคงเหลือที่แลกของได้</p>
-                  <p className="text-4xl font-bold text-emerald-700 mt-1">
-                    {fmtKg(m.balanceKg)} <span className="text-lg font-semibold">กก.</span>
-                  </p>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs text-gray-500">ฝากทั้งหมด</p>
-                    <p className="text-base font-bold">{fmtKg(m.totalKg)} กก.</p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs text-gray-500">แลกไปแล้ว</p>
-                    <p className="text-base font-bold">{fmtKg(m.redeemedKg)} กก.</p>
-                  </div>
-                  <div className="rounded-2xl bg-gray-50 p-3">
-                    <p className="text-xs text-gray-500">ฝากมาแล้ว</p>
-                    <p className="text-base font-bold">{m.depositCount} ครั้ง</p>
-                  </div>
-                </div>
-              </div>
+              <section className="isolate relative overflow-hidden bg-[#146C43] text-white rounded-[28px] p-5">
+                <div className="absolute -z-10 -right-10 -top-10 w-40 h-40 rounded-full bg-[#1B7C4F]" />
+                <div className="absolute -z-10 right-8 top-16 w-[90px] h-[90px] rounded-full bg-[#1B7C4F]" />
+                <p className="text-[13px] text-[#CFE6D8]">บัตรสะสมขยะรีไซเคิล</p>
+                <h1 className={`${DISPLAY} mt-0.5 text-[22px] font-semibold`}>{m.fullName}</h1>
+                <p className="text-[13px] text-[#CFE6D8] tracking-wider">{m.code}</p>
+                {!m.isActive && <p className="mt-1 text-sm font-semibold text-[#FFD7D2]">บัตรนี้ถูกปิดการใช้งาน</p>}
+                <p className="mt-[18px] text-sm text-[#E8F3EC]">น้ำหนักคงเหลือที่แลกของได้</p>
+                <p className={`${DISPLAY} text-[56px] font-semibold leading-none`}>
+                  {fmtKg(m.balanceKg)}
+                  <span className="text-xl font-medium"> กก.</span>
+                </p>
+              </section>
 
-              <div role="tablist" aria-label="ประวัติ" className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-1 ring-1 ring-gray-200/70">
+              {(progress?.next || progress?.goal || progress?.allAffordable) && (
+                <section className="bg-white border border-[#E4E0D4] rounded-[22px] p-4 flex flex-col gap-3">
+                  {[progress.next && { ...progress.next, label: "ของชิ้นถัดไป", tone: "next" }, progress.goal && { ...progress.goal, label: "เป้าหมายใหญ่", tone: "goal" }]
+                    .filter(Boolean)
+                    .map((p) => (
+                      <div key={p.tone}>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`w-11 h-11 rounded-[14px] flex items-center justify-center shrink-0 ${
+                              p.tone === "next" ? "bg-[#FDF3D9] text-[#7A5300]" : "bg-[#DDF3EF] text-[#0B7A6F]"
+                            }`}
+                          >
+                            <Icon d={ICON.gift} size={24} />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] text-[#51605A]">{p.label}</p>
+                            <p className="text-base font-semibold truncate">
+                              {p.name} · {fmtKg(p.kgCost)} กก.
+                            </p>
+                          </div>
+                          <span className={`text-[13px] font-bold whitespace-nowrap ${p.missingKg > 0 ? "text-[#7A5300]" : "text-[#146C43]"}`}>
+                            {p.missingKg > 0 ? `ขาด ${fmtKg(p.missingKg)}` : "แลกได้แล้ว"}
+                          </span>
+                        </div>
+                        <div className="mt-2.5 h-2.5 rounded-full bg-[#F0EDE4]">
+                          <div
+                            className={`h-2.5 rounded-full ${p.missingKg > 0 ? "bg-[#F4B740]" : "bg-[#146C43]"}`}
+                            style={{ width: `${p.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  {progress.allAffordable && !progress.goal && (
+                    <p className="text-[15px] font-semibold text-[#146C43]">ยอดของคุณพอแลกของรางวัลได้ทุกรายการแล้ว</p>
+                  )}
+                </section>
+              )}
+
+              {groupTotal > 0 && (
+                <section className="bg-white border border-[#E4E0D4] rounded-[22px] p-4">
+                  <p className="text-[13px] text-[#51605A]">คุณช่วยแยกขยะไปแล้ว</p>
+                  <p className={`${DISPLAY} text-[28px] font-semibold`}>
+                    {fmtKg(m.totalKg)} กก. <span className="text-sm font-medium text-[#51605A]">จาก {m.depositCount} ครั้ง</span>
+                  </p>
+                  <div className="mt-2.5 flex h-3.5 rounded-full overflow-hidden gap-0.5" aria-hidden="true">
+                    {data.byGroup.map((g) => (
+                      <div key={g.group} style={{ width: `${(g.kg / groupTotal) * 100}%`, background: (GROUP_THEME[g.group] || GROUP_THEME.metal).fg }} />
+                    ))}
+                  </div>
+                  <ul className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[13px]">
+                    {data.byGroup.map((g) => (
+                      <li key={g.group} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: (GROUP_THEME[g.group] || GROUP_THEME.metal).fg }} />
+                        {g.label} {fmtKg(g.kg)} กก.
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              <div role="tablist" aria-label="ประวัติ" className="grid grid-cols-3 gap-1 rounded-[18px] bg-white p-1 border border-[#E4E0D4]">
                 {[
-                  { id: "deposits", label: "การฝาก" },
-                  { id: "redemptions", label: "การแลกของ" },
+                  { id: "all", label: "ทั้งหมด" },
+                  { id: "out", label: "การแลกของ" },
                   { id: "rewards", label: "ของรางวัล" },
                 ].map((t) => (
                   <button
@@ -135,81 +196,77 @@ export default function RecycleMemberCardPage() {
                     role="tab"
                     aria-selected={tab === t.id}
                     onClick={() => setTab(t.id)}
-                    className={`h-12 rounded-xl text-sm font-semibold ${tab === t.id ? "bg-emerald-700 text-white" : "text-gray-600"}`}
+                    className={`h-[46px] rounded-[14px] text-sm font-semibold ${tab === t.id ? "bg-[#146C43] text-white" : "text-[#51605A]"}`}
                   >
                     {t.label}
                   </button>
                 ))}
               </div>
 
-              {tab === "deposits" && (
-                <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
-                  {data.deposits.length === 0 && <p className="text-sm text-gray-500">ยังไม่มีการฝาก</p>}
-                  <ul className="divide-y divide-gray-100">
-                    {data.deposits.map((d) => (
-                      <li key={d.id} className="py-3">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">
-                            {formatThaiDate(d.date)} • {formatThaiTime(d.at)} น.
-                          </span>
-                          <span className="text-sm font-bold text-emerald-700">+{fmtKg(d.totalKg)} กก.</span>
+              {tab !== "rewards" ? (
+                <section className="bg-white border border-[#E4E0D4] rounded-[22px] px-4 py-1.5">
+                  {rows.length === 0 && <p className="py-4 text-sm text-[#51605A]">{tab === "out" ? "ยังไม่เคยแลกของ" : "ยังไม่มีรายการ"}</p>}
+                  <ul className="divide-y divide-[#F0EDE4]">
+                    {rows.map((h) => (
+                      <li key={`${h.kind}-${h.id}`} className="py-3 flex items-center gap-3">
+                        <span
+                          className={`w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0 ${
+                            h.kind === "in" ? "bg-[#E2F0E7] text-[#146C43]" : "bg-[#FDF3D9] text-[#7A5300]"
+                          }`}
+                        >
+                          <Icon d={h.kind === "in" ? ICON.plus : ICON.minus} size={18} strokeWidth={2.2} />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">
+                            {formatThaiDate(h.date)} · {formatThaiTime(h.at)}
+                          </p>
+                          <p className="text-xs text-[#51605A]">{h.detail}</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {d.items.map((it) => `${getWasteTypeLabel(it.type)} ${fmtKg(it.kg)}`).join(" • ")}
-                        </p>
+                        <span className={`${DISPLAY} text-[17px] font-semibold whitespace-nowrap ${h.kind === "in" ? "text-[#146C43]" : "text-[#7A5300]"}`}>
+                          {h.kind === "in" ? "+" : "−"}
+                          {fmtKg(h.totalKg)}
+                        </span>
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
-
-              {tab === "redemptions" && (
-                <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
-                  {data.redemptions.length === 0 && <p className="text-sm text-gray-500">ยังไม่เคยแลกของ</p>}
-                  <ul className="divide-y divide-gray-100">
-                    {data.redemptions.map((r) => (
-                      <li key={r.id} className="py-3">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">
-                            {formatThaiDate(r.date)} • {formatThaiTime(r.at)} น.
-                          </span>
-                          <span className="text-sm font-bold text-gray-900">−{fmtKg(r.totalKg)} กก.</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{r.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {tab === "rewards" && (
-                <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
-                  <p className="text-sm text-gray-600 mb-2">นำบัตรมาแลกได้ที่จุดรับ — ใช้น้ำหนักคงเหลือตามรายการ</p>
-                  {data.rewards.length === 0 && <p className="text-sm text-gray-500">ยังไม่มีของรางวัล</p>}
-                  <ul className="divide-y divide-gray-100">
+                </section>
+              ) : (
+                <section className="bg-white border border-[#E4E0D4] rounded-[22px] px-4 py-3">
+                  <p className="text-[13px] text-[#51605A] mb-1">นำบัตรมาแลกได้ที่จุดรับ — ใช้น้ำหนักคงเหลือตามรายการ</p>
+                  {data.rewards.length === 0 && <p className="py-2 text-sm text-[#51605A]">ยังไม่มีของรางวัล</p>}
+                  <ul className="divide-y divide-[#F0EDE4]">
                     {data.rewards.map((r) => {
                       const enough = m.balanceKg + 0.001 >= r.kgCost;
                       const out = typeof r.stock === "number" && r.stock <= 0;
                       return (
-                        <li key={r.id} className={`py-3 flex justify-between gap-3 ${out ? "opacity-50" : ""}`}>
+                        <li key={r.id} className={`py-3 flex justify-between items-center gap-3 ${out ? "opacity-50" : ""}`}>
                           <div className="min-w-0">
-                            <p className="text-base font-semibold text-gray-900">{r.name}</p>
-                            <p className="text-xs text-gray-500">{out ? "ของหมด" : enough ? "แลกได้แล้ว" : `ขาดอีก ${fmtKg(r.kgCost - m.balanceKg)} กก.`}</p>
+                            <p className="text-[15px] font-semibold">{r.name}</p>
+                            <p className="text-xs text-[#51605A]">
+                              {out ? "ของหมด" : enough ? "แลกได้แล้ว" : `ขาดอีก ${fmtKg(r.kgCost - m.balanceKg)} กก.`}
+                            </p>
                           </div>
-                          <span className={`text-sm font-bold whitespace-nowrap ${enough && !out ? "text-emerald-700" : "text-gray-700"}`}>
+                          <span className={`text-sm font-bold whitespace-nowrap ${enough && !out ? "text-[#146C43]" : "text-[#334155]"}`}>
                             {fmtKg(r.kgCost)} กก./{r.unit}
                           </span>
                         </li>
                       );
                     })}
                   </ul>
-                </div>
+                </section>
+              )}
+
+              {(RECYCLE_POINT.place || RECYCLE_POINT.hours) && (
+                <section className="bg-[#E2F0E7] rounded-[20px] px-4 py-3.5 text-[#0B4A2D]">
+                  <p className="text-sm font-semibold">จุดรับฝากและแลกของ</p>
+                  <p className="text-[13px] mt-0.5">{[RECYCLE_POINT.place, RECYCLE_POINT.hours].filter(Boolean).join(" · ")}</p>
+                </section>
               )}
 
               {isSignedIn && forceMemberView && (
                 <Link
                   href={`/admin/recycle/deposit?code=${encodeURIComponent(m.code)}`}
-                  className="block text-center text-sm font-semibold text-emerald-800 py-2"
+                  className="block text-center text-sm font-semibold text-[#146C43] py-2"
                 >
                   เจ้าหน้าที่: ไปหน้าบันทึกการฝาก →
                 </Link>

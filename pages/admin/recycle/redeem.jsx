@@ -1,5 +1,6 @@
 // ตัดยอดน้ำหนักเพื่อแลกของรางวัล — โครงการพระสังข์หอบทอง
 // URL: /admin/recycle/redeem?code=PS-0001  (เข้าจากหน้าบันทึกการฝาก / ข้อมูลสมาชิก)
+// ดีไซน์ตามแคนวาส "พระสังข์หอบทอง — UI ฉบับปรับใหม่" หน้า 4
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -8,6 +9,8 @@ import { getBalanceKg } from "@/lib/recycle/balance";
 import { roundKg } from "@/lib/recycle/validate";
 import { formatThaiDate, formatThaiTime, getBangkokYMD } from "@/lib/recycle/dates";
 import { fmtKg, recycleFetch } from "@/lib/recycle/client";
+import RecycleLoading from "@/components/recycle/RecycleLoading";
+import { DISPLAY, ICON, Icon, RECYCLE_ROOT, REWARD_TONES } from "@/lib/recycle/theme";
 
 function RedeemPageInner() {
   const router = useRouter();
@@ -114,132 +117,136 @@ function RedeemPageInner() {
     }
   };
 
+  const backHref = code ? `/admin/recycle/deposit?code=${encodeURIComponent(code)}` : "/admin/recycle";
+  const usedPct = balance > 0 ? Math.min(100, Math.round((cart.total / balance) * 100)) : 0;
+  const pieceCount = cart.lines.reduce((s, l) => s + l.qty, 0);
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-white px-4 pt-5 pb-6">
-      <div className="max-w-xl mx-auto space-y-4">
-        <div className="rounded-3xl bg-white/90 ring-1 ring-gray-200/60 shadow-sm p-5 flex items-center gap-3">
-          <Link
-            href={code ? `/admin/recycle/deposit?code=${encodeURIComponent(code)}` : "/admin/recycle"}
-            aria-label="กลับหน้าบันทึกการฝาก"
-            className="h-11 w-11 shrink-0 rounded-2xl border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-50"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
+    <main className={`${RECYCLE_ROOT} min-h-screen`}>
+      <div className="max-w-xl lg:max-w-3xl mx-auto px-4 pt-4 pb-6 flex flex-col gap-3.5">
+        <header className="flex items-center gap-3">
+          <Link href={backHref} aria-label="กลับหน้าบันทึกการฝาก" className="w-11 h-11 rounded-[14px] bg-white border border-[#E4E0D4] flex items-center justify-center shrink-0">
+            <Icon d={ICON.back} size={20} strokeWidth={2} />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900">แลกของ (ตัดยอดน้ำหนัก)</h1>
-            <p className="text-sm text-gray-500">โครงการพระสังข์หอบทอง • {formatThaiDate(getBangkokYMD())}</p>
+            <h1 className={`${DISPLAY} text-[19px] font-semibold leading-tight`}>แลกของรางวัล</h1>
+            <p className="text-xs text-[#51605A] truncate">
+              {member ? `${member.fullName} · ${member.code}` : formatThaiDate(getBangkokYMD())}
+            </p>
           </div>
-        </div>
+        </header>
 
-        {loading && <div className="rounded-3xl bg-white/80 ring-1 ring-gray-200/60 p-6 text-center text-gray-500">กำลังโหลด...</div>}
+        {loading && <RecycleLoading message="กำลังเปิดรายการของรางวัล" />}
 
         {error && (
-          <div className="rounded-3xl bg-amber-50/80 ring-1 ring-amber-200 p-5" role="alert">
+          <div className="rounded-3xl bg-amber-50 ring-1 ring-amber-200 p-5" role="alert">
             <p className="font-semibold text-amber-900">ดำเนินการไม่ได้</p>
             <p className="text-sm text-amber-800 mt-1">{error}</p>
           </div>
         )}
 
-        {member && (
-          <div className="rounded-3xl bg-white/90 ring-1 ring-gray-200/60 shadow-sm p-5">
-            <p className="text-lg font-bold text-gray-900">{member.fullName}</p>
-            <p className="text-sm text-gray-500">{member.code}</p>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-2xl bg-gray-50 p-3">
-                <p className="text-xs text-gray-500">ฝากทั้งหมด</p>
-                <p className="text-base font-bold">{fmtKg(member.totalKg)}</p>
+        {member && step !== "done" && (
+          <section className="bg-[#F4B740] text-[#3D2A00] rounded-[26px] px-[18px] py-4">
+            <div className="flex justify-between items-end gap-3">
+              <div>
+                <p className="text-[13px] font-semibold">{step === "confirm" ? "คงเหลือหลังแลก" : cart.total ? "คงเหลือหลังแลก" : "คงเหลือแลกได้"}</p>
+                <p className={`${DISPLAY} text-[40px] font-semibold leading-none mt-1`}>
+                  {fmtKg(cart.after)}
+                  <span className="text-base font-medium"> กก.</span>
+                </p>
               </div>
-              <div className="rounded-2xl bg-gray-50 p-3">
-                <p className="text-xs text-gray-500">แลกไปแล้ว</p>
-                <p className="text-base font-bold">{fmtKg(member.redeemedKg)}</p>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-200">
-                <p className="text-xs text-emerald-800">คงเหลือ</p>
-                <p className="text-xl font-bold text-emerald-700">{fmtKg(balance)}</p>
+              <div className="text-right text-[13px]">
+                <p>มีอยู่ {fmtKg(balance)} กก.</p>
+                <p className="font-bold">ใช้ไป {fmtKg(cart.total)} กก.</p>
               </div>
             </div>
-            <p className="mt-2 text-xs text-gray-500 text-right">หน่วย: กิโลกรัม</p>
-          </div>
+            <div className="mt-3 h-2.5 rounded-full bg-[#FBE3A8]">
+              <div className="h-2.5 rounded-full bg-[#3D2A00] transition-[width]" style={{ width: `${usedPct}%` }} />
+            </div>
+          </section>
         )}
 
         {member && step === "pick" && (
           <>
             {rewards.length === 0 && (
-              <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 p-6 text-center text-gray-500">
+              <div className="rounded-3xl bg-white border border-[#E4E0D4] p-6 text-center text-[#51605A]">
                 ยังไม่มีของรางวัล —{" "}
-                <Link href="/admin/recycle?tab=rewards" className="font-semibold text-emerald-800">
+                <Link href="/admin/recycle?tab=rewards" className="font-semibold text-[#146C43]">
                   เพิ่มของรางวัล
                 </Link>
               </div>
             )}
-            {rewards.map((r) => {
-              const n = qty[r._id] || 0;
-              const outOfStock = typeof r.stock === "number" && r.stock <= 0;
-              const tooExpensive = r.kgCost > balance + 0.001;
-              return (
-                <div
-                  key={r._id}
-                  className={[
-                    "rounded-3xl bg-white shadow-sm p-4 flex items-center gap-3 ring-1",
-                    n > 0 ? "ring-2 ring-emerald-600 bg-emerald-50/40" : "ring-gray-200/60",
-                    outOfStock ? "opacity-50" : "",
-                  ].join(" ")}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-semibold text-gray-900">{r.name}</p>
-                    <p className="text-sm text-gray-600">
-                      ใช้ <strong className="text-gray-900">{fmtKg(r.kgCost)} กก.</strong> / {r.unit}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {rewards.map((r, i) => {
+                const n = qty[r._id] || 0;
+                const out = typeof r.stock === "number" && r.stock <= 0;
+                const tone = REWARD_TONES[i % REWARD_TONES.length];
+                return (
+                  <div
+                    key={r._id}
+                    className={`bg-white rounded-[22px] p-3 flex flex-col ${out ? "opacity-[.55]" : ""}`}
+                    style={{ border: n > 0 ? "2.5px solid #146C43" : "1px solid #E4E0D4" }}
+                  >
+                    <div className="relative h-[84px] rounded-2xl flex items-center justify-center" style={{ color: tone.fg, background: tone.bg }}>
+                      <Icon d={ICON.gift} size={34} strokeWidth={1.6} />
+                      {n > 0 && (
+                        <span className={`${DISPLAY} absolute top-2 right-2 min-w-[30px] h-[26px] px-2 rounded-full bg-[#146C43] text-white text-sm font-semibold flex items-center justify-center`}>
+                          ×{n}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2.5 text-sm font-semibold leading-snug min-h-[38px]">{r.name}</p>
+                    <p className="text-xs text-[#51605A]">
+                      {out ? "ของหมด" : typeof r.stock === "number" ? `เหลือ ${r.stock} ${r.unit}` : "มีตลอด"}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {typeof r.stock === "number" ? (outOfStock ? "ของหมด" : `เหลือ ${r.stock} ${r.unit}`) : "ไม่จำกัดจำนวน"}
-                      {!outOfStock && tooExpensive && n === 0 ? " • ยอดไม่พอ" : ""}
+                    <p className={`${DISPLAY} mt-1.5 text-lg font-semibold text-[#146C43]`}>
+                      {fmtKg(r.kgCost)}
+                      <span className="text-xs font-medium text-[#51605A]"> กก./{r.unit}</span>
                     </p>
+                    <div className="mt-2.5 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => change(r, -1)}
+                        disabled={n === 0}
+                        aria-label={`ลด ${r.name}`}
+                        className="h-12 rounded-[14px] border-[1.5px] border-[#E4E0D4] bg-white text-[26px] font-semibold disabled:opacity-30 active:scale-95"
+                      >
+                        −
+                      </button>
+                      <span className={`${DISPLAY} min-w-6 text-center text-[22px] font-semibold`} aria-live="polite">
+                        {n}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => change(r, +1)}
+                        disabled={!canAdd(r)}
+                        aria-label={`เพิ่ม ${r.name}`}
+                        className="h-12 rounded-[14px] bg-[#146C43] text-white text-[26px] font-semibold disabled:opacity-30 active:scale-95"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => change(r, -1)}
-                      disabled={n === 0}
-                      aria-label={`ลด ${r.name}`}
-                      className="h-14 w-14 rounded-2xl border-2 border-gray-200 bg-white text-3xl font-bold text-gray-700 disabled:opacity-30"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center text-2xl font-bold tabular-nums" aria-live="polite">
-                      {n}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => change(r, +1)}
-                      disabled={!canAdd(r)}
-                      aria-label={`เพิ่ม ${r.name}`}
-                      className="h-14 w-14 rounded-2xl bg-emerald-700 text-3xl font-bold text-white disabled:opacity-30"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </>
         )}
 
         {member && step === "confirm" && (
-          <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5 space-y-3">
-            <p className="text-base font-semibold text-gray-900">ยืนยันการแลกของ</p>
-            <ul className="divide-y divide-gray-100">
+          <section className="bg-white rounded-[24px] border border-[#E4E0D4] p-5 flex flex-col gap-3">
+            <p className={`${DISPLAY} text-xl font-semibold`}>ยืนยันการแลกของ</p>
+            <ul className="divide-y divide-[#F0EDE4]">
               {cart.lines.map((l) => (
-                <li key={l._id} className="py-3 flex justify-between text-base">
+                <li key={l._id} className="py-3 flex justify-between gap-3 text-base">
                   <span>
                     {l.name} × {l.qty} {l.unit}
                   </span>
-                  <span className="font-semibold">{fmtKg(l.subtotal)} กก.</span>
+                  <span className="font-semibold whitespace-nowrap">{fmtKg(l.subtotal)} กก.</span>
                 </li>
               ))}
             </ul>
-            <div className="rounded-2xl bg-gray-50 p-4 space-y-1 text-base">
+            <div className="rounded-2xl bg-[#F5F3EC] p-4 space-y-1.5 text-base">
               <div className="flex justify-between">
                 <span>คงเหลือก่อนแลก</span>
                 <span>{fmtKg(balance)} กก.</span>
@@ -248,75 +255,58 @@ function RedeemPageInner() {
                 <span>ตัดยอด</span>
                 <span>− {fmtKg(cart.total)} กก.</span>
               </div>
-              <div className="flex justify-between font-bold text-lg border-t border-gray-200 pt-2">
+              <div className="flex justify-between font-bold text-lg border-t border-[#E4E0D4] pt-2">
                 <span>คงเหลือหลังแลก</span>
-                <span className="text-emerald-700">{fmtKg(cart.after)} กก.</span>
+                <span className="text-[#146C43]">{fmtKg(cart.after)} กก.</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={confirm}
-              disabled={saving}
-              className="h-14 w-full rounded-2xl bg-emerald-700 text-white text-lg font-bold hover:bg-emerald-800 disabled:opacity-50"
-            >
-              {saving ? "กำลังบันทึก..." : "ยืนยัน ตัดยอดและมอบของ"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep("pick")}
-              disabled={saving}
-              className="h-12 w-full rounded-2xl border border-gray-200 bg-white font-semibold text-gray-800 hover:bg-gray-50"
-            >
-              กลับไปแก้ไข
-            </button>
-          </div>
+          </section>
         )}
 
         {member && step === "done" && result && (
-          <div className="space-y-4">
-            <div className="rounded-3xl bg-emerald-50/90 ring-1 ring-emerald-200/80 p-6 text-center">
-              <p className="text-xl font-bold text-emerald-900">ตัดยอดเรียบร้อย มอบของได้เลย</p>
-              <ul className="mt-3 text-base text-emerald-900 space-y-1">
+          <div className="flex flex-col gap-3">
+            <section className="bg-[#146C43] text-white rounded-[26px] p-6 text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-white text-[#146C43] flex items-center justify-center">
+                <Icon d={ICON.check} size={34} strokeWidth={2.6} />
+              </div>
+              <p className={`${DISPLAY} mt-3 text-[22px] font-semibold`}>ตัดยอดเรียบร้อย มอบของได้เลย</p>
+              <ul className="mt-3 text-base space-y-1">
                 {result.items.map((it) => (
                   <li key={String(it.rewardId)}>
                     {it.name} × {it.qty} {it.unit}
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-sm text-emerald-800">
-                ตัดยอด {fmtKg(result.totalKg)} กก. • คงเหลือ <strong>{fmtKg(getBalanceKg(member))} กก.</strong>
+              <p className="mt-3 text-sm text-[#CFE6D8]">
+                ตัดยอด {fmtKg(result.totalKg)} กก. • คงเหลือ <strong className="text-white">{fmtKg(getBalanceKg(member))} กก.</strong>
               </p>
-            </div>
+            </section>
             <Link
               href="/admin/recycle?tab=deposit"
-              className="h-14 w-full rounded-2xl bg-emerald-700 text-white text-lg font-bold hover:bg-emerald-800 flex items-center justify-center"
+              className={`${DISPLAY} h-[60px] rounded-[20px] bg-[#146C43] text-white text-lg font-semibold flex items-center justify-center`}
             >
               สแกนคนถัดไป
             </Link>
-            <button
-              type="button"
-              onClick={() => setStep("pick")}
-              className="h-12 w-full rounded-2xl border border-gray-200 bg-white font-semibold text-gray-800 hover:bg-gray-50"
-            >
+            <button type="button" onClick={() => setStep("pick")} className="h-12 rounded-2xl border border-[#E4E0D4] bg-white font-semibold">
               แลกเพิ่ม
             </button>
           </div>
         )}
 
         {member && history.length > 0 && step !== "confirm" && (
-          <div className="rounded-3xl bg-white ring-1 ring-gray-200/60 shadow-sm p-5">
-            <p className="text-base font-semibold text-gray-900">ประวัติการแลกล่าสุด</p>
-            <ul className="mt-2 divide-y divide-gray-100">
+          <section className="bg-white rounded-[22px] border border-[#E4E0D4] px-4 py-3">
+            <p className="text-[15px] font-semibold">ประวัติการแลกล่าสุด</p>
+            <ul className="mt-1 divide-y divide-[#F0EDE4]">
               {history.map((h) => (
                 <li key={h._id} className="py-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
-                      {formatThaiDate(h.redeemDate)} {formatThaiTime(h.createdAt)} น.
+                      {formatThaiDate(h.redeemDate)} · {formatThaiTime(h.createdAt)} น.
                     </p>
-                    <p className="text-xs text-gray-500">{h.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</p>
+                    <p className="text-xs text-[#51605A]">{h.items.map((it) => `${it.name} ×${it.qty}`).join(", ")}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold">−{fmtKg(h.totalKg)} กก.</p>
+                    <p className={`${DISPLAY} text-base font-semibold text-[#7A5300]`}>−{fmtKg(h.totalKg)} กก.</p>
                     <button type="button" onClick={() => voidRedemption(h)} className="text-xs text-red-700 hover:underline">
                       ยกเลิก
                     </button>
@@ -324,27 +314,40 @@ function RedeemPageInner() {
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
-        {member && step === "pick" && (
-          <div className="sticky bottom-14 md:bottom-0 z-30 -mx-4 border-t border-gray-200 bg-white/95 backdrop-blur px-4 py-3 rounded-t-3xl">
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm text-gray-600">
-                  ใช้ {fmtKg(cart.total)} กก. • เหลือ {fmtKg(cart.after)} กก.
-                </span>
-                <span className="text-sm text-gray-600">{cart.lines.reduce((s, l) => s + l.qty, 0)} ชิ้น</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep("confirm")}
-                disabled={cart.lines.length === 0 || !member.isActive}
-                className="h-14 w-full rounded-2xl bg-emerald-700 text-white text-lg font-bold hover:bg-emerald-800 disabled:opacity-50 shadow-sm"
-              >
-                ถัดไป: ตรวจสอบก่อนตัดยอด
-              </button>
-            </div>
+        {member && (step === "pick" || step === "confirm") && (
+          <div className="sticky bottom-14 md:bottom-0 z-30 -mx-4 lg:mx-0 bg-white border-t lg:border border-[#E4E0D4] rounded-t-[28px] lg:rounded-[28px] px-4 pt-3.5 pb-5 flex flex-col gap-2.5">
+            {step === "pick" ? (
+              <>
+                <p className="text-sm text-[#51605A] text-center">
+                  {pieceCount ? `เลือกแล้ว ${pieceCount} ชิ้น · ใช้ ${fmtKg(cart.total)} กก.` : "แตะ + เพื่อเลือกของ"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStep("confirm")}
+                  disabled={cart.lines.length === 0 || !member.isActive}
+                  className={`${DISPLAY} h-[60px] rounded-[20px] bg-[#146C43] text-white text-lg font-semibold disabled:opacity-40 active:scale-[.98]`}
+                >
+                  ถัดไป: ตรวจสอบก่อนตัดยอด
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={confirm}
+                  disabled={saving}
+                  className={`${DISPLAY} h-[60px] rounded-[20px] bg-[#146C43] text-white text-lg font-semibold disabled:opacity-40 active:scale-[.98]`}
+                >
+                  {saving ? "กำลังบันทึก..." : "ยืนยัน ตัดยอดและมอบของ"}
+                </button>
+                <button type="button" onClick={() => setStep("pick")} disabled={saving} className="h-12 rounded-2xl border border-[#E4E0D4] bg-white font-semibold">
+                  กลับไปแก้ไข
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

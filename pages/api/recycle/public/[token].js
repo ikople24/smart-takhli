@@ -10,6 +10,8 @@ import RecycleRedemption from "@/models/recycle/RecycleRedemption";
 import RecycleReward from "@/models/recycle/RecycleReward";
 import { isPublicToken } from "@/lib/recycle/publicToken";
 import { getBalanceKg } from "@/lib/recycle/balance";
+import { roundKg } from "@/lib/recycle/validate";
+import { WASTE_GROUPS, WASTE_TYPES } from "@/lib/recycle/wasteTypes";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -23,7 +25,7 @@ export default async function handler(req, res) {
   const member = await RecycleMember.findOne({ publicToken: token }).lean();
   if (!member) return res.status(404).json({ success: false, message: "ไม่พบข้อมูลสมาชิก" });
 
-  const [deposits, redemptions, rewards] = await Promise.all([
+  const [deposits, redemptions, rewards, byTypeRaw] = await Promise.all([
     RecycleDeposit.find({ memberId: member._id, voided: false })
       .sort({ createdAt: -1 })
       .limit(30)
@@ -37,7 +39,20 @@ export default async function handler(req, res) {
     member.isActive
       ? RecycleReward.find({ isActive: true }).sort({ sortOrder: 1, kgCost: 1 }).select("name kgCost unit stock").lean()
       : [],
+    // น้ำหนักสะสมตามประเภท (ตลอดอายุสมาชิก) ใช้ทำแถบ "คุณช่วยแยกขยะไปแล้ว"
+    RecycleDeposit.aggregate([
+      { $match: { memberId: member._id, voided: false } },
+      { $unwind: "$items" },
+      { $group: { _id: "$items.type", kg: { $sum: "$items.kg" } } },
+    ]),
   ]);
+  const groupOf = Object.fromEntries(WASTE_TYPES.map((t) => [t.id, t.group]));
+  const groupKg = {};
+  for (const r of byTypeRaw) {
+    const g = groupOf[r._id] || "other";
+    groupKg[g] = (groupKg[g] || 0) + r.kg;
+  }
+  const byGroup = WASTE_GROUPS.map((g) => ({ group: g.id, label: g.label, kg: roundKg(groupKg[g.id] || 0) })).filter((g) => g.kg > 0);
 
   res.setHeader("Cache-Control", "no-store");
   return res.json({
@@ -53,6 +68,7 @@ export default async function handler(req, res) {
     },
     deposits: deposits.map((d) => ({ id: d._id, date: d.depositDate, at: d.createdAt, items: d.items, totalKg: d.totalKg })),
     redemptions: redemptions.map((r) => ({ id: r._id, date: r.redeemDate, at: r.createdAt, items: r.items, totalKg: r.totalKg })),
+    byGroup,
     rewards: rewards.map((r) => ({ id: r._id, name: r.name, kgCost: r.kgCost, unit: r.unit, stock: r.stock })),
   });
 }

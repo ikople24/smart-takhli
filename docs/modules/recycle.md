@@ -68,15 +68,28 @@ prefix (`pathMatchesPermission`) และใช้ `<PermissionGuard requiredPa
 
 ## Lib (`lib/recycle/`)
 
+- `keypad.js` — ตรรกะแป้นตัวเลข (pure)
+- `config.js` — ข้อมูลจุดรับจาก env
+- `theme.js` — ฟอนต์/สี/ไอคอน
 - `publicToken.js` — สุ่ม/ตรวจ token, `ensurePublicTokens` เติมให้สมาชิกเก่า
-- `balance.js` — `getBalanceKg`, `buildRedemptionItems`, `normalizeRewardInput`
+- `balance.js` — `getBalanceKg`, `buildRedemptionItems`, `normalizeRewardInput`, `getRewardProgress`
 - `wasteTypes.js` — ประเภทขยะ 7 ชนิด / 4 หมวด (**ห้ามเปลี่ยน `id` ที่ใช้แล้ว** — เลิกรับให้ตั้ง `active: false`)
 - `validate.js` — `normalizeDepositItems`, `normalizeMemberInput` (pure, ใช้ทั้ง API และหน้าเว็บ)
 - `dates.js` — วันที่เวลาไทย, `client.js` — `recycleFetch`, `makeDepositUrl`
 
+## UI / ธีม
+
+ดีไซน์ตามแคนวาส "พระสังข์หอบทอง — UI ฉบับปรับใหม่" (claude.ai artifact)
+- `lib/recycle/theme.js` — ฟอนต์ (IBM Plex Sans Thai Looped + Prompt ผ่าน next/font), สีหลัก, สีตามหมวดขยะ (`GROUP_THEME`), ไอคอนตามประเภท (`TYPE_ICON`), `<Icon>`
+- หน้ากรอกน้ำหนัก: การ์ดประเภทขยะ 3 สถานะ (ว่าง / กำลังกรอก / กรอกแล้ว) + แป้นตัวเลขบนจอ (`lib/recycle/keypad.js#applyKey`), คอมใช้คีย์บอร์ดได้ (ตัวเลข . Backspace, Enter = ประเภทถัดไป); มือถือแป้นติดล่างจอ, จอใหญ่อยู่ด้านขวา
+- หลังบันทึก: ใบเสร็จ + แถบ "อีก X กก. แลก Y ได้" (`getRewardProgress`)
+- Loading: `components/recycle/RecycleLoading.jsx` + sprite `public/recycle/phrasang-loading-strip.webp` (5 เฟรม 256×300) — เต็มจอครั้งแรกของ session ที่ `/admin/recycle` และตอนเปิดหน้าประชาชน, แบบกล่องตอนรอข้อมูล
+- บัตร QR พิมพ์ขนาดจริง 85.6×54 มม. หน้า-หลังคู่กัน
+- env (ไม่บังคับ): `NEXT_PUBLIC_RECYCLE_POINT_PLACE`, `NEXT_PUBLIC_RECYCLE_POINT_HOURS` — แสดงจุดรับบนหน้าประชาชน/หัวหน้ากรอกน้ำหนัก (ว่าง = ซ่อน)
+
 ## Components (`components/recycle/`)
 
-`DepositTodayPanel`, `MembersPanel`, `RewardsPanel`, `MemberCardsPanel`, `SummaryPanel`, `MemberForm`
+`RecycleLoading`, `DepositTodayPanel`, `MembersPanel`, `RewardsPanel`, `MemberCardsPanel`, `SummaryPanel`, `MemberForm`
 
 ## ยังไม่ได้ทำ / ไอเดียต่อ
 

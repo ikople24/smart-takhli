@@ -1,5 +1,7 @@
 // โครงการพระสังข์หอบทอง — รับฝากขยะรีไซเคิล (บันทึกน้ำหนักเป็น กก. ตามประเภท)
 // แท็บ: รับฝาก | สมาชิก | แลกของ | บัตร QR | สรุป   (เลือกแท็บผ่าน ?tab=)
+// เข้าครั้งแรกในแต่ละ session → โชว์ Loading การ์ตูนพระสังข์ ~1.6 วินาที
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import PermissionGuard from "@/components/PermissionGuard";
 import DepositTodayPanel from "@/components/recycle/DepositTodayPanel";
@@ -7,6 +9,8 @@ import MembersPanel from "@/components/recycle/MembersPanel";
 import MemberCardsPanel from "@/components/recycle/MemberCardsPanel";
 import SummaryPanel from "@/components/recycle/SummaryPanel";
 import RewardsPanel from "@/components/recycle/RewardsPanel";
+import RecycleLoading from "@/components/recycle/RecycleLoading";
+import { DISPLAY, ICON, Icon, RECYCLE_ROOT } from "@/lib/recycle/theme";
 
 const TABS = [
   { id: "deposit", label: "รับฝาก" },
@@ -15,10 +19,26 @@ const TABS = [
   { id: "cards", label: "บัตร QR" },
   { id: "summary", label: "สรุป" },
 ];
+const INTRO_KEY = "recycle_intro_shown";
 
 export default function RecyclePage() {
   const router = useRouter();
   const tab = TABS.some((t) => t.id === router.query.tab) ? router.query.tab : "deposit";
+  const [intro, setIntro] = useState(false);
+
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem(INTRO_KEY) === "1";
+      sessionStorage.setItem(INTRO_KEY, "1");
+    } catch {
+      seen = true; // เก็บค่าไม่ได้ → ไม่ต้องโชว์ซ้ำทุกครั้ง
+    }
+    if (seen) return;
+    setIntro(true);
+    const t = setTimeout(() => setIntro(false), 1600);
+    return () => clearTimeout(t);
+  }, []);
 
   const selectTab = (id) => {
     router.replace({ pathname: router.pathname, query: { tab: id } }, undefined, { shallow: true });
@@ -26,14 +46,24 @@ export default function RecyclePage() {
 
   return (
     <PermissionGuard>
-      <main className="min-h-screen bg-gray-50 p-4 sm:p-6 print:bg-white print:p-0">
+      {intro && <RecycleLoading fullscreen message="กำลังเข้าสู่ระบบ" />}
+      <main className={`${RECYCLE_ROOT} min-h-screen p-4 sm:p-6 print:bg-white print:p-0`}>
         <div className="max-w-5xl mx-auto space-y-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 print:hidden">
-            <p className="text-lg font-semibold text-gray-900">พระสังข์หอบทอง</p>
-            <p className="text-xs text-gray-500 mt-1">รับฝากขยะรีไซเคิล — บันทึกน้ำหนัก (กก.) ตามประเภท ผ่านบัตร QR สมาชิก</p>
-          </div>
+          <header className="flex items-center gap-3 print:hidden">
+            <div className="w-11 h-11 rounded-[14px] bg-[#146C43] text-white flex items-center justify-center shrink-0">
+              <Icon d={ICON.leaf} size={24} />
+            </div>
+            <div>
+              <h1 className={`${DISPLAY} text-xl font-semibold leading-tight`}>พระสังข์หอบทอง</h1>
+              <p className="text-xs text-[#51605A]">ธนาคารขยะรีไซเคิล · บันทึกน้ำหนัก (กก.) ตามประเภท ผ่านบัตร QR สมาชิก</p>
+            </div>
+          </header>
 
-          <div role="tablist" aria-label="เมนูพระสังข์หอบทอง" className="grid grid-cols-5 gap-1 rounded-2xl bg-white p-1 ring-1 ring-gray-200/70 shadow-sm print:hidden">
+          <div
+            role="tablist"
+            aria-label="เมนูพระสังข์หอบทอง"
+            className="grid grid-cols-5 gap-1 rounded-[18px] bg-white p-1 border border-[#E4E0D4] print:hidden"
+          >
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -42,8 +72,8 @@ export default function RecyclePage() {
                 aria-selected={tab === t.id}
                 onClick={() => selectTab(t.id)}
                 className={[
-                  "h-12 rounded-xl text-[13px] sm:text-base font-semibold transition-colors",
-                  tab === t.id ? "bg-emerald-700 text-white shadow-sm" : "text-gray-600 hover:bg-gray-50",
+                  "h-11 rounded-[14px] text-[13px] sm:text-[15px] font-semibold transition-colors",
+                  tab === t.id ? "bg-[#146C43] text-white" : "text-[#51605A] hover:bg-[#F5F3EC]",
                 ].join(" ")}
               >
                 {t.label}
