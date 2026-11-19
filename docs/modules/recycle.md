@@ -69,7 +69,6 @@ prefix (`pathMatchesPermission`) และใช้ `<PermissionGuard requiredPa
 ## Lib (`lib/recycle/`)
 
 - `keypad.js` — ตรรกะแป้นตัวเลข (pure)
-- `config.js` — ข้อมูลจุดรับจาก env
 - `theme.js` — ฟอนต์/สี/ไอคอน
 - `publicToken.js` — สุ่ม/ตรวจ token, `ensurePublicTokens` เติมให้สมาชิกเก่า
 - `balance.js` — `getBalanceKg`, `buildRedemptionItems`, `normalizeRewardInput`, `getRewardProgress`
@@ -85,7 +84,6 @@ prefix (`pathMatchesPermission`) และใช้ `<PermissionGuard requiredPa
 - หลังบันทึก: ใบเสร็จ + แถบ "อีก X กก. แลก Y ได้" (`getRewardProgress`)
 - Loading: `components/recycle/RecycleLoading.jsx` + sprite `public/recycle/phrasang-loading-strip.webp` (5 เฟรม 256×300) — เต็มจอครั้งแรกของ session ที่ `/admin/recycle` และตอนเปิดหน้าประชาชน, แบบกล่องตอนรอข้อมูล
 - บัตร QR พิมพ์ขนาดจริง 85.6×54 มม. หน้า-หลังคู่กัน
-- env (ไม่บังคับ): `NEXT_PUBLIC_RECYCLE_POINT_PLACE`, `NEXT_PUBLIC_RECYCLE_POINT_HOURS` — แสดงจุดรับบนหน้าประชาชน/หัวหน้ากรอกน้ำหนัก (ว่าง = ซ่อน)
 
 ## Components (`components/recycle/`)
 

@@ -15,7 +15,6 @@ import { getBalanceKg, getRewardProgress } from "@/lib/recycle/balance";
 import { applyKey } from "@/lib/recycle/keypad";
 import { formatThaiDate, formatThaiTime, getBangkokYMD } from "@/lib/recycle/dates";
 import { fmtKg, recycleFetch } from "@/lib/recycle/client";
-import { RECYCLE_POINT_LABEL } from "@/lib/recycle/config";
 import { DISPLAY, GROUP_THEME, ICON, Icon, RECYCLE_ROOT, TYPE_ICON, FALLBACK_ICON } from "@/lib/recycle/theme";
 
 const TYPES = WASTE_TYPES.filter((t) => t.active);
@@ -340,10 +339,7 @@ function DepositPageInner() {
           </Link>
           <div>
             <h1 className={`${DISPLAY} text-[19px] font-semibold leading-tight`}>รับฝากขยะ</h1>
-            <p className="text-xs text-[#51605A]">
-              {formatThaiDate(getBangkokYMD())}
-              {RECYCLE_POINT_LABEL ? ` · ${RECYCLE_POINT_LABEL}` : ""}
-            </p>
+            <p className="text-xs text-[#51605A]">{formatThaiDate(getBangkokYMD())}</p>
           </div>
         </header>
 

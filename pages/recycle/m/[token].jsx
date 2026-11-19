@@ -13,7 +13,6 @@ import { fmtKg } from "@/lib/recycle/client";
 import { formatThaiDate, formatThaiTime } from "@/lib/recycle/dates";
 import { getWasteTypeLabel } from "@/lib/recycle/wasteTypes";
 import { getRewardProgress } from "@/lib/recycle/balance";
-import { RECYCLE_POINT } from "@/lib/recycle/config";
 import RecycleLoading from "@/components/recycle/RecycleLoading";
 import { DISPLAY, GROUP_THEME, ICON, Icon, RECYCLE_ROOT } from "@/lib/recycle/theme";
 
@@ -256,12 +255,6 @@ export default function RecycleMemberCardPage() {
                 </section>
               )}
 
-              {(RECYCLE_POINT.place || RECYCLE_POINT.hours) && (
-                <section className="bg-[#E2F0E7] rounded-[20px] px-4 py-3.5 text-[#0B4A2D]">
-                  <p className="text-sm font-semibold">จุดรับฝากและแลกของ</p>
-                  <p className="text-[13px] mt-0.5">{[RECYCLE_POINT.place, RECYCLE_POINT.hours].filter(Boolean).join(" · ")}</p>
-                </section>
-              )}
 
               {isSignedIn && forceMemberView && (
                 <Link
