@@ -58,6 +58,13 @@ export const ALL_PAGES: PagePermission[] = [
     hideFromMenu: true, // เข้าถึงผ่าน internal link ใน elderly-school
   },
   {
+    path: '/admin/recycle',
+    label: 'พระสังข์หอบทอง',
+    icon: '♻️',
+    description: 'รับฝากขยะรีไซเคิล — สมาชิก บัตร QR บันทึกน้ำหนักตามประเภท และสรุป',
+    category: 'management'
+  },
+  {
     path: '/admin/smart-school',
     label: 'smart-school',
     icon: '🏫',

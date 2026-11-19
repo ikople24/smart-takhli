@@ -32,6 +32,7 @@ const navigationItems = [
   { label: 'การร้องเรียน',     href: '/admin/manage-complaints',         icon: '📋', group: 'จัดการ' },
   { label: 'Smart Health',       href: '/admin/smart-health',             icon: '🟣', group: 'จัดการ' },
   { label: 'โรงเรียนผู้สูงอายุ', href: '/admin/elderly-school',           icon: '🎓', group: 'จัดการ' },
+  { label: 'พระสังข์หอบทอง',   href: '/admin/recycle',                  icon: '♻️', group: 'จัดการ' },
   { label: 'Smart School',       href: '/admin/smart-school',             icon: '🏫', group: 'จัดการ' },
   { label: 'คุณภาพน้ำ (ประปา)', href: '/admin/smart-papar/water-quality', icon: '💧', group: 'จัดการ' },
   // หน้าลูกใต้ path คุณภาพน้ำ — เห็นเมนูตามสิทธิ์หน้าแม่โดยอัตโนมัติ
