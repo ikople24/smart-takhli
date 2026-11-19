@@ -1,7 +1,7 @@
 import React, { ReactNode, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Bars3Icon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { usePermissionsStore } from '@/stores/usePermissionsStore';
 import { DEFAULT_PERMISSIONS, pathMatchesPermission } from '@/lib/permissions';
 import type { Role } from '@/lib/permissions';
@@ -308,18 +308,6 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* ปุ่มเปิด sidebar บนมือถือ เมื่อหน้าไม่มี title bar (เช่นหน้าแผนที่ m10 เต็มจอ) */}
-        {!noSidebar && !title && !subtitle && breadcrumbs.length === 0 && (
-          <div className="flex-shrink-0 px-4 py-2 md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-ghost btn-sm btn-circle"
-            >
-              <Bars3Icon className="w-5 h-5" />
-            </button>
           </div>
         )}
 

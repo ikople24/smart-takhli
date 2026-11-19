@@ -3,6 +3,7 @@
 // fullscreen = เต็มจอตอนเข้าระบบ, ไม่ใส่ = กล่องในหน้า (ระหว่างรอข้อมูล)
 import { useEffect, useState } from "react";
 import { DISPLAY, ICON, Icon, recycleBodyFont } from "@/lib/recycle/theme";
+import { MASCOT_SRC, preloadMascot } from "@/lib/recycle/mascot";
 
 const TIPS = [
   "ล้างขวดพลาสติกแล้วบีบให้แบน ช่วยให้ชั่งและเก็บง่ายขึ้น",
@@ -22,19 +23,13 @@ function Sparkle({ className, size }) {
 export default function RecycleLoading({ fullscreen = false, message = "กำลังขนขยะไปแลกทอง" }) {
   const [tip, setTip] = useState(0);
   useEffect(() => {
+    preloadMascot();
+  }, []);
+  useEffect(() => {
     const t = setInterval(() => setTip((i) => (i + 1) % TIPS.length), 2800);
     return () => clearInterval(t);
   }, []);
 
-  const mascot = (
-    <div className="relative w-[220px] h-[220px] rounded-full bg-[#F5F3EC] flex flex-col items-center justify-end pb-3">
-      <Sparkle className="ps-spark absolute left-3 top-7 text-[#F4B740]" size={24} />
-      <Sparkle className="ps-spark ps-b absolute -right-1 top-16 text-white" size={18} />
-      <Sparkle className="ps-spark ps-c absolute right-5 top-1 text-[#F4B740]" size={14} />
-      <div className="ps-mascot" role="img" aria-label="พระสังข์แบกถุงทองกำลังเดินมา" />
-      <div className="ps-shadow -mt-2" />
-    </div>
-  );
 
   return (
     <div
@@ -53,7 +48,14 @@ export default function RecycleLoading({ fullscreen = false, message = "กำ�
       <span className="ps-coin" style={{ left: 120, top: 80, animationDelay: "1.6s" }} />
 
       {fullscreen && <div className="flex-1" />}
-      {mascot}
+      {/* ต้องเขียนตรงใน return: styled-jsx ไม่เติม class scope ให้ JSX ที่เก็บในตัวแปร */}
+      <div className="relative w-[220px] h-[220px] rounded-full bg-[#F5F3EC] flex flex-col items-center justify-end pb-3">
+        <Sparkle className="ps-spark absolute left-3 top-7 text-[#F4B740]" size={24} />
+        <Sparkle className="ps-spark ps-b absolute -right-1 top-16 text-white" size={18} />
+        <Sparkle className="ps-spark ps-c absolute right-5 top-1 text-[#F4B740]" size={14} />
+        <div className="ps-mascot" role="img" aria-label="พระสังข์แบกถุงทองกำลังเดินมา" />
+        <div className="ps-shadow -mt-2" />
+      </div>
       <p className={`${DISPLAY} mt-6 text-[28px] font-semibold leading-tight text-center`}>พระสังข์หอบทอง</p>
       <p className="mt-1 text-sm text-[#CFE6D8] text-center">ธนาคารขยะรีไซเคิล · เทศบาลเมืองตาคลี</p>
       <div className="mt-6 w-[220px] h-2.5 rounded-full bg-[#0F5A37] relative overflow-hidden">
@@ -80,7 +82,7 @@ export default function RecycleLoading({ fullscreen = false, message = "กำ�
         .ps-mascot {
           width: 176px;
           height: 206px;
-          background: url(/recycle/phrasang-loading-strip.webp) no-repeat 0 0 / 880px 206px;
+          background: url(${MASCOT_SRC}) no-repeat 0 0 / 880px 206px;
           animation: ps-walk 1.5s steps(5) infinite, ps-bob 0.75s ease-in-out infinite;
         }
         .ps-shadow {

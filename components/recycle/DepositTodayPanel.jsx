@@ -1,5 +1,5 @@
 // แท็บ "รับฝาก" (หน้าแรกเจ้าหน้าที่) — ดีไซน์ตามแคนวาสหน้า 1
-// สแกนบัตร (ด้วยกล้องมือถือ) / ค้นหาสมาชิกกรณีลืมบัตร / ตัวเลขวันนี้ / รายการฝากวันนี้
+// สแกนบัตร (แตะการ์ด → เปิดกล้องในหน้าเว็บ QrScanModal) / ค้นหาสมาชิกกรณีลืมบัตร / ตัวเลขวันนี้ / รายการฝากวันนี้
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -7,6 +7,7 @@ import { fmtKg, recycleFetch } from "@/lib/recycle/client";
 import { formatThaiDate, formatThaiTime, getBangkokYMD } from "@/lib/recycle/dates";
 import { WASTE_GROUPS, WASTE_TYPES } from "@/lib/recycle/wasteTypes";
 import { DISPLAY, GROUP_THEME, ICON, Icon } from "@/lib/recycle/theme";
+import QrScanModal from "@/components/recycle/QrScanModal";
 
 const GROUP_OF = Object.fromEntries(WASTE_TYPES.map((t) => [t.id, t.group]));
 
@@ -25,6 +26,7 @@ export default function DepositTodayPanel() {
   const [totalKg, setTotalKg] = useState(0);
   const [redeemCount, setRedeemCount] = useState(0);
   const [error, setError] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
 
   const loadToday = useCallback(async () => {
     try {
@@ -80,17 +82,22 @@ export default function DepositTodayPanel() {
   return (
     <div className="grid gap-3.5 lg:grid-cols-2 lg:items-start">
       <div className="flex flex-col gap-3.5">
-        <section className="bg-[#146C43] text-white rounded-[28px] px-5 py-[22px] flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setScanOpen(true)}
+          className="w-full text-left bg-[#146C43] text-white rounded-[28px] px-5 py-[22px] flex items-center gap-4 transition active:scale-[0.98] hover:bg-[#11603B] focus-visible:outline focus-visible:outline-4 focus-visible:outline-[#F4B740]"
+        >
           <span className="w-[72px] h-[72px] rounded-[22px] bg-white text-[#146C43] flex items-center justify-center shrink-0">
             <Icon d={ICON.scan} size={40} strokeWidth={1.7} />
           </span>
           <span>
             <span className={`${DISPLAY} block text-[21px] font-semibold leading-snug`}>สแกนบัตรสมาชิก</span>
             <span className="block mt-0.5 text-[13px] text-[#CFE6D8]">
-              ใช้กล้องมือถือสแกน QR บนบัตร แล้วเริ่มกรอกน้ำหนักได้ทันที (ล็อกอินไว้ใน browser เดียวกับที่กล้องเปิดลิงก์)
+              แตะเพื่อเปิดกล้อง แล้วเล็ง QR บนบัตร — อ่านได้จะเปิดหน้ากรอกน้ำหนักให้ทันที
             </span>
           </span>
-        </section>
+        </button>
+        <QrScanModal open={scanOpen} onClose={() => setScanOpen(false)} />
 
         <section className="grid grid-cols-3 gap-2">
           {[

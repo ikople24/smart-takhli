@@ -45,6 +45,7 @@
     "next-connect": "^1.0.0",
     "papaparse": "^5.5.3",
     "proj4": "^2.21.0",
+    "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-compare-image": "^3.5.4",
