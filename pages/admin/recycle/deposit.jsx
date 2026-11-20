@@ -358,7 +358,7 @@ function DepositPageInner() {
           </div>
         </header>
 
-        {loadingMember && <RecycleLoading message="กำลังเปิดข้อมูลสมาชิก" />}
+        {loadingMember && <RecycleLoading fullscreen message="กำลังเปิดข้อมูลสมาชิก" />}
 
         {error && (
           <div className="rounded-3xl bg-amber-50 ring-1 ring-amber-200 p-5 mb-3" role="alert">

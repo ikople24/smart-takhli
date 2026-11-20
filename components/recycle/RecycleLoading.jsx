@@ -37,8 +37,10 @@ export default function RecycleLoading({ fullscreen = false, message = "กำ�
       aria-live="polite"
       className={[
         recycleBodyFont.className,
-        "isolate relative overflow-hidden bg-[#146C43] text-white flex flex-col items-center",
-        fullscreen ? "fixed inset-0 z-[60] px-7" : "rounded-[28px] px-6 py-10",
+        "isolate overflow-hidden bg-[#146C43] text-white flex flex-col items-center",
+        // ห้ามใส่ relative คู่กับ fixed — Tailwind เรียง .relative หลัง .fixed จึงชนะ
+        // ทำให้ Loading เต็มจอกลายเป็นกล่องแทรกในหน้า (เห็นชัดบน desktop: อยู่ใต้แถบหัวข้อ ไม่ทับ sidebar)
+        fullscreen ? "fixed inset-0 z-[60] px-7" : "relative rounded-[28px] px-6 py-10",
       ].join(" ")}
     >
       <div className="absolute -z-10 -left-[90px] -top-[70px] w-[260px] h-[260px] rounded-full bg-[#1B7C4F]" />

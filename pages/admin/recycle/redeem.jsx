@@ -136,7 +136,7 @@ function RedeemPageInner() {
           </div>
         </header>
 
-        {loading && <RecycleLoading message="กำลังเปิดรายการของรางวัล" />}
+        {loading && <RecycleLoading fullscreen message="กำลังเปิดรายการของรางวัล" />}
 
         {error && (
           <div className="rounded-3xl bg-amber-50 ring-1 ring-amber-200 p-5" role="alert">
